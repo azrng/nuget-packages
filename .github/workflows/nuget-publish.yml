@@ -1,0 +1,34 @@
+name: Publish NuGet Package
+
+# 触发条件
+on:
+  push: # 发布到主分支
+    branches: [ master ]
+
+# 设置运行环境以及执行任务
+jobs:
+  build-and-publish: # 构建和发布
+    runs-on: windows-latest
+
+    steps: # 执行任务
+      - name: Checkout code # 拉取代码
+        uses: actions/checkout@v2
+
+      - name: Setup .NET Core # 安装.NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '10.x' # 修改为你的.NET版本
+
+      - name: Restore NuGet packages # 还原NuGet包
+        run: dotnet restore
+
+      - name: Build # 编译
+        run: dotnet build --configuration Release
+
+      - name: Pack NuGet package # 打包所有类库项目
+        run: |
+          dotnet pack  --configuration Release --no-build
+
+      # 需在github库中设置${{ secrets.NUGET_API_KEY }}
+      - name: Publish NuGet package
+        run: dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
