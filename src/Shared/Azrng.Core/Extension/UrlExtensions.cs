@@ -1,0 +1,83 @@
+using System.Text;
+using System.Web;
+
+namespace Azrng.Core.Extension
+{
+    /// <summary>
+    /// 编码操作类HttpUtility
+    /// </summary>
+    public static class UrlExtensions
+    {
+        /// <summary>
+        /// UrlEncode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static string UrlEncode(this string target)
+        {
+            return HttpUtility.UrlEncode(target);
+        }
+
+        /// <summary>
+        /// UrlEncode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
+        public static string UrlEncode(this string target, Encoding encoding)
+        {
+            return HttpUtility.UrlEncode(target, encoding);
+        }
+
+        /// <summary>
+        /// UrlDecode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static string UrlDecode(this string target)
+        {
+            return HttpUtility.UrlDecode(target);
+        }
+
+        /// <summary>
+        /// UrlDecode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
+        public static string UrlDecode(this string target, Encoding encoding)
+        {
+            return HttpUtility.UrlDecode(target, encoding);
+        }
+
+        /// <summary>
+        /// AttributeEncode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static string AttributeEncode(this string target)
+        {
+            return HttpUtility.HtmlAttributeEncode(target);
+        }
+
+        /// <summary>
+        /// HtmlEncode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static string HtmlEncode(this string target)
+        {
+            return HttpUtility.HtmlEncode(target);
+        }
+
+        /// <summary>
+        /// HtmlDecode
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static string HtmlDecode(this string target)
+        {
+            return HttpUtility.HtmlDecode(target);
+        }
+    }
+}
