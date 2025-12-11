@@ -17,11 +17,7 @@ namespace Azrng.AliyunSms
 
             var config = new AliyunSmsConfig();
             action.Invoke(config);
-            //services.TryAddSingleton(new AliyunSmsConfig
-            //{
-            //    AccessKeyId = config.AccessKeyId,
-            //    AccessSecret = config.AccessSecret
-            //});
+
 
             var client = new DefaultAcsClient(DefaultProfile.GetProfile("cn-hangzhou", config.AccessKeyId, config.AccessSecret));
             services.AddSingleton<DefaultAcsClient>(client);
