@@ -23,7 +23,6 @@ namespace Azrng.AliyunSms
             //    AccessSecret = config.AccessSecret
             //});
 
-            //var client = new DefaultAcsClient(DefaultProfile.GetProfile("cn-hangzhou", "LTAI4GHu9vidSSiEhMMdh82w", "CcvTVRjtIcpJ5B9y1X293Mkn1UsfQB"));
             var client = new DefaultAcsClient(DefaultProfile.GetProfile("cn-hangzhou", config.AccessKeyId, config.AccessSecret));
             services.AddSingleton<DefaultAcsClient>(client);
             services.TryAddTransient<ISmsService, SmsService>();

@@ -17,16 +17,15 @@ namespace Azrng.AliyunSms
             _client = client;
         }
 
-        ///<inheritdoc cref="ISmsService.SendSmsAsync(SendSmsVm)"/>
         public ApiResult SendSmsAsync(SendSmsVm vm)
         {
             var request = new CommonRequest
-            {
-                Method = MethodType.POST,
-                Domain = "dysmsapi.aliyuncs.com",
-                Version = "2017-05-25",
-                Action = "QuerySendDetails"
-            };
+                          {
+                              Method = MethodType.POST,
+                              Domain = "dysmsapi.aliyuncs.com",
+                              Version = "2017-05-25",
+                              Action = "QuerySendDetails"
+                          };
             request.AddQueryParameters("PhoneNumbers", vm.PhoneNumbers);
             request.AddQueryParameters("SignName", vm.SignName);
             request.AddQueryParameters("TemplateCode", vm.TemplateCode);
