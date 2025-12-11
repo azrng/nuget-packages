@@ -1,0 +1,21 @@
+﻿{
+    "originDbType": 5,
+    "targetDbType": 1,
+    "defaultSchema": "public",
+    "schemaDiff": {
+        "adds": [
+            "public",
+            "test",
+            "aaa"
+        ],
+        "removes": []
+    },
+    "tableStructDiff": {
+        "removes": [],
+        "adds": []
+    },
+    "columnStructInfoDiff": {
+        "adds": [],
+        "removes": []
+    }
+}

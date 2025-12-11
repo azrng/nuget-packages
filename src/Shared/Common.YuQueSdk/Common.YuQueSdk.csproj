@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Azrng</Authors>
+        <Description>适用于.NetCore的语雀Sdk，与语雀官方保持一致。</Description>
+        <Copyright>Azrng</Copyright>
+        <Version>0.0.1-beta2</Version>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <DocumentationFile>Common.YuQueSdk.xml</DocumentationFile>
+        <PackageReleaseNotes>获取用户信息以及获取文档详情，逐步更新中</PackageReleaseNotes>
+        <ApplicationIcon>yuque.ico</ApplicationIcon>
+        <EnableNETAnalyzers>True</EnableNETAnalyzers>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
+        <NoWarn>1701;1702;1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="yuque.ico"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0"/>
+        <PackageReference Include="Refit.HttpClientFactory" Version="6.3.2"/>
+        <PackageReference Include="Refit.Newtonsoft.Json" Version="6.3.2"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+        <Description>数据库操作的基础类</Description>
+        <Authors>Azrng</Authors>
+        <Company>Azrng</Company>
+        <Version>1.2.0</Version>
+        <Copyright>Azrng</Copyright>
+        <RootNamespace>Azrng.Core</RootNamespace>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+</Project>

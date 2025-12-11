@@ -1,0 +1,19 @@
+create database pgsql_test;
+create table pgsql_test.public.test_table
+(
+    id           bigint,
+    content      varchar(50),
+    created_time timestamptz
+);
+
+
+
+create database pgsql_test2;
+create table pgsql_test2.public.test_table
+(
+    id           bigint,
+    content      varchar(50),
+    created_time timestamptz
+);
+
+

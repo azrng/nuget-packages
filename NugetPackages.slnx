@@ -1,30 +1,159 @@
 <Solution>
-	<Folder Name="/Shared/">
-		<Project Path="src/Shared/StudyUse/StudyUse.csproj" />
-	</Folder>
-	<Folder Name="/Shared/AspNetCore/">
-		<Project Path="src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj" />
-		<Project Path="src/Shared/Azrng.AspNetCore.Inject/Azrng.AspNetCore.Inject.csproj" />
-		<Project Path="src/Shared/Azrng.ConsoleApp.DependencyInjection/Azrng.ConsoleApp.DependencyInjection.csproj" />
-		<Project Path="src/Shared/Azrng.Core.Json/Azrng.Core.Json.csproj" />
-		<Project Path="src/Shared/Azrng.Core.NewtonsoftJson/Azrng.Core.NewtonsoftJson.csproj" />
-		<Project Path="src/Shared/Azrng.Swashbuckle/Azrng.Swashbuckle.csproj" />
-	</Folder>
-	<Folder Name="/Shared/Cache/" />
-	<Folder Name="/Shared/DataBase/" />
-	<Folder Name="/Shared/DataBase/EFCore/" />
-	<Folder Name="/Shared/Helper/">
-		<Project Path="src/Shared/Azrng.Core/Azrng.Core.csproj" />
-	</Folder>
-	<Folder Name="/Solution Items/">
-		<File Path=".github/workflows/nuget-publish.yml" />
-		<File Path="README.md" />
-	</Folder>
-	<Folder Name="/test/" />
-	<Folder Name="/Test/AspNetCore/">
-		<Project Path="test\Common.Mvc.Test\Common.Mvc.Test.csproj" />
-	</Folder>
-	<Folder Name="/test/Helper/">
-		<Project Path="test/Common.Core.Test/Common.Core.Test.csproj" />
-	</Folder>
+  <Folder Name="/Services/">
+    <Project Path="src/Services/HttpTestApi/HttpTestApi.csproj" />
+    <Project Path="src\Services\ApiSettingConfig\ApiSettingConfig.csproj" />
+    <Project Path="src\Services\APIStudy\APIStudy.csproj" />
+    <Project Path="src\Services\AuthenticationApiSample\AuthenticationApiSample.csproj" />
+    <Project Path="src\Services\CacheAPI\CacheAPI.csproj" />
+    <Project Path="src\Services\ConsoleAppDI\ConsoleAppDI.csproj" />
+    <Project Path="src\Services\DbEnvConfigSample\DbEnvConfigSample.csproj" />
+    <Project Path="src\Services\DbOperateHelper.ConsoleApp\DbOperateHelper.ConsoleApp.csproj" />
+    <Project Path="src\Services\DistributeLockSample\DistributeLockSample.csproj" />
+    <Project Path="src\Services\InjectSample.Application\InjectSample.Application.csproj" />
+    <Project Path="src\Services\InjectSampleApi\InjectSampleApi.csproj" />
+    <Project Path="src\Services\PostgresSqlSample\PostgresSqlSample.csproj" />
+    <Project Path="src\Services\QuartzApi\QuartzApi.csproj" />
+    <Project Path="src\Services\WebDbSqlMigrationSample\WebDbSqlMigrationSample.csproj" />
+  </Folder>
+  <Folder Name="/Services/EventBus/">
+    <Project Path="src\Services\NewInMemoryEventBusSample\NewInMemoryEventBusSample.csproj" />
+    <Project Path="src\Services\NewRabbitMQEventBusSample\NewRabbitMQEventBusSample.csproj" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="src\Shared\Common.Email\Common.Email.csproj" />
+    <Project Path="src\Shared\Common.QRCode\Common.QRCode.csproj" />
+    <Project Path="src\Shared\CommonCollect\CommonCollect.csproj" />
+    <Project Path="src\Shared\StudyUse\StudyUse.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/">
+    <Project Path="src\Shared\Azrng.AspNetCore.Core\Azrng.AspNetCore.Core.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.DbEnvConfig\Azrng.AspNetCore.DbEnvConfig.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Inject\Azrng.AspNetCore.Inject.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Job.Quartz\Azrng.AspNetCore.Job.Quartz.csproj" />
+    <Project Path="src\Shared\Azrng.ConsoleApp.DependencyInjection\Azrng.ConsoleApp.DependencyInjection.csproj" />
+    <Project Path="src\Shared\Azrng.SqlMigration\Azrng.SqlMigration.csproj" />
+    <Project Path="src\Shared\Azrng.Swashbuckle\Azrng.Swashbuckle.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/Authentication/">
+    <Project Path="src\Shared\Azrng.AspNetCore.Authentication.Basic\Azrng.AspNetCore.Authentication.Basic.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Authentication.JwtBearer\Azrng.AspNetCore.Authentication.JwtBearer.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Authorization.Default\Azrng.AspNetCore.Authorization.Default.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/Json/">
+    <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
+    <Project Path="src\Shared\Azrng.Core.NewtonsoftJson\Azrng.Core.NewtonsoftJson.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Cache/">
+    <Project Path="src\Shared\Azrng.Cache.Core\Azrng.Cache.Core.csproj" />
+    <Project Path="src\Shared\Azrng.Cache.FreeRedis\Azrng.Cache.FreeRedis.csproj" />
+    <Project Path="src\Shared\Common.Cache.CSRedis\Common.Cache.CSRedis.csproj" />
+    <Project Path="src\Shared\Common.Cache.MemoryCache\Common.Cache.MemoryCache.csproj" />
+    <Project Path="src\Shared\Common.Cache.Redis\Common.Cache.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/">
+    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
+    <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/Ado/">
+    <Project Path="src\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/EFCore/">
+    <Project Path="src\Shared\Azrng.EFCore.AutoAudit\Azrng.EFCore.AutoAudit.csproj" />
+    <Project Path="src\Shared\Common.Db.Core\Common.Db.Core.csproj" />
+    <Project Path="src\Shared\Common.EFCore.InMemory\Common.EFCore.InMemory.csproj" />
+    <Project Path="src\Shared\Common.EFCore.MySQL\Common.EFCore.MySQL.csproj" />
+    <Project Path="src\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSql.csproj" />
+    <Project Path="src\Shared\Common.EFCore.SQLite\Common.EFCore.SQLite.csproj" />
+    <Project Path="src\Shared\Common.EFCore.SQLServer\Common.EFCore.SQLServer.csproj" />
+    <Project Path="src\Shared\Common.EFCore\Common.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DistributeLock/">
+    <Project Path="src\Shared\Azrng.DistributeLock.Core\Azrng.DistributeLock.Core.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.InMemory\Azrng.DistributeLock.InMemory.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.PostgreSql\Azrng.DistributeLock.PostgreSql.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.Redis\Azrng.DistributeLock.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Shared/EventBus/">
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.Core\Azrng.EventBus.Core.csproj" />
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.InMemory\Azrng.EventBus.InMemory.csproj" />
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.RabbitMQ\Azrng.EventBus.RabbitMQ.csproj" />
+  </Folder>
+  <Folder Name="/Shared/FileStore/">
+    <Project Path="src\Shared\Azrng.MinioStore\Azrng.MinioStore.csproj" />
+    <Project Path="src\Shared\Azrng.S3Store\Azrng.S3Store.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Helper/">
+    <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
+    <Project Path="src\Shared\Azrng.Office.NPOI\Azrng.Office.NPOI.csproj" />
+    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
+    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
+    <Project Path="src\Shared\Common\Common.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Http/">
+    <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
+    <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
+  </Folder>
+  <Folder Name="/Shared/SettingConfig/">
+    <Project Path="src\Shared\Azrng.SettingConfig.BasicAuthorization\Azrng.SettingConfig.BasicAuthorization.csproj" />
+    <Project Path="src\Shared\Azrng.SettingConfig\Azrng.SettingConfig.csproj" />
+  </Folder>
+  <Folder Name="/Shared/ThirdParty/">
+    <Project Path="src\Shared\Azrng.AliyunSms\Azrng.AliyunSms.csproj" />
+    <Project Path="src\Shared\Azrng.Notification.QYWeiXinRobot\Azrng.Notification.QYWeiXinRobot.csproj" />
+    <Project Path="src\Shared\Azrng.YuntongxunSms\Azrng.YuntongxunSms.csproj" />
+    <Project Path="src\Shared\Common.YuQueSdk\Common.YuQueSdk.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+    <File Path="push-packer.sh" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="test\APIStudy.Test\APIStudy.Test.csproj" />
+    <Project Path="test\CommonCollect.Test\CommonCollect.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Cache/">
+    <Project Path="test\Common.Cache.MemoryCache.Test\Common.Cache.MemoryCache.Test.csproj" />
+    <Project Path="test\Common.Cache.Redis.Test\Common.Cache.Redis.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/DataBase/">
+    <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
+    <Project Path="test\Common.DbSystemOperator.MySql.Test\Common.DbSystemOperator.MySql.Test.csproj" />
+    <Project Path="test\Common.DbSystemOperator.Pgsql.Test\Common.DbSystemOperator.Pgsql.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/DataBase/EfCore/">
+    <Project Path="test\Azrng.EFCore.AutoAudit.Test\Azrng.EFCore.AutoAudit.Test.csproj" />
+    <Project Path="test\Common.EFCore.PostgreSql.Test\Common.EFCore.PostgreSql.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/DistributeLock/">
+    <Project Path="test\Azrng.DistributeLock.InMemory.Test\Azrng.DistributeLock.InMemory.Test.csproj" />
+    <Project Path="test\Azrng.DistributeLock.Pgsql.Test\Azrng.DistributeLock.Pgsql.Test.csproj" />
+    <Project Path="test\Azrng.DistributeLock.Redis.Test\Azrng.DistributeLock.Redis.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/FileStore/">
+    <Project Path="test\Common.MinioStore.Test\Common.MinioStore.Test.csproj" />
+    <Project Path="test\Common.S3Store.Test\Common.S3Store.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Helper/">
+    <Project Path="test\Azrng.Office.Npoi.Test\Azrng.Office.Npoi.Test.csproj" />
+    <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
+    <Project Path="test\Common.Security.Test\Common.Security.Test.csproj" />
+    <Project Path="test\Common.SecurityCrypto.Test\Common.SecurityCrypto.Test.csproj" />
+    <Project Path="test\Common.Windows.Core.Test\Common.Windows.Core.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Http/">
+    <Project Path="test\Common.HttpClients.Test\Common.HttpClients.Test.csproj" />
+    <Project Path="test\Common.RestSharpClient.Test\Common.RestSharpClient.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Json/">
+    <Project Path="test\Azrng.Core.DefaultJson.Test\Azrng.Core.DefaultJson.Test.csproj" />
+    <Project Path="test\Azrng.Core.NewtonsoftJson.Test\Azrng.Core.NewtonsoftJson.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/ThirdParty/">
+    <Project Path="test\Common.AliyunSms.Tests\Common.AliyunSms.Tests.csproj" />
+    <Project Path="test\Common.Notification.QYWeiXinRobot.Tests\Common.Notification.QYWeiXinRobot.Tests.csproj" />
+    <Project Path="test\Common.YuQueSdk.DependencyInjection.Test\Common.YuQueSdk.DependencyInjection.Test.csproj" />
+  </Folder>
 </Solution>

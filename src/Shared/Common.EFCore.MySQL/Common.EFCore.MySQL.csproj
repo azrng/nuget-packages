@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+		<!--<TargetFramework>net5.0</TargetFramework>-->
+		<!--<TargetFramework>net6.0</TargetFramework>-->
+		<!--<TargetFramework>net7.0</TargetFramework>-->
+		<Authors>Azrng</Authors>
+		<Description>封住简单操作MySQL的方法</Description>
+		<Copyright>Azrng</Copyright>
+        <Version>1.4.2</Version>
+        <PackageId>Common.EFCore.MySQL</PackageId>
+        <RootNamespace>Azrng.EFCore.MySQL</RootNamespace>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
+		<NoWarn>1701;1702;1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="[6.0.0,6.0.10]" />
+		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="[6.0.0,6.0.10]" />
+		<PackageReference Include="Zack.EFCore.Batch.MySQL.Pomelo" Version="[1.5.0,1.5.8]" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
+		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
+	</ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.3.efcore.9.0.0" />
+    </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Common.EFCore\Common.EFCore.csproj" />
+	</ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+</Project>

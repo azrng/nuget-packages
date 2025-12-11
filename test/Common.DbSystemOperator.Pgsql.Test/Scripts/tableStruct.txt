@@ -1,0 +1,99 @@
+create schema  if not exists export;
+-- 创建表：学生表（students）
+CREATE TABLE export.students (
+                          id SERIAL PRIMARY KEY, -- 主键，自增
+                          name VARCHAR(50) NOT NULL, -- 学生姓名
+                          age INT CHECK (age > 0 AND age < 150), -- 学生年龄
+                          gender CHAR(1) CHECK (gender IN ('M', 'F')), -- 学生性别，M 代表男性，F 代表女性
+                          birthday DATE, -- 学生生日
+                          height DECIMAL(5, 2), -- 学生身高，单位为米
+                          weight DECIMAL(5, 2), -- 学生体重，单位为千克
+                          email VARCHAR(100) UNIQUE, -- 学生邮箱
+                          phone VARCHAR(20), -- 学生电话
+                          address TEXT, -- 学生地址
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 记录创建时间
+                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- 记录更新时间
+);
+
+COMMENT ON TABLE export.students IS '学生表，存储学生的基本信息';
+COMMENT ON COLUMN export.students.id IS '学生唯一标识，主键';
+COMMENT ON COLUMN export.students.name IS '学生姓名';
+COMMENT ON COLUMN export.students.age IS '学生年龄';
+COMMENT ON COLUMN export.students.gender IS '学生性别，M 代表男性，F 代表女性';
+COMMENT ON COLUMN export.students.birthday IS '学生生日';
+COMMENT ON COLUMN export.students.height IS '学生身高，单位为米';
+COMMENT ON COLUMN export.students.weight IS '学生体重，单位为千克';
+COMMENT ON COLUMN export.students.email IS '学生邮箱';
+COMMENT ON COLUMN export.students.phone IS '学生电话';
+COMMENT ON COLUMN export.students.address IS '学生地址';
+COMMENT ON COLUMN export.students.created_at IS '记录创建时间';
+COMMENT ON COLUMN export.students.updated_at IS '记录更新时间';
+
+-- 创建表：课程表（export.courses）
+CREATE TABLE export.courses (
+                         id SERIAL PRIMARY KEY, -- 主键，自增
+                         name VARCHAR(100) NOT NULL, -- 课程名称
+                         teacher_name VARCHAR(50), -- 授课教师姓名
+                         credit INT, -- 课程学分
+                         start_date DATE, -- 课程开始日期
+                         end_date DATE, -- 课程结束日期
+                         student_id INT REFERENCES export.students(id) ON DELETE SET NULL -- 外键关联学生表
+);
+
+COMMENT ON TABLE export.courses IS '课程表，存储课程信息';
+COMMENT ON COLUMN export.courses.id IS '课程唯一标识，主键';
+COMMENT ON COLUMN export.courses.name IS '课程名称';
+COMMENT ON COLUMN export.courses.teacher_name IS '授课教师姓名';
+COMMENT ON COLUMN export.courses.credit IS '课程学分';
+COMMENT ON COLUMN export.courses.start_date IS '课程开始日期';
+COMMENT ON COLUMN export.courses.end_date IS '课程结束日期';
+COMMENT ON COLUMN export.courses.student_id IS '选课学生对应的 ID，外键关联学生表';
+
+-- 为学生表的姓名字段创建索引
+CREATE INDEX idx_students_name ON export.students (name);
+
+-- 为课程表的课程名称字段创建唯一索引
+CREATE UNIQUE INDEX idx_courses_name ON export.courses (name);
+
+-- 创建视图：查看学生选课信息
+CREATE VIEW export.student_courses AS
+SELECT s.id AS student_id, s.name AS student_name, c.id AS course_id, c.name AS course_name
+FROM export.students s
+         JOIN export.courses c ON s.id = c.student_id;
+
+COMMENT ON VIEW export.student_courses IS '视图：查看学生选课信息';
+
+-- 创建存储过程：插入学生信息
+CREATE OR REPLACE FUNCTION export.insert_student (
+    p_name VARCHAR,
+    p_age INT,
+    p_gender CHAR,
+    p_birthday DATE,
+    p_height DECIMAL,
+    p_weight DECIMAL,
+    p_email VARCHAR,
+    p_phone VARCHAR,
+    p_address TEXT
+) RETURNS VOID AS $$
+BEGIN
+    INSERT INTO export.students (name, age, gender, birthday, height, weight, email, phone, address)
+    VALUES (p_name, p_age, p_gender, p_birthday, p_height, p_weight, p_email, p_phone, p_address);
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION export.insert_student IS '存储过程：插入学生信息';
+
+-- 插入一些测试数据
+-- 插入学生数据
+INSERT INTO export.students (name, age, gender, birthday, height, weight, email, phone, address)
+VALUES
+    ('张三', 20, 'M', '2005-03-15', 1.75, 65.0, 'zhangsan@example.com', '13800000000', '北京市海淀区'),
+    ('李四', 22, 'F', '2003-06-10', 1.68, 55.0, 'lisi@example.com', '13900000000', '上海市浦东新区'),
+    ('王五', 21, 'M', '2004-01-20', 1.72, 60.0, 'wangwu@example.com', '13700000000', '广州市天河区');
+
+-- 插入课程数据
+INSERT INTO export.courses (name, teacher_name, credit, start_date, end_date, student_id)
+VALUES
+    ('数学', '赵老师', 3, '2024-09-01', '2025-01-15', 1),
+    ('英语', '钱老师', 4, '2024-09-01', '2025-01-15', 2),
+    ('物理', '孙老师', 3, '2024-09-01', '2025-01-15', 3);

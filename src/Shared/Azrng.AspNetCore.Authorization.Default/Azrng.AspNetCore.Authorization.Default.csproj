@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Authors>Azrng</Authors>
+        <Description>一个默认的授权处理</Description>
+        <Copyright>版权归Azrng所有</Copyright>
+        <Version>1.0.0</Version>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
+        <PackageId>Azrng.AspNetCore.Authorization.Default</PackageId>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <DocumentationFile>Azrng.AspNetCore.Authorization.Default.xml</DocumentationFile>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Authors>Azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <Description>基础的Basic认证包</Description>
+        <Version>1.0.0</Version>
+        <PackageId>Azrng.AspNetCore.Authentication.Basic</PackageId>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <DocumentationFile>Azrng.AspNetCore.Authentication.Basic.xml</DocumentationFile>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj" />
+    </ItemGroup>
+
+</Project>

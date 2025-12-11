@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Authors>Azrng</Authors>
+    <Company>Azrng</Company>
+    <Description>1.使用     
+       services.AddRedisCacheService(() =&gt; new RedisConfig
+            {
+                ConnectionString = "xxxx:6379,password=xxxx,defaultDatabase=0",
+                InstanceName = "prefix"
+            });
+2.注入IRedisCache</Description>
+    <Copyright>版权归Azrng所有</Copyright>
+    <Version>1.0.2</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSRedisCore" Version="3.6.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

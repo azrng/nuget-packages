@@ -1,0 +1,33 @@
+﻿{
+  "originDbType": 5,
+  "targetDbType": 1,
+  "defaultSchema": "default",
+  "schemaDiff": {
+    "adds": [],
+    "removes": []
+  },
+  "tableStructDiff": {
+    "removes": [],
+    "adds": []
+  },
+  "columnStructInfoDiff": {
+    "adds": [],
+    "removes": [
+      {
+        "schemaName": "public",
+        "tableName": "patient_info",
+        "columnName": "patient_id"
+      },
+      {
+        "schemaName": "public",
+        "tableName": "patient_info",
+        "columnName": "patient_name"
+      },
+      {
+        "schemaName": "public",
+        "tableName": "patient_info",
+        "columnName": "sex"
+      }
+    ]
+  }
+}

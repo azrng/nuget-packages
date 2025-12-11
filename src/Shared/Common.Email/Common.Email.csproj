@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Description>发送邮件服务
+            startup类添加配置：
+            services.AddEmail(info =&gt;
+            {
+            info.Host = "smtp.163.com";
+            info.Post = 587;
+            info.FromName = "发送者用户名";
+            info.FromAddress = "发送者地址";
+            info.FromPassword = "发送者密码(授权码)";
+            });
+            然后注入：IEmailHelper
+        </Description>
+        <Authors>azrng</Authors>
+        <PackageId>Common.SendEmail</PackageId>
+        <Product>Common.SendEmail</Product>
+        <IsPackable>false</IsPackable>
+        <Version>1.0.1</Version>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MailKit" Version="2.10.0"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.9"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.9"/>
+        <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.9"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,7 @@
+﻿
+create table public.test_table
+(
+    id           bigint,
+    content      varchar(50),
+    created_time timestamptz
+);

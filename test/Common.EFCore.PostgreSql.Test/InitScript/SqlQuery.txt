@@ -1,0 +1,10 @@
+create table public.test_table
+(
+    id           bigint,
+    content      varchar(50),
+    created_time timestamptz
+);
+
+
+INSERT INTO public.test_table (id, content, created_time) VALUES (1826442031518453760, 'abcde', '2024-08-22 02:11:28.623836 +00:00');
+INSERT INTO public.test_table (id, content, created_time) VALUES (1826442054167695360, 'fghig', '2024-08-22 02:11:34.023829 +00:00');

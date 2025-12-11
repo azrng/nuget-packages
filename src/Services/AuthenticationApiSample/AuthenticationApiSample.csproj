@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DocumentationFile>AuthenticationApiSample.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azrng.Core.Json" Version="1.2.6-beta2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Azrng.AspNetCore.Authentication.Basic\Azrng.AspNetCore.Authentication.Basic.csproj" />
+    <ProjectReference Include="..\..\Shared\Azrng.AspNetCore.Authorization.Default\Azrng.AspNetCore.Authorization.Default.csproj" />
+    <ProjectReference Include="..\..\Shared\Azrng.Swashbuckle\Azrng.Swashbuckle.csproj" />
+    <ProjectReference Include="..\..\Shared\Azrng.AspNetCore.Authentication.JwtBearer\Azrng.AspNetCore.Authentication.JwtBearer.csproj" />
+  </ItemGroup>
+
+</Project>

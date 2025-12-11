@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!--<TargetFramework>net6.0</TargetFramework>-->
+        <TargetFrameworks>net6.0;net7.0;net8.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Authors>Azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <VersionPrefix>1.2.0</VersionPrefix>
+        <Description>该项目是一个业务配置维护的Nuget包</Description>
+        <PackageId>SettingConfig</PackageId>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="wwwroot\index.html"/>
+        <None Remove="wwwroot\layer.js"/>
+        <None Remove="wwwroot\theme\default\icon-ext.png"/>
+        <None Remove="wwwroot\theme\default\icon.png"/>
+        <None Remove="wwwroot\theme\default\layer.css"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="wwwroot/**/*"/>
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+        <PackageReference Include="Npgsql" Version="6.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
+        <PackageReference Include="Npgsql" Version="7.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+        <PackageReference Include="Npgsql" Version="8.0.2"/>
+    </ItemGroup>
+
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+        <PackageReference Include="Npgsql" Version="10.0.0-rc.1"/>
+    </ItemGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <PackageReference Include="Dapper" Version="2.0.123"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
+    </ItemGroup>
+
+</Project>

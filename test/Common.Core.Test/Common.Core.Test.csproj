@@ -25,4 +25,7 @@
         <ProjectReference Include="..\..\src\Shared\Azrng.Core\Azrng.Core.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
 </Project>

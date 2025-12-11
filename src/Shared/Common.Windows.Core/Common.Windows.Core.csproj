@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net6.0-windows;net7.0-windows;net8.0-windows;net9.0-windows</TargetFrameworks>
+        <Authors>Azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <Description>一些windows常用的操作</Description>
+        <Version>0.0.6</Version>
+        <PackageId>Common.Windows.Core</PackageId>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <DocumentationFile>Common.Windows.Core.xml</DocumentationFile>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
+        <PackageReference Include="System.Management" Version="6.0.1"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net7.0-windows'">
+        <PackageReference Include="System.Management" Version="7.0.0"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+        <PackageReference Include="System.Management" Version="8.0.0"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+        <PackageReference Include="System.Management" Version="9.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+</Project>
