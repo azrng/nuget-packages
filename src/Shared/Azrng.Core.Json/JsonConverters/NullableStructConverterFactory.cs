@@ -1,0 +1,55 @@
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Azrng.Core.Json.JsonConverters
+{
+    /// <summary>
+    /// null值转换工厂
+    /// </summary>
+    public class NullableStructConverterFactory : JsonConverterFactory
+    {
+        public override bool CanConvert([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type typeToConvert)
+        {
+            if (typeToConvert.GetProperty("HasValue") != null)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public override JsonConverter CreateConverter(Type typeToConvert,
+                                                      JsonSerializerOptions options)
+        {
+            var converterType = typeof(NullableConverter<>).MakeGenericType(typeToConvert.GenericTypeArguments[0]);
+            return (JsonConverter)Activator.CreateInstance(converterType)!;
+        }
+
+        private class NullableConverter<T> : JsonConverter<T?> where T : struct
+        {
+            public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                if (reader.TokenType == JsonTokenType.String)
+                {
+                    if (string.IsNullOrEmpty(reader.GetString()) || string.IsNullOrWhiteSpace(reader.GetString()))
+                    {
+                        return null;
+                    }
+                }
+
+                return JsonSerializer.Deserialize<T>(ref reader, options);
+            }
+
+            public override void Write(Utf8JsonWriter writer, T? value, JsonSerializerOptions options)
+            {
+                var tempOptions = new JsonSerializerOptions(options);
+
+                var thisFactory = new NullableStructConverterFactory().ToString();
+                tempOptions.Converters.Remove(options.Converters.FirstOrDefault(t => t.ToString() == thisFactory)!);
+
+                JsonSerializer.Serialize(writer, value, tempOptions);
+            }
+        }
+    }
+}
