@@ -1,0 +1,27 @@
+<Solution>
+	<Folder Name="/Shared/">
+		<Project Path="src/Shared/StudyUse/StudyUse.csproj" />
+	</Folder>
+	<Folder Name="/Shared/AspNetCore/">
+		<Project Path="src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj" />
+		<Project Path="src/Shared/Azrng.AspNetCore.Inject/Azrng.AspNetCore.Inject.csproj" />
+		<Project Path="src/Shared/Azrng.ConsoleApp.DependencyInjection/Azrng.ConsoleApp.DependencyInjection.csproj" />
+		<Project Path="src/Shared/Azrng.Core.Json/Azrng.Core.Json.csproj" />
+		<Project Path="src/Shared/Azrng.Core.NewtonsoftJson/Azrng.Core.NewtonsoftJson.csproj" />
+		<Project Path="src/Shared/Azrng.Swashbuckle/Azrng.Swashbuckle.csproj" />
+	</Folder>
+	<Folder Name="/Shared/Helper/">
+		<Project Path="src/Shared/Azrng.Core/Azrng.Core.csproj" />
+	</Folder>
+	<Folder Name="/Solution Items/">
+		<File Path=".github/workflows/nuget-publish.yml" />
+		<File Path="README.md" />
+	</Folder>
+	<Folder Name="/test/" />
+	<Folder Name="/Test/AspNetCore/">
+		<Project Path="test\Common.Mvc.Test\Common.Mvc.Test.csproj" />
+	</Folder>
+	<Folder Name="/test/Helper/">
+		<Project Path="test/Common.Core.Test/Common.Core.Test.csproj" />
+	</Folder>
+</Solution>
