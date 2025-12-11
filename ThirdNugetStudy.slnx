@@ -1,0 +1,17 @@
+﻿<Solution>
+  <Folder Name="/Shared/">
+    <Project Path="src\Shared\Azrng.AliyunSms\Azrng.AliyunSms.csproj" Type="C#" />
+    <Project Path="src\Shared\Azrng.ConsoleApp.DependencyInjection\Azrng.ConsoleApp.DependencyInjection.csproj" Type="C#" />
+    <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" Type="C#" />
+    <Project Path="src\Shared\Azrng.MinioStore\Azrng.MinioStore.csproj" Type="C#" />
+    <Project Path="src\Shared\Azrng.S3Store\Azrng.S3Store.csproj" Type="C#" />
+    <Project Path="src\Shared\Common.YuQueSdk\Common.YuQueSdk.csproj" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="test\Common.AliyunSms.Tests\Common.AliyunSms.Tests.csproj" />
+    <Project Path="test\Common.MinioStore.Test\Common.MinioStore.Test.csproj" Type="C#" />
+    <Project Path="test\Common.Notification.QYWeiXinRobot.Tests\Common.Notification.QYWeiXinRobot.Tests.csproj" />
+    <Project Path="test\Common.S3Store.Test\Common.S3Store.Test.csproj" />
+    <Project Path="test\Common.YuQueSdk.DependencyInjection.Test\Common.YuQueSdk.DependencyInjection.Test.csproj" />
+  </Folder>
+</Solution>

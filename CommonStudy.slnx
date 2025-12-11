@@ -1,0 +1,31 @@
+<Solution>
+  <Folder Name="/Service/">
+    <Project Path="src/Services/HttpTestApi/HttpTestApi.csproj" Id="e45752b4-f3b3-4d38-871b-32b2b093d503" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="src\Shared\CommonCollect\CommonCollect.csproj" />
+    <Project Path="src\Shared\StudyUse\StudyUse.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Helper/">
+    <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
+    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
+    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Http/">
+    <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
+    <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Http/">
+    <Project Path="test\Common.HttpClients.Test\Common.HttpClients.Test.csproj" />
+    <Project Path="test\Common.RestSharpClient.Test\Common.RestSharpClient.Test.csproj" />
+  </Folder>
+</Solution>

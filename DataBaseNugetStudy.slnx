@@ -1,0 +1,23 @@
+﻿<Solution>
+  <Folder Name="/Services/">
+    <Project Path="src\Services\DbOperateHelper.ConsoleApp\DbOperateHelper.ConsoleApp.csproj" />
+  </Folder>
+  <Folder Name="/Shared/" />
+  <Folder Name="/Shared/Db/">
+    <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
+    <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
+    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
+    <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DbHelper/">
+    <Project Path="src\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="test/Azrng.Dapper.Test/Azrng.Dapper.Test.csproj" />
+    <Project Path="test\Azrng.DynamicSqlBuilder.Test\Azrng.DynamicSqlBuilder.Test.csproj" />
+    <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
+    <Project Path="test\Common.DbSystemOperator.MySql.Test\Common.DbSystemOperator.MySql.Test.csproj" />
+    <Project Path="test\Common.DbSystemOperator.Pgsql.Test\Common.DbSystemOperator.Pgsql.Test.csproj" />
+  </Folder>
+</Solution>
