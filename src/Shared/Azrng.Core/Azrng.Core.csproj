@@ -7,7 +7,7 @@
         <Description>基本的公共核心类库</Description>
         <Version>1.9.0</Version>
         <PackageId>Azrng.Core</PackageId>
-        <PackageProjectUrl>https://github.com/azrng/nuget-packages</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.Core.xml</DocumentationFile>
         <LangVersion>latest</LangVersion>

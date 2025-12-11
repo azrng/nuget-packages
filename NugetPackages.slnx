@@ -10,6 +10,9 @@
 		<Project Path="src/Shared/Azrng.Core.NewtonsoftJson/Azrng.Core.NewtonsoftJson.csproj" />
 		<Project Path="src/Shared/Azrng.Swashbuckle/Azrng.Swashbuckle.csproj" />
 	</Folder>
+	<Folder Name="/Shared/Cache/" />
+	<Folder Name="/Shared/DataBase/" />
+	<Folder Name="/Shared/DataBase/EFCore/" />
 	<Folder Name="/Shared/Helper/">
 		<Project Path="src/Shared/Azrng.Core/Azrng.Core.csproj" />
 	</Folder>

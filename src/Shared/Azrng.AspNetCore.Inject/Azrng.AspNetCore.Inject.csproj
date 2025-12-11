@@ -11,8 +11,9 @@
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.Inject.xml</DocumentationFile>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
