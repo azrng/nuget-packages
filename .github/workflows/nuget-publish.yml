@@ -20,14 +20,14 @@ jobs:
           dotnet-version: '10.x' # 修改为你的.NET版本
 
       - name: Restore NuGet packages # 还原NuGet包
-        run: dotnet restore ./src/NugetPackages.slnx
+        run: dotnet restore NugetPackages.slnx
 
       - name: Build # 编译
-        run: dotnet build ./src/NugetPackages.slnx --configuration Release
+        run: dotnet build NugetPackages.slnx --configuration Release
 
       - name: Pack NuGet package # 打包所有类库项目
         run: |
-          dotnet pack ./src/NugetPackages.slnx --configuration Release --no-build
+          dotnet pack NugetPackages.slnx --configuration Release --no-build
 
       # 需在github库中设置${{ secrets.NUGET_API_KEY }}
       - name: Publish NuGet package
