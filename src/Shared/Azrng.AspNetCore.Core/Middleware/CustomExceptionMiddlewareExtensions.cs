@@ -3,9 +3,11 @@ using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Azrng.AspNetCore.Core.Middleware
 {
@@ -19,8 +21,8 @@ namespace Azrng.AspNetCore.Core.Middleware
         private readonly CommonMvcConfig _config;
 
         public CustomExceptionMiddleware(RequestDelegate next,
-            ILogger<CustomExceptionMiddleware> logger,
-            CommonMvcConfig? config = null)
+                                         ILogger<CustomExceptionMiddleware> logger,
+                                         CommonMvcConfig? config = null)
         {
             _next = next;
             _logger = logger;
@@ -57,8 +59,7 @@ namespace Azrng.AspNetCore.Core.Middleware
         {
             var xRequested = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier;
 
-            _logger.LogError(
-                $@"统一日志记录异常-{context.Request.GetUrl()} request had an exception, xRequestId:{xRequested},
+            _logger.LogError($@"统一日志记录异常-{context.Request.GetUrl()} request had an exception, xRequestId:{xRequested},
                 message:{exception.Message}{exception.InnerException?.Message},stackTrace:{exception.StackTrace},time:{DateTime.Now}");
 
             var result = new ResultModel { Message = "系统异常,请联系管理员", IsSuccess = false };
@@ -84,7 +85,7 @@ namespace Azrng.AspNetCore.Core.Middleware
                     result.Message = inp.Message;
                     break;
 
-                case  LogicBusinessException inp:
+                case LogicBusinessException inp:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     result.Code = inp.ErrorCode;
                     result.Message = inp.Message;
@@ -113,11 +114,16 @@ namespace Azrng.AspNetCore.Core.Middleware
 
             context.Response.ContentType = "application/json; charset=utf-8";
 
-            var setting = new JsonSerializerSettings
-            {
-                ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
-            };
-            await context.Response.WriteAsync(JsonConvert.SerializeObject(result, setting));
+            var setting = new JsonSerializerOptions
+                          {
+                              PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
+                              DictionaryKeyPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
+                              Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // 关闭默认转义
+                              ReferenceHandler = ReferenceHandler.IgnoreCycles, // 忽略循环引用
+                              ReadCommentHandling = JsonCommentHandling.Skip, //跳过注释
+                              AllowTrailingCommas = true, // 允许尾随逗号
+                          };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(result, setting));
         }
     }
 }

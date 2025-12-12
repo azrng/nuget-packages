@@ -504,6 +504,9 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.1.0
+  * 移出Microsoft.AspNetCore.Mvc.NewtonsoftJson依赖
+  * 将对于序列化类的依赖使用System.Text.Json替换
 * 1.0.0
   * 更新正常版本
 * 1.0.0-beta5

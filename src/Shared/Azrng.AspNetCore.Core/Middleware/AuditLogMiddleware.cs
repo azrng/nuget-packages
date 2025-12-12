@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Azrng.AspNetCore.Core.Middleware;
 
@@ -122,7 +122,7 @@ public class AuditLogMiddleware
                                     HttpMethod = request.Method,
                                     RequestBody = reqBody,
                                     ResponseBody = respBody,
-                                    RawData = JsonConvert.SerializeObject(reqHeaders),
+                                    RawData = JsonSerializer.Serialize(reqHeaders),
                                     StatusCode = context.Response.StatusCode,
                                     UserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
                                     UserName = context.User.FindFirst(ClaimTypes.Name)?.Value,

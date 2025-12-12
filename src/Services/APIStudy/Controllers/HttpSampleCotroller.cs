@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Azrng.Core.Helpers;
+using Microsoft.AspNetCore.Mvc;
 
 namespace APIStudy.Controllers;
 
@@ -8,9 +9,9 @@ namespace APIStudy.Controllers;
 public class HttpSampleController : BaseController
 {
     [HttpGet]
-    public string Get(string name)
+    public TestHttpRequest Get(string name)
     {
-        return "success" + name;
+        return new TestHttpRequest { Id = "11", Name = name, LongId = Snowflake.NewId() };
     }
 
     [HttpPost]
@@ -37,4 +38,6 @@ public class TestHttpRequest
     public string Id { get; set; }
 
     public string Name { get; set; }
+
+    public long LongId { get; set; }
 }

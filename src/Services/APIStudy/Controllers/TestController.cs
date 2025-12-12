@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Azrng.Core.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace APIStudy.Controllers;
 
@@ -30,6 +31,12 @@ public class TestController : BaseController
     public IResultModel<string> Failure()
     {
         return ResultModel<string>.Failure("失败");
+    }
+
+    [HttpGet]
+    public IResultModel<string> ThrowError()
+    {
+        throw new ParameterException("操作异常");
     }
 }
 

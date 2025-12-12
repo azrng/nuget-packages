@@ -1,5 +1,6 @@
 using APIStudy.Model;
 using Azrng.AspNetCore.Core.Extension;
+using Azrng.AspNetCore.Core.JsonConverters;
 using Azrng.Core.Json;
 using Azrng.Swashbuckle;
 
@@ -16,12 +17,14 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddDefaultControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new LongToStringConverter());
+                });
 
         services.AddAnyCors()
-                .AddDefaultSwaggerGen()
-                .AddMvcModelVerifyFilter()
-                .AddMvcResultPackFilterFilter();
+                .AddDefaultSwaggerGen();
 
         // services.ConfigureNewtonsoftJson();
         services.ConfigureDefaultJson();
@@ -52,7 +55,7 @@ public class Startup
         app.UseRouting();
         app.UseStaticFiles();
 
-        app.UseAutoAuditLog();
+        // app.UseAutoAuditLog();
         app.UseCustomExceptionMiddleware();
 
         //使用跨域
