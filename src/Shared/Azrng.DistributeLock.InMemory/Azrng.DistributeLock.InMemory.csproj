@@ -4,19 +4,23 @@
         <TargetFrameworks>net6.0;net7.0;net8.0;net10.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.1.0</Version>
+        <Version>0.1.1</Version>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>内存分布式锁库</Description>
         <PackageId>Azrng.DistributeLock.InMemory</PackageId>
-        <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.DistributeLock.InMemory.xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)'=='net6.0'">
         <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0"/>
