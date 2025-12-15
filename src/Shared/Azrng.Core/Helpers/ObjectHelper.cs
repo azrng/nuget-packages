@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -65,59 +65,63 @@ namespace Azrng.Core.Helpers
             {
                 // 获取可空类型的实际类型
                 targetType = Nullable.GetUnderlyingType(targetType);
+
+                // 如果值为null，则对于可空类型来说是有效的
+                if (value is string str && string.IsNullOrEmpty(str))
+                    return null;
             }
 
-            if (targetType == typeof(int))
+            var valueType = value.GetType();
+
+            // 直接匹配类型，避免多次GetType调用
+            if (valueType == targetType || (Nullable.GetUnderlyingType(targetType!) ?? targetType) == valueType)
+                return value;
+
+            var typeCode = Type.GetTypeCode(targetType);
+            return typeCode switch
             {
-                return Convert.ToInt32(value);
-            }
-            else if (targetType == typeof(long))
+                TypeCode.Int32 => Convert.ToInt32(value),
+                TypeCode.Int64 => Convert.ToInt64(value),
+                TypeCode.Decimal => Convert.ToDecimal(value),
+                TypeCode.Double => Convert.ToDouble(value),
+                TypeCode.Single => Convert.ToSingle(value),
+                TypeCode.String => value.ToString(),
+                TypeCode.DateTime => Convert.ToDateTime(value),
+                TypeCode.Boolean => Convert.ToBoolean(value),
+                TypeCode.Byte => Convert.ToByte(value),
+                TypeCode.Char => Convert.ToChar(value),
+                TypeCode.Int16 => Convert.ToInt16(value),
+                TypeCode.SByte => Convert.ToSByte(value),
+                TypeCode.UInt16 => Convert.ToUInt16(value),
+                TypeCode.UInt32 => Convert.ToUInt32(value),
+                TypeCode.UInt64 => Convert.ToUInt64(value),
+                _ => HandleSpecialTypes(value, targetType)
+            };
+        }
+
+        /// <summary>
+        /// 处理特殊类型的转换
+        /// </summary>
+        private static object HandleSpecialTypes(object value, Type targetType)
+        {
+            if (targetType.IsEnum)
             {
-                return Convert.ToInt64(value);
-            }
-            else if (targetType == typeof(decimal))
-            {
-                return Convert.ToDecimal(value);
-            }
-            else if (targetType == typeof(double))
-            {
-                return Convert.ToDouble(value);
-            }
-            else if (targetType == typeof(float))
-            {
-                return Convert.ToSingle(value);
-            }
-            else if (targetType == typeof(string))
-            {
-                return value?.ToString() ?? string.Empty;
-            }
-            else if (targetType == typeof(DateTime))
-            {
-                return Convert.ToDateTime(value);
-            }
-            else if (targetType == typeof(bool))
-            {
-                return Convert.ToBoolean(value);
-            }
-            else if (targetType!.IsEnum)
-            {
-                if (value is string stringValue)
-                    return Enum.Parse(targetType, stringValue);
-                else
-                    return Enum.ToObject(targetType, Convert.ToInt32(value));
-            }
-            else
-            {
-                // 默认使用 Convert.ChangeType 转换
-                try
+                return value switch
                 {
-                    return Convert.ChangeType(value, targetType);
-                }
-                catch
-                {
-                    // 如果转换失败，返回原始值
-                    return value;
-                }
+                    string stringValue => Enum.Parse(targetType, stringValue),
+                    _ => Enum.ToObject(targetType, Convert.ToInt32(value))
+                };
+            }
+
+            // 默认使用 Convert.ChangeType 转换
+            try
+            {
+                return Convert.ChangeType(value, targetType);
+            }
+            catch
+            {
+                // 如果转换失败，返回原始值
+                return value;
             }
         }
     }
