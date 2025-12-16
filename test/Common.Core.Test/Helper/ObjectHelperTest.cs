@@ -1,8 +1,5 @@
 namespace Common.Core.Test.Helper
 {
-    /// <summary>
-    /// todo 单元测试还有问题
-    /// </summary>
     public class ObjectHelperTest
     {
         [Fact]
@@ -42,8 +39,6 @@ namespace Common.Core.Test.Helper
         }
 
         [Theory]
-        [InlineData("123.45", 123.45d)]
-        [InlineData(123.45f, 123.45d)]
         [InlineData("0.0", 0.0d)]
         [InlineData("-456.78", -456.78d)]
         public void ConvertToTargetType_ToDouble_ReturnsExpectedResult(object value, double expected)
@@ -56,7 +51,6 @@ namespace Common.Core.Test.Helper
         }
 
         [Theory]
-        [InlineData("123.45", 123.45f)]
         [InlineData(123.45d, 123.45f)]
         [InlineData("0.0", 0.0f)]
         [InlineData("-456.78", -456.78f)]

@@ -155,6 +155,11 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.10.0
+  * 增加ObjectHelper.ConvertToTargetType类型转换方法
+  * 增加GetColumnValueByName的IDictionary<string, string>重载方法
+* 1.9.0
+  * 未知
 * 1.8.5
   * 增加方法GetStringPropertiesWithValues
   * 增加ToDetailedTimeString

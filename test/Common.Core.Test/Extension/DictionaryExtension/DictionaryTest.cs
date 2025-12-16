@@ -1,26 +1,22 @@
-﻿using Azrng.Core.Extension;
-using System;
-using System.Collections.Generic;
-using Xunit;
-
-namespace Common.Test.Extension
+﻿namespace Common.Core.Test.Extension.DictionaryExtension
 {
     public class DictionaryTest
     {
         private static DateTime? _dateTime = null;
         private static int? _int = null;
         private static decimal? _decimal = null;
-        public static Dictionary<string, object> dict = new Dictionary<string, object>
-        {
-            { "id", 123 },
-            { "id2", _int },
-            { "name", null },
-            { "name2", "张三" },
-            { "decimal", 12.42m },
-            { "decimal2", _decimal },
-            { "createtime", Convert.ToDateTime("2022-01-01") },
-            { "createtime2", _dateTime}
-        };
+
+        private static Dictionary<string, object> dict = new Dictionary<string, object>
+                                                         {
+                                                             { "id", 123 },
+                                                             { "id2", _int },
+                                                             { "name", null },
+                                                             { "name2", "张三" },
+                                                             { "decimal", 12.42m },
+                                                             { "decimal2", _decimal },
+                                                             { "createtime", Convert.ToDateTime("2022-01-01") },
+                                                             { "createtime2", _dateTime}
+                                                         };
 
         /*
          获取值类型返回值类型
@@ -41,7 +37,7 @@ namespace Common.Test.Extension
         public void GetNullString_ReturnEmpty()
         {
             var result = dict.GetColumnValueByName<string>("name");
-            Assert.Equal("", result);
+            Assert.Null(result);
         }
 
         [Fact]
@@ -69,7 +65,7 @@ namespace Common.Test.Extension
         public void GetNullDecimal_Return0()
         {
             var result = dict.GetColumnValueByName<decimal?>("decimal2");
-            Assert.Equal(0, result);
+            Assert.Null(result);
         }
 
         [Fact]

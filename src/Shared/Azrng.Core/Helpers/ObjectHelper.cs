@@ -78,9 +78,10 @@ namespace Azrng.Core.Helpers
                 return value;
 
             var typeCode = Type.GetTypeCode(targetType);
+            var isEnum = targetType.BaseType == typeof(Enum);
             return typeCode switch
             {
-                TypeCode.Int32 => Convert.ToInt32(value),
+                TypeCode.Int32 => isEnum ? HandleSpecialTypes(value, targetType) : Convert.ToInt32(value),
                 TypeCode.Int64 => Convert.ToInt64(value),
                 TypeCode.Decimal => Convert.ToDecimal(value),
                 TypeCode.Double => Convert.ToDouble(value),

@@ -28,10 +28,25 @@ namespace Azrng.Core.Extension
         /// 根据列名获取列值
         /// </summary>
         /// <param name="keyValues">字典型数据结构</param>
-        /// <param name="columnName">列名</param>
-        public static string GetColumnValueByName(this IDictionary<string, object> keyValues, string columnName)
+        /// <param name="key">列名</param>
+        public static string GetColumnValueByName(this IDictionary<string, string> keyValues, string key)
         {
-            if (keyValues == null || columnName == null || !keyValues.TryGetValue(columnName, out var columnInfo))
+            if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
+            {
+                return null;
+            }
+
+            return columnInfo;
+        }
+
+        /// <summary>
+        /// 根据列名获取列值
+        /// </summary>
+        /// <param name="keyValues">字典型数据结构</param>
+        /// <param name="key">列名</param>
+        public static string GetColumnValueByName(this IDictionary<string, object> keyValues, string key)
+        {
+            if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
             {
                 return "";
             }
@@ -48,10 +63,10 @@ namespace Azrng.Core.Extension
         /// 根据列名获取列值（可为null的类型返回null值）
         /// </summary>
         /// <param name="keyValues">字典型数据结构</param>
-        /// <param name="columnName">列名</param>
-        public static T GetColumnValueByName<T>(this IDictionary<string, object> keyValues, string columnName)
+        /// <param name="key">列名</param>
+        public static T GetColumnValueByName<T>(this IDictionary<string, object> keyValues, string key)
         {
-            if (keyValues == null || columnName == null || !keyValues.TryGetValue(columnName, out var columnInfo))
+            if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
             {
                 return default;
             }
