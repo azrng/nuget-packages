@@ -16,7 +16,7 @@ services.AddRedisCacheService(x =>
 
 ## 版本更新记录
 
-* 1.4.0
+* 1.3.1
   * 更新异常信息输出
 * 1.3.0
   * 更新正式包

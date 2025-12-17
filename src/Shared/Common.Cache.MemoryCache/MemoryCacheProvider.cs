@@ -47,25 +47,34 @@ namespace Azrng.Cache.MemoryCache
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key));
-            ValidateValueType<T>();
 
-            if (_cache.TryGetValue(key, out T result))
+            try
             {
+                ValidateValueType<T>();
+
+                if (_cache.TryGetValue(key, out T result))
+                {
+                    return Task.FromResult(result);
+                }
+
+                expiry ??= _memoryConfig.DefaultExpiry;
+
+                result = getData.Invoke();
+
+                // 根据配置决定是否缓存空集合和空字符串
+                if (ShouldCacheValue(result))
+                {
+                    _cache.Set<T>(key, result,
+                        new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
+                }
+
                 return Task.FromResult(result);
             }
-
-            expiry ??= _memoryConfig.DefaultExpiry;
-
-            result = getData.Invoke();
-
-            // 根据配置决定是否缓存空集合和空字符串
-            if (ShouldCacheValue(result))
+            catch (Exception ex)
             {
-                _cache.Set<T>(key, result,
-                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
+                _logger.LogError(ex, $"内存缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
+                return default;
             }
-
-            return Task.FromResult(result);
         }
 
         public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
@@ -73,25 +82,33 @@ namespace Azrng.Cache.MemoryCache
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key));
 
-            ValidateValueType<T>();
-
-            if (_cache.TryGetValue(key, out T result))
+            try
             {
+                ValidateValueType<T>();
+
+                if (_cache.TryGetValue(key, out T result))
+                {
+                    return result;
+                }
+
+                expiry ??= _memoryConfig.DefaultExpiry;
+
+                result = await getData();
+
+                // 根据配置决定是否缓存空集合和空字符串
+                if (ShouldCacheValue(result))
+                {
+                    _cache.Set<T>(key, result,
+                        new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
+                }
+
                 return result;
             }
-
-            expiry ??= _memoryConfig.DefaultExpiry;
-
-            result = await getData();
-
-            // 根据配置决定是否缓存空集合和空字符串
-            if (ShouldCacheValue(result))
+            catch (Exception ex)
             {
-                _cache.Set<T>(key, result,
-                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
+                _logger.LogError(ex, $"内存缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
+                return default;
             }
-
-            return result;
         }
 
         public Task<bool> SetAsync(string key, string value, TimeSpan? expiry = null)
@@ -253,7 +270,6 @@ namespace Azrng.Cache.MemoryCache
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
 
 #if NET7_0_OR_GREATER
-
             // .NET 7及以上版本使用_coherentState字段
             var coherentStateField = _cache.GetType().GetField("_coherentState", flags);
             if (coherentStateField != null)
@@ -278,6 +294,7 @@ namespace Azrng.Cache.MemoryCache
                 }
             }
 #else
+
             // .NET 6及以下版本使用_entries字段
             var entriesField = _cache.GetType().GetField("_entries", flags);
             if (entriesField is not null)

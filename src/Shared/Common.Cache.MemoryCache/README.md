@@ -15,6 +15,8 @@ services.AddMemoryCacheExtension(x =>
 
 ## 版本更新记录
 
+* 1.3.2
+  * 更新异常信息输出
 * 1.3.1
   * 更新批量删除缓存的日志输出
 * 1.3.0
