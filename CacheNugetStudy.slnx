@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/Services/">
+    <Project Path="src/Services/CacheAPI/CacheAPI.csproj" />
+  </Folder>
+  <Folder Name="/Shared/" />
+  <Folder Name="/Shared/Cache/">
+    <Project Path="src/Shared/Azrng.Cache.Core/Azrng.Cache.Core.csproj" />
+    <Project Path="src/Shared/Azrng.Cache.FreeRedis/Azrng.Cache.FreeRedis.csproj" />
+    <Project Path="src/Shared/Common.Cache.CSRedis/Common.Cache.CSRedis.csproj" />
+    <Project Path="src/Shared/Common.Cache.MemoryCache/Common.Cache.MemoryCache.csproj" />
+    <Project Path="src/Shared/Common.Cache.Redis/Common.Cache.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="test/Common.Cache.MemoryCache.Test/Common.Cache.MemoryCache.Test.csproj" />
+    <Project Path="test/Common.Cache.Redis.Test/Common.Cache.Redis.Test.csproj" />
+  </Folder>
+</Solution>

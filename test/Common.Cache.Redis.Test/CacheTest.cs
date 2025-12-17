@@ -1,15 +1,18 @@
 using Azrng.Cache.Core;
 using Common.Cache.Redis.Test.Model;
+using Xunit.Abstractions;
 
 namespace Common.Cache.Redis.Test;
 
 public class CacheTest
 {
     private readonly ICacheProvider _cacheProvider;
+    private readonly ITestOutputHelper _testOutputHelper;
 
-    public CacheTest(ICacheProvider cacheProvider)
+    public CacheTest(ICacheProvider cacheProvider, ITestOutputHelper testOutputHelper)
     {
         _cacheProvider = cacheProvider;
+        _testOutputHelper = testOutputHelper;
     }
 
     /// <summary>
@@ -126,6 +129,52 @@ public class CacheTest
 
         await Task.Delay(2 * 2000);
         result = await _cacheProvider.GetAsync<UserInfo>(key);
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    /// 测试获取数据异常
+    /// </summary>
+    [Fact]
+    public async Task GetOrCreate_Async_ExceptionAsync()
+    {
+        var key = Guid.NewGuid().ToString("N");
+        var isExist = await _cacheProvider.ExistAsync(key);
+        Assert.False(isExist);
+
+        try
+        {
+            var result = await _cacheProvider.GetOrCreateAsync(key, async () =>
+            {
+                await Task.Delay(100);
+                string aa = null;
+                return aa.ToString();
+            }, TimeSpan.FromSeconds(2));
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
+    }
+
+    /// <summary>
+    /// 测试获取数据返回null
+    /// </summary>
+    [Fact]
+    public async Task GetOrCreate_Async_NullAsync()
+    {
+        var key = Guid.NewGuid().ToString("N");
+        var isExist = await _cacheProvider.ExistAsync(key);
+        Assert.False(isExist);
+
+        var result = await _cacheProvider.GetOrCreateAsync(key, async () =>
+            {
+                await Task.Delay(100);
+                UserInfo aa = null;
+                return aa;
+            },
+            TimeSpan.FromSeconds(2));
+
         Assert.Null(result);
     }
 

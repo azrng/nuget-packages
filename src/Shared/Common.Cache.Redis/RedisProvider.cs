@@ -36,7 +36,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return null;
             }
         }
@@ -54,7 +54,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -90,7 +90,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -127,7 +127,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -146,7 +146,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -165,7 +165,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -182,7 +182,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -208,7 +208,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
                 return 0;
             }
         }
@@ -240,7 +240,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -257,7 +257,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.Message}");
+                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
                 return default;
             }
         }
@@ -305,7 +305,7 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"SCAN命令执行异常，前缀匹配符:{prefixMatchStr}");
+                _logger.LogError(ex, $"SCAN命令执行异常，前缀匹配符:{prefixMatchStr} message:{ex.GetExceptionAndStack()}");
             }
 
             return keys.ToArray();
