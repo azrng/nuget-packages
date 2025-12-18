@@ -43,7 +43,7 @@ namespace Azrng.Core.Extension
             var dictionary = new Dictionary<Enum, T>();
             foreach (Enum item in values)
             {
-                dictionary.Add(item, item.GetCustomerObj<T>());
+                dictionary.Add(item, item.GetCustomerAttribute<T>());
             }
 
             return dictionary;

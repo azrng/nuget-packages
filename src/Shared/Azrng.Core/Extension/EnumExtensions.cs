@@ -46,9 +46,20 @@ namespace Azrng.Core.Extension
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T GetCustomerObj<T>(this Enum value) where T : Attribute
+        public static T GetCustomerAttribute<T>(this Enum value) where T : Attribute
         {
             return value.GetType().CustomAttributeCommon<T>(value.ToString());
+        }
+
+        /// <summary>
+        /// 验证枚举值是否合法
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="enum"></param>
+        /// <returns></returns>
+        public static bool IsDefined<T>(this T @enum) where T : Enum
+        {
+            return Enum.IsDefined(typeof(T), @enum);
         }
 
         #region 私有方法

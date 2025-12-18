@@ -61,13 +61,29 @@ namespace Azrng.Core.Extension
         /// <typeparam name="TKey"></typeparam>
         /// <param name="query"></param>
         /// <param name="keySelector"></param>
+        /// <param name="isAsc"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static IQueryable<TSource> OrderBy<TSource, TKey>(this IQueryable<TSource> query,
+                                                                 Expression<Func<TSource, TKey>> keySelector,
+                                                                 bool isAsc) where TSource : class
+        {
+            return query.OrderBy(keySelector, isAsc ? SortEnum.Asc : SortEnum.Desc);
+        }
+
+        /// <summary>
+        /// 根据指定列进行排序排序
+        /// </summary>
+        /// <typeparam name="TSource"></typeparam>
+        /// <typeparam name="TKey"></typeparam>
+        /// <param name="query"></param>
+        /// <param name="keySelector"></param>
         /// <param name="sortEnum"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public static IQueryable<TSource> OrderBy<TSource, TKey>(this IQueryable<TSource> query,
                                                                  Expression<Func<TSource, TKey>> keySelector,
-                                                                 SortEnum sortEnum)
-            where TSource : class
+                                                                 SortEnum sortEnum) where TSource : class
         {
             if (query == null || keySelector == null)
                 throw new ArgumentNullException(nameof(query));
@@ -83,7 +99,7 @@ namespace Azrng.Core.Extension
         /// <param name="orderContent"></param>
         /// <returns></returns>
         public static IQueryable<TEntity> OrderBy<TEntity>(this IQueryable<TEntity> query,
-                                                           params SortContent[]? orderContent)
+                                                           params SortContent[] orderContent)
             where TEntity : class
         {
             if (query == null)
@@ -161,7 +177,7 @@ namespace Azrng.Core.Extension
         /// <param name="orderParams">排序参数</param>
         /// <returns></returns>
         public static IQueryable<T> OrderBy<T>(this IQueryable<T> queryable,
-                                               params FiledOrderParam[]? orderParams)
+                                               params FiledOrderParam[] orderParams)
             where T : class
         {
             var parameter = Expression.Parameter(typeof(T), "t");

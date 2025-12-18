@@ -155,6 +155,10 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.11.0
+  * 增加关于时间、字典、表达式树扩展方法
+  * GetCustomerObj变更为GetCustomerAttribute
+  * 变更CalculateDaysDifference改为扩展方法DateDiff
 * 1.10.0
   * 增加ObjectHelper.ConvertToTargetType类型转换方法
   * 增加GetColumnValueByName的IDictionary<string, string>重载方法
