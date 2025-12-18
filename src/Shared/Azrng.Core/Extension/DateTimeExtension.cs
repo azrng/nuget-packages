@@ -40,7 +40,17 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string ToDetailedTimeString(this DateTime time)
         {
-            return time.ToFormatString("yyyy-MM-dd HH:mm:ss.fff");
+            return time.ToFormatString("yyyy-MM-dd HH:mm:ss.fffffff");
+        }
+
+        /// <summary>
+        /// 转详细时间字符串
+        /// </summary>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public static string ToDetailedTimeString(this DateTime? time)
+        {
+            return time.HasValue ? time.Value.ToDetailedTimeString() : string.Empty;
         }
 
         /// <summary>
@@ -61,6 +71,29 @@ namespace Azrng.Core.Extension
         public static string ToDateString(this DateTime time)
         {
             return time.ToFormatString("yyyy-MM-dd");
+        }
+
+        /// <summary>
+        /// 转  ISO 8601 标准时间字符串
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static string ToIsoDateTimeString(this DateTime? dateTime)
+        {
+            return dateTime.HasValue
+                ? dateTime.Value.ToIsoDateTimeString()
+                : "";
+        }
+
+        /// <summary>
+        /// 转  ISO 8601 标准时间字符串
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static string ToIsoDateTimeString(this DateTime dateTime)
+        {
+            // O 相当于 yyyy-MM-ddTHH:mm:ss.fffffffK
+            return dateTime.ToFormatString("O");
         }
 
         /// <summary>
@@ -239,6 +272,42 @@ namespace Azrng.Core.Extension
         public static int GetCurrentMonthDayNumber(this DateTime dateTime)
         {
             return DateTime.DaysInMonth(dateTime.Year, dateTime.Month);
+        }
+
+        /// <summary>
+        /// 计算两个日期天数(未满24小时算1天  超过24小时才算一天)
+        /// </summary>
+        /// <param name="dateStart">开始时间</param>
+        /// <param name="dateEnd">结束时间</param>
+        /// <returns></returns>
+        public static int DateDiff(this DateTime? dateStart, DateTime? dateEnd)
+        {
+            if (!dateStart.HasValue || !dateEnd.HasValue)
+            {
+                return 0;
+            }
+
+            return DateDiff(dateStart, dateEnd.Value);
+        }
+
+        /// <summary>
+        /// 计算两个日期天数(未满24小时算1天  超过24小时才算一天)
+        /// </summary>
+        /// <param name="dateStart">开始时间</param>
+        /// <param name="dateEnd">结束时间</param>
+        /// <returns></returns>
+        public static int DateDiff(this DateTime? dateStart, DateTime dateEnd)
+        {
+            if (!dateStart.HasValue)
+            {
+                return 0;
+            }
+
+            // 计算时间差
+            var difference = dateEnd - dateStart.Value;
+
+            // 返回天数差（绝对值）
+            return (int)Math.Ceiling(Math.Abs(difference.TotalDays));
         }
     }
 }

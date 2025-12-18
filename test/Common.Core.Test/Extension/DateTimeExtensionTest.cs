@@ -111,7 +111,62 @@ public class DateTimeExtensionTest
         Assert.Equal(new DateTime(2025, 1, 1).AddSeconds(-1), yearEnd);
     }
 
+    [Fact]
+    public void DetailsTime_Test()
+    {
+        var date = DateTime.Now;
+        var str1 = date.ToDetailedTimeString();
+        _testOutputHelper.WriteLine(str1);
+        Assert.NotEmpty(str1);
+    }
+
+    [Fact]
+    public void DetailsTime_Null_Test()
+    {
+        DateTime? date = null;
+        var str1 = date.ToDetailedTimeString();
+        Assert.Empty(str1);
+    }
+
+    [Fact]
+    public void IsoTime_Test()
+    {
+        var date = DateTime.Now;
+        var str1 = date.ToIsoDateTimeString();
+        _testOutputHelper.WriteLine(str1);
+
+        var str2 = date.ToString("yyyy-MM-ddTHH:mm:ss.fffffffK");
+        _testOutputHelper.WriteLine(str2);
+    }
+
+    [Fact]
+    public void IsoTime_Null_Test()
+    {
+        DateTime? date = null;
+        var str1 = date.ToIsoDateTimeString();
+        Assert.Empty(str1);
+    }
+
     #endregion
 
-
+    /// <summary>
+    /// 计算相隔的天数
+    /// </summary>
+    /// <param name="startTime"></param>
+    /// <param name="endTime"></param>
+    /// <param name="day"></param>
+    [Theory]
+    [InlineData("2025-09-17", "2025-09-17", 0)]
+    [InlineData("2025-09-17", "2025-09-18", 1)]
+    [InlineData("2025-09-18", "2025-09-17", 1)]
+    [InlineData("2025-09-17 10:00:00", "2025-09-18 10:00:01", 2)]
+    [InlineData("2025-09-17 10:00:00", "2025-09-18 09:00:01", 1)]
+    [InlineData(null, "2025-09-18", 0)]
+    [InlineData("2025-09-18", null, 0)]
+    [InlineData("2025-09-10 10:00:00", "2025-09-20 09:00:01", 10)]
+    public void CalculateDaysDifference_ReturnOk(string startTime, string endTime, int day)
+    {
+        var result = startTime.ToDateTime().DateDiff(endTime.ToDateTime());
+        Assert.Equal(day, result);
+    }
 }

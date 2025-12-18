@@ -161,24 +161,6 @@ namespace Azrng.Core.Helpers
         }
 
         /// <summary>
-        /// 计算相差的天数（超出的时间算一天）
-        /// </summary>
-        /// <param name="startDate"></param>
-        /// <param name="endDate"></param>
-        /// <returns></returns>
-        public static int CalculateDaysDifference(DateTime? startDate, DateTime? endDate)
-        {
-            if (startDate == null || endDate == null)
-                return 0;
-
-            // 计算时间差
-            var difference = endDate.Value - startDate.Value;
-
-            // 返回天数差（绝对值）
-            return (int)Math.Ceiling(Math.Abs(difference.TotalDays));
-        }
-
-        /// <summary>
         /// 查询指定的时间距离现在的时间差
         /// </summary>
         /// <param name="getTime">指定的时间</param>
