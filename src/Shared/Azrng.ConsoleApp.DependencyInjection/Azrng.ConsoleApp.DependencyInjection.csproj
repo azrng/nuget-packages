@@ -25,6 +25,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
     </ItemGroup>
 
@@ -38,10 +42,6 @@
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" PrivateAssets="contentfiles;analyzers"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
