@@ -75,8 +75,6 @@ var aa = await _configSettingService.GetConfigAsync<List<string>>("aaa");
 * 使用
     - [x] 项目中查询
     - [x] 查询缓存
-    - [ ] 支持初始化数据
-
 
 ## 版本更新记录
 

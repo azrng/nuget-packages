@@ -11,7 +11,7 @@ services.AddMemoryCacheExtension(x =>
 });
 ```
 
-然后就可以在需要使用的地方直接注入ICacheProvider进行使用
+然后就可以在需要使用的地方直接注入`ICacheProvider`进行使用
 
 ## 版本更新记录
 

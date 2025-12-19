@@ -12,7 +12,7 @@ services.AddRedisCacheService(x =>
 });
 ```
 
-然后在需要使用的地方进行注入ICacheProvider就可以使用了
+然后在需要使用的地方进行注入`ICacheProvider`就可以使用了
 
 ## 版本更新记录
 
