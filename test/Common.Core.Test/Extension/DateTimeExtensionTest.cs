@@ -164,7 +164,7 @@ public class DateTimeExtensionTest
     [InlineData(null, "2025-09-18", 0)]
     [InlineData("2025-09-18", null, 0)]
     [InlineData("2025-09-10 10:00:00", "2025-09-20 09:00:01", 10)]
-    public void CalculateDaysDifference_ReturnOk(string startTime, string endTime, int day)
+    public void DateDiff_ReturnOk(string startTime, string endTime, int day)
     {
         var result = startTime.ToDateTime().DateDiff(endTime.ToDateTime());
         Assert.Equal(day, result);
