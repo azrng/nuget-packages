@@ -13,7 +13,12 @@
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
         <PackageReference Include="AWSSDK.S3" Version="3.7.101.39"/>
@@ -46,4 +51,5 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0"/>
     </ItemGroup>
+    
 </Project>
