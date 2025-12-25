@@ -39,16 +39,28 @@ namespace Azrng.Core.Helpers
         }
 
         /// <summary>
-        /// 获取字符串里面的URL地址
+        /// 提取字符串里面的URL地址
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static string GetUrl(string str)
+        public static string ExtractUrl(string str)
         {
-            return new Regex("[a-zA-z]+://[^\\s]*", RegexOptions.Multiline).Matches(str)
-                                                                           .Where(item => item.Success)
-                                                                           .Select(item => item.Value)
-                                                                           .FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(str))
+                return string.Empty;
+
+            var matches = Regex.Matches(str, "[a-zA-Z]+://[^\\s]*", RegexOptions.Multiline);
+            foreach (Match match in matches.Cast<Match>())
+            {
+                if (!match.Success)
+                    continue;
+
+                if (Uri.TryCreate(match.Value, UriKind.Absolute, out var uri))
+                {
+                    return uri.GetLeftPart(UriPartial.Authority);
+                }
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -105,31 +117,33 @@ namespace Azrng.Core.Helpers
                 throw new ArgumentNullException(nameof(uri));
             if (queryString == null)
                 throw new ArgumentNullException(nameof(queryString));
-            var num = uri.IndexOf('#');
-            var str1 = uri;
-            var str2 = "";
-            if (num != -1)
+
+            var fragmentIndex = uri.IndexOf('#');
+            var fragment = fragmentIndex >= 0 ? uri.Substring(fragmentIndex) : string.Empty;
+            var body = fragmentIndex >= 0 ? uri.Substring(0, fragmentIndex) : uri;
+
+            // 过滤掉无效键值对，避免生成错误的查询参数
+            var encodedPairs = queryString.Where(pair => pair.Value != null && !pair.Key.IsNullOrWhiteSpace())
+                                          .Select(pair => $"{pair.Key.UrlEncode()}={pair.Value.UrlEncode()}")
+                                          .ToList();
+
+            if (encodedPairs.Count == 0)
+                return uri;
+
+            var stringBuilder = new StringBuilder(body);
+            var hasQuery = body.Contains('?');
+            if (!hasQuery)
             {
-                str2 = uri.Substring(num);
-                str1 = uri.Substring(0, num);
+                stringBuilder.Append('?');
+            }
+            else if (!body.EndsWith("?") && !body.EndsWith("&"))
+            {
+                // 如果原始 URL 已经拥有查询部分但未以连接符结尾，需要主动补上 &
+                stringBuilder.Append('&');
             }
 
-            var flag = str1.IndexOf('?') != -1;
-            var stringBuilder = new StringBuilder();
-            stringBuilder.Append(str1);
-            foreach (var keyValuePair in queryString)
-            {
-                if (keyValuePair.Value != null)
-                {
-                    stringBuilder.Append(flag ? '&' : '?');
-                    stringBuilder.Append(keyValuePair.Key.UrlEncode());
-                    stringBuilder.Append('=');
-                    stringBuilder.Append(keyValuePair.Value.UrlEncode());
-                    flag = true;
-                }
-            }
-
-            stringBuilder.Append(str2);
+            stringBuilder.Append(string.Join("&", encodedPairs));
+            stringBuilder.Append(fragment);
             return stringBuilder.ToString();
         }
     }
