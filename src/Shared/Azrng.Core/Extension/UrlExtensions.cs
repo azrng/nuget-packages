@@ -15,7 +15,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string UrlEncode(this string target)
         {
-            return HttpUtility.UrlEncode(target);
+            return target.UrlEncode(Encoding.UTF8);
         }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string UrlDecode(this string target)
         {
-            return HttpUtility.UrlDecode(target);
+            return target.UrlDecode(Encoding.UTF8);
         }
 
         /// <summary>

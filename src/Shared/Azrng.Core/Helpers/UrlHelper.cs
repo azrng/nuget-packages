@@ -2,6 +2,7 @@ using Azrng.Core.Extension;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -89,6 +90,47 @@ namespace Azrng.Core.Helpers
             }
 
             return dict;
+        }
+
+        /// <summary>
+        /// 将给定的查询键值附加到 URI 之中
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="queryString"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string AddQueryString(string uri, IEnumerable<KeyValuePair<string, string>> queryString)
+        {
+            if (uri == null)
+                throw new ArgumentNullException(nameof(uri));
+            if (queryString == null)
+                throw new ArgumentNullException(nameof(queryString));
+            var num = uri.IndexOf('#');
+            var str1 = uri;
+            var str2 = "";
+            if (num != -1)
+            {
+                str2 = uri.Substring(num);
+                str1 = uri.Substring(0, num);
+            }
+
+            var flag = str1.IndexOf('?') != -1;
+            var stringBuilder = new StringBuilder();
+            stringBuilder.Append(str1);
+            foreach (var keyValuePair in queryString)
+            {
+                if (keyValuePair.Value != null)
+                {
+                    stringBuilder.Append(flag ? '&' : '?');
+                    stringBuilder.Append(keyValuePair.Key.UrlEncode());
+                    stringBuilder.Append('=');
+                    stringBuilder.Append(keyValuePair.Value.UrlEncode());
+                    flag = true;
+                }
+            }
+
+            stringBuilder.Append(str2);
+            return stringBuilder.ToString();
         }
     }
 }
