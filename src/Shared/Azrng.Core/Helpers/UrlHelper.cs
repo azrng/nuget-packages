@@ -111,12 +111,27 @@ namespace Azrng.Core.Helpers
         /// <param name="queryString"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
+        public static string AddQueryString(Uri uri, IEnumerable<KeyValuePair<string, string>> queryString)
+        {
+            if (uri == null)
+                throw new ArgumentNullException(nameof(uri));
+
+            return AddQueryString(uri.ToString().TrimEnd('/'), queryString);
+        }
+
+        /// <summary>
+        /// 将给定的查询键值附加到 URI 之中
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="queryString"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public static string AddQueryString(string uri, IEnumerable<KeyValuePair<string, string>> queryString)
         {
             if (uri == null)
                 throw new ArgumentNullException(nameof(uri));
             if (queryString == null)
-                throw new ArgumentNullException(nameof(queryString));
+                return uri;
 
             var fragmentIndex = uri.IndexOf('#');
             var fragment = fragmentIndex >= 0 ? uri.Substring(fragmentIndex) : string.Empty;
@@ -136,7 +151,7 @@ namespace Azrng.Core.Helpers
             {
                 stringBuilder.Append('?');
             }
-            else if (!body.EndsWith("?") && !body.EndsWith("&"))
+            else if (!body.EndsWith('?') && !body.EndsWith('&'))
             {
                 // 如果原始 URL 已经拥有查询部分但未以连接符结尾，需要主动补上 &
                 stringBuilder.Append('&');

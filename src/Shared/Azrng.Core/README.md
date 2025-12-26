@@ -155,6 +155,9 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.12.0
+  * 增加针对url的AddQueryString
+  * 修改Url的GetUrl为ExtractUrl
 * 1.11.0
   * 增加关于时间、字典、表达式树扩展方法
   * GetCustomerObj变更为GetCustomerAttribute
