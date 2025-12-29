@@ -1,6 +1,4 @@
 using Azrng.DynamicSqlBuilder.Model;
-using ConsoleApp.Models.DynamicSql;
-using ConsoleApp.Models.DynamicSql.SqlOperation;
 using Dapper;
 
 namespace Azrng.DynamicSqlBuilder.SqlOperation

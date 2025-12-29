@@ -1,4 +1,4 @@
-﻿using ConsoleApp.Models.DynamicSql.SqlOperation;
+﻿using Azrng.DynamicSqlBuilder.SqlOperation;
 
 namespace Azrng.DynamicSqlBuilder.Model
 {

@@ -2,8 +2,6 @@
 using Azrng.Core.Extension;
 using Azrng.DynamicSqlBuilder.Model;
 using Azrng.DynamicSqlBuilder.SqlOperation;
-using ConsoleApp.Models.DynamicSql;
-using ConsoleApp.Models.DynamicSql.SqlOperation;
 using Dapper;
 using System.Text;
 

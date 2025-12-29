@@ -1,6 +1,5 @@
 using Azrng.DynamicSqlBuilder.Model;
-using ConsoleApp.Models.DynamicSql;
-using ConsoleApp.Models.DynamicSql.SqlOperation;
+using Azrng.DynamicSqlBuilder.SqlOperation;
 
 namespace Azrng.DynamicSqlBuilder.Utils;
 

@@ -1,4 +1,4 @@
-﻿namespace ConsoleApp.Models.DynamicSql.SqlOperation
+﻿namespace Azrng.DynamicSqlBuilder.SqlOperation
 {
     /// <summary>
     /// Sql操作符常量
