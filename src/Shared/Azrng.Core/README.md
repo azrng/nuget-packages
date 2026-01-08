@@ -155,6 +155,8 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.13.0-未发布
+  * StringHelper增加字符串批量替换方法
 * 1.12.0
   * 增加针对url的AddQueryString
   * 修改Url的GetUrl为ExtractUrl
