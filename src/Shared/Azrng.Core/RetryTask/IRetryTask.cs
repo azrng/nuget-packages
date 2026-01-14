@@ -1,4 +1,7 @@
-﻿namespace CommonCollect.RetryTask
+﻿using System;
+using System.Threading.Tasks;
+
+namespace Azrng.Core.RetryTask
 {
     /// <summary>定义重试的行为</summary>
     /// <typeparam name="TResult"></typeparam>
