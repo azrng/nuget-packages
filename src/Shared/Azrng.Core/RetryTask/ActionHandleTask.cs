@@ -1,22 +1,22 @@
-﻿namespace CommonCollect.RetryTask
+﻿using System;
+using System.Threading.Tasks;
+
+namespace Azrng.Core.RetryTask
 {
     /// <summary>提供异常处理的请求任务</summary>
     /// <typeparam name="TResult"></typeparam>
-    internal sealed class ActionHandleTask<TResult> :
-        TaskBase<TResult>,
-        IHandleTask<TResult>,
-        ITask<TResult>
+    internal sealed class ActionHandleTask<TResult> : TaskBase<TResult>, IHandleTask<TResult>
     {
         /// <summary>请求任务创建的委托</summary>
-        private readonly Func<Task<TResult>> invoker;
+        private readonly Func<Task<TResult>> _invoker;
 
         /// <summary>异常处理的请求任务</summary>
         /// <param name="invoker">请求任务创建的委托</param>
-        public ActionHandleTask(Func<Task<TResult>> invoker) => this.invoker = invoker;
+        public ActionHandleTask(Func<Task<TResult>> invoker) => _invoker = invoker;
 
         /// <summary>创建请求任务</summary>
         /// <returns></returns>
-        protected override Task<TResult> InvokeAsync() => invoker();
+        protected override Task<TResult> InvokeAsync() => _invoker();
 
         /// <summary>当捕获到异常时返回指定结果</summary>
         /// <typeparam name="TException"></typeparam>
@@ -46,28 +46,18 @@
         {
             if (func == null)
                 throw new ArgumentNullException(nameof(func));
-            return new ActionHandleTask<TResult>(newInvoker);
+            return new ActionHandleTask<TResult>(NewInvoker);
 
-            async Task<TResult> newInvoker()
+            async Task<TResult> NewInvoker()
             {
-                int num;
-                TException exception;
                 try
                 {
-                    return await invoker().ConfigureAwait(false);
+                    return await _invoker().ConfigureAwait(false);
                 }
                 catch (TException ex)
                 {
-                    num = 1;
-                    exception = ex;
+                    return await func(ex).ConfigureAwait(false);
                 }
-
-                if (num != 1)
-                {
-                    return default;
-                }
-
-              return await func(exception).ConfigureAwait(false);
             }
         }
     }

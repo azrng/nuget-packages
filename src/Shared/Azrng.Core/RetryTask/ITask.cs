@@ -1,8 +1,11 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace CommonCollect.RetryTask
+namespace Azrng.Core.RetryTask
 {
-    /// <summary>定义返回结果的行为</summary>
+    /// <summary>
+    /// 定义返回结果的行为
+    /// </summary>
+    /// <remarks>该重试相关操作的类从WebApiClientCore包中copy</remarks>
     /// <typeparam name="TResult"></typeparam>
     public interface ITask<TResult>
     {
