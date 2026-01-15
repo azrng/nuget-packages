@@ -47,7 +47,8 @@ namespace Azrng.Core.Extension
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         /// <exception cref="T:System.ArgumentNullException"></exception>
         /// <returns></returns>
-        public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount, Func<int, TimeSpan> delay)
+        public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount,
+            Func<int, TimeSpan> delay)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));
@@ -93,7 +94,8 @@ namespace Azrng.Core.Extension
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         /// <exception cref="T:System.ArgumentNullException"></exception>
         /// <returns></returns>
-        public static IRetryTask<TResult> Retry<TResult>(this Task<TResult> task, int maxCount, Func<int, TimeSpan> delay)
+        public static IRetryTask<TResult> Retry<TResult>(this Task<TResult> task, int maxCount,
+            Func<int, TimeSpan> delay)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));

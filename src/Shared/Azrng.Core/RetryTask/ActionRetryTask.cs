@@ -23,8 +23,8 @@ namespace Azrng.Core.RetryTask
         /// <param name="retryDelay">各次重试的延时时间</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         public ActionRetryTask(Func<Task<TResult>> invoker,
-                               int maxRetryCount,
-                               Func<int, TimeSpan> retryDelay)
+            int maxRetryCount,
+            Func<int, TimeSpan> retryDelay)
         {
             if (maxRetryCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxRetryCount));
@@ -61,7 +61,7 @@ namespace Azrng.Core.RetryTask
         /// <summary>
         /// 执行前延时
         /// </summary>
-        /// <param name="index"></param>
+        /// <param name="index">重试次数索引</param>
         /// <returns></returns>
         private async Task DelayBeforeRetry(int index)
         {
@@ -117,7 +117,8 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="handler">捕获到指定异常时</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task> handler) where TException : Exception
+        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task> handler)
+            where TException : Exception
         {
             return WhenCatchAsync((Func<TException, Task<bool>>)(async ex =>
             {
@@ -133,7 +134,8 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="predicate">返回true才Retry</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task<bool>> predicate) where TException : Exception
+        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task<bool>> predicate)
+            where TException : Exception
         {
             return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,
                 _retryDelay);
@@ -190,6 +192,8 @@ namespace Azrng.Core.RetryTask
         /// <summary>表示重试标记的异常</summary>
         /// <summary>重试标记的异常</summary>
         /// <param name="inner">内部异常</param>
-        private class RetryMarkException(Exception inner) : Exception(null, inner) { }
+        private class RetryMarkException(Exception inner) : Exception(null, inner)
+        {
+        }
     }
 }
