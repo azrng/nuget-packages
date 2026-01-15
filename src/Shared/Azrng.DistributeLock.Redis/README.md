@@ -142,6 +142,8 @@ Redis 分布式锁基于 Redis 原生的 `SET lock_key lock_value EX expire_time
 
 ## 版本更新记录
 
+* 0.2.0
+  * 更新README.md
 * 0.1.0
     * 支持.Net10
 * 0.0.1

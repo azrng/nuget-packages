@@ -94,6 +94,8 @@ if (lockInstance != null)
 
 ## 版本更新记录
 
+* 0.2.0
+  * 更新README.md
 * 0.1.1
   * 纠正版本问题
 * 0.1.0
