@@ -10,7 +10,7 @@ namespace Azrng.Core.RetryTask
     public interface IRetryTask<TResult> : ITask<TResult>
     {
         /// <summary>
-        /// 当捕获到异常时进行Retry
+        /// 当捕获到指定异常时进行Retry
         /// </summary>
         /// <typeparam name="TException">异常类型</typeparam>
         /// <returns></returns>

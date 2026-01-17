@@ -10,12 +10,63 @@ namespace Azrng.Core.Extension
     /// <remarks>拷贝自：WebApiClientCore</remarks>
     public static class RetryTaskExtensions
     {
-        /// <summary>返回提供请求重试的请求任务对象</summary>
+        // /// <summary>返回提供请求重试的请求任务对象</summary>
+        // /// <typeparam name="TResult"></typeparam>
+        // /// <param name="task"></param>
+        // /// <param name="maxCount">最大重试次数</param>
+        // /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        // /// <exception cref="T:System.ArgumentNullException"></exception>
+        // /// <returns></returns>
+        // public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount)
+        // {
+        //     return task.Retry(maxCount, null);
+        // }
+        //
+        // /// <summary>
+        // /// 返回提供请求重试的请求任务对象
+        // /// </summary>
+        // /// <typeparam name="TResult"></typeparam>
+        // /// <param name="task"></param>
+        // /// <param name="maxCount">最大重试次数</param>
+        // /// <param name="delay">各次重试的延时时间</param>
+        // /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        // /// <exception cref="T:System.ArgumentNullException"></exception>
+        // /// <returns></returns>
+        // public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount, TimeSpan delay)
+        // {
+        //     return task.Retry(maxCount, i => delay);
+        // }
+
+        // /// <summary>
+        // /// 返回提供请求重试的请求任务对象(成功不重试)
+        // /// </summary>
+        // /// <typeparam name="TResult"></typeparam>
+        // /// <param name="task"></param>
+        // /// <param name="maxCount">最大重试次数</param>
+        // /// <param name="delay">各次重试的延时时间</param>
+        // /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
+        // /// <exception cref="T:System.ArgumentNullException"></exception>
+        // /// <remarks>只有当遇到抛出RetryMarkException异常使用才会重试</remarks>
+        // /// <returns></returns>
+        // public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount,
+        //                                                  Func<int, TimeSpan> delay)
+        // {
+        //     if (task == null)
+        //         throw new ArgumentNullException(nameof(task));
+        //     if (maxCount < 1)
+        //         throw new ArgumentOutOfRangeException(nameof(maxCount));
+        //     return new ActionRetryTask<TResult>( () =>  task, maxCount, delay);
+        // }
+
+        /// <summary>
+        /// 返回提供请求重试的请求任务对象(成功不重试)
+        /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="task"></param>
         /// <param name="maxCount">最大重试次数</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         /// <exception cref="T:System.ArgumentNullException"></exception>
+        /// <remarks>只有当遇到抛出RetryMarkException异常使用才会重试</remarks>
         /// <returns></returns>
         public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount)
         {
@@ -31,6 +82,7 @@ namespace Azrng.Core.Extension
         /// <param name="delay">各次重试的延时时间</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         /// <exception cref="T:System.ArgumentNullException"></exception>
+        /// <remarks>只有当遇到抛出RetryMarkException异常使用才会重试</remarks>
         /// <returns></returns>
         public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount, TimeSpan delay)
         {
@@ -46,62 +98,29 @@ namespace Azrng.Core.Extension
         /// <param name="delay">各次重试的延时时间</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         /// <exception cref="T:System.ArgumentNullException"></exception>
+        /// <remarks>只有当遇到抛出RetryMarkException异常使用才会重试</remarks>
         /// <returns></returns>
         public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount,
-            Func<int, TimeSpan> delay)
+                                                         Func<int, TimeSpan> delay)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));
             if (maxCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxCount));
-            return new ActionRetryTask<TResult>(async () => await task, maxCount, delay);
-        }
-
-        /// <summary>返回提供请求重试的请求任务对象</summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="task"></param>
-        /// <param name="maxCount">最大重试次数</param>
-        /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
-        /// <exception cref="T:System.ArgumentNullException"></exception>
-        /// <returns></returns>
-        public static IRetryTask<TResult> Retry<TResult>(this Task<TResult> task, int maxCount)
-        {
-            return task.Retry(maxCount, null);
+            return new ActionRetryTask<TResult>( () =>  task, maxCount, delay);
         }
 
         /// <summary>
-        /// 返回提供请求重试的请求任务对象
+        /// 将 Func<Task<TResult>> 转换为 ITask<TResult>
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
-        /// <param name="task"></param>
-        /// <param name="maxCount">最大重试次数</param>
-        /// <param name="delay">各次重试的延时时间</param>
-        /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
-        /// <exception cref="T:System.ArgumentNullException"></exception>
+        /// <param name="func">创建任务的函数</param>
         /// <returns></returns>
-        public static IRetryTask<TResult> Retry<TResult>(this Task<TResult> task, int maxCount, TimeSpan delay)
+        public static ITask<TResult> AsTask<TResult>(this Func<Task<TResult>> func)
         {
-            return task.Retry(maxCount, i => delay);
-        }
-
-        /// <summary>
-        /// 返回提供请求重试的请求任务对象
-        /// </summary>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="task"></param>
-        /// <param name="maxCount">最大重试次数</param>
-        /// <param name="delay">各次重试的延时时间</param>
-        /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
-        /// <exception cref="T:System.ArgumentNullException"></exception>
-        /// <returns></returns>
-        public static IRetryTask<TResult> Retry<TResult>(this Task<TResult> task, int maxCount,
-            Func<int, TimeSpan> delay)
-        {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
-            if (maxCount < 1)
-                throw new ArgumentOutOfRangeException(nameof(maxCount));
-            return new ActionRetryTask<TResult>(async () => await task, maxCount, delay);
+            if (func == null)
+                throw new ArgumentNullException(nameof(func));
+            return new FuncTask<TResult>(func);
         }
 
         /// <summary>当遇到异常时返回默认值</summary>
