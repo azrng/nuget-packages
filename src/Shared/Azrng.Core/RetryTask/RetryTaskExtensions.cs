@@ -59,7 +59,7 @@ namespace Azrng.Core.Extension
                 throw new ArgumentNullException(nameof(task));
             if (maxCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxCount));
-            return new ActionRetryTask<TResult>(() => task, maxCount, delay);
+            return new ActionRetryTask<TResult>(async () => await task, maxCount, delay);
         }
 
         /// <summary>当遇到异常时返回默认值</summary>

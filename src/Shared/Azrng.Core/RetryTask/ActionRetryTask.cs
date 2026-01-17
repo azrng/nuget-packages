@@ -9,7 +9,7 @@ namespace Azrng.Core.RetryTask
         IRetryTask<TResult>
     {
         /// <summary>请求任务创建的委托</summary>
-        private readonly Func<ITask<TResult>> _invoker;
+        private readonly Func<Task<TResult>> _invoker;
 
         /// <summary>获取最大重试次数</summary>
         private readonly int _maxRetryCount;
@@ -22,9 +22,7 @@ namespace Azrng.Core.RetryTask
         /// <param name="maxRetryCount">最大尝试次数</param>
         /// <param name="retryDelay">各次重试的延时时间</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
-        public ActionRetryTask(Func<ITask<TResult>> invoker,
-                               int maxRetryCount,
-                               Func<int, TimeSpan> retryDelay)
+        public ActionRetryTask(Func<Task<TResult>> invoker, int maxRetryCount, Func<int, TimeSpan> retryDelay)
         {
             if (maxRetryCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxRetryCount));
@@ -137,18 +135,13 @@ namespace Azrng.Core.RetryTask
         public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task<bool>> predicate)
             where TException : Exception
         {
-
-            throw new NotSupportedException();
-
-            // return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,
-            //     _retryDelay);
+            return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,
+                _retryDelay);
 
             async Task<TResult> NewInvoker()
             {
                 try
                 {
-
-
                     return await _invoker().ConfigureAwait(false);
                 }
                 catch (TException ex)
@@ -182,9 +175,8 @@ namespace Azrng.Core.RetryTask
         {
             if (predicate == null)
                 throw new ArgumentNullException(nameof(predicate));
-            throw new NotSupportedException();
-            // return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,
-            //     _retryDelay);
+            return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,
+                _retryDelay);
 
             async Task<TResult> NewInvoker()
             {
