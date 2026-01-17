@@ -64,6 +64,109 @@ GlobalConfig.MinimumLevel = LogLevel.Warning;
 // 再次之后输出输出的日志就只会输出警告及以上的日志
 ```
 
+### RetryHelper
+
+提供便捷的异步操作重试功能，支持多种重试策略和条件配置。
+
+> 默认配置：只有当遇到抛出 `RetryMarkException` 异常时才会进行重试。
+
+#### 基本用法
+
+```csharp
+// 简单重试（无延时）
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3);
+
+// 带固定延时重试
+var result = await RetryHelper.ExecuteAsync(
+    () => GetDataAsync(),
+    3,
+    TimeSpan.FromSeconds(2)
+);
+
+// 带参数的方法
+var result = await RetryHelper.ExecuteAsync(() => ProcessAsync(id, name), 3);
+```
+
+#### 动态延时策略
+
+```csharp
+// 指数退避重试（每次重试延时翻倍）
+var result = await RetryHelper.ExecuteAsync(
+    () => GetDataAsync(),
+    maxRetryCount: 3,
+    delayStrategy: i => TimeSpan.FromSeconds(Math.Pow(2, i))
+);
+
+// 自定义延时策略
+var result = await RetryHelper.ExecuteAsync(
+    () => GetDataAsync(),
+    maxRetryCount: 3,
+    delayStrategy: i => TimeSpan.FromSeconds(i + 1) // 第1次1s，第2次2s，第3次3s
+);
+```
+
+#### 条件重试
+
+```csharp
+// 当捕获到特定异常时重试
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3)
+    .WhenCatch<HttpRequestException>();
+
+// 当捕获到特定异常且满足条件时重试
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3)
+    .WhenCatch<HttpRequestException>(ex => ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable);
+
+// 带异常处理的异步重试
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3)
+    .WhenCatchAsync<TimeoutException>(async ex =>
+    {
+        await LogErrorAsync(ex);
+        return true; // 返回 true 表示继续重试
+    });
+```
+
+#### 基于结果的重试
+
+```csharp
+// 当结果满足条件时重试
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3)
+    .WhenResult(data => data == null || data.Count == 0);
+
+// 异步检查结果
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3)
+    .WhenResultAsync(async data =>
+    {
+        await ValidateAsync(data);
+        return data.IsValid == false;
+    });
+```
+
+#### 触发重试
+
+在需要重试的地方抛出 `RetryMarkException`：
+
+```csharp
+public async Task<string> GetDataAsync()
+{
+    try
+    {
+        var response = await httpClient.GetAsync(url);
+        if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+        {
+            throw new RetryMarkException("服务暂时不可用");
+        }
+        return await response.Content.ReadAsStringAsync();
+    }
+    catch (HttpRequestException ex)
+    {
+        throw new RetryMarkException("请求失败", ex);
+    }
+}
+
+// 使用重试
+var result = await RetryHelper.ExecuteAsync(() => GetDataAsync(), 3);
+```
+
 ## 公共返回类
 
 封装了公共的返回类
@@ -155,6 +258,8 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.13.0
+  * 增加方法重试操作到RetryHelper
 * 1.12.0
   * StringHelper增加字符串批量替换方法
   * 增加针对url的AddQueryString
