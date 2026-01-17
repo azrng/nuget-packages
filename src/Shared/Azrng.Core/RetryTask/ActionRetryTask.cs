@@ -183,7 +183,7 @@ namespace Azrng.Core.RetryTask
                 var result = await _invoker().ConfigureAwait(false);
                 return !await predicate(result).ConfigureAwait(false)
                     ? result
-                    : throw new ArgumentException("待定");
+                    : throw new RetryMarkException("结果不符合预期值");
             }
         }
     }

@@ -1,4 +1,0 @@
-﻿namespace Azrng.Core.RetryTask
-{
-
-}
