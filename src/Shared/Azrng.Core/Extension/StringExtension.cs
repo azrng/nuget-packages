@@ -227,7 +227,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static bool HasChinese(this string str)
         {
-            return Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+            return !str.IsNullOrWhiteSpace() && Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
         }
 
         #region 值判断
@@ -322,6 +322,8 @@ namespace Azrng.Core.Extension
         public static bool EqualsNoCase(this string aimStr, string compareStr,
                                         StringComparison stringComparison = StringComparison.CurrentCultureIgnoreCase)
         {
+            if (aimStr is null || compareStr is null)
+                return false;
             return aimStr.Equals(compareStr, stringComparison);
         }
 
@@ -418,6 +420,8 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static int ToVersionNumber(this string versionNumber)
         {
+            if (versionNumber.IsNullOrWhiteSpace())
+                return 0;
             var splitVersion = versionNumber.ToLower()
                                             .Replace("v", "")
                                             .Replace(".txt", "")
