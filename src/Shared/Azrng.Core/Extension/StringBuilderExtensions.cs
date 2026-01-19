@@ -49,7 +49,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static StringBuilder AppendLineIfNotEmpty(this StringBuilder builder, string str)
         {
-            return str.IsNullOrEmpty() ? builder : builder.AppendLine();
+            return str.IsNullOrEmpty() ? builder : builder.AppendLine(str);
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static StringBuilder AppendLineIfNotNullOrWhiteSpace(this StringBuilder builder, string str)
         {
-            return str.IsNotNullOrWhiteSpace() ? builder : builder.AppendLine();
+            return str.IsNullOrWhiteSpace() ? builder : builder.AppendLine(str);
         }
 
         /// <summary>
