@@ -159,7 +159,7 @@ public class StringExtensionTest
     [Fact]
     public void CustomerValueGetDefault_ReturnSource()
     {
-        string currValue = "customer";
+        var currValue = "customer";
         var defaultValue = "default";
         var result = currValue.GetOrDefault(defaultValue);
         Assert.NotEqual(defaultValue, result);
@@ -172,7 +172,7 @@ public class StringExtensionTest
     [Fact]
     public void EmptyGetDefault_ReturnSource()
     {
-        string currValue = " ";
+        var currValue = " ";
         var defaultValue = "default";
         var result = currValue.GetOrDefault(defaultValue);
         Assert.Equal(defaultValue, result);

@@ -297,18 +297,6 @@ namespace Azrng.Core.Extension
         }
 
         /// <summary>
-        /// 根据条件拼接字符串
-        /// </summary>
-        /// <param name="builder">字符串</param>
-        /// <param name="condition">条件</param>
-        /// <param name="str">要添加的字符串</param>
-        /// <returns></returns>
-        public static StringBuilder AppendIF(this StringBuilder builder, bool condition, string str)
-        {
-            return condition ? builder.Append(str) : builder;
-        }
-
-        /// <summary>
         /// 获取特定位置的字符串
         /// </summary>
         /// <param name="str">源字符串</param>
