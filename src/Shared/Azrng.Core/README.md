@@ -258,7 +258,7 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
-* 1.14.0-未发布
+* 1.14.0
   * 增加StringBuilderExtension扩展
 * 1.13.0
   * 增加方法重试操作到RetryHelper
