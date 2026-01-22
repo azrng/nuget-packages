@@ -16,24 +16,24 @@ namespace Common.HttpClients
         /// Get请求获取文件流
         /// </summary>
         /// <param name="url"></param>
-        /// <param name="jwtToken"></param>
+        /// <param name="bearerToken"></param>
         /// <param name="headers"></param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<Stream> GetStreamAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<Stream> GetStreamAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                                     CancellationToken cancellation = default);
 
         /// <summary>
         /// GET请求返回字符串
         /// </summary>
         /// <param name="url">请求地址</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<string> GetAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<string> GetAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                               CancellationToken cancellation = default);
 
         /// <summary>
@@ -41,12 +41,12 @@ namespace Common.HttpClients
         /// </summary>
         /// <typeparam name="T">响应内容</typeparam>
         /// <param name="url">请求地址</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> GetAsync<T>(string url, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                             CancellationToken cancellation = default);
 
         /// <summary>
@@ -54,12 +54,12 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="url">请求地址</param>
         /// <param name="data">请求的数据（字符串、对象）</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<string> PostAsync(string url, object data, string jwtToken = "",
+        Task<string> PostAsync(string url, object data, string bearerToken = "",
                                IDictionary<string, string> headers = null, int? timeout = null, CancellationToken cancellation = default);
 
         /// <summary>
@@ -68,12 +68,12 @@ namespace Common.HttpClients
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
         /// <param name="data">请求的数据（字符串、对象）</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> PostAsync<T>(string url, object data, string jwtToken = "", IDictionary<string, string> headers = null,
+        Task<T> PostAsync<T>(string url, object data, string bearerToken = "", IDictionary<string, string> headers = null,
                              int? timeout = null, CancellationToken cancellation = default);
 
         // /// <summary>
@@ -82,10 +82,10 @@ namespace Common.HttpClients
         // /// <typeparam name="T">返回的结果</typeparam>
         // /// <param name="url">请求地址</param>
         // /// <param name="data">请求的数据（字符串、对象）</param>
-        // /// <param name="jwtToken">token</param>
+        // /// <param name="bearerToken">token</param>
         // /// <param name="headers">请求头</param>
         // /// <returns></returns>
-        // IAsyncEnumerable<string> PostGetStreamAsync<T>(string url, object data, string jwtToken = "",
+        // IAsyncEnumerable<string> PostGetStreamAsync<T>(string url, object data, string bearerToken = "",
         //                                                IDictionary<string, string> headers = null, CancellationToken cancellation = default);
 
         /// <summary>
@@ -93,13 +93,13 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="url">请求地址</param>
         /// <param name="data">请求的数据（字符串、对象）</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns>字符串类型</returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<string> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, string jwtToken = "",
+        Task<string> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
                                        IDictionary<string, string> headers = null, int? timeout = null,
                                        CancellationToken cancellation = default);
 
@@ -109,12 +109,12 @@ namespace Common.HttpClients
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
         /// <param name="data">请求的数据</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, string jwtToken = "",
+        Task<T> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
                                      IDictionary<string, string> headers = null, int? timeout = null,
                                      CancellationToken cancellation = default);
 
@@ -126,13 +126,13 @@ namespace Common.HttpClients
         /// <param name="parameter">参数名</param>
         /// <param name="stream">文件流</param>
         /// <param name="fileName">文件名</param>
-        /// <param name="jwtToken"></param>
+        /// <param name="bearerToken"></param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<T> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName, string jwtToken = "",
+        Task<T> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName, string bearerToken = "",
                                      IDictionary<string, string> headers = null, int? timeout = null,
                                      CancellationToken cancellation = default);
 
@@ -142,13 +142,13 @@ namespace Common.HttpClients
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
         /// <param name="data">请求的数据</param>
-        /// <param name="jwtToken"></param>
+        /// <param name="bearerToken"></param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<T> PostFormDataAsync<T>(string url, MultipartFormDataContent data, string jwtToken = "",
+        Task<T> PostFormDataAsync<T>(string url, MultipartFormDataContent data, string bearerToken = "",
                                      IDictionary<string, string> headers = null, int? timeout = null,
                                      CancellationToken cancellation = default);
 
@@ -157,13 +157,13 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="url">请求地址</param>
         /// <param name="xmlData">请求的数据</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns>字符串类型</returns>
         /// <remarks>postman=>body=>xml</remarks>
-        Task<T> PostSoapAsync<T>(string url, string xmlData, string jwtToken = "",
+        Task<T> PostSoapAsync<T>(string url, string xmlData, string bearerToken = "",
                                  IDictionary<string, string> headers = null, int? timeout = null, CancellationToken cancellation = default);
 
         /// <summary>
@@ -172,24 +172,24 @@ namespace Common.HttpClients
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
         /// <param name="data">json字符串</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> PutAsync<T>(string url, object data, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<T> PutAsync<T>(string url, object data, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                             CancellationToken cancellation = default);
 
         /// <summary>
         /// Delete请求并传递token返回自定义内容
         /// </summary>
         /// <param name="url">请求地址</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<string> DeleteAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<string> DeleteAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                                  CancellationToken cancellation = default);
 
         /// <summary>
@@ -197,12 +197,12 @@ namespace Common.HttpClients
         /// </summary>
         /// <typeparam name="T">响应内容</typeparam>
         /// <param name="url">请求地址</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> DeleteAsync<T>(string url, string jwtToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        Task<T> DeleteAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
                                CancellationToken cancellation = default);
 
         /// <summary>
@@ -211,12 +211,12 @@ namespace Common.HttpClients
         /// <typeparam name="T">响应内容</typeparam>
         /// <param name="url">请求地址</param>
         /// <param name="data">参数</param>
-        /// <param name="jwtToken">token</param>
+        /// <param name="bearerToken">token</param>
         /// <param name="headers">请求头</param>
         /// <param name="timeout"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        Task<T> PatchAsync<T>(string url, object data, string jwtToken = "",
+        Task<T> PatchAsync<T>(string url, object data, string bearerToken = "",
                               IDictionary<string, string> headers = null, int? timeout = null, CancellationToken cancellation = default);
 
         /// <summary>

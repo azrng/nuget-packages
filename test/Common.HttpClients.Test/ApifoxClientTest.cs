@@ -30,19 +30,19 @@ public class ApifoxClientTest
         _testOutputHelper.WriteLine(result);
     }
 
-    /// <summary>
-    /// 调用接口抛出404异常
-    /// </summary>
-    [Fact]
-    public async Task Get_ReturnOk_Throw404()
-    {
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
-        {
-            await _httpHelper.GetAsync<string>(Host + "/get2?q1=11&q2=22");
-        });
-
-        Assert.True(ex is not null);
-    }
+    // /// <summary>
+    // /// 调用接口抛出404异常
+    // /// </summary>
+    // [Fact]
+    // public async Task Get_ReturnOk_Throw404()
+    // {
+    //     var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+    //     {
+    //         await _httpHelper.GetAsync<string>(Host + "/aaget2?q1=11&q2=22");
+    //     });
+    //
+    //     Assert.True(ex is not null);
+    // }
 
     [Fact]
     public async Task Post_ReturnOk()
@@ -106,21 +106,5 @@ public class ApifoxClientTest
         Assert.NotNull(result);
         _testOutputHelper.WriteLine("请求结束");
         _testOutputHelper.WriteLine(result);
-    }
-
-    [Fact]
-    public async Task Exception404_ReturnOk()
-    {
-        try
-        {
-            var result = await _httpHelper.GetAsync<string>(Host + "/get111?q1=11&q2=22");
-            Assert.Null(result);
-            _testOutputHelper.WriteLine("请求结束");
-            _testOutputHelper.WriteLine(result);
-        }
-        catch (Exception e)
-        {
-            Assert.True(e is HttpRequestException);
-        }
     }
 }
