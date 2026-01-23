@@ -251,6 +251,8 @@ options.FailThrowException = true;
 
 ## 版本更新记录
 
+* 1.3.2
+  * 更新jwtToken命名为bearerToken
 * 1.3.1
   * 支持.Net10
   * 支持超时或者错误后自动重试

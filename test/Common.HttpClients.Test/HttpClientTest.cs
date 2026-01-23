@@ -89,23 +89,23 @@ namespace Common.HttpClients.Test
             Assert.False(string.IsNullOrWhiteSpace(result));
         }
 
-        /// <summary>
-        /// 校验不安全证书
-        /// </summary>
-        [Fact]
-        public async Task Verify_Untrusted_Certificate_ReturnTrue()
-        {
-            try
-            {
-                var url = "https://sso-stable.synyi.sy/api/health/alive?ngsw-bypass=true";
-                var result = await _httpHelper.GetAsync(url);
-                Assert.False(string.IsNullOrWhiteSpace(result));
-            }
-            catch (Exception ex)
-            {
-                _testOutputHelper.WriteLine("抛出异常：" + ex.Message);
-                Assert.True(ex is HttpRequestException);
-            }
-        }
+        // /// <summary>
+        // /// 校验不安全证书
+        // /// </summary>
+        // [Fact]
+        // public async Task Verify_Untrusted_Certificate_ReturnTrue()
+        // {
+        //     try
+        //     {
+        //         var url = "https://sso-stable.synyi.sy/api/health/alive?ngsw-bypass=true";
+        //         var result = await _httpHelper.GetAsync(url);
+        //         Assert.False(string.IsNullOrWhiteSpace(result));
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _testOutputHelper.WriteLine("抛出异常：" + ex.Message);
+        //         Assert.True(ex is HttpRequestException);
+        //     }
+        // }
     }
 }

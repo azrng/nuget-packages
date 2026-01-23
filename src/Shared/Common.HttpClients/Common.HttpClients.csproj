@@ -4,9 +4,8 @@
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <Version>1.3.1</Version>
+        <Version>1.3.2</Version>
         <PackageId>Common.HttpClients</PackageId>
-        <DocumentationFile>Common.HttpClients.xml</DocumentationFile>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
