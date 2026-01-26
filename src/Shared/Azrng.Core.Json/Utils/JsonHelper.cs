@@ -23,5 +23,25 @@ namespace Azrng.Core.Json.Utils
             var jsonString = JsonSerializer.SerializeToUtf8Bytes(obj);
             return JsonSerializer.Deserialize<T>(jsonString);
         }
+
+        /// <summary>
+        /// 校验字符串是否是json字符串（通过try catch实现）
+        /// </summary>
+        /// <param name="jsonString"></param>
+        /// <returns></returns>
+        public static bool IsJsonString(this string jsonString)
+        {
+            if (string.IsNullOrEmpty(jsonString))
+                return false;
+            try
+            {
+                JsonSerializer.Deserialize<object>(jsonString);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
