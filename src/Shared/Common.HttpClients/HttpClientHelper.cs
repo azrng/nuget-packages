@@ -43,7 +43,8 @@ namespace Common.HttpClients
             return await _client.GetStringAsync(url, cancellation).ConfigureAwait(false);
         }
 
-        public async Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null, int? timeout = null,
+        public async Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null,
+                                         int? timeout = null,
                                          CancellationToken cancellation = default)
         {
             VerifyParam(url, bearerToken, headers);
@@ -320,7 +321,8 @@ namespace Common.HttpClients
 
             if (!string.IsNullOrWhiteSpace(bearerToken))
             {
-                _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bearerToken}");
+                var bearerTokenStr = bearerToken.StartsWith("Bearer ") ? bearerToken : "Bearer " + bearerToken;
+                _client.DefaultRequestHeaders.Add("Authorization", bearerTokenStr);
             }
 
             if (!(headers?.Count > 0))

@@ -13,7 +13,7 @@ namespace Common.Core.Test.Helper.UrlHelperTest
 
         [Theory]
         [InlineData("http://www.baidu.com/get/userinfo?userId=123&timestamp=13", "http://www.baidu.com")]
-        public void GetUrl_Ok(string str, string url)
+        public void GetUrl_ReturnOk(string str, string url)
         {
             var result = UrlHelper.ExtractUrl(str);
             _testOutputHelper.WriteLine(result);

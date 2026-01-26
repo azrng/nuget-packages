@@ -251,6 +251,8 @@ options.FailThrowException = true;
 
 ## 版本更新记录
 
+* 1.3.3
+  * 传递bearerToken的时候主动判断是否拼接Bearer头
 * 1.3.2
   * 更新jwtToken命名为bearerToken
 * 1.3.1
