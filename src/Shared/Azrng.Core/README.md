@@ -258,6 +258,8 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.15.0
+  * 枚举增加GetEnglishDescription
 * 1.14.0
   * 增加StringBuilderExtension扩展
 * 1.13.0

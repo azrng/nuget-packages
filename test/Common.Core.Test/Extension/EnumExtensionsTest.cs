@@ -7,13 +7,26 @@ namespace Common.Core.Test.Extension
     /// </summary>
     public class EnumExtensionsTest
     {
-        [Fact]
-        public void GetDescription_ReturnOk()
+        [Theory]
+        [InlineData(ScheduleTimeIntervalType.Morning,"早上")]
+        [InlineData(ScheduleTimeIntervalType.Afternoon,"下午")]
+        [InlineData(ScheduleTimeIntervalType.AllDay,"全天")]
+        [InlineData((ScheduleTimeIntervalType)4,"")]
+        public void GetDescription_ReturnOk(ScheduleTimeIntervalType scheduleTimeIntervalType,string description)
         {
-            var description = "下午";
-            var type = ScheduleTimeIntervalType.Afternoon;
+            var result = scheduleTimeIntervalType.GetDescription();
 
-            var result = type.GetDescription();
+            Assert.Equal(description, result);
+        }
+
+        [Theory]
+        [InlineData(ScheduleTimeIntervalType.Morning,"Morning")]
+        [InlineData(ScheduleTimeIntervalType.Afternoon,"Afternoon")]
+        [InlineData(ScheduleTimeIntervalType.AllDay,"All Day")]
+        [InlineData((ScheduleTimeIntervalType)4,"")]
+        public void GetEnglishDescription_ReturnOk(ScheduleTimeIntervalType scheduleTimeIntervalType,string description)
+        {
+            var result = scheduleTimeIntervalType.GetEnglishDescription();
 
             Assert.Equal(description, result);
         }

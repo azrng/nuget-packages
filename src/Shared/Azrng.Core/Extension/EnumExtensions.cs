@@ -12,6 +12,7 @@ namespace Azrng.Core.Extension
     public static class EnumExtensions
     {
         private static readonly ConcurrentDictionary<Enum, string> _descriptionCache = new();
+        private static readonly ConcurrentDictionary<Enum, string> _englishDescriptionCache = new();
 
         /// <summary>
         /// 获取枚举描述
@@ -25,18 +26,31 @@ namespace Azrng.Core.Extension
 
             return _descriptionCache.GetOrAdd(enumItem, key =>
             {
-                var fieldInfo = enumItem.GetType().GetField(enumItem.ToString());
-                if (fieldInfo == null)
+                var attribute = enumItem.GetType().CustomAttributeCommon<DescriptionAttribute>(enumItem.ToString());
+                if (attribute == null)
                     return string.Empty;
 
-                var infos = GetDescriptionAttr(fieldInfo);
-                if (infos is null || infos.Length == 0)
-                {
-                    return enumItem.ToString();
-                }
+                return attribute.Description;
+            });
+        }
 
-                var des = infos[0];
-                return des.Description;
+        /// <summary>
+        /// 获取枚举英文描述
+        /// </summary>
+        /// <param name="enumItem"></param>
+        /// <returns></returns>
+        public static string GetEnglishDescription(this Enum enumItem)
+        {
+            if (enumItem == null)
+                throw new ArgumentNullException(nameof(enumItem));
+
+            return _englishDescriptionCache.GetOrAdd(enumItem, key =>
+            {
+                var attribute = enumItem.GetType().CustomAttributeCommon<EnglishDescriptionAttribute>(enumItem.ToString());
+                if (attribute == null)
+                    return string.Empty;
+
+                return attribute.Value;
             });
         }
 
