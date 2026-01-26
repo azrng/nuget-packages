@@ -25,11 +25,10 @@ namespace Azrng.Core.NewtonsoftJson.ContractResolvers
             object? existingValue,
             JsonSerializer serializer)
         {
-            if ((reader.ValueType == (Type)null || reader.ValueType == typeof(long?)) && reader.Value == null)
-                return (object)null;
-            long result;
-            long.TryParse(reader.Value != null ? reader.Value.ToString() : "", out result);
-            return (object)result;
+            if ((reader.ValueType == null || reader.ValueType == typeof(long?)) && reader.Value == null)
+                return null;
+            long.TryParse(reader.Value != null ? reader.Value.ToString() : "", out var result);
+            return result;
         }
 
         /// <summary>写json</summary>
