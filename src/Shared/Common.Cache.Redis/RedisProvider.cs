@@ -67,7 +67,16 @@ namespace Common.Cache.Redis
             try
             {
                 var redisKey = GetKey(key);
-                var value = await GetAsync<T>(redisKey);
+
+                // 直接从 Redis 获取原始字符串值，避免重复调用 GetKey
+                var rawValue = await _redisManage.Database.StringGetAsync(redisKey);
+                T value = default;
+
+                if (rawValue.HasValue)
+                {
+                    value = GetObject<T>(rawValue);
+                }
+
                 if (value is null || value.Equals(default(T)))
                 {
                     _logger.LogInformation($"redis读取为空，开始执行查询操作：key:{key}");
@@ -104,7 +113,15 @@ namespace Common.Cache.Redis
             {
                 var redisKey = GetKey(key);
 
-                var value = await GetAsync<T>(redisKey);
+                // 直接从 Redis 获取原始字符串值，避免重复调用 GetKey
+                var rawValue = await _redisManage.Database.StringGetAsync(redisKey);
+                T value = default;
+
+                if (rawValue.HasValue)
+                {
+                    value = GetObject<T>(rawValue);
+                }
+
                 if (value is null || value.Equals(default(T)))
                 {
                     _logger.LogInformation($"redis读取为空，开始执行查询操作：key:{key}");
@@ -318,17 +335,23 @@ namespace Common.Cache.Redis
         /// <returns></returns>
         private string GetKey(string key)
         {
+            if (string.IsNullOrWhiteSpace(key))
+                return key;
+
             if (string.IsNullOrWhiteSpace(_redisConfig?.KeyPrefix))
             {
                 return key;
             }
 
-            if (!key.StartsWith(_redisConfig.KeyPrefix))
+            // 检查 key 是否已经包含前缀（包括冒号）
+            var fullPrefix = _redisConfig.KeyPrefix + ":";
+            if (key.StartsWith(fullPrefix, StringComparison.Ordinal))
             {
-                return _redisConfig.KeyPrefix + ":" + key;
+                return key;
             }
 
-            return key;
+            // 添加前缀
+            return fullPrefix + key;
         }
 
         /// <summary>
@@ -348,7 +371,9 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"JSON反序列化失败：{str}");
+                var preview = str != null && str.Length > 200 ? str[..200] : str;
+                _logger.LogError(ex, "JSON反序列化失败，目标类型：{TypeName}，数据长度：{DataLength}，数据内容：{DataPreview}...",
+                    typeof(T).Name, str?.Length ?? 0, preview);
                 return default;
             }
         }

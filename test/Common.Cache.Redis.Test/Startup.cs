@@ -17,7 +17,7 @@ namespace Common.Cache.Redis.Test
             services.AddRedisCacheStore(x =>
             {
                 x.ConnectionString = "172.16.127.100:25089,password=,DefaultDatabase=0";
-                x.KeyPrefix = "test";
+                x.KeyPrefix = "azrng";
                 x.CacheEmptyCollections = false;
             });
 
