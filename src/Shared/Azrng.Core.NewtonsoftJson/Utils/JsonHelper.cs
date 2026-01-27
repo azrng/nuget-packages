@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Azrng.Core.Extension;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace Azrng.Core.NewtonsoftJson.Utils
@@ -10,21 +11,10 @@ namespace Azrng.Core.NewtonsoftJson.Utils
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
+        [Obsolete]
         public static string ToJson(object obj)
         {
             var timeConverter = new IsoDateTimeConverter { DateTimeFormat = "yyyy-MM-dd HH:mm:ss" };
-            return JsonConvert.SerializeObject(obj, timeConverter);
-        }
-
-        /// <summary>
-        /// 对象转json字符串
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="datetimeFormats">设置时间格式</param>
-        /// <returns></returns>
-        public static string ToJson(object obj, string datetimeFormats)
-        {
-            var timeConverter = new IsoDateTimeConverter { DateTimeFormat = datetimeFormats };
             return JsonConvert.SerializeObject(obj, timeConverter);
         }
 
@@ -34,9 +24,37 @@ namespace Azrng.Core.NewtonsoftJson.Utils
         /// <typeparam name="T"></typeparam>
         /// <param name="json"></param>
         /// <returns></returns>
+        [Obsolete]
         public static T? ToObject<T>(string? json)
         {
             return json == null ? default : JsonConvert.DeserializeObject<T>(json);
+        }
+
+        /// <summary>
+        /// 序列化
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="serializerSettings"></param>
+        /// <returns></returns>
+        public static string Serialize(object obj, JsonSerializerSettings? serializerSettings = null)
+        {
+            if (serializerSettings is not null)
+                return JsonConvert.SerializeObject(obj, serializerSettings);
+
+            var timeConverter = new IsoDateTimeConverter { DateTimeFormat = "yyyy-MM-dd HH:mm:ss" };
+            return JsonConvert.SerializeObject(obj, timeConverter);
+        }
+
+        /// <summary>
+        /// 反序列化
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="json"></param>
+        /// <param name="serializerSettings"></param>
+        /// <returns></returns>
+        public static T? Deserialize<T>(string? json, JsonSerializerSettings? serializerSettings = null)
+        {
+            return json.IsNullOrWhiteSpace() ? default : JsonConvert.DeserializeObject<T>(json, serializerSettings);
         }
 
         /// <summary>

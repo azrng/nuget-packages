@@ -27,7 +27,7 @@ namespace Azrng.Core.Extension
                 return null;
             }
 
-            var val = Attribute.GetCustomAttribute(field, typeof(T), inherit: false) as T;
+            var val = Attribute.GetCustomAttribute(field, typeof(T), inherit: true) as T;
             return val;
         }
 
