@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Services/">
+    <Project Path="src/Services/PostgresSqlSample/PostgresSqlSample.csproj" />
+  </Folder>
+  <Folder Name="/Shared/" />
+  <Folder Name="/Shared/Db/">
+    <Project Path="src/Shared/Azrng.EFCore.AutoAudit/Azrng.EFCore.AutoAudit.csproj" />
+    <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
+    <Project Path="src/Shared/Common.Db.Core/Common.Db.Core.csproj" />
+    <Project Path="src/Shared/Common.EFCore.InMemory/Common.EFCore.InMemory.csproj" />
+    <Project Path="src/Shared/Common.EFCore.MySQL/Common.EFCore.MySQL.csproj" />
+    <Project Path="src/Shared/Common.EFCore.PostgresSql/Common.EFCore.PostgresSQL.csproj" />
+    <Project Path="src/Shared/Common.EFCore.SQLite/Common.EFCore.SQLite.csproj" />
+    <Project Path="src/Shared/Common.EFCore.SQLServer/Common.EFCore.SQLServer.csproj" />
+    <Project Path="src/Shared/Common.EFCore/Common.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="test/Azrng.EFCore.AutoAudit.Test/Azrng.EFCore.AutoAudit.Test.csproj" />
+    <Project Path="test/Common.EFCore.PostgreSql.Test/Common.EFCore.PostgreSql.Test.csproj" />
+  </Folder>
+</Solution>

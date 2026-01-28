@@ -1,0 +1,94 @@
+<Solution>
+  <Folder Name="/Shared/">
+    <Project Path="src\Shared\Common.Email\Common.Email.csproj" />
+    <Project Path="src\Shared\Common.QRCode\Common.QRCode.csproj" />
+    <Project Path="src\Shared\CommonCollect\CommonCollect.csproj" />
+    <Project Path="src\Shared\StudyUse\StudyUse.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/">
+    <Project Path="src\Shared\Azrng.AspNetCore.Core\Azrng.AspNetCore.Core.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.DbEnvConfig\Azrng.AspNetCore.DbEnvConfig.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Inject\Azrng.AspNetCore.Inject.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Job.Quartz\Azrng.AspNetCore.Job.Quartz.csproj" />
+    <Project Path="src\Shared\Azrng.ConsoleApp.DependencyInjection\Azrng.ConsoleApp.DependencyInjection.csproj" />
+    <Project Path="src\Shared\Azrng.SqlMigration\Azrng.SqlMigration.csproj" />
+    <Project Path="src\Shared\Azrng.Swashbuckle\Azrng.Swashbuckle.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/Authentication/">
+    <Project Path="src\Shared\Azrng.AspNetCore.Authentication.Basic\Azrng.AspNetCore.Authentication.Basic.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Authentication.JwtBearer\Azrng.AspNetCore.Authentication.JwtBearer.csproj" />
+    <Project Path="src\Shared\Azrng.AspNetCore.Authorization.Default\Azrng.AspNetCore.Authorization.Default.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/Json/">
+    <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
+    <Project Path="src\Shared\Azrng.Core.NewtonsoftJson\Azrng.Core.NewtonsoftJson.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Cache/">
+    <Project Path="src\Shared\Azrng.Cache.Core\Azrng.Cache.Core.csproj" />
+    <Project Path="src\Shared\Azrng.Cache.FreeRedis\Azrng.Cache.FreeRedis.csproj" />
+    <Project Path="src\Shared\Common.Cache.CSRedis\Common.Cache.CSRedis.csproj" />
+    <Project Path="src\Shared\Common.Cache.MemoryCache\Common.Cache.MemoryCache.csproj" />
+    <Project Path="src\Shared\Common.Cache.Redis\Common.Cache.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/">
+    <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/Ado/">
+    <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
+    <Project Path="src\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj" />
+    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DataBase/EFCore/">
+    <Project Path="src\Shared\Azrng.EFCore.AutoAudit\Azrng.EFCore.AutoAudit.csproj" />
+    <Project Path="src\Shared\Common.Db.Core\Common.Db.Core.csproj" />
+    <Project Path="src\Shared\Common.EFCore.InMemory\Common.EFCore.InMemory.csproj" />
+    <Project Path="src\Shared\Common.EFCore.MySQL\Common.EFCore.MySQL.csproj" />
+    <Project Path="src\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSql.csproj" />
+    <Project Path="src\Shared\Common.EFCore.SQLite\Common.EFCore.SQLite.csproj" />
+    <Project Path="src\Shared\Common.EFCore.SQLServer\Common.EFCore.SQLServer.csproj" />
+    <Project Path="src\Shared\Common.EFCore\Common.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DistributeLock/">
+    <Project Path="src\Shared\Azrng.DistributeLock.Core\Azrng.DistributeLock.Core.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.InMemory\Azrng.DistributeLock.InMemory.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.PostgreSql\Azrng.DistributeLock.PostgreSql.csproj" />
+    <Project Path="src\Shared\Azrng.DistributeLock.Redis\Azrng.DistributeLock.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Shared/EventBus/">
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.Core\Azrng.EventBus.Core.csproj" />
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.InMemory\Azrng.EventBus.InMemory.csproj" />
+    <Project Path="src\Shared\NewEventBus\Azrng.EventBus.RabbitMQ\Azrng.EventBus.RabbitMQ.csproj" />
+  </Folder>
+  <Folder Name="/Shared/FileStore/">
+    <Project Path="src\Shared\Azrng.MinioStore\Azrng.MinioStore.csproj" />
+    <Project Path="src\Shared\Azrng.S3Store\Azrng.S3Store.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Helper/">
+    <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
+    <Project Path="src\Shared\Azrng.Office.NPOI\Azrng.Office.NPOI.csproj" />
+    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
+    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
+    <Project Path="src\Shared\Common\Common.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Http/">
+    <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
+    <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
+  </Folder>
+  <Folder Name="/Shared/SettingConfig/">
+    <Project Path="src\Shared\Azrng.SettingConfig.BasicAuthorization\Azrng.SettingConfig.BasicAuthorization.csproj" />
+    <Project Path="src\Shared\Azrng.SettingConfig\Azrng.SettingConfig.csproj" />
+  </Folder>
+  <Folder Name="/Shared/ThirdParty/">
+    <Project Path="src\Shared\Azrng.AliyunSms\Azrng.AliyunSms.csproj" />
+    <Project Path="src\Shared\Azrng.Notification.QYWeiXinRobot\Azrng.Notification.QYWeiXinRobot.csproj" />
+    <Project Path="src\Shared\Azrng.YuntongxunSms\Azrng.YuntongxunSms.csproj" />
+    <Project Path="src\Shared\Common.YuQueSdk\Common.YuQueSdk.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+    <File Path="push-packer.sh" />
+  </Folder>
+</Solution>
