@@ -62,7 +62,7 @@ public class MaxComputeConnection : DbConnection
 
     public override string Database => _config.Project ?? string.Empty;
 
-    public override string DataSource => _config.Url;
+    public override string DataSource => _config.ServerUrl;
 
     public override string ServerVersion => "1.0";
 
@@ -148,7 +148,7 @@ public class MaxComputeConnection : DbConnection
     {
         var parts = new List<string>
         {
-            $"Url={config.Url}",
+            $"Url={config.ServerUrl}",
             $"AccessId={config.AccessId}",
             $"SecretKey={config.SecretKey}",
             $"JdbcUrl={config.JdbcUrl}"
@@ -183,7 +183,7 @@ public class MaxComputeConnection : DbConnection
             switch (key)
             {
                 case "Url":
-                    config.Url = value;
+                    config.ServerUrl = value;
                     break;
                 case "AccessId":
                     config.AccessId = value;

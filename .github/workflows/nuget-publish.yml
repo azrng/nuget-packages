@@ -25,9 +25,35 @@ jobs:
       - name: Build # 编译
         run: dotnet build NugetPackages.slnx --configuration Release
 
-      - name: Pack NuGet package # 打包所有类库项目
+      - name: Find projects with GeneratePackageOnBuild # 查找需要打包的项目
         run: |
-          dotnet pack NugetPackages.slnx --configuration Release --no-build
+          $projects = Get-ChildItem -Path . -Filter *.csproj -Recurse |
+            Where-Object {
+              $content = Get-Content $_.FullName -Raw
+              $_.DirectoryName -notmatch '[\\/]obj[\\/]' -and
+              $content -match '<GeneratePackageOnBuild>\s*True\s*</GeneratePackageOnBuild>'
+            }
+          if ($projects) {
+            $projectList = $projects.FullName -join ' '
+            Write-Output "PROJECTS=$projectList" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host "Found projects with GeneratePackageOnBuild=True:"
+            $projects | ForEach-Object { Write-Host "  - $($_.FullName)" }
+          } else {
+            Write-Host "No projects found with GeneratePackageOnBuild=True"
+            Write-Output "PROJECTS=" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+        shell: pwsh
+
+      - name: Pack NuGet package # 打包指定项目
+        if: env.PROJECTS != ''
+        run: |
+          foreach ($project in "${{ env.PROJECTS }}".split(' ')) {
+            if ($project.Trim() -ne '') {
+              Write-Host "Packing: $project"
+              dotnet pack $project --configuration Release --no-build
+            }
+          }
+        shell: pwsh
 
       # 需在github库中设置${{ secrets.NUGET_API_KEY }}
       - name: Publish NuGet package

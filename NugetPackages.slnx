@@ -120,6 +120,7 @@
     <Project Path="test\Common.Cache.Redis.Test\Common.Cache.Redis.Test.csproj" />
   </Folder>
   <Folder Name="/Test/DataBase/">
+    <Project Path="test/Azrng.NMaxCompute.Test/Azrng.NMaxCompute.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.MySql.Test\Common.DbSystemOperator.MySql.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.Pgsql.Test\Common.DbSystemOperator.Pgsql.Test.csproj" />

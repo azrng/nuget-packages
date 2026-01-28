@@ -93,7 +93,7 @@ public static class MaxComputeConnectionFactory
 
         var config = new MaxComputeConfig
         {
-            Url = url,
+            ServerUrl = url,
             AccessId = accessId,
             SecretKey = secretKey,
             JdbcUrl = jdbcUrl,

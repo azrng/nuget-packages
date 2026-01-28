@@ -6,9 +6,9 @@ namespace Azrng.NMaxCompute.Models;
 public class MaxComputeConfig
 {
     /// <summary>
-    /// REST API 地址
+    /// REST API Server 地址
     /// </summary>
-    public string Url { get; set; } = string.Empty;
+    public string ServerUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Access ID
@@ -40,7 +40,7 @@ public class MaxComputeConfig
     /// </summary>
     public virtual bool IsValid()
     {
-        return !string.IsNullOrWhiteSpace(Url) &&
+        return !string.IsNullOrWhiteSpace(ServerUrl) &&
                !string.IsNullOrWhiteSpace(AccessId) &&
                !string.IsNullOrWhiteSpace(SecretKey) &&
                !string.IsNullOrWhiteSpace(JdbcUrl);
