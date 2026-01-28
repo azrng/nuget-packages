@@ -51,12 +51,13 @@
     <Project Path="src\Shared\Common.Cache.Redis\Common.Cache.Redis.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/">
-    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
-    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
     <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/Ado/">
+    <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
     <Project Path="src\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj" />
+    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/EFCore/">
     <Project Path="src\Shared\Azrng.EFCore.AutoAudit\Azrng.EFCore.AutoAudit.csproj" />
