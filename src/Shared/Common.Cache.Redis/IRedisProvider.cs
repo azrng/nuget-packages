@@ -21,38 +21,54 @@ namespace Common.Cache.Redis
         Task<long> PublishAsync<T>(string channel, T message);
 
         /// <summary>
-        /// 订阅频道，当有消息发布时触发回调
+        /// 订阅频道，当有消息发布时触发回调，返回订阅ID
         /// </summary>
         /// <typeparam name="T">消息类型</typeparam>
         /// <param name="channel">频道名称</param>
         /// <param name="handler">消息处理回调</param>
         /// <param name="cancellationToken">取消令牌</param>
-        /// <returns>订阅任务，可用于取消订阅</returns>
-        Task SubscribeAsync<T>(string channel, Action<T> handler, CancellationToken cancellationToken = default);
+        /// <returns>订阅ID，用于后续取消订阅</returns>
+        Task<Guid> SubscribeAsync<T>(string channel, Action<T> handler, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 取消订阅频道
+        /// 取消指定订阅者的订阅
+        /// </summary>
+        /// <param name="channel">频道名称</param>
+        /// <param name="subscriptionId">订阅ID</param>
+        /// <returns></returns>
+        Task UnsubscribeAsync(string channel, Guid subscriptionId);
+
+        /// <summary>
+        /// 强制取消频道的所有订阅（紧急情况使用）
         /// </summary>
         /// <param name="channel">频道名称</param>
         /// <returns></returns>
-        Task UnsubscribeAsync(string channel);
+        Task UnsubscribeAllAsync(string channel);
 
         /// <summary>
-        /// 订阅匹配模式的频道
+        /// 订阅匹配模式的频道，返回订阅ID
         /// </summary>
         /// <typeparam name="T">消息类型</typeparam>
         /// <param name="pattern">频道匹配模式，支持通配符：? 表示任意单个字符，* 表示任意多个字符</param>
         /// <param name="handler">消息处理回调，参数为频道名和消息内容</param>
         /// <param name="cancellationToken">取消令牌</param>
-        /// <returns></returns>
-        Task SubscribePatternAsync<T>(string pattern, Action<string, T> handler, CancellationToken cancellationToken = default);
+        /// <returns>订阅ID</returns>
+        Task<Guid> SubscribePatternAsync<T>(string pattern, Action<string, T> handler, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 取消模式订阅
+        /// 取消指定模式订阅者的订阅
+        /// </summary>
+        /// <param name="pattern">匹配模式</param>
+        /// <param name="subscriptionId">订阅ID</param>
+        /// <returns></returns>
+        Task UnsubscribePatternAsync(string pattern, Guid subscriptionId);
+
+        /// <summary>
+        /// 强制取消模式的所有订阅（紧急情况使用）
         /// </summary>
         /// <param name="pattern">匹配模式</param>
         /// <returns></returns>
-        Task UnsubscribePatternAsync(string pattern);
+        Task UnsubscribePatternAllAsync(string pattern);
 
         #endregion
     }
