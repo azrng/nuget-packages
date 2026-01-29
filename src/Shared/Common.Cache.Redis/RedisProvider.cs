@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Common.Cache.Redis
@@ -15,6 +16,7 @@ namespace Common.Cache.Redis
         private readonly RedisConfig _redisConfig;
         private readonly RedisManage _redisManage;
         private readonly ILogger<RedisProvider> _logger;
+        private readonly Dictionary<string, ChannelMessageQueue> _activeSubscriptions = new();
 
         public RedisProvider(IOptions<RedisConfig> options, RedisManage redisManage,
                              ILogger<RedisProvider> logger)
@@ -456,5 +458,259 @@ namespace Common.Cache.Redis
 
             return _redisConfig.CacheEmptyCollections || !IsEmptyCollectionOrString(value);
         }
+
+        #region 发布/订阅
+
+        /// <summary>
+        /// 发布消息到指定频道
+        /// </summary>
+        public async Task<long> PublishAsync<T>(string channel, T message)
+        {
+            if (string.IsNullOrWhiteSpace(channel))
+                throw new ArgumentNullException(nameof(channel));
+
+            try
+            {
+                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
+                var jsonMessage = GetJsonStr(message);
+
+                if (string.IsNullOrEmpty(jsonMessage))
+                {
+                    _logger.LogWarning("发布消息失败，消息序列化为空，频道：{Channel}", channel);
+                    return 0;
+                }
+
+                var result = await subscriber.PublishAsync(RedisChannel.Literal(channel), jsonMessage);
+                _logger.LogInformation("发布消息成功，频道：{Channel}，订阅者数量：{SubscriberCount}", channel, result);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "发布消息失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// 订阅频道，当有消息发布时触发回调
+        /// </summary>
+        public Task SubscribeAsync<T>(string channel, Action<T> handler, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(channel))
+                throw new ArgumentNullException(nameof(channel));
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            try
+            {
+                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
+
+                // 如果已经订阅过该频道，先取消订阅
+                if (_activeSubscriptions.TryGetValue(channel, out var existingQueue))
+                {
+                    existingQueue.CancellationTokenSource.Cancel();
+                    existingQueue.CancellationTokenSource.Dispose();
+                    _activeSubscriptions.Remove(channel);
+                }
+
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var queue = new ChannelMessageQueue(channel, cts);
+
+                _activeSubscriptions[channel] = queue;
+
+                // 订阅频道
+                subscriber.Subscribe(RedisChannel.Literal(channel), (ch, value) =>
+                {
+                    if (cts.Token.IsCancellationRequested)
+                        return;
+
+                    try
+                    {
+                        var message = GetObject<T>(value);
+                        if (message != null)
+                        {
+                            handler(message);
+                            _logger.LogDebug("收到消息，频道：{Channel}，消息类型：{MessageType}", channel, typeof(T).Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "处理订阅消息失败，频道：{Channel}", channel);
+                    }
+                });
+
+                _logger.LogInformation("订阅频道成功：{Channel}", channel);
+
+                // 返回一个任务，直到取消令牌被触发
+                return Task.Run(async () =>
+                {
+                    try
+                    {
+                        while (!cts.Token.IsCancellationRequested)
+                        {
+                            await Task.Delay(1000, cts.Token);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // 正常取消，不记录错误
+                    }
+                    finally
+                    {
+                        await UnsubscribeAsync(channel);
+                    }
+                }, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "订阅频道失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// 取消订阅频道
+        /// </summary>
+        public Task UnsubscribeAsync(string channel)
+        {
+            if (string.IsNullOrWhiteSpace(channel))
+                throw new ArgumentNullException(nameof(channel));
+
+            try
+            {
+                if (_activeSubscriptions.TryGetValue(channel, out var queue))
+                {
+                    queue.CancellationTokenSource.Cancel();
+                    queue.CancellationTokenSource.Dispose();
+                    _activeSubscriptions.Remove(channel);
+                }
+
+                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
+                subscriber.Unsubscribe(RedisChannel.Literal(channel));
+
+                _logger.LogInformation("取消订阅频道成功：{Channel}", channel);
+                return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取消订阅频道失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// 订阅匹配模式的频道
+        /// </summary>
+        public Task SubscribePatternAsync<T>(string pattern, Action<string, T> handler, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                throw new ArgumentNullException(nameof(pattern));
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            try
+            {
+                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
+
+                // 如果已经订阅过该模式，先取消订阅
+                var patternKey = $"pattern:{pattern}";
+                if (_activeSubscriptions.TryGetValue(patternKey, out var existingQueue))
+                {
+                    existingQueue.CancellationTokenSource.Cancel();
+                    existingQueue.CancellationTokenSource.Dispose();
+                    _activeSubscriptions.Remove(patternKey);
+                }
+
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var queue = new ChannelMessageQueue(patternKey, cts);
+
+                _activeSubscriptions[patternKey] = queue;
+
+                // 订阅模式
+                subscriber.Subscribe(RedisChannel.Pattern(pattern), (ch, value) =>
+                {
+                    if (cts.Token.IsCancellationRequested)
+                        return;
+
+                    try
+                    {
+                        var message = GetObject<T>(value);
+                        if (message != null)
+                        {
+                            var channelName = ch.ToString();
+                            handler(channelName, message);
+                            _logger.LogDebug("收到模式消息，模式：{Pattern}，频道：{Channel}，消息类型：{MessageType}",
+                                pattern, channelName, typeof(T).Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "处理模式订阅消息失败，模式：{Pattern}", pattern);
+                    }
+                });
+
+                _logger.LogInformation("订阅频道模式成功：{Pattern}", pattern);
+
+                // 返回一个任务，直到取消令牌被触发
+                return Task.Run(async () =>
+                {
+                    try
+                    {
+                        while (!cts.Token.IsCancellationRequested)
+                        {
+                            await Task.Delay(1000, cts.Token);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // 正常取消，不记录错误
+                    }
+                    finally
+                    {
+                        await UnsubscribePatternAsync(pattern);
+                    }
+                }, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "订阅频道模式失败，模式：{Pattern}，消息：{Message}", pattern, ex.GetExceptionAndStack());
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// 取消模式订阅
+        /// </summary>
+        public Task UnsubscribePatternAsync(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                throw new ArgumentNullException(nameof(pattern));
+
+            try
+            {
+                var patternKey = $"pattern:{pattern}";
+
+                if (_activeSubscriptions.TryGetValue(patternKey, out var queue))
+                {
+                    queue.CancellationTokenSource.Cancel();
+                    queue.CancellationTokenSource.Dispose();
+                    _activeSubscriptions.Remove(patternKey);
+                }
+
+                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
+                subscriber.Unsubscribe(RedisChannel.Pattern(pattern));
+
+                _logger.LogInformation("取消订阅频道模式成功：{Pattern}", pattern);
+                return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取消订阅频道模式失败，模式：{Pattern}，消息：{Message}", pattern, ex.GetExceptionAndStack());
+                return Task.CompletedTask;
+            }
+        }
+
+        #endregion
     }
 }
