@@ -508,26 +508,26 @@ namespace Common.Cache.Redis
             {
                 var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
 
-                // 检查是否已经有该频道的订阅
-                if (!_activeSubscriptions.TryGetValue(channel, out var subscription))
+                // 使用 GetOrAdd 原子操作，避免竞态条件
+                var subscription = _activeSubscriptions.GetOrAdd(channel, ch =>
                 {
                     // 创建新的订阅
                     var cts = new CancellationTokenSource();
-                    subscription = new ChannelSubscription(channel, cts);
-                    _activeSubscriptions[channel] = subscription;
+                    var newSubscription = new ChannelSubscription(ch, cts);
 
                     // 订阅 Redis 频道
-                    subscriber.Subscribe(RedisChannel.Literal(channel), (ch, value) =>
+                    subscriber.Subscribe(RedisChannel.Literal(ch), (redisCh, value) =>
                     {
                         if (cts.Token.IsCancellationRequested)
                             return;
 
                         // 分发消息给所有订阅者
-                        subscription.Broadcast(value, _logger, this);
+                        newSubscription.Broadcast(value, _logger, this);
                     });
 
-                    _logger.LogInformation("创建新订阅，频道：{Channel}", channel);
-                }
+                    _logger.LogInformation("创建新订阅，频道：{Channel}", ch);
+                    return newSubscription;
+                });
 
                 // 生成订阅ID并添加订阅者
                 var subscriptionId = Guid.NewGuid();
@@ -667,6 +667,8 @@ namespace Common.Cache.Redis
                 if (_activeSubscriptions.TryGetValue(channel, out var subscription))
                 {
                     subscription.RemoveSubscriber(subscriberId);
+                    _logger.LogInformation("移除订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，剩余订阅者数量：{Count}",
+                        channel, subscriberId, subscription.SubscriberCount);
 
                     // 如果没有订阅者了，取消整个频道订阅
                     if (subscription.SubscriberCount == 0)
@@ -680,6 +682,10 @@ namespace Common.Cache.Redis
 
                         _logger.LogInformation("频道 {Channel} 没有订阅者了，已取消 Redis 订阅", channel);
                     }
+                }
+                else
+                {
+                    _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 不存在或已被移除", channel);
                 }
 
                 return Task.CompletedTask;

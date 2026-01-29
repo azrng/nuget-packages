@@ -324,7 +324,7 @@ await newsService.SubscribeAllNewsAsync(cts.Token);
 
 ## 版本更新记录
 
-* 1.3.3
+* 1.4.0
   * **新增**：发布订阅功能支持
     * 支持频道订阅和模式订阅
     * 支持多订阅者管理
