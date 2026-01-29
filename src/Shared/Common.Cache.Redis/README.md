@@ -11,6 +11,7 @@
 - 支持模糊匹配删除
 - 支持 Key 前缀配置
 - 支持多框架：.NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
+- **支持发布/订阅功能**
 
 ## 安装
 
@@ -101,6 +102,204 @@ await _cacheProvider.RemoveAsync(keysToDelete);
 await _cacheProvider.RemoveMatchKeyAsync("user_*");
 ```
 
+### 发布订阅功能
+
+Common.Cache.Redis 提供了完整的 Redis 发布订阅功能支持，支持频道订阅和模式订阅。
+
+#### 发布消息
+
+```csharp
+// 发布简单字符串消息
+var subscriberCount = await _redisProvider.PublishAsync("user-channel", "Hello World");
+
+// 发布对象消息（会自动序列化为 JSON）
+var user = new UserInfo { Name = "张三", Age = 25 };
+await _redisProvider.PublishAsync("user-channel", user);
+```
+
+#### 订阅频道
+
+订阅频道会返回一个订阅ID，可以用于后续取消订阅：
+
+```csharp
+// 订阅频道，返回订阅ID
+var subscriptionId = await _redisProvider.SubscribeAsync<string>("user-channel", message =>
+{
+    Console.WriteLine($"收到消息: {message}");
+});
+
+// 订阅对象消息
+await _redisProvider.SubscribeAsync<UserInfo>("user-channel", user =>
+{
+    Console.WriteLine($"用户: {user.Name}, 年龄: {user.Age}");
+});
+```
+
+#### 多订阅者支持
+
+同一频道可以有多个订阅者，每个订阅者都会收到消息：
+
+```csharp
+// 订阅者1
+var subscriptionId1 = await _redisProvider.SubscribeAsync<string>("news-channel", message =>
+{
+    Console.WriteLine($"订阅者1收到: {message}");
+});
+
+// 订阅者2
+var subscriptionId2 = await _redisProvider.SubscribeAsync<string>("news-channel", message =>
+{
+    Console.WriteLine($"订阅者2收到: {message}");
+});
+
+// 发布消息，两个订阅者都会收到
+await _redisProvider.PublishAsync("news-channel", "Breaking news!");
+```
+
+#### 取消订阅
+
+有两种方式取消订阅：
+
+**1. 取消特定订阅者**
+
+```csharp
+// 取消指定ID的订阅
+await _redisProvider.UnsubscribeAsync("user-channel", subscriptionId);
+```
+
+**2. 强制取消频道所有订阅**
+
+```csharp
+// 强制取消该频道的所有订阅（紧急情况使用）
+await _redisProvider.UnsubscribeAllAsync("user-channel");
+```
+
+#### 使用取消令牌自动取消
+
+推荐使用 `CancellationToken` 来管理订阅生命周期：
+
+```csharp
+using var cts = new CancellationTokenSource();
+
+// 订阅并传入取消令牌
+var subscriptionId = await _redisProvider.SubscribeAsync<string>("user-channel", message =>
+{
+    Console.WriteLine($"收到消息: {message}");
+}, cts.Token);
+
+// 当不再需要订阅时，取消令牌
+cts.Cancel(); // 订阅会自动清理
+```
+
+#### 模式订阅
+
+支持通配符模式订阅，可以匹配多个频道：
+
+```csharp
+// 订阅所有以 "user:" 开头的频道
+var subscriptionId = await _redisProvider.SubscribePatternAsync<UserInfo>("user:*", (channel, user) =>
+{
+    Console.WriteLine($"频道 {channel} 收到用户消息: {user.Name}");
+});
+
+// 发布到不同频道
+await _redisProvider.PublishAsync("user:1", new UserInfo { Name = "张三" });
+await _redisProvider.PublishAsync("user:2", new UserInfo { Name = "李四" });
+// 两个消息都会被接收到
+```
+
+**模式通配符规则：**
+- `*` 匹配多个任意字符
+- `?` 匹配单个任意字符
+- `[]` 匹配指定范围内的字符
+
+例如：
+- `user_*` 匹配所有以 "user_" 开头的频道
+- `user:_?` 匹配类似 "user:_a", "user:_1" 的频道
+- `user:[1-3]` 匹配 user:_1, user:_2, user:_3
+
+**取消模式订阅：**
+
+```csharp
+// 取消指定模式订阅
+await _redisProvider.UnsubscribePatternAsync("user:*", subscriptionId);
+
+// 强制取消模式所有订阅
+await _redisProvider.UnsubscribePatternAllAsync("user:*");
+```
+
+#### 完整示例
+
+```csharp
+public class NewsService
+{
+    private readonly IRedisProvider _redisProvider;
+
+    public NewsService(IRedisProvider redisProvider)
+    {
+        _redisProvider = redisProvider;
+    }
+
+    // 发布新闻
+    public async Task PublishNewsAsync(string category, string news)
+    {
+        var channel = $"news:{category}";
+        await _redisProvider.PublishAsync(channel, news);
+        Console.WriteLine($"已发布新闻到频道 {channel}");
+    }
+
+    // 订阅新闻
+    public async Task SubscribeNewsAsync(string category, CancellationToken cancellationToken = default)
+    {
+        var channel = $"news:{category}";
+        var subscriptionId = await _redisProvider.SubscribeAsync<string>(channel, news =>
+        {
+            Console.WriteLine($"[{category}] 收到新闻: {news}");
+            // 处理接收到的新闻...
+        }, cancellationToken);
+
+        Console.WriteLine($"已订阅频道 {channel}，订阅ID: {subscriptionId}");
+        return subscriptionId;
+    }
+
+    // 订阅所有类别的新闻
+    public async Task SubscribeAllNewsAsync(CancellationToken cancellationToken = default)
+    {
+        var pattern = "news:*";
+        var subscriptionId = await _redisProvider.SubscribePatternAsync<string>(pattern, (channel, news) =>
+        {
+            var category = channel.Replace("news:", "");
+            Console.WriteLine($"[{category}] 收到新闻: {news}");
+        }, cancellationToken);
+
+        Console.WriteLine($"已订阅所有新闻频道，订阅ID: {subscriptionId}");
+        return subscriptionId;
+    }
+}
+
+// 使用示例
+var newsService = new NewsService(redisProvider);
+
+// 发布新闻
+await newsService.PublishNewsAsync("sports", "今日足球比赛结果");
+await newsService.PublishNewsAsync("tech", "新款智能手机发布");
+
+// 订阅体育新闻
+using var cts = new CancellationTokenSource();
+await newsService.SubscribeNewsAsync("sports", cts.Token);
+
+// 订阅所有新闻
+await newsService.SubscribeAllNewsAsync(cts.Token);
+```
+
+#### 注意事项
+
+1. **订阅者数量**：`PublishAsync` 返回的订阅者数量是 Redis 服务器看到的连接数，可能与本地订阅者数量不同
+2. **多订阅者**：同一频道的多个订阅者共享同一个 Redis 连接，但都能独立接收消息
+3. **取消清理**：当最后一个订阅者取消后，Redis 订阅会自动清理
+4. **线程安全**：订阅和取消操作都是线程安全的
+5. **异常处理**：订阅回调中的异常会被捕获并记录，不会影响其他订阅者
+
 ### 配置选项
 
 [RedisConfig]() 类提供了以下配置选项：
@@ -125,6 +324,14 @@ await _cacheProvider.RemoveMatchKeyAsync("user_*");
 
 ## 版本更新记录
 
+* 1.3.3
+  * **新增**：发布订阅功能支持
+    * 支持频道订阅和模式订阅
+    * 支持多订阅者管理
+    * 支持通过订阅ID精确取消订阅
+    * 支持强制取消所有订阅
+  * 优化：修复 GetOrCreateAsync 重复调用 GetKey 的问题
+  * 优化：改进 GetKey 方法的前缀检查逻辑
 * 1.3.2
   * 更新GetOrCreateAsync方法
 * 1.3.1
