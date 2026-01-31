@@ -23,6 +23,9 @@ namespace Azrng.Core.Helpers
 
                 var response = await client.GetStringAsync(serviceUrl);
 
+                if (string.IsNullOrEmpty(response) || response.Length < 29)
+                    return null;
+
                 var time = response.Substring(19, 10).ToInt64().ToDateTime(true);
 
                 return time;

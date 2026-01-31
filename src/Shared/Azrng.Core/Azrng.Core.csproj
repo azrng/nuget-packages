@@ -7,6 +7,7 @@
         <Description>基本的公共核心类库</Description>
         <Version>1.15.0</Version>
         <PackageId>Azrng.Core</PackageId>
+        <Nullable>enable</Nullable>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <LangVersion>latest</LangVersion>

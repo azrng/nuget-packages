@@ -161,15 +161,17 @@ namespace Azrng.Core.Extension
 
             //统一管理参数，保证参数一致，否则会报错
             var visitor = new PredicateExpressionVisitor(parameter);
-            Expression<Func<T, bool>>? result = null;
+            Expression<Func<T, bool>>? result = express;
 
             //合并表达式
             foreach (var curExpression in arrayExpress)
             {
                 //表达式树内容
-                var left = visitor.Visit(result.Body);
+                var left = result != null ? visitor.Visit(result.Body) : null;
                 var right = visitor.Visit(curExpression.Body);
-                result = Expression.Lambda<Func<T, bool>>(Expression.AndAlso(left, right), parameter);
+                result = Expression.Lambda<Func<T, bool>>(
+                    left != null ? Expression.AndAlso(left, right) : right,
+                    parameter);
             }
 
             return result;
@@ -210,15 +212,17 @@ namespace Azrng.Core.Extension
 
             //统一管理参数，保证参数一致，否则会报错
             var visitor = new PredicateExpressionVisitor(parameter);
-            Expression<Func<T, bool>>? result = null;
+            Expression<Func<T, bool>>? result = express;
 
             //合并表达式
             foreach (var curExpression in arrayExpress)
             {
                 //表达式树内容
-                var left = visitor.Visit(result.Body);
+                var left = result != null ? visitor.Visit(result.Body) : null;
                 var right = visitor.Visit(curExpression.Body);
-                result = Expression.Lambda<Func<T, bool>>(Expression.OrElse(left, right), parameter);
+                result = Expression.Lambda<Func<T, bool>>(
+                    left != null ? Expression.OrElse(left, right) : right,
+                    parameter);
             }
 
             return result;

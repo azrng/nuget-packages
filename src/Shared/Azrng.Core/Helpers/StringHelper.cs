@@ -15,6 +15,9 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string CompressText(string originStr)
         {
+            if (string.IsNullOrEmpty(originStr))
+                return originStr ?? string.Empty;
+
             // 移除换行符和回车符
             var compressed = originStr.Replace("\r", "").Replace("\n", "");
 
@@ -141,7 +144,8 @@ namespace Azrng.Core.Helpers
             return regex.Replace(input, match =>
             {
                 var key = match.Value;
-                return replacements.FirstOrDefault(x => x.Key == key).Value;
+                var kvp = replacements.FirstOrDefault(x => x.Key == key);
+                return kvp.Value ?? string.Empty;
             });
         }
     }

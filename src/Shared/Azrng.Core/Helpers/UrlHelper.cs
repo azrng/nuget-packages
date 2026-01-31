@@ -24,7 +24,7 @@ namespace Azrng.Core.Helpers
             var uri = new Uri(url);
             var query = HttpUtility.ParseQueryString(uri.Query).ToString();
             if (query.IsNullOrWhiteSpace())
-                return (url, null)!;
+                return (url, string.Empty);
 
             // 分割参数
             var parameters = HttpUtility.ParseQueryString(query!);
