@@ -30,14 +30,6 @@ namespace Azrng.Core
         /// <returns></returns>
         T Clone<T>(T obj) where T : class;
 
-        // /// <summary>
-        // /// 对象转字典
-        // /// </summary>
-        // /// <param name="obj"></param>
-        // /// <typeparam name="T"></typeparam>
-        // /// <returns></returns>
-        // Dictionary<string, object> ToDictionary<T>(T obj) where T : class;
-
         /// <summary>
         /// json字符串转对象集合
         /// </summary>

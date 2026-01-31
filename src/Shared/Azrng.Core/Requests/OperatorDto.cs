@@ -8,22 +8,22 @@ namespace Azrng.Core.Requests
         /// <summary>
         /// 用户ID
         /// </summary>
-        public T UserId { get; set; }
+        public T UserId { get; set; } = default!;
 
         /// <summary>
         /// 账号
         /// </summary>
-        public string Account { get; set; }
+        public string Account { get; set; } = string.Empty;
 
         /// <summary>
         /// 真实姓名
         /// </summary>
-        public string RealName { get; set; }
+        public string RealName { get; set; } = string.Empty;
 
         /// <summary>
         /// 昵称
         /// </summary>
-        public string NickName { get; set; }
+        public string NickName { get; set; } = string.Empty;
 
         /// <summary>
         /// 是否可以查看所有数据
@@ -39,7 +39,7 @@ namespace Azrng.Core.Requests
         /// <summary>
         /// 头像
         /// </summary>
-        public string Avatar { get; set; }
+        public string Avatar { get; set; } = string.Empty;
     }
 
     // /// <summary>

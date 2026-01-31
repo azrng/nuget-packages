@@ -147,7 +147,7 @@ namespace Azrng.Core.RetryTask
                 catch (TException ex)
                 {
                     var flag = predicate == null;
-                    if (!flag)
+                    if (!flag && predicate != null)
                         flag = await predicate(ex).ConfigureAwait(false);
                     if (flag)
                         throw new RetryMarkException(ex);

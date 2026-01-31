@@ -52,7 +52,7 @@ namespace Azrng.Core.Helpers
         /// </summary>
         private static long _msStart;
 
-        private static Stopwatch _watch;
+        private static Stopwatch _watch = Stopwatch.StartNew();
 
         /// <summary>
         /// 上次时间

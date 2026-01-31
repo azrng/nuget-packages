@@ -8,7 +8,8 @@ namespace Azrng.Core.Model
     /// <typeparam name="T"></typeparam>
     public class TreeItem<T>
     {
-        public T Item { get; set; }
-        public IEnumerable<TreeItem<T>> Children { get; set; }
+        public T Item { get; set; } = default!;
+
+        public IEnumerable<TreeItem<T>>? Children { get; set; }
     }
 }

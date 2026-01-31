@@ -10,12 +10,12 @@ namespace Azrng.Core.Requests
         /// <summary>
         /// 请求数据
         /// </summary>
-        public T Data { get; set; }
+        public T Data { get; set; } = default!;
 
         /// <summary>
         /// 登陆人信息
         /// </summary>
-        public OperatorDto<TO> UserIdentity { get; set; } = new OperatorDto<TO>();
+        public OperatorDto<TO> UserIdentity { get; set; } = null!;
     }
 
     /// <summary>
@@ -27,12 +27,12 @@ namespace Azrng.Core.Requests
         /// <summary>
         /// 请求数据
         /// </summary>
-        public T Data { get; set; }
+        public T Data { get; set; } = default!;
 
         /// <summary>
         /// 登陆人信息
         /// </summary>
-        public OperatorDto<string> UserIdentity { get; set; } = new OperatorDto<string>();
+        public OperatorDto<string> UserIdentity { get; set; } = null!;
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ namespace Azrng.Core.Requests
         /// <summary>
         /// 请求数据
         /// </summary>
-        public T Data { get; set; }
+        public T Data { get; set; } = default!;
 
         /// <summary>
         /// 登陆人信息

@@ -44,7 +44,7 @@ namespace Azrng.Core.Helpers
             return Interlocked.Exchange(ref _value, value);
         }
 
-        public int CompareTo(object obj)
+        public int CompareTo(object? obj)
         {
             if (obj == null)
             {
