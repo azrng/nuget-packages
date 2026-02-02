@@ -8,11 +8,15 @@ using System.Reflection;
 
 namespace Azrng.AspNetCore.Job.Quartz.Schedules
 {
+    /// <summary>
+    /// Quartz作业托管服务
+    /// </summary>
     public class JobHostedService : IHostedService
     {
         private readonly IScheduler _scheduler;
         private readonly ILogger<JobHostedService> _logger;
         private readonly QuartzOptions _options;
+        private readonly DependencyInjectionJobFactory? _jobFactory;
 
         public JobHostedService(
             ISchedulerFactory schedulerFactory,
@@ -24,6 +28,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
             _scheduler.JobFactory = jobFactory;
             _logger = logger;
             _options = options.Value;
+            _jobFactory = jobFactory as DependencyInjectionJobFactory;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -49,13 +54,14 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
             {
                 try
                 {
+                    var assemblyName = assembly.GetName().Name;
                     var jobTypes = assembly.DefinedTypes
                                            .Where(type => type.IsClass && !type.IsAbstract && typeof(IJob).IsAssignableFrom(type))
                                            .ToList();
 
                     allJobTypes.AddRange(jobTypes);
                     _logger.LogInformation("从程序集 {AssemblyName} 扫描到 {Count} 个作业类",
-                        assembly.GetName().Name, jobTypes.Count);
+                        assemblyName, jobTypes.Count);
                 }
                 catch (Exception ex)
                 {
@@ -116,6 +122,14 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Quartz 调度器正在关闭...");
+
+            // 清理所有scope
+            if (_jobFactory != null)
+            {
+                _jobFactory.DisposeAllScopes();
+                _logger.LogDebug("已清理所有作业scope");
+            }
+
             await _scheduler.Shutdown(cancellationToken);
             _logger.LogInformation("Quartz 调度器已关闭");
         }
@@ -191,6 +205,11 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
             var filtered = assemblies.Where(assembly =>
                                      {
                                          var assemblyName = assembly.GetName().Name;
+                                         if (assemblyName == null)
+                                         {
+                                             return true;
+                                         }
+
                                          foreach (var pattern in _options.ExcludedAssemblyPatterns)
                                          {
                                              if (SimpleWildcardMatch(assemblyName, pattern))
@@ -215,7 +234,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
         /// <summary>
         /// 简单的通配符匹配
         /// </summary>
-        private bool SimpleWildcardMatch(string input, string pattern)
+        private static bool SimpleWildcardMatch(string input, string pattern)
         {
             // 转换通配符为正则表达式
             var regexPattern = "^" +

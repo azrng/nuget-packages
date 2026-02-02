@@ -8,7 +8,7 @@
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基于QuartzJob的扩展包</Description>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.0.0-beta1</Version>
+        <Version>1.0.0-beta2</Version>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

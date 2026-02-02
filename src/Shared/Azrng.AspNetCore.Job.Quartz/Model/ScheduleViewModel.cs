@@ -2,12 +2,15 @@
 {
     public class ScheduleViewModel
     {
-        public string JobName { get; set; }
+        /// <summary>
+        /// 作业名称
+        /// </summary>
+        public string JobName { get; set; } = string.Empty;
 
         /// <summary>
         /// 任务分组
         /// </summary>
-        public string JobGroup { get; set; }
+        public string JobGroup { get; set; } = "default";
 
         /// <summary>
         /// 开始时间
@@ -22,7 +25,7 @@
         /// <summary>
         /// Cron表达式
         /// </summary>
-        public string Cron { get; set; }
+        public string Cron { get; set; } = string.Empty;
 
         /// <summary>
         /// 执行次数（默认无限循环）
@@ -42,7 +45,7 @@
         /// <summary>
         /// 备注
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// 参数

@@ -178,42 +178,45 @@ public class JobController : ControllerBase
 ```csharp
 builder.Services.AddQuartzService(options =>
 {
-    // 基础配置
-    options.SchedulerName = "MyScheduler";
-    options.SchedulerId = "AUTO";
-    options.StartOnApplicationStart = true;
-    options.WaitForJobsToCompleteOnShutdown = true;
+    // 日志和历史配置
+    options.EnableJobHistory = true;           // 是否启用作业执行历史记录
+    options.EnableDetailedLogging = true;      // 是否记录详细的作业执行日志
 
-    // 并发配置
-    options.MaxBatchSize = 1;
-    options.BatchTriggerAcquisitionFireAheadTimeWindow = 0;
-    options.JobScanInterval = 1000;
-
-    // 持久化配置（可选）
-    options.EnableJobPersistence = false;
-    options.Persistence = new PersistenceOptions
+    // 程序集扫描配置
+    options.AssemblyNamesToScan = new List<string>
     {
-        ConnectionString = "your-connection-string",
-        DatabaseProviderType = DatabaseProviderType.SqlServer,
-        TablePrefix = "QRTZ_",
-        CreateTablesOnStartup = false
+        // 指定要扫描的程序集名称（可选）
+        "MyApp.Jobs",
+        "MyApp.Tasks"
     };
 
-    // 历史记录配置
-    options.EnableJobHistory = true;
-    options.JobHistoryRetentionDays = 30;
-
-    // 监听器配置
-    options.EnableJobListener = true;
-    options.EnableTriggerListener = true;
-    options.EnableSchedulerListener = true;
-
-    // 其他配置
-    options.MisfirePolicy = MisfirePolicy.ExecuteOnce;
-    options.EnableDetailedLogging = true;
-    options.JobTimeoutSeconds = 0; // 0表示不限制
+    options.ScanAllLoadedAssemblies = false;   // 是否扫描所有已加载的程序集
+    options.ExcludedAssemblyPatterns = new List<string>
+    {
+        // 排除的系统程序集模式（支持通配符）
+        "System.*",
+        "Microsoft.*",
+        "Newtonsoft.*"
+    };
 });
+
+// 或者指定具体的程序集
+builder.Services.AddQuartzService(
+    options => { },
+    Assembly.GetEntryAssembly()!,          // 入口程序集
+    Assembly.GetCallingAssembly()           // 调用程序集
+);
 ```
+
+### 配置说明
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `EnableJobHistory` | bool | true | 是否启用作业执行历史记录 |
+| `EnableDetailedLogging` | bool | true | 是否记录详细的作业执行日志 |
+| `AssemblyNamesToScan` | List\<string\> | 空 | 要扫描的程序集名称列表，为空时自动扫描入口程序集和调用程序集 |
+| `ScanAllLoadedAssemblies` | bool | false | 是否扫描所有已加载的程序集（包含系统程序集，需谨慎使用） |
+| `ExcludedAssemblyPatterns` | List\<string\> | 空 | 排除的程序集名称模式列表（支持通配符 * 和 ?）|
 
 ## 高级功能
 
@@ -328,39 +331,6 @@ public class JobHistoryController : ControllerBase
 0 10,44 14 ? 3 WED   # 每年3月的星期三下午2:10和2:44执行
 ```
 
-## API 文档
-
-### IJobService - 作业管理服务
-
-| 方法 | 说明 |
-|------|------|
-| `StartJobAsync<T>()` | 启动单次任务 |
-| `StartCronJobAsync<T>()` | 启动定时任务（Cron表达式） |
-| `PauseJobAsync()` | 暂停任务 |
-| `ResumeJobAsync()` | 恢复任务 |
-| `InterruptJobAsync()` | 中断正在运行的任务 |
-| `ExecuteJobAsync()` | 立即执行任务 |
-| `DeleteJobAsync()` | 删除任务 |
-
-### IJobStatusService - 作业状态服务
-
-| 方法 | 说明 |
-|------|------|
-| `GetRunningJobsAsync()` | 获取正在运行的作业 |
-| `GetScheduledJobsAsync()` | 获取所有已调度的作业 |
-| `IsJobRunningAsync()` | 检查作业是否正在运行 |
-| `GetNextFireTimeAsync()` | 获取作业下次执行时间 |
-| `GetJobDetailAsync()` | 获取作业详情 |
-
-### IJobExecutionHistoryService - 作业历史服务
-
-| 方法 | 说明 |
-|------|------|
-| `GetHistoryAsync()` | 获取作业执行历史 |
-| `GetRecentHistoryAsync()` | 获取最近的执行历史 |
-| `GetStatisticsAsync()` | 获取作业执行统计 |
-| `CleanupExpiredHistoryAsync()` | 清理过期历史记录 |
-
 ## 注意事项
 
 1. **作业类必须是公共类**：只有 public 类才能被扫描和注册
@@ -371,13 +341,7 @@ public class JobHistoryController : ControllerBase
 
 ## 版本历史
 
-- **1.0.0-beta1** - 基础功能发布
-- **1.1.0-beta1** - 添加配置选项、作业监听器、历史记录、状态查询功能
-
-## 许可证
-
-版权归 Azrng 所有
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
+* 1.0.0-beta2
+  * 添加配置选项、作业监听器、历史记录、状态查询功能
+* 1.0.0-beta1
+  * 基础功能发布
