@@ -24,6 +24,13 @@ public class JobController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IResultModel<string>> StartCronJob()
+    {
+        await _jobService.StartCronJobAsync<CustomerJob1>("自定义cron job", "0 0/1 * * * ?");
+        return ResultModel<string>.Success("ok");
+    }
+
+    [HttpGet]
     public async Task<IResultModel<string>> PauseOneJob()
     {
         await _jobService.PauseJobAsync(nameof(HelloJob));

@@ -102,7 +102,7 @@ namespace Azrng.AspNetCore.Job.Quartz
                                         .Build();
 
             await scheduler.ScheduleJob(job, trigger);
-            _logger.LogDebug("任务创建成功");
+            _logger.LogDebug("任务[{Group}]:{Name}创建成功", jobGroup, jobName);
         }
 
         public async Task StartCronJobAsync<T>(string jobName, string cronExpression, string jobGroup = "default",
