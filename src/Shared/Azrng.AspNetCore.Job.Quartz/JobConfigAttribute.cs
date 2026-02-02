@@ -17,28 +17,28 @@ namespace Azrng.AspNetCore.Job.Quartz
         public string Group { get; }
 
         /// <summary>
-        /// 任务cron
+        /// 任务Cron表达式
         /// </summary>
-        public string CornExpression { get; }
+        public string CronExpression { get; }
 
-        public JobConfigAttribute(string name, string group, string cornExpression)
+        public JobConfigAttribute(string name, string group, string cronExpression)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                throw new ArgumentException("请检查定时任务名称");
+                throw new ArgumentException("请检查定时任务名称", nameof(name));
             }
             if (string.IsNullOrWhiteSpace(group))
             {
-                throw new ArgumentException("请检查定时任务分组");
+                throw new ArgumentException("请检查定时任务分组", nameof(group));
             }
 
-            if (string.IsNullOrWhiteSpace(cornExpression))
+            if (string.IsNullOrWhiteSpace(cronExpression))
             {
-                throw new ArgumentException("请检查定时任务Corn表达式");
+                throw new ArgumentException("请检查定时任务Cron表达式", nameof(cronExpression));
             }
             Name = name;
             Group = group;
-            CornExpression = cornExpression;
+            CronExpression = cronExpression;
         }
     }
 }
