@@ -1,7 +1,6 @@
 using Azrng.Core;
 using Azrng.DynamicSqlBuilder.Model;
 using Common.Dapper.Repository;
-using ConsoleApp.Models.DynamicSql;
 using Microsoft.Extensions.Logging;
 
 namespace Azrng.DynamicSqlBuilder.Test;
