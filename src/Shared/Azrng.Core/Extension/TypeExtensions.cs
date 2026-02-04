@@ -14,7 +14,7 @@ namespace Azrng.Core.Extension
         /// <param name="sourceType">类型</param>
         /// <param name="fieldName">字段名</param>
         /// <returns></returns>
-        public static T CustomAttributeCommon<T>(this Type sourceType, string fieldName) where T : Attribute
+        public static T? CustomAttributeCommon<T>(this Type sourceType, string fieldName) where T : Attribute
         {
             if (string.IsNullOrEmpty(fieldName))
             {

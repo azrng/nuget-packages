@@ -102,7 +102,7 @@ namespace Azrng.Core.Extension
         /// <param name="time"></param>
         /// <param name="format">要转换的格式</param>
         /// <returns></returns>
-        public static string ToFormatString(this DateTime time, string format)
+        public static string ToFormatString(this DateTime time, string? format)
         {
             return time.ToString(format ?? "yyyy-MM-dd HH:mm:ss");
         }
@@ -205,7 +205,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static bool IsWeekend(this DateTime dateTime)
         {
-            var weeks = new int[]
+            var weeks = new[]
                         {
                             (int)DayOfWeek.Saturday,
                             (int)DayOfWeek.Sunday

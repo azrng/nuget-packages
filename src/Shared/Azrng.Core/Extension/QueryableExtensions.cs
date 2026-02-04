@@ -17,19 +17,19 @@ namespace Azrng.Core.Extension
         /// 查询映射
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <typeparam name="TM"></typeparam>
+        /// <typeparam name="Tm"></typeparam>
         /// <param name="queryable"></param>
         /// <returns></returns>
-        public static IQueryable<TM> SelectMapper<T, TM>(this IQueryable<T> queryable)
+        public static IQueryable<Tm> SelectMapper<T, Tm>(this IQueryable<T> queryable)
             where T : class
         {
             var parameter = Expression.Parameter(typeof(T), "t");
-            var newExpression = Expression.New(typeof(TM));
+            var newExpression = Expression.New(typeof(Tm));
 
             var mapperType = typeof(T).GetProperties();
 
             var listBinding = new List<MemberBinding>();
-            foreach (var item in typeof(TM).GetProperties())
+            foreach (var item in typeof(Tm).GetProperties())
             {
                 if (mapperType.All(t => t.Name != item.Name))
                 {
@@ -37,18 +37,19 @@ namespace Azrng.Core.Extension
                 }
 
                 var mem = Expression.Property(parameter, item.Name); // t.name
-                var members = typeof(TM).GetMember(item.Name);
+                var members = typeof(Tm).GetMember(item.Name);
                 if (members.Length == 0)
                 {
                     continue;
                 }
+
                 var member = members[0];
                 MemberBinding memBinding = Expression.Bind(member, mem); // 这里传mem是用t.name给他赋值
                 listBinding.Add(memBinding);
             }
 
             var memberExp = Expression.MemberInit(newExpression, listBinding);
-            var selectExpression = Expression.Lambda<Func<T, TM>>(memberExp, new ParameterExpression[]
+            var selectExpression = Expression.Lambda<Func<T, Tm>>(memberExp, new ParameterExpression[]
                                                                              {
                                                                                  parameter
                                                                              });
@@ -110,7 +111,7 @@ namespace Azrng.Core.Extension
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
-            return orderContent == null
+            return orderContent.Length == 0
                 ? query
                 : orderContent.Aggregate(query, (current, item) => current.OrderBy(item));
         }
@@ -186,7 +187,7 @@ namespace Azrng.Core.Extension
             where T : class
         {
             var parameter = Expression.Parameter(typeof(T), "t");
-            if (orderParams == null || orderParams.Length <= 0)
+            if (orderParams.Length <= 0)
             {
                 return queryable;
             }

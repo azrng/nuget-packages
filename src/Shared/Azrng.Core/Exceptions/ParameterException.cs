@@ -20,7 +20,7 @@ namespace Azrng.Core.Exceptions
         /// </summary>
         /// <param name="argument"></param>
         /// <param name="paramName"></param>
-        public static void ThrowIfNull(object argument, string paramName)
+        public static void ThrowIfNull(object? argument, string paramName)
         {
             if (argument != null)
                 return;

@@ -53,7 +53,7 @@ namespace Azrng.Core.Extension
         /// <remarks>只有当遇到抛出RetryMarkException异常使用才会重试</remarks>
         /// <returns></returns>
         public static IRetryTask<TResult> Retry<TResult>(this ITask<TResult> task, int maxCount,
-                                                         Func<int, TimeSpan> delay)
+                                                         Func<int, TimeSpan>? delay)
         {
             if (task == null)
                 throw new ArgumentNullException(nameof(task));

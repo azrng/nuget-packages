@@ -35,6 +35,6 @@ namespace Azrng.Core.Exceptions
         /// <summary>
         /// 异常编码
         /// </summary>
-        public string ErrorCode { get; } = "500";
+        public string ErrorCode { get; }
     }
 }

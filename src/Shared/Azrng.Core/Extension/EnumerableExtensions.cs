@@ -13,7 +13,7 @@ namespace Azrng.Core.Extension
         /// <summary>
         /// 检查集合是null或者空
         /// </summary>
-        public static bool IsNullOrEmpty<T>(this IEnumerable<T> source)
+        public static bool IsNullOrEmpty<T>(this IEnumerable<T>? source)
         {
             return source?.Any() != true;
         }
@@ -21,7 +21,7 @@ namespace Azrng.Core.Extension
         /// <summary>
         /// 检查集合不是null或者空
         /// </summary>
-        public static bool IsNotNullOrEmpty<T>(this IEnumerable<T> source)
+        public static bool IsNotNullOrEmpty<T>(this IEnumerable<T>? source)
         {
             return source?.Any() == true;
         }

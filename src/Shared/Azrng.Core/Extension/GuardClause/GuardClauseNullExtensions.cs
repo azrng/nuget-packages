@@ -89,7 +89,7 @@ namespace Azrng.Core.Extension.GuardClause
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public static string NullOrEmpty(this IGuardClause guardClause,
-                                         [NotNull] string input,
+                                         string input,
                                          string? message = null,
                                          [CallerArgumentExpression("input")] string? parameterName = null,
                                          Func<Exception>? exceptionCreator = null)

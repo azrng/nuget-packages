@@ -15,14 +15,14 @@ namespace Azrng.Core.RetryTask
         private readonly int _maxRetryCount;
 
         /// <summary>获取各次重试的延时时间</summary>
-        private readonly Func<int, TimeSpan> _retryDelay;
+        private readonly Func<int, TimeSpan>? _retryDelay;
 
         /// <summary>支持重试的Api请求任务</summary>
         /// <param name="invoker">请求任务创建的委托</param>
         /// <param name="maxRetryCount">最大尝试次数</param>
         /// <param name="retryDelay">各次重试的延时时间</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException"></exception>
-        public ActionRetryTask(Func<Task<TResult>> invoker, int maxRetryCount, Func<int, TimeSpan> retryDelay)
+        public ActionRetryTask(Func<Task<TResult>> invoker, int maxRetryCount, Func<int, TimeSpan>? retryDelay)
         {
             if (maxRetryCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxRetryCount));
@@ -35,7 +35,7 @@ namespace Azrng.Core.RetryTask
         /// <returns></returns>
         protected override async Task<TResult> InvokeAsync()
         {
-            Exception inner = null;
+            Exception? inner = null;
             for (var i = 0; i <= _maxRetryCount; ++i)
             {
                 TResult result;
@@ -78,7 +78,7 @@ namespace Azrng.Core.RetryTask
         /// <returns></returns>
         public IRetryTask<TResult> WhenCatch<TException>() where TException : Exception
         {
-            return WhenCatch((Func<TException, bool>)(ex => true));
+            return WhenCatch((Func<TException, bool>)(_ => true));
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="handler">捕获到指定异常时</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatch<TException>(Action<TException> handler) where TException : Exception
+        public IRetryTask<TResult> WhenCatch<TException>(Action<TException>? handler) where TException : Exception
         {
             return WhenCatch((Func<TException, bool>)(ex =>
             {
@@ -103,7 +103,7 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="predicate">返回true才Retry</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatch<TException>(Func<TException, bool> predicate) where TException : Exception
+        public IRetryTask<TResult> WhenCatch<TException>(Func<TException, bool>? predicate) where TException : Exception
         {
             return WhenCatchAsync((Func<TException, Task<bool>>)(ex =>
                 Task.FromResult(predicate == null || predicate(ex))));
@@ -115,7 +115,7 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="handler">捕获到指定异常时</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task> handler)
+        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task>? handler)
             where TException : Exception
         {
             return WhenCatchAsync((Func<TException, Task<bool>>)(async ex =>
@@ -132,7 +132,7 @@ namespace Azrng.Core.RetryTask
         /// <typeparam name="TException">异常类型</typeparam>
         /// <param name="predicate">返回true才Retry</param>
         /// <returns></returns>
-        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task<bool>> predicate)
+        public IRetryTask<TResult> WhenCatchAsync<TException>(Func<TException, Task<bool>>? predicate)
             where TException : Exception
         {
             return new ActionRetryTask<TResult>(NewInvoker, _maxRetryCount,

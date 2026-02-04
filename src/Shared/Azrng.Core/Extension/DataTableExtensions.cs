@@ -47,13 +47,14 @@ namespace Azrng.Core.Extension
         /// <typeparam name="T"></typeparam>
         /// <param name="table"></param>
         /// <returns></returns>
-        public static List<T> ToEntities<T>(this DataTable table) where T : new()
+        public static List<T>? ToEntities<T>(this DataTable? table) where T : new()
         {
-            var list = new List<T>();
             if (table == null)
             {
                 return null;
             }
+
+            var list = new List<T>();
 
             foreach (DataRow row in table.Rows)
             {

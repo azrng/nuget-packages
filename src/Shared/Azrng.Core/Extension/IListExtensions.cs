@@ -98,7 +98,7 @@ namespace Azrng.Core.Extension
         /// <param name="table"></param>
         /// <param name="hasColumns"></param>
         /// <returns></returns>
-        public static DataTable ToDataTable(this IList list, DataTable table, bool hasColumns = true)
+        public static DataTable ToDataTable(this IList list, DataTable? table, bool hasColumns = true)
         {
             table ??= new DataTable();
 

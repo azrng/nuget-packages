@@ -24,7 +24,7 @@ namespace Azrng.Core.Extension
             if (enumItem == null)
                 throw new ArgumentNullException(nameof(enumItem));
 
-            return _descriptionCache.GetOrAdd(enumItem, key =>
+            return _descriptionCache.GetOrAdd(enumItem, _ =>
             {
                 var attribute = enumItem.GetType().CustomAttributeCommon<DescriptionAttribute>(enumItem.ToString());
                 if (attribute == null)
@@ -44,7 +44,7 @@ namespace Azrng.Core.Extension
             if (enumItem == null)
                 throw new ArgumentNullException(nameof(enumItem));
 
-            return _englishDescriptionCache.GetOrAdd(enumItem, key =>
+            return _englishDescriptionCache.GetOrAdd(enumItem, _ =>
             {
                 var attribute = enumItem.GetType().CustomAttributeCommon<EnglishDescriptionAttribute>(enumItem.ToString());
                 if (attribute == null)
@@ -60,7 +60,7 @@ namespace Azrng.Core.Extension
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T GetCustomerAttribute<T>(this Enum value) where T : Attribute
+        public static T? GetCustomerAttribute<T>(this Enum value) where T : Attribute
         {
             return value.GetType().CustomAttributeCommon<T>(value.ToString());
         }
@@ -75,24 +75,5 @@ namespace Azrng.Core.Extension
         {
             return Enum.IsDefined(typeof(T), @enum);
         }
-
-        #region 私有方法
-
-        /// <summary>
-        /// 获取字段Description
-        /// </summary>
-        /// <param name="fieldInfo">FieldInfo</param>
-        /// <returns>DescriptionAttribute[] </returns>
-        private static DescriptionAttribute[] GetDescriptionAttr(FieldInfo fieldInfo)
-        {
-            if (fieldInfo != null)
-            {
-                return (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), true);
-            }
-
-            return null;
-        }
-
-        #endregion 私有方法
     }
 }

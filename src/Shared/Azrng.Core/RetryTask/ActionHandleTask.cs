@@ -24,7 +24,7 @@ namespace Azrng.Core.RetryTask
         /// <returns></returns>
         public IHandleTask<TResult> WhenCatch<TException>(Func<TResult> func) where TException : Exception
         {
-            return func != null ? WhenCatch((Func<TException, TResult>)(ex => func())) : throw new ArgumentNullException(nameof(func));
+            return func != null ? WhenCatch((Func<TException, TResult>)(_ => func())) : throw new ArgumentNullException(nameof(func));
         }
 
         /// <summary>当捕获到异常时返回指定结果</summary>

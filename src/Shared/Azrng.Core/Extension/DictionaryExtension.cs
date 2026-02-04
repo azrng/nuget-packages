@@ -17,7 +17,7 @@ namespace Azrng.Core.Extension
         /// <typeparam name="TKey"></typeparam>
         /// <typeparam name="TValue"></typeparam>
         /// <returns></returns>
-        public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue)
+        public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue>? dictionary, TKey key, TValue defaultValue)
         {
             if (dictionary == null || !dictionary.TryGetValue(key, out var @default))
                 return defaultValue;
@@ -29,7 +29,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="keyValues">字典型数据结构</param>
         /// <param name="key">列名</param>
-        public static string GetColumnValueByName(this IDictionary<string, string> keyValues, string key)
+        public static string? GetColumnValueByName(this IDictionary<string, string>? keyValues, string? key)
         {
             if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
             {
@@ -44,7 +44,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="keyValues">字典型数据结构</param>
         /// <param name="key">列名</param>
-        public static string GetColumnValueByName(this IDictionary<string, object> keyValues, string key)
+        public static string GetColumnValueByName(this IDictionary<string, object?>? keyValues, string? key)
         {
             if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
             {
@@ -64,7 +64,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="keyValues">字典型数据结构</param>
         /// <param name="key">列名</param>
-        public static T GetColumnValueByName<T>(this IDictionary<string, object> keyValues, string key)
+        public static T? GetColumnValueByName<T>(this IDictionary<string, object?>? keyValues, string? key)
         {
             if (keyValues == null || key == null || !keyValues.TryGetValue(key, out var columnInfo))
             {

@@ -37,7 +37,7 @@ namespace Azrng.Core.CommonDto
         /// </summary>
         /// <param name="expression">要访问的表达式</param>
         /// <returns>处理后的表达式树</returns>
-        public override Expression Visit(Expression expression)
+        public override Expression Visit(Expression? expression)
         {
             // 通过调用 base.Visit 方法，递归访问并处理表达式树中的各个节点
             // 其中 VisitParameter 方法会被调用，用于替换参数

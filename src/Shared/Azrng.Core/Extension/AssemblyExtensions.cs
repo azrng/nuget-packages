@@ -14,7 +14,7 @@ namespace Azrng.Core.Extension
         /// <param name="assembly"></param>
         /// <param name="typeFullName"></param>
         /// <returns></returns>
-        public static Type GetType(this Assembly assembly, string typeFullName)
+        public static Type? GetType(this Assembly assembly, string typeFullName)
         {
             return assembly.GetType(typeFullName);
         }
@@ -24,7 +24,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="assembly"></param>
         /// <returns></returns>
-        public static string GetAssemblyName(this Assembly assembly)
+        public static string? GetAssemblyName(this Assembly assembly)
         {
             return assembly.GetName().Name;
         }
@@ -34,7 +34,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static string GetAssemblyName(this Type type)
+        public static string? GetAssemblyName(this Type type)
         {
             return type.GetTypeInfo().GetAssemblyName();
         }
@@ -44,7 +44,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="typeInfo"></param>
         /// <returns></returns>
-        public static string GetAssemblyName(this TypeInfo typeInfo)
+        public static string? GetAssemblyName(this TypeInfo typeInfo)
         {
             return typeInfo.Assembly.GetAssemblyName();
         }
@@ -76,7 +76,7 @@ namespace Azrng.Core.Extension
             try
             {
                 asm.GetTypes();
-                foreach (var typeInfo in asm.DefinedTypes)
+                foreach (var unused in asm.DefinedTypes)
                 {
                     break;
                 }

@@ -27,7 +27,7 @@ namespace Azrng.Core.CommonDto
         /// 重写 ToString 方法，返回包装值的字符串表示。
         /// 如果 Value 为 null，则返回空字符串。
         /// </summary>
-        public override string ToString()
+        public override string? ToString()
         {
             var obj = Value;
             return obj == null ? "" : obj.ToString();

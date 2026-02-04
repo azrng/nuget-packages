@@ -10,10 +10,12 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="idCard"></param>
         /// <returns></returns>
-        public static string GetBirthdayByIdCard(this string idCard)
+        public static string? GetBirthdayByIdCard(this string idCard)
         {
             try
             {
+                if (idCard.IsNullOrEmpty())
+                    return null;
                 return idCard.Length switch
                 {
                     18 => idCard.Substring(6, 4) + "-" + idCard.Substring(10, 2) + "-" + idCard.Substring(12, 2),

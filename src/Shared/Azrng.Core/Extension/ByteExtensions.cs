@@ -76,7 +76,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="bytes">字节数组</param>
         /// <returns></returns>
-        public static string GetFileSuffix(this byte[] bytes)
+        public static string? GetFileSuffix(this byte[] bytes)
         {
             var fileCode = GetFileCode(bytes);
             var key = CommonCoreConst.FileFormats.First(i => i.Value.Equals(fileCode)).Key;
@@ -88,7 +88,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="bytes">字节数组</param>
         /// <returns></returns>
-        public static string GetContentType(this byte[] bytes)
+        public static string? GetContentType(this byte[] bytes)
         {
             var fileCode = GetFileCode(bytes);
             var extensions = CommonCoreConst.FileFormats.First((i) => i.Value.Equals(fileCode)).Key;
