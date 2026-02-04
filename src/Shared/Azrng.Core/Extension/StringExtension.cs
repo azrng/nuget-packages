@@ -203,7 +203,7 @@ namespace Azrng.Core.Extension
         /// <param name="str"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static byte[] ToBytes(this string str, Encoding encoding = null)
+        public static byte[] ToBytes(this string str, Encoding? encoding = null)
         {
             encoding ??= Encoding.UTF8;
             return encoding.GetBytes(str);
@@ -319,7 +319,7 @@ namespace Azrng.Core.Extension
         /// <param name="compareStr">对比字符串</param>
         /// <param name="stringComparison"><inheritdoc cref="StringComparison"/></param>
         /// <returns></returns>
-        public static bool EqualsNoCase(this string aimStr, string compareStr,
+        public static bool EqualsNoCase(this string? aimStr, string? compareStr,
                                         StringComparison stringComparison = StringComparison.CurrentCultureIgnoreCase)
         {
             if (aimStr is null || compareStr is null)
@@ -331,7 +331,7 @@ namespace Azrng.Core.Extension
         /// 移除控制字符(不可见Unicode字符)
         /// </summary>
         /// <remarks>UniCode编码表及部分不可见字符过滤方案 - https://www.cnblogs.com/fan-yuan/p/8176886.html</remarks>
-        public static string RemoveControlChars(this string text)
+        public static string? RemoveControlChars(this string? text)
         {
             return text == null ? null : string.Concat(text.Where(c => !char.IsControl(c)));
         }
@@ -341,7 +341,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static unsafe string ToUpperFirst(this string str)
+        public static unsafe string? ToUpperFirst(this string? str)
         {
             if (str == null) return null;
             var ret = string.Copy(str);
@@ -368,7 +368,7 @@ namespace Azrng.Core.Extension
         /// <param name="source">待编码的明文</param>
         /// <param name="encodeType">加密采用的编码方式</param>
         /// <returns></returns>
-        public static string ToBase64Encode(this string source, Encoding encodeType = null)
+        public static string ToBase64Encode(this string source, Encoding? encodeType = null)
         {
             encodeType ??= Encoding.UTF8;
             var bytes = encodeType.GetBytes(source);
@@ -388,7 +388,7 @@ namespace Azrng.Core.Extension
         /// <param name="result">待解密的密文</param>
         /// <param name="encodeType">解密采用的编码方式，注意和加密时采用的方式一致</param>
         /// <returns>解密后的字符串</returns>
-        public static string FromBase64Decode(this string result, Encoding encodeType = null)
+        public static string FromBase64Decode(this string result, Encoding? encodeType = null)
         {
             encodeType ??= Encoding.UTF8;
             result = result.Replace(" ", "+");

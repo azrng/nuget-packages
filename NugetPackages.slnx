@@ -112,6 +112,7 @@
     <File Path="push-packer.sh" />
   </Folder>
   <Folder Name="/Test/">
+    <Project Path="test/Azrng.AspNetCore.Job.Quartz.Test/Azrng.AspNetCore.Job.Quartz.Test.csproj" />
     <Project Path="test\APIStudy.Test\APIStudy.Test.csproj" />
     <Project Path="test\CommonCollect.Test\CommonCollect.Test.csproj" />
   </Folder>

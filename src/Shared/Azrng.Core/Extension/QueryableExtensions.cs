@@ -37,7 +37,12 @@ namespace Azrng.Core.Extension
                 }
 
                 var mem = Expression.Property(parameter, item.Name); // t.name
-                var member = typeof(TM).GetMember(item.Name)[0];
+                var members = typeof(TM).GetMember(item.Name);
+                if (members.Length == 0)
+                {
+                    continue;
+                }
+                var member = members[0];
                 MemberBinding memBinding = Expression.Bind(member, mem); // 这里传mem是用t.name给他赋值
                 listBinding.Add(memBinding);
             }

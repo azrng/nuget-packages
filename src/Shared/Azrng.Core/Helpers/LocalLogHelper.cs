@@ -387,12 +387,12 @@ namespace Azrng.Core.Helpers
             /// <summary>
             /// 类型
             /// </summary>
-            public string Type { get; set; }
+            public string Type { get; set; } = string.Empty;
 
             /// <summary>
             /// 消息
             /// </summary>
-            public string Message { get; set; }
+            public string Message { get; set; } = string.Empty;
         }
     }
 }

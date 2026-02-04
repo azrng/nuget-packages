@@ -37,6 +37,8 @@ namespace Azrng.Core.Extension
         public static IQueryable<T> QueryableWhereIf<T>(this IQueryable<T> source, bool condition,
                                                         Expression<Func<T, bool>> predicate)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
             return condition ? source.Where(predicate) : source;
         }
 
@@ -50,6 +52,8 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static IEnumerable<T> WhereIF<T>(this IEnumerable<T> source, bool condition, Func<T, bool> predicate)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
             return condition ? source.Where(predicate) : source;
         }
 

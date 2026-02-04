@@ -12,12 +12,12 @@ namespace Azrng.Core.Model
         /// <summary>
         /// id
         /// </summary>
-        public T Id { get; set; }
+        public T Id { get; set; } = default!;
 
         /// <summary>
         /// 父类id
         /// </summary>
-        public T ParentId { get; set; }
+        public T ParentId { get; set; } = default!;
 
         /// <summary>
         /// 子项

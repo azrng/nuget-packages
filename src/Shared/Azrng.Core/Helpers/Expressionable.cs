@@ -13,7 +13,7 @@ namespace Azrng.Core.Helpers
 
     public class Expressionable<T> where T : class, new()
     {
-        private Expression<Func<T, bool>> _exp;
+        private Expression<Func<T, bool>>? _exp;
 
         public Expressionable<T> And(Expression<Func<T, bool>> exp)
         {

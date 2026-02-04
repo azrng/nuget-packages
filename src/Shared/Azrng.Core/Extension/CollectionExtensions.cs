@@ -20,7 +20,7 @@ namespace Azrng.Core.Extension
 #if NET6_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(source);
 #else
-            if (source == null) throw new ArgumentNullException();
+            if (source == null) throw new ArgumentNullException(nameof(source));
 #endif
 
             if (source.Contains(item)) return false;

@@ -21,7 +21,7 @@ namespace Azrng.Core.CommonDto
         /// <summary>
         /// 获取或设置包装的值。
         /// </summary>
-        public T Value { get; set; }
+        public T Value { get; set; } = default!;
 
         /// <summary>
         /// 重写 ToString 方法，返回包装值的字符串表示。

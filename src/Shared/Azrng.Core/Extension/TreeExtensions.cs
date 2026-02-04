@@ -20,7 +20,7 @@ namespace Azrng.Core.Extension
         /// <param name="parentIdSelector">Function extracting item's parent_id</param>
         /// <param name="rootId">Root element id</param>
         public static IEnumerable<TreeItem<T>> GenerateTree<T, K>(this IEnumerable<T> collection, Func<T, K> idSelector,
-            Func<T, K> parentIdSelector, K rootId = default)
+            Func<T, K> parentIdSelector, K? rootId = default)
         {
             if (collection == null)
                 throw new ArgumentNullException(nameof(collection));

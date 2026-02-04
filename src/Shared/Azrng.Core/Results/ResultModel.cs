@@ -7,9 +7,14 @@ namespace Azrng.Core.Results
     /// </summary>
     public class ResultModel : IResultModel
     {
-        public ResultModel() { }
+        public ResultModel()
+        {
+            Code = "200";
+            Message = "success";
+            Errors = new List<ErrorInfo>();
+        }
 
-        public ResultModel(bool isSuccess, string message = "success", string code = "200", IEnumerable<ErrorInfo> errorInfos = null)
+        public ResultModel(bool isSuccess, string message = "success", string code = "200", IEnumerable<ErrorInfo>? errorInfos = null)
         {
             IsSuccess = isSuccess;
             Code = code;
@@ -58,7 +63,7 @@ namespace Azrng.Core.Results
         /// <param name="errorInfos">model验证错误</param>
         /// <returns></returns>
         public static IResultModel Error(string message, string errorCode = "400",
-                                         IEnumerable<ErrorInfo> errorInfos = null)
+                                         IEnumerable<ErrorInfo>? errorInfos = null)
         {
             return new ResultModel(false, message, errorCode, errorInfos);
         }
@@ -71,7 +76,7 @@ namespace Azrng.Core.Results
         /// <param name="errorInfos">model验证错误</param>
         /// <returns></returns>
         public static IResultModel Failure(string message, string errorCode = "400",
-                                           IEnumerable<ErrorInfo> errorInfos = null)
+                                           IEnumerable<ErrorInfo>? errorInfos = null)
         {
             return new ResultModel(false, message, errorCode, errorInfos);
         }
@@ -87,7 +92,7 @@ namespace Azrng.Core.Results
     {
         public ResultModel() { }
 
-        public ResultModel(T data, bool isSuccess, string message, string code, IEnumerable<ErrorInfo> errorInfos = null)
+        public ResultModel(T? data, bool isSuccess, string message, string code, IEnumerable<ErrorInfo>? errorInfos = null)
             : base(isSuccess, message, code, errorInfos)
         {
             Data = data;
@@ -96,7 +101,7 @@ namespace Azrng.Core.Results
         /// <summary>
         ///返回的数据
         /// </summary>
-        public T Data { get; set; }
+        public T? Data { get; set; }
 
         /// <summary>
         /// 成功
@@ -116,7 +121,7 @@ namespace Azrng.Core.Results
         /// <param name="errorInfos">model验证错误信息</param>
         /// <returns></returns>
         public static new IResultModel<T> Error(string message, string errorCode = "400",
-                                                IEnumerable<ErrorInfo> errorInfos = null)
+                                                IEnumerable<ErrorInfo>? errorInfos = null)
         {
             return new ResultModel<T>(default, false, message, errorCode, errorInfos);
         }
@@ -129,7 +134,7 @@ namespace Azrng.Core.Results
         /// <param name="errorInfos">model验证错误信息</param>
         /// <returns></returns>
         public static new IResultModel<T> Failure(string message, string errorCode = "400",
-                                                  IEnumerable<ErrorInfo> errorInfos = null)
+                                                  IEnumerable<ErrorInfo>? errorInfos = null)
         {
             return new ResultModel<T>(default, false, message, errorCode, errorInfos);
         }

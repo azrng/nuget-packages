@@ -104,7 +104,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string ToFormatString(this DateTime time, string format)
         {
-            return time.ToString(format);
+            return time.ToString(format ?? "yyyy-MM-dd HH:mm:ss");
         }
 
         #endregion

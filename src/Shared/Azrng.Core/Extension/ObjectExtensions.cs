@@ -99,7 +99,7 @@ namespace Azrng.Core.Extension
         /// <returns>返回值</returns>
         public static TTo To<TFrom, TTo>(this TFrom from, TTo defaultValue)
         {
-            if (from.Equals(null))
+            if (from is null)
                 return defaultValue;
             try
             {
@@ -173,7 +173,7 @@ namespace Azrng.Core.Extension
             TTo defaultValue
         )
         {
-            if (from.Equals(null))
+            if (from is null)
                 return defaultValue;
             var v = getProperty(from);
             return v.To(defaultValue);
@@ -193,7 +193,7 @@ namespace Azrng.Core.Extension
             Func<TFrom, TProperty> getProperty
         )
         {
-            if (from.Equals(null))
+            if (from is null)
                 return default;
             var v = getProperty(from);
             return v.To(default(TTo));

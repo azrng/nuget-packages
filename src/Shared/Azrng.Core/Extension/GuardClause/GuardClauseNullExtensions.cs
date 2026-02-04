@@ -28,9 +28,9 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="Exception"></exception>
         public static T Null<T>(this IGuardClause guardClause,
                                 [NotNull] T input,
-                                string message = null,
-                                [CallerArgumentExpression("input")] string parameterName = null,
-                                Func<Exception> exceptionCreator = null)
+                                string? message = null,
+                                [CallerArgumentExpression("input")] string? parameterName = null,
+                                Func<Exception>? exceptionCreator = null)
         {
             if (input is not null)
             {
@@ -38,7 +38,7 @@ namespace Azrng.Core.Extension.GuardClause
             }
 
             var exception = exceptionCreator?.Invoke();
-            if (message.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(message))
             {
                 throw exception ?? new ArgumentNullException(parameterName);
             }
@@ -59,9 +59,9 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="Exception"></exception>
         public static T Null<T>(this IGuardClause guardClause,
                                 [NotNull] T? input,
-                                string message = null,
-                                [CallerArgumentExpression("input")] string parameterName = null,
-                                Func<Exception> exceptionCreator = null) where T : struct
+                                string? message = null,
+                                [CallerArgumentExpression("input")] string? parameterName = null,
+                                Func<Exception>? exceptionCreator = null) where T : struct
         {
             if (input is not null)
             {
@@ -90,9 +90,9 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="Exception"></exception>
         public static string NullOrEmpty(this IGuardClause guardClause,
                                          [NotNull] string input,
-                                         string message = null,
-                                         [CallerArgumentExpression("input")] string parameterName = null,
-                                         Func<Exception> exceptionCreator = null)
+                                         string? message = null,
+                                         [CallerArgumentExpression("input")] string? parameterName = null,
+                                         Func<Exception>? exceptionCreator = null)
         {
             Guard.Against.Null(input, parameterName, message, exceptionCreator);
             if (input == string.Empty)
@@ -116,9 +116,9 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="Exception"></exception>
         public static Guid NullOrEmpty(this IGuardClause guardClause,
                                        [NotNull] Guid? input,
-                                       string message = null,
-                                       [CallerArgumentExpression("input")] string parameterName = null,
-                                       Func<Exception> exceptionCreator = null)
+                                       string? message = null,
+                                       [CallerArgumentExpression("input")] string? parameterName = null,
+                                       Func<Exception>? exceptionCreator = null)
         {
             Guard.Against.Null(input, message: message, parameterName: parameterName, exceptionCreator: exceptionCreator);
             if (input == Guid.Empty)
@@ -142,10 +142,10 @@ namespace Azrng.Core.Extension.GuardClause
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public static IEnumerable<T> NullOrEmpty<T>(this IGuardClause guardClause,
-                                                    [NotNull] IEnumerable<T> input,
-                                                    string message = null,
-                                                    [CallerArgumentExpression("input")] string parameterName = null,
-                                                    Func<Exception> exceptionCreator = null)
+                                                    IEnumerable<T> input,
+                                                    string? message = null,
+                                                    [CallerArgumentExpression("input")] string? parameterName = null,
+                                                    Func<Exception>? exceptionCreator = null)
         {
             Guard.Against.Null(input, parameterName, message, exceptionCreator: exceptionCreator);
 
@@ -176,9 +176,9 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="ArgumentException"></exception>
         public static string NullOrWhiteSpace(this IGuardClause guardClause,
                                               [NotNull] string input,
-                                              string message = null,
-                                              [CallerArgumentExpression("input")] string parameterName = null,
-                                              Func<Exception> exceptionCreator = null)
+                                              string? message = null,
+                                              [CallerArgumentExpression("input")] string? parameterName = null,
+                                              Func<Exception>? exceptionCreator = null)
         {
             Guard.Against.NullOrEmpty(input, message: message, parameterName: parameterName, exceptionCreator: exceptionCreator);
             if (string.IsNullOrWhiteSpace(input))
@@ -203,11 +203,11 @@ namespace Azrng.Core.Extension.GuardClause
         /// <exception cref="Exception"></exception>
         public static T Default<T>(this IGuardClause guardClause,
                                    [AllowNull, NotNull] T input,
-                                   string message = null,
-                                   [CallerArgumentExpression("input")] string parameterName = null,
-                                   Func<Exception> exceptionCreator = null)
+                                   string? message = null,
+                                   [CallerArgumentExpression("input")] string? parameterName = null,
+                                   Func<Exception>? exceptionCreator = null)
         {
-            if (EqualityComparer<T>.Default.Equals(input, default!) || input is null)
+            if (input is null || EqualityComparer<T>.Default.Equals(input, default))
             {
                 throw exceptionCreator?.Invoke() ??
                       new ArgumentException(message ?? $"Parameter [{parameterName}] is default value for type {typeof(T).Name}",

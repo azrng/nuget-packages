@@ -302,7 +302,7 @@ namespace Azrng.Core.Helpers
 
         class AssemblyEquality : EqualityComparer<Assembly>
         {
-            public override bool Equals(Assembly x, Assembly y)
+            public override bool Equals(Assembly? x, Assembly? y)
             {
                 if (x == null && y == null) return true;
                 if (x == null || y == null) return false;

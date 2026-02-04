@@ -5,12 +5,12 @@ public class RuntimeInfo : LibraryInfo
     /// <summary>
     /// 版本
     /// </summary>
-    public string Version { get; set; }
+    public string Version { get; set; } = string.Empty;
 
     /// <summary>
     /// 框架描述
     /// </summary>
-    public string FrameworkDescription { get; set; }
+    public string FrameworkDescription { get; set; } = string.Empty;
 
     /// <summary>
     /// 进程总数
@@ -20,32 +20,32 @@ public class RuntimeInfo : LibraryInfo
     /// <summary>
     /// os 架构
     /// </summary>
-    public string OsArchitecture { get; set; }
+    public string OsArchitecture { get; set; } = string.Empty;
 
     /// <summary>
     /// os 描述
     /// </summary>
-    public string OsDescription { get; set; }
+    public string OsDescription { get; set; } = string.Empty;
 
     /// <summary>
     /// os 版本
     /// </summary>
-    public string OsVersion { get; set; }
+    public string OsVersion { get; set; } = string.Empty;
 
     /// <summary>
     /// 机器名
     /// </summary>
-    public string MachineName { get; set; }
+    public string MachineName { get; set; } = string.Empty;
 
     /// <summary>
     /// 用户名
     /// </summary>
-    public string UserName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 
     /// <summary>
     /// 运行时标识符
     /// </summary>
-    public string RuntimeIdentifier { get; set; }
+    public string RuntimeIdentifier { get; set; } = string.Empty;
 
     //
     // 摘要:
@@ -58,7 +58,7 @@ public class RuntimeInfo : LibraryInfo
     /// <summary>
     /// 工作目录
     /// </summary>
-    public string WorkingDirectory { get; set; }
+    public string WorkingDirectory { get; set; } = string.Empty;
 
     ///  <summary>
     /// 进程id
@@ -68,7 +68,7 @@ public class RuntimeInfo : LibraryInfo
     ///  <summary>
     /// 进程路径
     /// </summary>
-    public string ProcessPath { get; set; }
+    public string ProcessPath { get; set; } = string.Empty;
 
     /// <summary>
     /// 是否在容器内运行
@@ -89,15 +89,15 @@ public class LibraryInfo
     /// <summary>
     /// 库版本
     /// </summary>
-    public string LibraryVersion { get; set; }
+    public string LibraryVersion { get; set; } = string.Empty;
 
     /// <summary>
     /// 库hash值
     /// </summary>
-    public string LibraryHash { get; set; }
+    public string LibraryHash { get; set; } = string.Empty;
 
     /// <summary>
     /// 仓库地址
     /// </summary>
-    public string RepositoryUrl { get; set; }
+    public string RepositoryUrl { get; set; } = string.Empty;
 }

@@ -67,7 +67,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static T XmlTo<T>(string xmlOrPath, bool isPath = false, Encoding encoding = null)
         {
-            _ = encoding ?? Encoding.UTF8;
+            encoding ??= Encoding.UTF8;
 
             // 如果是文件路径，则先加载文件
             var xml = isPath ? IOHelper.ReadXml(xmlOrPath).InnerXml : xmlOrPath;

@@ -127,7 +127,7 @@ namespace Azrng.Core.Extension
         /// <remarks>当键存在时更新键值，当键不存在则添加键值</remarks>
         public static void AddOrUpdate<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
         {
-            if (dict == null) throw new ArgumentNullException();
+            if (dict == null) throw new ArgumentNullException(nameof(dict));
             dict[key] = value;
         }
 
@@ -142,7 +142,7 @@ namespace Azrng.Core.Extension
         public static void CreateOrInsert<TKey, TValue>(this IDictionary<TKey, List<TValue>> dict, TKey key,
                                                         TValue value)
         {
-            if (dict == null) throw new ArgumentNullException();
+            if (dict == null) throw new ArgumentNullException(nameof(dict));
             if (dict.TryGetValue(key, out var val))
             {
                 val.Add(value);
@@ -163,7 +163,7 @@ namespace Azrng.Core.Extension
         public static void AddOrAppend<TKey>(this IDictionary<TKey, int> dict, TKey key, int value)
         {
             if (dict == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(dict));
 
             if (!dict.TryAdd(key, value))
             {
@@ -181,7 +181,7 @@ namespace Azrng.Core.Extension
         public static void AddOrAppend<TKey>(this IDictionary<TKey, long> dict, TKey key, long value)
         {
             if (dict == null)
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(dict));
 
             if (!dict.TryAdd(key, value))
             {
