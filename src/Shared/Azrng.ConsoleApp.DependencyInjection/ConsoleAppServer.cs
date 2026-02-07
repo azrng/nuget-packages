@@ -18,6 +18,7 @@ public class ConsoleAppServer
         var configBuilder = new ConfigurationBuilder();
         configBuilder.SetBasePath(Environment.CurrentDirectory);
         configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        // AddEnvironmentVariables("ASPNETCORE_") 会移除前缀，所以这里用 读取的时候要去掉这个前缀
         configBuilder.AddEnvironmentVariables("ASPNETCORE_");
         configBuilder.AddCommandLine(args);
 

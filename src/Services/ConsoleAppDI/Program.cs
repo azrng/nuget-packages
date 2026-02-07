@@ -21,7 +21,7 @@ builder.Services.ConfigureDefaultJson();
 // {
 //     services.AddHttpClientService();
 // });
-await using var sp = builder.Build<JsonTempService>();
+await using var sp = builder.Build<ConfigurationReadService>();
 
 await sp.RunAsync();
 Console.Read();
