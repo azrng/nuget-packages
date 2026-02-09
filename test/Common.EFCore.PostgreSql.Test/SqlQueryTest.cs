@@ -42,12 +42,12 @@ public class SqlQueryTest
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
 
         // 原始写法
-        var originSql = "select id,content from public.test_table where content='abcde'";
+        var originSql = "select id,content from public.test_table where content='用户登录成功'";
         var result = await unitOfWork.ExecuteScalarAsync(originSql);
         _testOutputHelper.WriteLine(result.ToString());
         Assert.NotEmpty(result.ToString() ?? string.Empty);
 
-        var param = "a"; // 入参
+        var param = "用户登录成功"; // 入参
 
         // 参数化查询
         FormattableString sql = $"select id,content from public.test_table where content={param}";
@@ -75,7 +75,7 @@ public class SqlQueryTest
 
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
 
-        var param = new List<string>() { "abcde", "fghig" };
+        var param = new List<string>() { "用户登录成功", "fghig" };
 
         // 参数化查询
         FormattableString sql = $"select id,content from public.test_table where content=any({param})";
@@ -103,7 +103,7 @@ public class SqlQueryTest
 
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
 
-        var param = "%abc%";
+        var param = "%完成%";
 
         // 参数化查询
         FormattableString sql = $"select id,content from public.test_table where content like {param}";

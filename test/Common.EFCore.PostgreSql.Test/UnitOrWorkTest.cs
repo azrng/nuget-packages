@@ -45,7 +45,7 @@ public class UnitOrWorkTest
             var list = new List<string>();
             {
                 var content = Guid.NewGuid().ToString();
-                await testRep.AddAsync(new TestEntity(content));
+                await testRep.AddAsync(new TestEntity(content, "Test User 1", "test1@example.com", "Transaction test 1"));
 
                 var flag = await unitOfWork.SaveChangesAsync();
                 Assert.True(flag > 0);
@@ -54,7 +54,7 @@ public class UnitOrWorkTest
 
             {
                 var content = Guid.NewGuid().ToString();
-                await testRep.AddAsync(new TestEntity(content));
+                await testRep.AddAsync(new TestEntity(content, "Test User 2", "test2@example.com", "Transaction test 2"));
 
                 var flag = await unitOfWork.SaveChangesAsync();
                 Assert.True(flag > 0);

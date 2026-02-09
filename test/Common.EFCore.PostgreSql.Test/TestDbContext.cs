@@ -36,15 +36,30 @@ public class TestEntity : IdentityBaseEntity
 {
     private TestEntity() { }
 
-    public TestEntity(string content)
+    public TestEntity(string content, string name, string? email = null, string? description = null)
     {
         Content = content;
+        Name = name;
+        Email = email;
+        Description = description;
         CreatedTime = DateTimeOffset.UtcNow;
     }
 
     [Column("content")]
     [StringLength(50)]
     public string? Content { get; set; } = null!;
+
+    [Column("name")]
+    [StringLength(100)]
+    public string? Name { get; set; }
+
+    [Column("email")]
+    [StringLength(200)]
+    public string? Email { get; set; }
+
+    [Column("description")]
+    [StringLength(500)]
+    public string? Description { get; set; }
 
     [Column("created_time")]
     public DateTimeOffset CreatedTime { get; set; }

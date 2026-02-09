@@ -31,7 +31,7 @@ public class RepositoryAndUnitOfWork
         var testRep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var content = Guid.NewGuid().ToString();
-        await testRep.AddAsync(new TestEntity(content));
+        await testRep.AddAsync(new TestEntity(content, "Test User", "test@example.com", "Single database test"));
 
         var flag = await unitOfWork.SaveChangesAsync();
         Assert.True(flag > 0);
@@ -65,7 +65,7 @@ public class RepositoryAndUnitOfWork
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var unitOfWork2 = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
         var content = Guid.NewGuid().ToString();
-        await testRep.AddAsync(new TestEntity(content));
+        await testRep.AddAsync(new TestEntity(content, "Test User", "test@example.com", "Specify context test"));
 
         // 当使用IBaseRepository<TestEntity, TestDbContext>指定上下文的时候，就不能使用IUnitOfWork，应该使用IUnitOfWork<TestDbContext>
         var flag = await unitOfWork.SaveChangesAsync();
@@ -101,7 +101,7 @@ public class RepositoryAndUnitOfWork
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
         var testRep = unitOfWork.GetRepository<TestEntity>();
         var content = Guid.NewGuid().ToString();
-        await testRep.AddAsync(new TestEntity(content));
+        await testRep.AddAsync(new TestEntity(content, "Test User", "test@example.com", "Get repository test"));
         var flag = await unitOfWork.SaveChangesAsync();
         Assert.True(flag > 0);
 
@@ -144,7 +144,7 @@ public class RepositoryAndUnitOfWork
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
             var testDb1Rep = unitOfWork.GetRepository<TestEntity>();
             var content = Guid.NewGuid().ToString();
-            await testDb1Rep.AddAsync(new TestEntity(content));
+            await testDb1Rep.AddAsync(new TestEntity(content, "Test User 1", "test1@example.com", "Multi-context database 1"));
             var flag = await unitOfWork.SaveChangesAsync();
             Assert.True(flag > 0);
 
@@ -158,7 +158,7 @@ public class RepositoryAndUnitOfWork
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDb2Context>>();
             var testDb2Rep = unitOfWork.GetRepository<TestEntity>();
             var content = Guid.NewGuid().ToString();
-            await testDb2Rep.AddAsync(new TestEntity(content));
+            await testDb2Rep.AddAsync(new TestEntity(content, "Test User 2", "test2@example.com", "Multi-context database 2"));
             var flag = await unitOfWork.SaveChangesAsync();
             Assert.True(flag > 0);
 
@@ -202,7 +202,7 @@ public class RepositoryAndUnitOfWork
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDbContext>>();
             var testDb1Rep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity, TestDbContext>>();
             var content = Guid.NewGuid().ToString();
-            await testDb1Rep.AddAsync(new TestEntity(content));
+            await testDb1Rep.AddAsync(new TestEntity(content, "Test User 1", "test1@example.com", "Multi-context DB1 test"));
             var flag = await unitOfWork.SaveChangesAsync();
             Assert.True(flag > 0);
 
@@ -216,7 +216,7 @@ public class RepositoryAndUnitOfWork
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork<TestDb2Context>>();
             var testDb2Rep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity, TestDb2Context>>();
             var content = Guid.NewGuid().ToString();
-            await testDb2Rep.AddAsync(new TestEntity(content));
+            await testDb2Rep.AddAsync(new TestEntity(content, "Test User 2", "test2@example.com", "Multi-context DB2 test"));
             var flag = await unitOfWork.SaveChangesAsync();
             Assert.True(flag > 0);
 

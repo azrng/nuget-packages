@@ -28,7 +28,7 @@ public class RepositoryGetTest
 
         var testRep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity>>();
         var content = Guid.NewGuid().ToString();
-        await testRep.AddAsync(new TestEntity(content), true);
+        await testRep.AddAsync(new TestEntity(content, "Test User", "test@example.com", "Test description"), true);
 
         var count = await testRep.CountAsync(t => true);
         Assert.True(count > 0);
@@ -65,7 +65,7 @@ public class RepositoryGetTest
         {
             var testRep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity, TestDbContext>>();
             var content = Guid.NewGuid().ToString();
-            await testRep.AddAsync(new TestEntity(content), true);
+            await testRep.AddAsync(new TestEntity(content, "Test User 1", "test1@example.com", "Database 1 test"), true);
 
             var count = await testRep.CountAsync(t => true);
             Assert.True(count > 0);
@@ -76,7 +76,7 @@ public class RepositoryGetTest
         {
             var testRep = scope.ServiceProvider.GetRequiredService<IBaseRepository<TestEntity, TestDb2Context>>();
             var content = Guid.NewGuid().ToString();
-            await testRep.AddAsync(new TestEntity(content), true);
+            await testRep.AddAsync(new TestEntity(content, "Test User 2", "test2@example.com", "Database 2 test"), true);
 
             var count = await testRep.CountAsync(t => true);
             Assert.True(count > 0);
