@@ -12,6 +12,8 @@ services.AddEntityFramework<AuthDbContext>(options =>
 
 ### 版本更新记录
 
+* 1.5.0
+  * 适配Common.EFCore修改
 * 1.4.2
   * 支持老的creater、modifyer、modify_time
 * 1.4.1

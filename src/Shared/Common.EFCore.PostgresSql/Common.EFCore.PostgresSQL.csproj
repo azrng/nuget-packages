@@ -9,7 +9,7 @@
         <Authors>Azrng</Authors>
         <Copyright>Azrng</Copyright>
         <Description>操作PostgresSql基础方法</Description>
-        <Version>1.5.0</Version>
+        <Version>1.6.0</Version>
         <PackageId>Common.EFCore.PostgresSql</PackageId>
         <RootNamespace>Azrng.EFCore.PostgresSql</RootNamespace>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>

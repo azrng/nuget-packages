@@ -8,7 +8,7 @@
 		<Authors>Azrng</Authors>
 		<Description>封住简单操作MySQL的方法</Description>
 		<Copyright>Azrng</Copyright>
-        <Version>1.4.2</Version>
+        <Version>1.5.0</Version>
         <PackageId>Common.EFCore.MySQL</PackageId>
         <RootNamespace>Azrng.EFCore.MySQL</RootNamespace>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>

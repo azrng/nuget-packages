@@ -454,8 +454,72 @@ public async Task SingleDbContextAdd()
 }
 ```
 
+### 条件批量更新（仅支持.NET10+）
+
+在批量更新时，有时需要根据某些条件决定是否更新特定字段。新增的条件更新扩展方法可以让您更灵活地处理这类场景。
+
+```csharp
+// 示例1：当值不为 null 时才更新
+string? email = GetUserEmailInput();
+string? phone = GetUserPhoneInput();
+
+await repository.UpdateAsync(
+    x => x.Id == userId,
+    x => x.SetPropertyIfNotNull(u => u.Email, email)
+         .SetPropertyIfNotNull(u => u.Phone, phone)
+);
+
+// 示例2：当字符串不为空白时才更新
+string? userName = GetUserNameInput();
+
+await repository.UpdateAsync(
+    x => x.Id == userId,
+    x => x.SetPropertyIfNotNullOrWhiteSpace(u => u.UserName, userName)
+         .SetProperty(u => u.UpdateTime, DateTime.Now) // 无条件更新
+);
+
+// 示例3：根据布尔条件决定是否更新
+bool shouldActivate = CheckActivationCondition();
+await repository.UpdateAsync(
+    x => x.Id == userId,
+    x => x.SetPropertyIfTrue(shouldActivate, u => u.IsActive, true)
+         .SetPropertyIfTrue(shouldActivate, u => u.ActivationDate, DateTime.Today)
+);
+
+// 示例4：使用自定义条件
+int newScore = GetScore();
+await repository.UpdateAsync(
+    x => x.Id == userId,
+    x => x.SetPropertyIf(score => score > 0, u => u.Score, newScore)
+);
+
+// 示例5：混合使用普通 SetProperty 和条件更新
+await repository.UpdateAsync(
+    x => x.IsActive == false,
+    x => x.SetProperty(u => u.UpdateTime, DateTime.Now) // 无条件更新
+         .SetPropertyIfNotNull(u => u.LastLoginIp, userIp) // 条件更新
+         .SetPropertyIfNotNullOrWhiteSpace(u => u.Comment, comment) // 条件更新
+);
+```
+
+**方法说明：**
+
+| 方法 | 描述 | 适用版本 |
+|------|------|---------|
+| `SetPropertyIfTrue(condition, property, value)` | 当 condition 为 true 时才设置属性 | .NET 10+ |
+| `SetPropertyIfNotNull(property, value)` | 当 value 不为 null 时才设置属性（引用类型） | .NET 10+ |
+| `SetPropertyIfNotNullOrWhiteSpace(property, value)` | 当 value 不为 null 或空白时才设置属性（字符串） | .NET 10+ |
+| `SetPropertyIf(condition, property, value)` | 使用自定义条件判断是否设置属性 | .NET 10+ |
+
 ## 版本更新记录
 
+* 1.6.0
+  * 新增条件批量更新扩展方法（仅支持.NET10+）：
+    * `SetPropertyIfTrue` - 当条件为 true 时才设置属性
+    * `SetPropertyIfNotNull` - 当值不为 null 时才设置属性
+    * `SetPropertyIfNotNullOrWhiteSpace` - 当字符串值不为 null 或空白时才设置属性
+    * `SetPropertyIf` - 支持自定义条件的属性设置
+    * 支持链式调用，可与普通 `SetProperty` 混合使用
 * 1.5.0
   * 支持.Net10
 * 1.4.3

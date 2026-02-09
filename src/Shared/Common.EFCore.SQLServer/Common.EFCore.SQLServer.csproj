@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <!--<TargetFramework>netstandard2.1</TargetFramework>-->
         <!--<TargetFramework>net5.0</TargetFramework>-->
         <!--<TargetFramework>net6.0</TargetFramework>-->
         <Authors>Azrng</Authors>
         <Copyright>Azrng</Copyright>
         <Description>基本的对sqlserver增删改查的封装</Description>
-        <Version>1.4.2</Version>
+        <Version>1.5.0</Version>
         <PackageId>Common.EFCore.SQLServer</PackageId>
         <RootNamespace>Azrng.EFCore.SQLServer</RootNamespace>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -37,6 +37,11 @@
     <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0"/>
     </ItemGroup>
 
     <ItemGroup>

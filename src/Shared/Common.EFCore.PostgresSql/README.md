@@ -12,6 +12,8 @@ services.AddEntityFramework<AuthDbContext>(options =>
 
 #### 版本更新记录
 
+* 1.6.0
+    * 适配Common.EFCore修改
 * 1.5.0
   * 支持.Net10
 * 1.4.3
