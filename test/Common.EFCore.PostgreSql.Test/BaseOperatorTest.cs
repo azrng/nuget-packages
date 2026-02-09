@@ -80,12 +80,6 @@ public class BaseOperatorTest
     [Fact]
     public async Task ConditionalUpdate_SetPropertyIfIsNotNull_Test()
     {
-#if NET10_0_OR_GREATER
-        _testOutputHelper.WriteLine("Using UpdateSettersBuilder API (NET10+)");
-#elif NET7_0_OR_GREATER
-        _testOutputHelper.WriteLine("Using SetPropertyCalls API (NET7-9)");
-#endif
-
         var service = new ServiceCollection();
         service.AddLogging(loggerBuilder =>
         {
