@@ -12,7 +12,8 @@ namespace Azrng.EFCore.SQLServer.Repository
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TDbContext"></typeparam>
-    public class SqlServerRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext> where TEntity : IEntity
+    public class SqlServerRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext>, IBaseRepository<TEntity, TDbContext>
+        where TEntity : IEntity
         where TDbContext : DbContext
     {
         public SqlServerRepository(TDbContext dbContext) : base(dbContext) { }

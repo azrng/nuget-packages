@@ -12,7 +12,8 @@ namespace Azrng.EFCore.SQLite.Repository
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TDbContext"></typeparam>
-    public class SqliteRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext> where TEntity : IEntity
+    public class SqliteRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext>, IBaseRepository<TEntity, TDbContext>
+        where TEntity : IEntity
         where TDbContext : DbContext
     {
         public SqliteRepository(TDbContext dbContext) : base(dbContext) { }

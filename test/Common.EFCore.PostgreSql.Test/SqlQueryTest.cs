@@ -19,7 +19,7 @@ public class SqlQueryTest
     public SqlQueryTest(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
-        _connectionStr = "Host=localhost;Username=postgres;Password=123456;Database=test;port=5433";
+        _connectionStr = "Host=localhost;Username=postgres;Password=123456;Database=pgsql_test;port=5432";
     }
 
     [Fact]

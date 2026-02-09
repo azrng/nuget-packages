@@ -12,7 +12,8 @@ namespace Azrng.EFCore.PostgresSql.Repository
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TDbContext"></typeparam>
-    public class PostgreRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext> where TEntity : IEntity
+    public class PostgreRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext>, IBaseRepository<TEntity, TDbContext>
+        where TEntity : IEntity
         where TDbContext : DbContext
     {
         public PostgreRepository(TDbContext dbContext) : base(dbContext) { }

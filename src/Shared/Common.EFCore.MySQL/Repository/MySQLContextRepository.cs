@@ -12,7 +12,8 @@ namespace Azrng.EFCore.MySQL.Repository
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TDbContext"></typeparam>
-    public class MySQLRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext> where TEntity : IEntity
+    public class MySQLRepository<TEntity, TDbContext> : BaseRepository<TEntity, TDbContext>, IBaseRepository<TEntity, TDbContext>
+        where TEntity : IEntity
         where TDbContext : DbContext
     {
         public MySQLRepository(TDbContext dbContext) : base(dbContext) { }
