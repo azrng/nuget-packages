@@ -7,6 +7,16 @@ create table pgsql_test.public.test_table
 );
 
 
+-- 测试数据 INSERT 语句
+INSERT INTO public.test_table (id, content, created_time) VALUES
+(1, '用户登录成功', '2026-02-09 08:15:23+08'),
+(2, '订单创建完成', '2026-02-09 09:30:45+08'),
+(3, '支付处理中', '2026-02-09 10:05:12+08'),
+(4, '商品库存不足', '2026-02-09 11:22:37+08'),
+(5, '系统维护通知', '2026-02-09 14:00:00+08'),
+(6, '数据同步完成', '2026-02-09 15:47:19+08'),
+(7, '权限校验失败', '2026-02-09 16:33:51+08'),
+(8, '操作超时请重试', '2026-02-09 17:59:08+08');
 
 create database pgsql_test2;
 create table pgsql_test2.public.test_table
