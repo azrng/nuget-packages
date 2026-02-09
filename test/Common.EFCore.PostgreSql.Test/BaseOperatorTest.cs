@@ -80,6 +80,12 @@ public class BaseOperatorTest
     [Fact]
     public async Task ConditionalUpdate_SetPropertyIfIsNotNull_Test()
     {
+#if NET10_0_OR_GREATER
+        _testOutputHelper.WriteLine("Using UpdateSettersBuilder API (NET10+)");
+#elif NET7_0_OR_GREATER
+        _testOutputHelper.WriteLine("Using SetPropertyCalls API (NET7-9)");
+#endif
+
         var service = new ServiceCollection();
         service.AddLogging(loggerBuilder =>
         {
@@ -103,8 +109,8 @@ public class BaseOperatorTest
         var newEmail = "new@test.com";
         string? nullEmail = null;
         var result = await testRep.UpdateAsync(x => x.Content == content,
-            x => x.SetPropertyIfIsNotNull(t => t.Email, newEmail) // 应该更新
-                  .SetPropertyIfIsNotNull(t => t.Name, nullEmail) // 不应该更新
+            x => x.SetPropertyIfNotNull(t => t.Email, newEmail) // 应该更新
+                  .SetPropertyIfNotNull(t => t.Name, nullEmail) // 不应该更新
         );
 
         _testOutputHelper.WriteLine($"Updated {result} records");
@@ -152,10 +158,10 @@ public class BaseOperatorTest
 
         var result = await testRep.UpdateAsync(x => x.Content == content,
             x => x
-                 .SetPropertyIfIsNotNullOrWhitespace(t => t.Name, validString) // 应该更新
-                 .SetPropertyIfIsNotNullOrWhitespace(t => t.Email, nullString) // 不应该更新
-                 .SetPropertyIfIsNotNullOrWhitespace(t => t.Description, emptyString) // 不应该更新
-                 .SetPropertyIfIsNotNullOrWhitespace(t => t.Content, whitespaceString) // 不应该更新
+                 .SetProperty(t => t.Name, validString) // 应该更新
+                 .SetPropertyIfNotNullOrWhiteSpace(t => t.Email, nullString) // 不应该更新
+                 .SetPropertyIfNotNullOrWhiteSpace(t => t.Description, emptyString) // 不应该更新
+                 .SetPropertyIfNotNullOrWhiteSpace(t => t.Content, whitespaceString) // 不应该更新
         );
 
         _testOutputHelper.WriteLine($"Updated {result} records");
@@ -299,8 +305,8 @@ public class BaseOperatorTest
         var result = await testRep.UpdateAsync(x => x.Content == content,
             x => x
                  .SetProperty(t => t.CreatedTime, newTime) // 无条件更新
-                 .SetPropertyIfIsNotNull(t => t.Name, nullValue) // 不更新
-                 .SetPropertyIfIsNotNullOrWhitespace(t => t.Description, validValue) // 更新
+                 .SetPropertyIfNotNull(t => t.Name, nullValue) // 不更新
+                 .SetPropertyIfNotNullOrWhiteSpace(t => t.Description, validValue) // 更新
         );
 
         _testOutputHelper.WriteLine($"Updated {result} records");
