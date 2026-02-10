@@ -11,7 +11,7 @@ namespace Azrng.Core.Extension
         /// <param name="condition">条件</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendIF(this StringBuilder builder, bool condition, string str)
+        public static StringBuilder AppendIF(this StringBuilder builder, bool condition, string? str)
         {
             return condition ? builder.Append(str) : builder;
         }
@@ -23,7 +23,7 @@ namespace Azrng.Core.Extension
         /// <param name="condition">条件</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendLineIF(this StringBuilder builder, bool condition, string str)
+        public static StringBuilder AppendLineIF(this StringBuilder builder, bool condition, string? str)
         {
             return condition ? builder.AppendLine(str) : builder;
         }
@@ -47,7 +47,7 @@ namespace Azrng.Core.Extension
         /// <param name="builder">字符串</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendLineIfNotEmpty(this StringBuilder builder, string str)
+        public static StringBuilder AppendLineIfNotEmpty(this StringBuilder builder, string? str)
         {
             return str.IsNullOrEmpty() ? builder : builder.AppendLine(str);
         }
@@ -58,7 +58,7 @@ namespace Azrng.Core.Extension
         /// <param name="builder">字符串</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendLineIfNotNullOrWhiteSpace(this StringBuilder builder, string str)
+        public static StringBuilder AppendLineIfNotNullOrWhiteSpace(this StringBuilder builder, string? str)
         {
             return str.IsNullOrWhiteSpace() ? builder : builder.AppendLine(str);
         }
@@ -69,7 +69,7 @@ namespace Azrng.Core.Extension
         /// <param name="builder">字符串</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendIfNotEmpty(this StringBuilder builder, string str)
+        public static StringBuilder AppendIfNotEmpty(this StringBuilder builder, string? str)
         {
             return str.IsNullOrEmpty() ? builder : builder.Append(str);
         }
@@ -80,7 +80,7 @@ namespace Azrng.Core.Extension
         /// <param name="builder">字符串</param>
         /// <param name="str">要添加的字符串</param>
         /// <returns></returns>
-        public static StringBuilder AppendIfNotNullOrWhiteSpace(this StringBuilder builder, string str)
+        public static StringBuilder AppendIfNotNullOrWhiteSpace(this StringBuilder builder, string? str)
         {
             return str.IsNullOrWhiteSpace() ? builder : builder.Append(str);
         }

@@ -62,7 +62,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static async Task<byte[]>? ToBytesFromFileAsync(this string fileName)
+        public static async Task<byte[]?>? ToBytesFromFileAsync(this string fileName)
         {
             if (!File.Exists(fileName))
                 return null;

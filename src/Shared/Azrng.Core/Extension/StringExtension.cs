@@ -18,11 +18,11 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="boolStr"></param>
         /// <returns></returns>
-        public static bool IsBool(this string boolStr)
+        public static bool IsBool(this string? boolStr)
         {
             if (boolStr.IsNullOrWhiteSpace())
                 return false;
-            return boolStr.Trim().ToLowerInvariant() switch
+            return boolStr!.Trim().ToLowerInvariant() switch
             {
                 "0" => false,
                 "1" => true,
@@ -38,7 +38,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsIntFormat(this string str)
+        public static bool IsIntFormat(this string? str)
         {
             return int.TryParse(str, out _);
         }
@@ -49,7 +49,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static int ToInt(this string source, int @default = 0)
+        public static int ToInt(this string? source, int @default = 0)
         {
             return source.ToInt32(@default);
         }
@@ -60,7 +60,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static int ToInt32(this string source, int @default = 0)
+        public static int ToInt32(this string? source, int @default = 0)
         {
             var result = int.TryParse(source, out var value);
             return result ? value : @default;
@@ -71,7 +71,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsFloatFormat(this string str)
+        public static bool IsFloatFormat(this string? str)
         {
             return float.TryParse(str, out _);
         }
@@ -82,7 +82,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static float ToFloat(this string source, float @default = 0)
+        public static float ToFloat(this string? source, float @default = 0)
         {
             var result = float.TryParse(source, out var value);
             return result ? value : @default;
@@ -93,7 +93,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsDoubleFormat(this string str)
+        public static bool IsDoubleFormat(this string? str)
         {
             return double.TryParse(str, out _);
         }
@@ -104,7 +104,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static double ToDouble(this string source, double @default = 0)
+        public static double ToDouble(this string? source, double @default = 0)
         {
             var result = double.TryParse(source, out var value);
             return result ? value : @default;
@@ -115,7 +115,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsInt64Format(this string str)
+        public static bool IsInt64Format(this string? str)
         {
             return long.TryParse(str, out _);
         }
@@ -126,7 +126,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static long ToInt64(this string source, long @default = 0)
+        public static long ToInt64(this string? source, long @default = 0)
         {
             var result = long.TryParse(source, out var value);
             return result ? value : @default;
@@ -137,7 +137,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsDecimalFormat(this string str)
+        public static bool IsDecimalFormat(this string? str)
         {
             return decimal.TryParse(str, out _);
         }
@@ -148,7 +148,7 @@ namespace Azrng.Core.Extension
         /// <param name="source"></param>
         /// <param name="default"></param>
         /// <returns></returns>
-        public static decimal ToDecimal(this string source, decimal @default = 0)
+        public static decimal ToDecimal(this string? source, decimal @default = 0)
         {
             var result = decimal.TryParse(source, out var value);
             return result ? value : @default;
@@ -159,7 +159,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool IsDateFormat(this string str)
+        public static bool IsDateFormat(this string? str)
         {
             return DateTime.TryParse(str, out _);
         }
@@ -169,7 +169,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static DateTime? ToDateTime(this string str)
+        public static DateTime? ToDateTime(this string? str)
         {
             var datetime = DateTime.TryParse(str, out var date);
             if (datetime)
@@ -212,7 +212,7 @@ namespace Azrng.Core.Extension
         /// <summary>
         /// 字符串转 Guid
         /// </summary>
-        public static Guid ToGuid(this string source, Guid @default = default)
+        public static Guid ToGuid(this string? source, Guid @default = default)
         {
             var result = Guid.TryParse(source, out var value);
             return result ? value : @default;
@@ -225,7 +225,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static bool HasChinese(this string str)
+        public static bool HasChinese(this string? str)
         {
             return !str.IsNullOrWhiteSpace() && Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
         }
@@ -237,7 +237,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="currentString"></param>
         /// <returns></returns>
-        public static bool IsNotNullOrWhiteSpace(this string currentString)
+        public static bool IsNotNullOrWhiteSpace(this string? currentString)
         {
             return !string.IsNullOrWhiteSpace(currentString);
         }
@@ -247,7 +247,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="currentString"></param>
         /// <returns></returns>
-        public static bool IsNullOrWhiteSpace(this string currentString)
+        public static bool IsNullOrWhiteSpace(this string? currentString)
         {
             return string.IsNullOrWhiteSpace(currentString);
         }
@@ -257,7 +257,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="currentString"></param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(this string currentString)
+        public static bool IsNullOrEmpty(this string? currentString)
         {
             return string.IsNullOrEmpty(currentString);
         }
@@ -267,7 +267,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="currentString"></param>
         /// <returns></returns>
-        public static bool IsNotNullOrEmpty(this string currentString)
+        public static bool IsNotNullOrEmpty(this string? currentString)
         {
             return !string.IsNullOrEmpty(currentString);
         }
@@ -280,9 +280,9 @@ namespace Azrng.Core.Extension
         /// <param name="currStr"></param>
         /// <param name="defaultValue"></param>
         /// <returns></returns>
-        public static string GetOrDefault(this string currStr, string defaultValue)
+        public static string GetOrDefault(this string? currStr, string defaultValue)
         {
-            return currStr.IsNullOrWhiteSpace() ? defaultValue : currStr;
+            return (currStr.IsNullOrWhiteSpace() ? defaultValue : currStr)!;
         }
 
         /// <summary>
@@ -418,11 +418,11 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="versionNumber">1.1.1输出数值格式：10101</param>
         /// <returns></returns>
-        public static int ToVersionNumber(this string versionNumber)
+        public static int ToVersionNumber(this string? versionNumber)
         {
             if (versionNumber.IsNullOrWhiteSpace())
                 return 0;
-            var splitVersion = versionNumber.ToLower()
+            var splitVersion = versionNumber!.ToLower()
                                             .Replace("v", "")
                                             .Replace(".txt", "")
                                             .Split('.');

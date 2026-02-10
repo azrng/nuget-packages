@@ -33,7 +33,7 @@ namespace Azrng.Core.Extension
         /// 验证身份证是否合法
         /// </summary>
         /// <param name="idCard">要验证的身份证</param>
-        public static bool IsIdCard(this string idCard)
+        public static bool IsIdCard(this string? idCard)
         {
             //如果为空，认为验证合格
             if (string.IsNullOrEmpty(idCard))
@@ -56,7 +56,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="cellPhone">要验证的手机号码</param>
         /// <returns></returns>
-        public static bool IsPhone(this string cellPhone)
+        public static bool IsPhone(this string? cellPhone)
         {
             if (string.IsNullOrEmpty(cellPhone))
             {

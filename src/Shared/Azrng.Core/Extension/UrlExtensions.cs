@@ -13,9 +13,9 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="target"></param>
         /// <returns></returns>
-        public static string UrlEncode(this string target)
+        public static string? UrlEncode(this string? target)
         {
-            return target.UrlEncode(Encoding.UTF8);
+            return target?.UrlEncode(Encoding.UTF8);
         }
 
         /// <summary>
@@ -24,9 +24,9 @@ namespace Azrng.Core.Extension
         /// <param name="target"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static string UrlEncode(this string target, Encoding encoding)
+        public static string? UrlEncode(this string? target, Encoding encoding)
         {
-            return target == null ? null : HttpUtility.UrlEncode(target, encoding);
+            return target is null ? null : HttpUtility.UrlEncode(target, encoding);
         }
 
         /// <summary>
@@ -34,9 +34,9 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="target"></param>
         /// <returns></returns>
-        public static string UrlDecode(this string target)
+        public static string? UrlDecode(this string? target)
         {
-            return target.UrlDecode(Encoding.UTF8);
+            return target?.UrlDecode(Encoding.UTF8);
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Azrng.Core.Extension
         /// <param name="target"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static string UrlDecode(this string target, Encoding encoding)
+        public static string? UrlDecode(this string? target, Encoding encoding)
         {
             return target == null ? null : HttpUtility.UrlDecode(target, encoding);
         }

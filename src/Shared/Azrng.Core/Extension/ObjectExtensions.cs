@@ -33,7 +33,7 @@ namespace Azrng.Core.Extension
         /// <param name="source">要拼接的实体</param>
         /// <param name="paramLower">参数是否要小写</param>
         /// <returns>Url,</returns>
-        public static string ToUrlParameter<T>(this T source, bool paramLower = false)
+        public static string ToUrlParameter<T>(this T? source, bool paramLower = false)
             where T : class
         {
             if (source == null)
@@ -97,7 +97,7 @@ namespace Azrng.Core.Extension
         /// <param name="from">待转换值</param>
         /// <param name="defaultValue">默认值</param>
         /// <returns>返回值</returns>
-        public static TTo To<TFrom, TTo>(this TFrom from, TTo defaultValue)
+        public static TTo To<TFrom, TTo>(this TFrom? from, TTo defaultValue)
         {
             if (from is null)
                 return defaultValue;
@@ -112,7 +112,7 @@ namespace Azrng.Core.Extension
                 }
 
                 //如果目标类型为枚举，则使用枚举格式化方法
-                if (type.IsEnum)
+                if (type!.IsEnum)
                     return (TTo)Enum.Parse(type, from.ToString());
                 return (TTo)Convert.ChangeType(from, type);
             }
@@ -129,7 +129,7 @@ namespace Azrng.Core.Extension
         /// <typeparam name="TTo">目标类型</typeparam>
         /// <param name="from">待转换值</param>
         /// <returns>返回值</returns>
-        public static TTo To<TFrom, TTo>(this TFrom from)
+        public static TTo? To<TFrom, TTo>(this TFrom from)
         {
             return from.To(default(TTo));
         }
@@ -141,7 +141,7 @@ namespace Azrng.Core.Extension
         /// <param name="from">待转换值</param>
         /// <param name="defaultValue">默认值</param>
         /// <returns>返回值</returns>
-        public static TTo To<TTo>(this string from, TTo defaultValue)
+        public static TTo To<TTo>(this string? from, TTo defaultValue)
         {
             return from.To<string, TTo>(defaultValue);
         }
@@ -152,7 +152,7 @@ namespace Azrng.Core.Extension
         /// <typeparam name="TTo">类型</typeparam>
         /// <param name="from">待转换字符串</param>
         /// <returns>返回值</returns>
-        public static TTo To<TTo>(this string from)
+        public static TTo? To<TTo>(this string? from)
         {
             return from.To(default(TTo));
         }
@@ -168,7 +168,7 @@ namespace Azrng.Core.Extension
         /// <param name="defaultValue"></param>
         /// <returns>转换结果</returns>
         public static TTo To<TFrom, TProperty, TTo>(
-            this TFrom from,
+            this TFrom? from,
             Func<TFrom, TProperty> getProperty,
             TTo defaultValue
         )
@@ -188,8 +188,8 @@ namespace Azrng.Core.Extension
         /// <param name="from">对象</param>
         /// <param name="getProperty">属性获取委托</param>
         /// <returns>转换结果</returns>
-        public static TTo To<TFrom, TProperty, TTo>(
-            this TFrom from,
+        public static TTo? To<TFrom, TProperty, TTo>(
+            this TFrom? from,
             Func<TFrom, TProperty> getProperty
         )
         {
@@ -207,7 +207,7 @@ namespace Azrng.Core.Extension
         /// <param name="from">对象</param>
         /// <param name="getProperty">属性获取委托</param>
         /// <returns>转换结果</returns>
-        public static TTo To<TFrom, TTo>(this TFrom from, Func<TFrom, object> getProperty)
+        public static TTo? To<TFrom, TTo>(this TFrom? from, Func<TFrom, object> getProperty)
         {
             return from.To<TFrom, object, TTo>(getProperty);
         }

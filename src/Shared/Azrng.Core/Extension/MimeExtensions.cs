@@ -13,7 +13,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static string? GetMimeType(this string fileName)
+        public static string? GetMimeType(this string? fileName)
         {
             if (fileName.IsNullOrWhiteSpace())
                 return null;
