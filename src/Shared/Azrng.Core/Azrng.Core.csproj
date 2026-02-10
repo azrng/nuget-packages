@@ -5,7 +5,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的公共核心类库</Description>
-        <Version>1.15.3</Version>
+        <Version>1.15.4</Version>
         <PackageId>Azrng.Core</PackageId>
         <Nullable>enable</Nullable>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>

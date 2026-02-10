@@ -38,7 +38,7 @@ namespace Azrng.Core.Results
         /// <summary>
         /// 数据
         /// </summary>
-        T Data { get; set; }
+        T? Data { get; set; }
     }
 
     /// <summary>

@@ -258,6 +258,8 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.15.4
+  * 修复IResultModel的null引用
 * 1.15.3
   * 更新null引用问题
 * 1.15.2

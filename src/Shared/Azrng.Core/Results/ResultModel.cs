@@ -19,7 +19,7 @@ namespace Azrng.Core.Results
             IsSuccess = isSuccess;
             Code = code;
             Message = message;
-            Errors = errorInfos ??= new List<ErrorInfo>();
+            Errors = errorInfos ?? new List<ErrorInfo>();
         }
 
         /// <summary>
