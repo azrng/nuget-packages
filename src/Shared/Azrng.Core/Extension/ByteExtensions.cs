@@ -79,6 +79,8 @@ namespace Azrng.Core.Extension
         public static string? GetFileSuffix(this byte[] bytes)
         {
             var fileCode = GetFileCode(bytes);
+            if(fileCode is null)
+                return null;
             var key = CommonCoreConst.FileFormats.First(i => i.Value.Equals(fileCode)).Key;
             return !CommonCoreConst.ContentTypeExtensionsMapping.ContainsKey(key) ? null : key;
         }
@@ -131,8 +133,12 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="bytes">字节数组</param>
         /// <returns></returns>
-        private static string GetFileCode(byte[] bytes)
+        private static string? GetFileCode(byte[] bytes)
         {
+            if (bytes.Length < 2)
+            {
+                return null;
+            }
             return bytes[0].ToString(CultureInfo.InvariantCulture) + bytes[1];
         }
     }

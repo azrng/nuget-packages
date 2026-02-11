@@ -287,7 +287,7 @@ namespace Azrng.Core.Extension
                 return 0;
             }
 
-            return DateDiff(dateStart, dateEnd.Value);
+            return dateStart.DateDiff(dateEnd.Value);
         }
 
         /// <summary>
@@ -303,8 +303,35 @@ namespace Azrng.Core.Extension
                 return 0;
             }
 
+            return dateStart.DateDiff(dateEnd);
+        }
+
+        /// <summary>
+        /// 计算两个日期天数(未满24小时算1天  超过24小时才算一天)
+        /// </summary>
+        /// <param name="dateStart">开始时间</param>
+        /// <param name="dateEnd">结束时间</param>
+        /// <returns></returns>
+        public static int DateDiff(this DateTime dateStart, DateTime? dateEnd)
+        {
+            if (!dateEnd.HasValue)
+            {
+                return 0;
+            }
+
+            return dateStart.DateDiff(dateEnd.Value);
+        }
+
+        /// <summary>
+        /// 计算两个日期天数(未满24小时算1天  超过24小时才算一天)
+        /// </summary>
+        /// <param name="dateStart">开始时间</param>
+        /// <param name="dateEnd">结束时间</param>
+        /// <returns></returns>
+        public static int DateDiff(this DateTime dateStart, DateTime dateEnd)
+        {
             // 计算时间差
-            var difference = dateEnd - dateStart.Value;
+            var difference = dateEnd - dateStart;
 
             // 返回天数差（绝对值）
             return (int)Math.Ceiling(Math.Abs(difference.TotalDays));

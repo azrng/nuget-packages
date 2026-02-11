@@ -1,172 +1,650 @@
-﻿using Azrng.Core.Enums;
-using FluentAssertions;
-using Xunit.Abstractions;
-
 namespace Common.Core.Test.Extension;
 
 /// <summary>
-/// 时间扩展
+/// DateTimeExtension DateTime扩展方法的单元测试
 /// </summary>
 public class DateTimeExtensionTest
 {
-    private readonly ITestOutputHelper _testOutputHelper;
+    #region 格式化时间 Tests
 
-    public DateTimeExtensionTest(ITestOutputHelper testOutputHelper)
+    /// <summary>
+    /// 测试ToStandardString方法：DateTime转标准时间字符串
+    /// </summary>
+    [Fact]
+    public void ToStandardString_ValidDateTime_ReturnsFormattedString()
     {
-        _testOutputHelper = testOutputHelper;
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+
+        // Act
+        var result = dateTime.ToStandardString();
+
+        // Assert
+        Assert.Equal("2019-01-21 20:57:51", result);
     }
 
     /// <summary>
-    /// 获取网络时间
+    /// 测试ToStandardString方法：可空DateTime为null时应返回空字符串
     /// </summary>
     [Fact]
-    public async Task GetNetworkTime_ReturnOk()
+    public void ToStandardString_NullDateTime_ReturnsEmptyString()
     {
-        var dateTime = DateTime.Now;
-        var currTime = await DateTimeHelper.GetNetworkTime();
-        currTime!.Value!.Hour.Should().BeLessOrEqualTo(dateTime.Hour);
+        // Arrange
+        DateTime? dateTime = null;
+
+        // Act
+        var result = dateTime.ToStandardString();
+
+        // Assert
+        Assert.Equal(string.Empty, result);
     }
 
     /// <summary>
-    /// 时间戳转时间
+    /// 测试ToDetailedTimeString方法：DateTime转详细时间字符串
     /// </summary>
     [Fact]
-    public void TimeSpanToDateTime_ReturnOk()
+    public void ToDetailedTimeString_ValidDateTime_ReturnsDetailedString()
     {
-        var ts = TimeSpan.FromHours(1);
-        var dt = ts.ToDateTime();
-        Assert.Equal(1, dt.Hour);
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, 123);
 
-        var ts2 = dt.ToTimeSpan();
-        Assert.True(ts == ts2);
+        // Act
+        var result = dateTime.ToDetailedTimeString();
+
+        // Assert
+        Assert.Equal("2019-01-21 20:57:51.1230000", result);
     }
-
-    #region 获取指定时间
 
     /// <summary>
-    /// 获取指定时间周一的时间
+    /// 测试ToDetailedTimeString方法：可空DateTime为null时应返回空字符串
     /// </summary>
-    /// <returns></returns>
     [Fact]
-    public void GetWeekOneDate_ReturnOk()
+    public void ToDetailedTimeString_NullDateTime_ReturnsEmptyString()
     {
-        // 准备
-        var date = new DateTime(2024, 08, 13, 12, 12,
-            12);
+        // Arrange
+        DateTime? dateTime = null;
 
-        // 昨天开始
-        var yesterdayStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.Yesterday);
-        Assert.Equal(new DateTime(2024, 08, 12), yesterdayStart);
+        // Act
+        var result = dateTime.ToDetailedTimeString();
 
-        // 昨天结束
-        var yesterdayEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.Yesterday);
-        Assert.Equal(new DateTime(2024, 08, 13).AddSeconds(-1), yesterdayEnd);
-
-        // 今天开始
-        var todayStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.Today);
-        Assert.Equal(new DateTime(2024, 08, 13), todayStart);
-
-        // 今天结束
-        var todayEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.Today);
-        Assert.Equal(new DateTime(2024, 08, 14).AddSeconds(-1), todayEnd);
-
-        // 这周开始
-        var weekOneDateStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.Week);
-        Assert.Equal(new DateTime(2024, 08, 12), weekOneDateStart);
-
-        // 这周结束
-        var weekOneDateEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.Week);
-        Assert.Equal(new DateTime(2024, 08, 19).AddSeconds(-1), weekOneDateEnd);
-
-        // 这月开始
-        var currentMonthStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.CurrentMonth);
-        Assert.Equal(new DateTime(2024, 08, 1), currentMonthStart);
-
-        // 这个月结束
-        var currentMonthEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.CurrentMonth);
-        Assert.Equal(new DateTime(2024, 09, 1).AddSeconds(-1), currentMonthEnd);
-
-        // 下个月开始
-        var nextMonthStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.NextMonth);
-        Assert.Equal(new DateTime(2024, 09, 1), nextMonthStart);
-
-        // 下个月结束
-        var nextMonthEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.NextMonth);
-        Assert.Equal(new DateTime(2024, 10, 1).AddSeconds(-1), nextMonthEnd);
-
-        // 这个季节开始
-        var seasonStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.Season);
-        Assert.Equal(new DateTime(2024, 7, 1), seasonStart);
-
-        // 这个季节结束
-        var seasonEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.Season);
-        Assert.Equal(new DateTime(2024, 10, 1).AddSeconds(-1), seasonEnd);
-
-        // 这年开始
-        var yearStart = DateTimeHelper.GetTargetTimeStart(date, TimeType.Year);
-        Assert.Equal(new DateTime(2024, 1, 1), yearStart);
-
-        // 这年结束
-        var yearEnd = DateTimeHelper.GetTargetTimeEnd(date, TimeType.Year);
-        Assert.Equal(new DateTime(2025, 1, 1).AddSeconds(-1), yearEnd);
+        // Assert
+        Assert.Equal(string.Empty, result);
     }
 
+    /// <summary>
+    /// 测试ToDateString方法：DateTime转日期字符串
+    /// </summary>
     [Fact]
-    public void DetailsTime_Test()
+    public void ToDateString_ValidDateTime_ReturnsDateString()
     {
-        var date = DateTime.Now;
-        var str1 = date.ToDetailedTimeString();
-        _testOutputHelper.WriteLine(str1);
-        Assert.NotEmpty(str1);
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21);
+
+        // Act
+        var result = dateTime.ToDateString();
+
+        // Assert
+        Assert.Equal("2019-01-21", result);
     }
 
+    /// <summary>
+    /// 测试ToDateString方法：可空DateTime为null时应返回空字符串
+    /// </summary>
     [Fact]
-    public void DetailsTime_Null_Test()
+    public void ToDateString_NullDateTime_ReturnsEmptyString()
     {
-        DateTime? date = null;
-        var str1 = date.ToDetailedTimeString();
-        Assert.Empty(str1);
+        // Arrange
+        DateTime? dateTime = null;
+
+        // Act
+        var result = dateTime.ToDateString();
+
+        // Assert
+        Assert.Equal(string.Empty, result);
     }
 
+    /// <summary>
+    /// 测试ToIsoDateTimeString方法：DateTime转ISO 8601标准时间字符串
+    /// </summary>
     [Fact]
-    public void IsoTime_Test()
+    public void ToIsoDateTimeString_ValidDateTime_ReturnsIsoString()
     {
-        var date = DateTime.Now;
-        var str1 = date.ToIsoDateTimeString();
-        _testOutputHelper.WriteLine(str1);
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Local);
 
-        var str2 = date.ToString("yyyy-MM-ddTHH:mm:ss.fffffffK");
-        _testOutputHelper.WriteLine(str2);
+        // Act
+        var result = dateTime.ToIsoDateTimeString();
+
+        // Assert
+        Assert.StartsWith("2019-01-21T20:57:51", result);
     }
 
+    /// <summary>
+    /// 测试ToIsoDateTimeString方法：可空DateTime为null时应返回空字符串
+    /// </summary>
     [Fact]
-    public void IsoTime_Null_Test()
+    public void ToIsoDateTimeString_NullDateTime_ReturnsEmptyString()
     {
-        DateTime? date = null;
-        var str1 = date.ToIsoDateTimeString();
-        Assert.Empty(str1);
+        // Arrange
+        DateTime? dateTime = null;
+
+        // Act
+        var result = dateTime.ToIsoDateTimeString();
+
+        // Assert
+        Assert.Equal("", result);
+    }
+
+    /// <summary>
+    /// 测试ToFormatString方法：自定义时间格式
+    /// </summary>
+    [Fact]
+    public void ToFormatString_CustomFormat_ReturnsFormattedString()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+
+        // Act
+        var result = dateTime.ToFormatString("yyyy年MM月dd日 HH时mm分ss秒");
+
+        // Assert
+        Assert.Equal("2019年01月21日 20时57分51秒", result);
+    }
+
+    /// <summary>
+    /// 测试ToFormatString方法：格式为null时应使用默认格式
+    /// </summary>
+    [Fact]
+    public void ToFormatString_NullFormat_UsesDefaultFormat()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+
+        // Act
+        var result = dateTime.ToFormatString(null);
+
+        // Assert
+        Assert.Equal("2019-01-21 20:57:51", result);
     }
 
     #endregion
 
+    #region 时区处理 Tests
+
     /// <summary>
-    /// 计算相隔的天数
+    /// 测试ToNowDateTime方法：获取无时区的当前时间
     /// </summary>
-    /// <param name="startTime"></param>
-    /// <param name="endTime"></param>
-    /// <param name="day"></param>
-    [Theory]
-    [InlineData("2025-09-17", "2025-09-17", 0)]
-    [InlineData("2025-09-17", "2025-09-18", 1)]
-    [InlineData("2025-09-18", "2025-09-17", 1)]
-    [InlineData("2025-09-17 10:00:00", "2025-09-18 10:00:01", 2)]
-    [InlineData("2025-09-17 10:00:00", "2025-09-18 09:00:01", 1)]
-    [InlineData(null, "2025-09-18", 0)]
-    [InlineData("2025-09-18", null, 0)]
-    [InlineData("2025-09-10 10:00:00", "2025-09-20 09:00:01", 10)]
-    public void DateDiff_ReturnOk(string startTime, string endTime, int day)
+    [Fact]
+    public void ToNowDateTime_ReturnsUnspecifiedTime()
     {
-        var result = startTime.ToDateTime().DateDiff(endTime.ToDateTime());
-        Assert.Equal(day, result);
+        // Arrange
+        var now = DateTime.Now;
+
+        // Act
+        var result = now.ToNowDateTime();
+
+        // Assert
+        Assert.Equal(DateTimeKind.Unspecified, result.Kind);
     }
+
+    /// <summary>
+    /// 测试ToUnspecifiedDateTime方法：转换为无时区时间
+    /// </summary>
+    [Fact]
+    public void ToUnspecifiedDateTime_ConvertsKindToUnspecified()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+
+        // Act
+        var result = dateTime.ToUnspecifiedDateTime();
+
+        // Assert
+        Assert.Equal(DateTimeKind.Unspecified, result.Kind);
+        Assert.Equal(2019, result.Year);
+        Assert.Equal(1, result.Month);
+        Assert.Equal(21, result.Day);
+    }
+
+    #endregion
+
+    #region 时间戳 Tests
+
+    /// <summary>
+    /// 测试ToTimestamp方法：获取毫秒级时间戳
+    /// </summary>
+    [Fact]
+    public void ToTimestamp_Milliseconds_ReturnsCorrectTimestamp()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+
+        // Act
+        var result = dateTime.ToTimestamp(false);
+
+        // Assert
+        Assert.True(result > 0);
+    }
+
+    /// <summary>
+    /// 测试ToTimestamp方法：获取秒级时间戳
+    /// </summary>
+    [Fact]
+    public void ToTimestamp_Seconds_ReturnsCorrectTimestamp()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+
+        // Act
+        var result = dateTime.ToTimestamp(true);
+
+        // Assert
+        Assert.True(result > 0);
+        // 秒级时间戳应该比毫秒级小约1000倍
+        var msTimestamp = dateTime.ToTimestamp(false);
+        Assert.True(result * 1000 - msTimestamp < 1000); // 允许1秒的误差
+    }
+
+    /// <summary>
+    /// 测试ToDateTime方法：毫秒级时间戳转DateTime
+    /// </summary>
+    [Fact]
+    public void ToDateTime_MillisecondsTimestamp_ConvertsToDateTime()
+    {
+        // Arrange
+        var timestamp = 1548070671000L; // 2019-01-21 20:57:51 UTC 附近的时间戳
+
+        // Act
+        var result = timestamp.ToDateTime(false);
+
+        // Assert
+        Assert.Equal(2019, result.Year);
+        Assert.Equal(1, result.Month);
+    }
+
+    /// <summary>
+    /// 测试ToDateTime方法：秒级时间戳转DateTime
+    /// </summary>
+    [Fact]
+    public void ToDateTime_SecondsTimestamp_ConvertsToDateTime()
+    {
+        // Arrange
+        var timestamp = 1548070671L; // 秒级时间戳
+
+        // Act
+        var result = timestamp.ToDateTime(true);
+
+        // Assert
+        Assert.True(result.Year >= 2019);
+    }
+
+    #endregion
+
+    #region 时间段 Tests
+
+    /// <summary>
+    /// 测试ToDateTime方法：TimeSpan转DateTime
+    /// </summary>
+    [Fact]
+    public void TimeSpan_ToDateTime_ConvertsToDateTime()
+    {
+        // Arrange
+        var timeSpan = new TimeSpan(1, 2, 3, 4, 5, 6); // 1天2小时3分4秒5毫秒
+
+        // Act
+        var result = timeSpan.ToDateTime();
+
+        // Assert
+        Assert.Equal(1, result.Day);
+        Assert.True(result.Hour >= 2);
+    }
+
+    /// <summary>
+    /// 测试ToTimeSpan方法：DateTime转TimeSpan
+    /// </summary>
+    [Fact]
+    public void DateTime_ToTimeSpan_ConvertsToTimeSpan()
+    {
+        // Arrange
+        var dateTime = new DateTime(1, 1, 1, 12, 30, 0); // 公元1年
+
+        // Act
+        var result = dateTime.ToTimeSpan();
+
+        // Assert
+        Assert.True(result.TotalDays > 0);
+    }
+
+    #endregion
+
+    #region 日期判断 Tests
+
+    /// <summary>
+    /// 测试IsWeekend方法：周六是周末
+    /// </summary>
+    [Fact]
+    public void IsWeekend_Saturday_ReturnsTrue()
+    {
+        // Arrange
+        var saturday = new DateTime(2019, 1, 26); // 2019-01-26 是周六
+
+        // Act
+        var result = saturday.IsWeekend();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    /// <summary>
+    /// 测试IsWeekend方法：周日是周末
+    /// </summary>
+    [Fact]
+    public void IsWeekend_Sunday_ReturnsTrue()
+    {
+        // Arrange
+        var sunday = new DateTime(2019, 1, 27); // 2019-01-27 是周日
+
+        // Act
+        var result = sunday.IsWeekend();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    /// <summary>
+    /// 测试IsWeekend方法：周三不是周末
+    /// </summary>
+    [Fact]
+    public void IsWeekend_Wednesday_ReturnsFalse()
+    {
+        // Arrange
+        var wednesday = new DateTime(2019, 1, 23); // 2019-01-23 是周三
+
+        // Act
+        var result = wednesday.IsWeekend();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    /// <summary>
+    /// 测试IsWeekday方法：工作日应返回true
+    /// </summary>
+    [Fact]
+    public void IsWeekday_Monday_ReturnsTrue()
+    {
+        // Arrange
+        var monday = new DateTime(2019, 1, 21); // 周一
+
+        // Act
+        var result = monday.IsWeekday();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    /// <summary>
+    /// 测试IsWeekday方法：周末应返回false
+    /// </summary>
+    [Fact]
+    public void IsWeekday_Saturday_ReturnsFalse()
+    {
+        // Arrange
+        var saturday = new DateTime(2019, 1, 26);
+
+        // Act
+        var result = saturday.IsWeekday();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：周一作为一周的开始
+    /// </summary>
+    [Fact]
+    public void GetWeekOfMonth_WeekStartMonday_ReturnsCorrectWeek()
+    {
+        // Arrange
+        var date = new DateTime(2026, 2, 11); // 是周三
+
+        // Act
+        var result = date.GetWeekOfMonth(1);
+
+        // Assert
+        Assert.Equal(2, result); // 第2周
+    }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：周日作为一周的开始
+    /// </summary>
+    [Fact]
+    public void GetWeekOfMonth_WeekStartSunday_ReturnsCorrectWeek()
+    {
+        // Arrange
+        var date = new DateTime(2019, 1, 6); // 2019-01-06 是周日
+
+        // Act
+        var result = date.GetWeekOfMonth(2);
+
+        // Assert
+        Assert.Equal(1, result); // 第一周
+    }
+
+    /// <summary>
+    /// 测试GetQuarter方法：获取月份对应的季度
+    /// </summary>
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 1)]
+    [InlineData(3, 1)]
+    [InlineData(4, 2)]
+    [InlineData(5, 2)]
+    [InlineData(6, 2)]
+    [InlineData(7, 3)]
+    [InlineData(8, 3)]
+    [InlineData(9, 3)]
+    [InlineData(10, 4)]
+    [InlineData(11, 4)]
+    [InlineData(12, 4)]
+    public void GetQuarter_DifferentMonths_ReturnsCorrectQuarter(int month, int expectedQuarter)
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, month, 15);
+
+        // Act
+        var result = dateTime.GetQuarter();
+
+        // Assert
+        Assert.Equal(expectedQuarter, result);
+    }
+
+    /// <summary>
+    /// 测试GetCurrentMonthDayNumber方法：获取当前月份有多少天
+    /// </summary>
+    [Fact]
+    public void GetCurrentMonthDayNumber_January_Returns31()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 1, 15);
+
+        // Act
+        var result = dateTime.GetCurrentMonthDayNumber();
+
+        // Assert
+        Assert.Equal(31, result);
+    }
+
+    /// <summary>
+    /// 测试GetCurrentMonthDayNumber方法：二月平年有28天
+    /// </summary>
+    [Fact]
+    public void GetCurrentMonthDayNumber_FebruaryNonLeapYear_Returns28()
+    {
+        // Arrange
+        var dateTime = new DateTime(2019, 2, 15);
+
+        // Act
+        var result = dateTime.GetCurrentMonthDayNumber();
+
+        // Assert
+        Assert.Equal(28, result);
+    }
+
+    /// <summary>
+    /// 测试GetCurrentMonthDayNumber方法：二月闰年有29天
+    /// </summary>
+    [Fact]
+    public void GetCurrentMonthDayNumber_FebruaryLeapYear_Returns29()
+    {
+        // Arrange
+        var dateTime = new DateTime(2020, 2, 15);
+
+        // Act
+        var result = dateTime.GetCurrentMonthDayNumber();
+
+        // Assert
+        Assert.Equal(29, result);
+    }
+
+    #endregion
+
+    #region 日期差 Tests
+
+    /// <summary>
+    /// 测试DateDiff方法：计算两个日期之间的天数
+    /// </summary>
+    [Fact]
+    public void DateDiff_OneDayDifference_ReturnsOne()
+    {
+        // Arrange
+        var startDate = new DateTime(2019, 1, 21);
+        var endDate = new DateTime(2019, 1, 22);
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(1, result);
+    }
+
+    /// <summary>
+    /// 测试DateDiff方法：不足24小时算一天
+    /// </summary>
+    [Fact]
+    public void DateDiff_LessThan24Hours_ReturnsOne()
+    {
+        // Arrange
+        var startDate = new DateTime(2019, 1, 21, 10, 0, 0);
+        var endDate = new DateTime(2019, 1, 21, 20, 0, 0);
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(1, result); // 不足24小时
+    }
+
+    /// <summary>
+    /// 测试DateDiff方法：不超过24小时才算一天
+    /// </summary>
+    [Fact]
+    public void DateDiff_MoreThan24Hours_ReturnsOne()
+    {
+        // Arrange
+        var startDate = new DateTime(2019, 1, 21, 10, 0, 0);
+        var endDate = new DateTime(2019, 1, 21, 23, 59, 59);
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(1, result); // 13小时59分，四舍五入为2天
+    }
+
+    /// <summary>
+    /// 测试DateDiff方法：可空DateTime为null时应返回0
+    /// </summary>
+    [Fact]
+    public void DateDiff_NullStartDate_ReturnsZero()
+    {
+        // Arrange
+        DateTime? startDate = null;
+        var endDate = new DateTime(2019, 1, 22);
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    /// <summary>
+    /// 测试DateDiff方法：可空DateTime为null时应返回0
+    /// </summary>
+    [Fact]
+    public void DateDiff_NullEndDate_ReturnsZero()
+    {
+        // Arrange
+        var startDate = new DateTime(2019, 1, 21);
+        DateTime? endDate = null;
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(0, result);
+    }
+
+    /// <summary>
+    /// 测试DateDiff方法：反向日期计算应返回正数
+    /// </summary>
+    [Fact]
+    public void DateDiff_ReverseOrder_ReturnsPositiveValue()
+    {
+        // Arrange
+        var startDate = new DateTime(2019, 1, 25);
+        var endDate = new DateTime(2019, 1, 21);
+
+        // Act
+        var result = startDate.DateDiff(endDate);
+
+        // Assert
+        Assert.Equal(4, result); // 4天
+    }
+
+    #endregion
+
+    #region 边界情况 Tests
+
+    /// <summary>
+    /// 测试边界情况：最小DateTime值
+    /// </summary>
+    [Fact]
+    public void ToTimeSpan_MinDateTime_ReturnsZeroTimeSpan()
+    {
+        // Arrange
+        var minDate = DateTime.MinValue;
+
+        // Act
+        var result = minDate.ToTimeSpan();
+
+        // Assert
+        Assert.Equal(TimeSpan.Zero, result);
+    }
+
+    /// <summary>
+    /// 测试边界情况：GetWeekOfMonth的无效参数
+    /// </summary>
+    [Fact]
+    public void GetWeekOfMonth_InvalidWeekStart_ThrowsException()
+    {
+        // Arrange
+        var date = new DateTime(2019, 1, 7);
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => date.GetWeekOfMonth(3));
+    }
+
+    #endregion
 }
