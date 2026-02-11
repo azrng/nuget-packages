@@ -192,6 +192,7 @@ namespace Azrng.Core.Extension
                 return queryable;
             }
 
+            var appliedCount = 0; // 跟踪实际应用的排序操作数量
             for (var i = 0; i < orderParams.Length; i++)
             {
                 var property = typeof(T).GetProperty(orderParams[i].PropertyName);
@@ -202,7 +203,7 @@ namespace Azrng.Core.Extension
 
                 var propertyAccess = Expression.MakeMemberAccess(parameter, property);
                 var orderByExpr = Expression.Lambda(propertyAccess, parameter);
-                var methodName = i > 0
+                var methodName = appliedCount > 0
                     ? orderParams[i].IsAsc ? "ThenBy" : "ThenByDescending"
                     : orderParams[i].IsAsc
                         ? "OrderBy"
@@ -215,6 +216,7 @@ namespace Azrng.Core.Extension
                     },
                     queryable.Expression, Expression.Quote(orderByExpr));
                 queryable = queryable.Provider.CreateQuery<T>(resultExp);
+                appliedCount++; // 只在成功应用排序后递增
             }
 
             return queryable;
@@ -275,6 +277,8 @@ namespace Azrng.Core.Extension
         {
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
+            if (pageIndex <= 0 || pageSize <= 0)
+                throw new ArgumentException("参数pageIndex/pageSize格式有误");
 
             return query.Skip((pageIndex - 1) * pageSize).Take(pageSize);
         }

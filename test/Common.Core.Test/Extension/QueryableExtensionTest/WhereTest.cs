@@ -271,6 +271,272 @@ public class WhereTest
     }
 
     #endregion
+
+    #region EqualWhere Tests
+
+    /// <summary>
+    /// 测试EqualWhere方法：根据字段名和值进行相等筛选
+    /// </summary>
+    [Fact]
+    public void EqualWhere_ValidFieldAndValue_FiltersCorrectly()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" },
+            new() { Id = 3, Name = "Alice" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.EqualWhere("Name", "Alice").ToList();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.All(result, x => Assert.Equal("Alice", x.Name));
+    }
+
+    /// <summary>
+    /// 测试EqualWhere方法：筛选不存在的值应返回空结果
+    /// </summary>
+    [Fact]
+    public void EqualWhere_NoMatch_ReturnsEmpty()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.EqualWhere("Name", "Charlie");
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region LessWhere Tests
+
+    /// <summary>
+    /// 测试LessWhere方法：根据字段名进行小于筛选
+    /// </summary>
+    [Fact]
+    public void LessWhere_ValidFieldAndValue_FiltersCorrectly()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" },
+            new() { Id = 3, Name = "Charlie" },
+            new() { Id = 4, Name = "David" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.LessWhere("Id", 3).ToList();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, result[0].Id);
+        Assert.Equal(2, result[1].Id);
+    }
+
+    /// <summary>
+    /// 测试LessWhere方法：所有值都大于比较值时返回空结果
+    /// </summary>
+    [Fact]
+    public void LessWhere_AllValuesGreater_ReturnsEmpty()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 5, Name = "Alice" },
+            new() { Id = 10, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.LessWhere("Id", 5);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region GreaterWhere Tests
+
+    /// <summary>
+    /// 测试GreaterWhere方法：根据字段名进行大于筛选
+    /// </summary>
+    [Fact]
+    public void GreaterWhere_ValidFieldAndValue_FiltersCorrectly()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" },
+            new() { Id = 3, Name = "Charlie" },
+            new() { Id = 4, Name = "David" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.GreaterWhere("Id", 2).ToList();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Equal(3, result[0].Id);
+        Assert.Equal(4, result[1].Id);
+    }
+
+    /// <summary>
+    /// 测试GreaterWhere方法：所有值都小于比较值时返回空结果
+    /// </summary>
+    [Fact]
+    public void GreaterWhere_AllValuesLess_ReturnsEmpty()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 3, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.GreaterWhere("Id", 5);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region WhereAny Tests
+
+    /// <summary>
+    /// 测试WhereAny方法：使用多个谓词进行OR条件查询
+    /// </summary>
+    [Fact]
+    public void WhereAny_MultiplePredicates_AppliesOrCondition()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" },
+            new() { Id = 3, Name = "Charlie" },
+            new() { Id = 4, Name = "David" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.WhereAny(
+            x => x.Name == "Alice",
+            x => x.Name == "Charlie"
+        ).ToList();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, x => x.Name == "Alice");
+        Assert.Contains(result, x => x.Name == "Charlie");
+    }
+
+    /// <summary>
+    /// 测试WhereAny方法：单个谓词时应正常工作
+    /// </summary>
+    [Fact]
+    public void WhereAny_SinglePredicate_WorksCorrectly()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.WhereAny(x => x.Name == "Alice").ToList();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Alice", result[0].Name);
+    }
+
+    /// <summary>
+    /// 测试WhereAny方法：空谓词数组应返回所有记录都不匹配的结果
+    /// </summary>
+    [Fact]
+    public void WhereAny_EmptyPredicates_ReturnsNoMatches()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.WhereAny();
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// 测试WhereAny方法：所有谓词都不匹配时应返回空结果
+    /// </summary>
+    [Fact]
+    public void WhereAny_NoMatches_ReturnsEmpty()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" },
+            new() { Id = 2, Name = "Bob" }
+        }.AsQueryable();
+
+        // Act
+        var result = data.WhereAny(
+            x => x.Name == "Charlie",
+            x => x.Name == "David"
+        );
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// 测试WhereAny方法：查询集为null时应抛出ArgumentNullException
+    /// </summary>
+    [Fact]
+    public void WhereAny_NullSource_ThrowsArgumentNullException()
+    {
+        // Arrange
+        IQueryable<TestEntity>? source = null;
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => source.WhereAny(x => x.Id == 1));
+    }
+
+    /// <summary>
+    /// 测试WhereAny方法：谓词数组为null时应抛出ArgumentNullException
+    /// </summary>
+    [Fact]
+    public void WhereAny_NullPredicates_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var data = new List<TestEntity>
+        {
+            new() { Id = 1, Name = "Alice" }
+        }.AsQueryable();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => data.WhereAny(null!));
+    }
+
+    #endregion
 }
 
 #region Test Helper Classes
