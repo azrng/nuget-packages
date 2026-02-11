@@ -258,6 +258,15 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.15.5
+  * 新增DictionaryExtension、DoublelExtension、ByteExtensions、CollectionExtensions、DataTableExtensions的完整单元测试
+  * 完善DateTimeExtension、DecimalExtension单元测试
+  * 修复ByteExtensions.GetFileCode方法IndexOutOfRangeException问题
+  * 修复QueryableExtensions.GreaterWhere方法比较类型错误
+  * 修复GetWeekOfMonth计算问题，增加WeekCalculationMode枚举支持两种周次计算方式
+  * 修复TimeSpan.ToDateTime方法ArgumentOutOfRangeException问题
+  * 修复MimeExtensions相关问题
+  * 新增GetWeekOfMonth方法重载，支持指定周计算模式
 * 1.15.4
   * 修复IResultModel的null引用
 * 1.15.3
