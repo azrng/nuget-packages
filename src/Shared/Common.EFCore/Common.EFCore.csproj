@@ -9,7 +9,7 @@
         <Description>简单封装了一些EFCore常用方法</Description>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
-        <Version>1.6.0</Version>
+        <Version>1.6.1</Version>
         <Copyright>Azrng</Copyright>
         <PackageId>Common.EFCore</PackageId>
         <RootNamespace>Azrng.EFCore</RootNamespace>
