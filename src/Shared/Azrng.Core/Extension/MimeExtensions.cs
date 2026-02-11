@@ -18,7 +18,7 @@ namespace Azrng.Core.Extension
             if (fileName.IsNullOrWhiteSpace())
                 return null;
 
-            var ext = fileName.Substring(fileName.LastIndexOf(".", StringComparison.Ordinal));
+            var ext = fileName!.Substring(fileName.LastIndexOf(".", StringComparison.Ordinal));
             return MimeTypeDict.GetValueOrDefault(ext.ToLowerInvariant());
         }
 
