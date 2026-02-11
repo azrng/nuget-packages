@@ -34,22 +34,6 @@ namespace Azrng.Core.Extension
         /// <param name="condition"></param>
         /// <param name="predicate"></param>
         /// <returns></returns>
-        public static IQueryable<T> QueryableWhereIf<T>(this IQueryable<T>? source, bool condition,
-                                                        Expression<Func<T, bool>> predicate)
-        {
-            if (source == null)
-                throw new ArgumentNullException(nameof(source));
-            return condition ? source.Where(predicate) : source;
-        }
-
-        /// <summary>
-        /// 带条件的where
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="condition"></param>
-        /// <param name="predicate"></param>
-        /// <returns></returns>
         public static IEnumerable<T> WhereIF<T>(this IEnumerable<T>? source, bool condition, Func<T, bool> predicate)
         {
             if (source == null)
