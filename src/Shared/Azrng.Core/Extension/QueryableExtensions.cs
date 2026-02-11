@@ -305,6 +305,71 @@ namespace Azrng.Core.Extension
         #region where
 
         /// <summary>
+        /// 带条件的where
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="condition"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IQueryable<T> QueryableWhereIf<T>(this IQueryable<T>? source, bool condition,
+                                                        Expression<Func<T, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            return condition ? source.Where(predicate) : source;
+        }
+
+        /// <summary>
+        /// 带条件的where
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="condition"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IQueryable<T> WhereIfTrue<T>(this IQueryable<T>? source, bool condition,
+                                                   Expression<Func<T, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            return condition ? source.Where(predicate) : source;
+        }
+
+        /// <summary>
+        /// 带条件的where
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="value"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IQueryable<T> WhereIfNotNullOrWhiteSpace<T>(this IQueryable<T>? source, string? value,
+                                                                  Expression<Func<T, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            return value.IsNotNullOrWhiteSpace() ? source.Where(predicate) : source;
+        }
+
+        /// <summary>
+        /// 带条件的where
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="F"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="value"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IQueryable<T> WhereIfNotNull<T, F>(this IQueryable<T>? source, F? value,
+                                                         Expression<Func<T, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            return value is not null ? source.Where(predicate) : source;
+        }
+
+        /// <summary>
         /// 等于筛选
         /// </summary>
         /// <typeparam name="T"></typeparam>
