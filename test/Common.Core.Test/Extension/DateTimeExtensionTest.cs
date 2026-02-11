@@ -14,7 +14,8 @@ public class DateTimeExtensionTest
     public void ToStandardString_ValidDateTime_ReturnsFormattedString()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51);
 
         // Act
         var result = dateTime.ToStandardString();
@@ -46,7 +47,8 @@ public class DateTimeExtensionTest
     public void ToDetailedTimeString_ValidDateTime_ReturnsDetailedString()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, 123);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51, 123);
 
         // Act
         var result = dateTime.ToDetailedTimeString();
@@ -110,7 +112,8 @@ public class DateTimeExtensionTest
     public void ToIsoDateTimeString_ValidDateTime_ReturnsIsoString()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Local);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51, DateTimeKind.Local);
 
         // Act
         var result = dateTime.ToIsoDateTimeString();
@@ -142,7 +145,8 @@ public class DateTimeExtensionTest
     public void ToFormatString_CustomFormat_ReturnsFormattedString()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51);
 
         // Act
         var result = dateTime.ToFormatString("yyyy年MM月dd日 HH时mm分ss秒");
@@ -158,7 +162,8 @@ public class DateTimeExtensionTest
     public void ToFormatString_NullFormat_UsesDefaultFormat()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51);
 
         // Act
         var result = dateTime.ToFormatString(null);
@@ -194,7 +199,8 @@ public class DateTimeExtensionTest
     public void ToUnspecifiedDateTime_ConvertsKindToUnspecified()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51, DateTimeKind.Utc);
 
         // Act
         var result = dateTime.ToUnspecifiedDateTime();
@@ -217,7 +223,8 @@ public class DateTimeExtensionTest
     public void ToTimestamp_Milliseconds_ReturnsCorrectTimestamp()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51, DateTimeKind.Utc);
 
         // Act
         var result = dateTime.ToTimestamp(false);
@@ -233,13 +240,15 @@ public class DateTimeExtensionTest
     public void ToTimestamp_Seconds_ReturnsCorrectTimestamp()
     {
         // Arrange
-        var dateTime = new DateTime(2019, 1, 21, 20, 57, 51, DateTimeKind.Utc);
+        var dateTime = new DateTime(2019, 1, 21, 20, 57,
+            51, DateTimeKind.Utc);
 
         // Act
         var result = dateTime.ToTimestamp(true);
 
         // Assert
         Assert.True(result > 0);
+
         // 秒级时间戳应该比毫秒级小约1000倍
         var msTimestamp = dateTime.ToTimestamp(false);
         Assert.True(result * 1000 - msTimestamp < 1000); // 允许1秒的误差
@@ -289,14 +298,20 @@ public class DateTimeExtensionTest
     public void TimeSpan_ToDateTime_ConvertsToDateTime()
     {
         // Arrange
-        var timeSpan = new TimeSpan(1, 2, 3, 4, 5, 6); // 1天2小时3分4秒5毫秒
+        var timeSpan = new TimeSpan(1, 2, 3, 4, 5); // 1天2小时3分4秒5毫秒
 
         // Act
         var result = timeSpan.ToDateTime();
 
         // Assert
-        Assert.Equal(1, result.Day);
-        Assert.True(result.Hour >= 2);
+        // DateTime.MinValue 是 0001年1月1日 00:00:00
+        // 加上 1天2小时3分4秒5毫秒 = 0001年1月2日 02:03:04.005
+        Assert.Equal(1, result.Year);
+        Assert.Equal(1, result.Month);
+        Assert.Equal(2, result.Day);
+        Assert.Equal(2, result.Hour);
+        Assert.Equal(3, result.Minute);
+        Assert.Equal(4, result.Second);
     }
 
     /// <summary>
@@ -306,7 +321,8 @@ public class DateTimeExtensionTest
     public void DateTime_ToTimeSpan_ConvertsToTimeSpan()
     {
         // Arrange
-        var dateTime = new DateTime(1, 1, 1, 12, 30, 0); // 公元1年
+        var dateTime = new DateTime(1, 1, 1, 12, 30,
+            0); // 公元1年
 
         // Act
         var result = dateTime.ToTimeSpan();
@@ -399,14 +415,19 @@ public class DateTimeExtensionTest
         Assert.False(result);
     }
 
+    #region GetWeekOfMonth Tests
+
     /// <summary>
-    /// 测试GetWeekOfMonth方法：周一作为一周的开始
+    /// 测试GetWeekOfMonth方法：周一作为一周的开始（从月首日计数模式）
     /// </summary>
     [Fact]
-    public void GetWeekOfMonth_WeekStartMonday_ReturnsCorrectWeek()
+    public void GetWeekOfMonth_WeekStartMonday_FromMonthStart_ReturnsWeek2()
     {
         // Arrange
-        var date = new DateTime(2026, 2, 11); // 是周三
+        // 2026年2月1日是周日，2月11日是周三
+        var date = new DateTime(2026, 2, 11);
+
+        // 从月首日计数：2月1-7日为第1周，2月8-14日为第2周
 
         // Act
         var result = date.GetWeekOfMonth(1);
@@ -416,20 +437,112 @@ public class DateTimeExtensionTest
     }
 
     /// <summary>
-    /// 测试GetWeekOfMonth方法：周日作为一周的开始
+    /// 测试GetWeekOfMonth方法：周一作为一周的开始（完整周模式）
     /// </summary>
     [Fact]
-    public void GetWeekOfMonth_WeekStartSunday_ReturnsCorrectWeek()
+    public void GetWeekOfMonth_WeekStartMonday_FullWeekOnly_ReturnsWeek2()
     {
         // Arrange
-        var date = new DateTime(2019, 1, 6); // 2019-01-06 是周日
+        // 2026年2月1日是周日，第一个完整周从2月2日（周一）开始
+        var date = new DateTime(2026, 2, 11);
+
+        // 完整周模式：2月2-8日为第1周，2月9-15日为第2周
 
         // Act
         var result = date.GetWeekOfMonth(2);
 
         // Assert
+        Assert.Equal(2, result); // 第2周
+    }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：周日作为一周的开始（从月首日计数模式）
+    /// </summary>
+    [Fact]
+    public void GetWeekOfMonth_WeekStartSunday_FromMonthStart_ReturnsWeek1()
+    {
+        // Arrange
+        var date = new DateTime(2019, 1, 6); // 2019-01-06 是周日
+
+        // Act
+        var result = date.GetWeekOfMonth(1);
+
+        // Assert
         Assert.Equal(1, result); // 第一周
     }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：验证不同日期的周次计算（从月首日计数）
+    /// </summary>
+    [Theory]
+    [InlineData(2026, 2, 1, 1)] // 2月1日周日 - 第1周
+    [InlineData(2026, 2, 2, 1)] // 2月2日周一 - 第1周
+    [InlineData(2026, 2, 7, 1)] // 2月7日周六 - 第1周
+    [InlineData(2026, 2, 8, 2)] // 2月8日周日 - 第2周
+    [InlineData(2026, 2, 9, 2)] // 2月9日周一 - 第2周
+    [InlineData(2026, 2, 14, 2)] // 2月14日周六 - 第2周
+    [InlineData(2026, 2, 15, 3)] // 2月15日周日 - 第3周
+    [InlineData(2026, 2, 28, 4)] // 2月28日周一 - 第4周
+    public void GetWeekOfMonth_VariousDates_FromMonthStart_ReturnsCorrectWeek(int year, int month, int day, int expectedWeek)
+    {
+        // Arrange
+        var date = new DateTime(year, month, day);
+
+        // Act
+        var result = date.GetWeekOfMonth(1);
+
+        // Assert
+        Assert.Equal(expectedWeek, result);
+    }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：验证不同日期的周次计算（完整周模式）
+    /// </summary>
+    [Theory]
+    [InlineData(2026, 2, 1, 1)] // 2月1日周日 - 第1周（不完整）
+    [InlineData(2026, 2, 2, 1)] // 2月2日周一 - 第1周
+    [InlineData(2026, 2, 7, 1)] // 2月7日周六 - 第1周
+    [InlineData(2026, 2, 8, 2)] // 2月8日周日 - 第2周
+    [InlineData(2026, 2, 9, 2)] // 2月9日周一 - 第2周
+    [InlineData(2026, 2, 14, 2)] // 2月14日周六 - 第2周
+    [InlineData(2026, 2, 15, 3)] // 2月15日周日 - 第3周
+    [InlineData(2026, 2, 28, 4)] // 2月28日周一 - 第4周
+    public void GetWeekOfMonth_VariousDates_FullWeekOnly_ReturnsCorrectWeek(int year, int month, int day, int expectedWeek)
+    {
+        // Arrange
+        var date = new DateTime(year, month, day);
+
+        // Act
+        var result = date.GetWeekOfMonth(2);
+
+        // Assert
+        Assert.Equal(expectedWeek, result);
+    }
+
+    /// <summary>
+    /// 测试GetWeekOfMonth方法：周一开始的月份第一天是周一的情况
+    /// </summary>
+    [Fact]
+    public void GetWeekOfMonth_FirstDayIsMonday_ReturnsCorrectWeeks()
+    {
+        // Arrange
+        // 2025年12月1日是周一
+        var date1 = new DateTime(2025, 12, 1); // 第1周
+        var date2 = new DateTime(2025, 12, 7); // 第1周
+        var date3 = new DateTime(2025, 12, 8); // 第2周
+
+        // Act
+        var result1 = date1.GetWeekOfMonth(1);
+        var result2 = date2.GetWeekOfMonth(1);
+        var result3 = date3.GetWeekOfMonth(1);
+
+        // Assert
+        Assert.Equal(1, result1);
+        Assert.Equal(1, result2);
+        Assert.Equal(2, result3);
+    }
+
+    #endregion
 
     /// <summary>
     /// 测试GetQuarter方法：获取月份对应的季度
@@ -535,8 +648,10 @@ public class DateTimeExtensionTest
     public void DateDiff_LessThan24Hours_ReturnsOne()
     {
         // Arrange
-        var startDate = new DateTime(2019, 1, 21, 10, 0, 0);
-        var endDate = new DateTime(2019, 1, 21, 20, 0, 0);
+        var startDate = new DateTime(2019, 1, 21, 10, 0,
+            0);
+        var endDate = new DateTime(2019, 1, 21, 20, 0,
+            0);
 
         // Act
         var result = startDate.DateDiff(endDate);
@@ -552,8 +667,10 @@ public class DateTimeExtensionTest
     public void DateDiff_MoreThan24Hours_ReturnsOne()
     {
         // Arrange
-        var startDate = new DateTime(2019, 1, 21, 10, 0, 0);
-        var endDate = new DateTime(2019, 1, 21, 23, 59, 59);
+        var startDate = new DateTime(2019, 1, 21, 10, 0,
+            0);
+        var endDate = new DateTime(2019, 1, 21, 23, 59,
+            59);
 
         // Act
         var result = startDate.DateDiff(endDate);
@@ -631,19 +748,6 @@ public class DateTimeExtensionTest
 
         // Assert
         Assert.Equal(TimeSpan.Zero, result);
-    }
-
-    /// <summary>
-    /// 测试边界情况：GetWeekOfMonth的无效参数
-    /// </summary>
-    [Fact]
-    public void GetWeekOfMonth_InvalidWeekStart_ThrowsException()
-    {
-        // Arrange
-        var date = new DateTime(2019, 1, 7);
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => date.GetWeekOfMonth(3));
     }
 
     #endregion

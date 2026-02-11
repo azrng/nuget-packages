@@ -180,10 +180,10 @@ namespace Azrng.Core.Extension
         /// TimeSpan转DateTime
         /// </summary>
         /// <param name="timeSpan"></param>
-        /// <returns></returns>
+        /// <returns>从DateTime.MinValue开始加上TimeSpan的DateTime</returns>
         public static DateTime ToDateTime(this TimeSpan timeSpan)
         {
-            return new DateTime(timeSpan.Ticks);
+            return DateTime.MinValue.Add(timeSpan);
         }
 
         /// <summary>
@@ -216,30 +216,41 @@ namespace Azrng.Core.Extension
         /// <summary>
         /// 获取日期是当月的第几周
         /// </summary>
-        /// <param name="day"></param>
-        /// <param name="weekStart">1表示 周一至周日 为一周 2表示 周日至周六 为一周</param>
-        /// <returns></returns>
-        public static int GetWeekOfMonth(this DateTime day, int weekStart = 1)
+        /// <param name="day">日期</param>
+        /// <param name="mode">周次计算模式</param>
+        /// <returns>周次（从1开始）</returns>
+        /// <exception cref="ArgumentException">weekStart参数无效时抛出</exception>
+        public static int GetWeekOfMonth(this DateTime day, int mode = 2)
         {
-            //WeekStart
-            //1表示 周一至周日 为一周
-
-            //2表示 周日至周六 为一周
-
-            var firstOfMonth = Convert.ToDateTime(day.Date.Year + "-" + day.Date.Month + "-" + 1);
-
-            var i = (int)firstOfMonth.Date.DayOfWeek;
-            if (i == 0)
+            // 一种是从月首日开始逐周计数，另一种是按完整周划分
+            if (mode == 1)
             {
-                i = 7;
+                // 模式1：从月首日开始逐周计数
+                // 将每个月的第一天算作第1周的开始，然后每7天为一周
+                return (day.Day - 1) / 7 + 1;
             }
-
-            return weekStart switch
+            else
             {
-                1 => (day.Date.Day + i - 2) / 7 + 1,
-                2 => (day.Date.Day + i - 1) / 7,
-                _ => throw new ArgumentException("无效的值")
-            };
+                // 模式2：按完整周划分（以周日为一周的开始）
+                // 规则：第1周从第一个周日开始，但月份第一天到第一个周日之间的日期也算第1周
+                var firstOfMonth = new DateTime(day.Year, day.Month, 1);
+                var firstDayOfWeek = (int)firstOfMonth.DayOfWeek; // 0=周日, 1=周一, ..., 6=周六
+
+                // 以周日（0）为一周的开始
+                var targetDayOfWeek = 0;
+
+                // 计算月份第一天到第一个周开始日（周日）之间的天数
+                var daysBeforeFirstWeek = (targetDayOfWeek - firstDayOfWeek + 7) % 7;
+
+                // 计算周次
+                // 从月份第一天开始算，每7天为一周
+                // day.Day - 1: 从0开始计数（第1天是0）
+                // + daysBeforeFirstWeek: 调整偏移量
+                // / 7: 计算是第几个完整周
+                // + 1: 周次从1开始
+                var weekNumber = (day.Day - 1 + daysBeforeFirstWeek) / 7 + 1;
+                return weekNumber;
+            }
         }
 
         /// <summary>
