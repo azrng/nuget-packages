@@ -35,9 +35,7 @@
   </Folder>
   <Folder Name="/Shared/DataBase/Ado/">
     <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
-    <Project Path="src\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj" />
     <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
-    <Project Path="src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/EFCore/">
     <Project Path="src\Shared\Azrng.EFCore.AutoAudit\Azrng.EFCore.AutoAudit.csproj" />
