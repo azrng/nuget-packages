@@ -1,6 +1,4 @@
-using Azrng.Core;
 using Azrng.DynamicSqlBuilder.Model;
-using Common.Dapper.Repository;
 using Microsoft.Extensions.Logging;
 
 namespace Azrng.DynamicSqlBuilder.Test;
@@ -8,14 +6,10 @@ namespace Azrng.DynamicSqlBuilder.Test;
 public class InOperatorTest
 {
     private readonly ILogger<InOperatorTest> _logger;
-    private readonly IDapperRepository _dapperRepository;
-    private readonly IJsonSerializer _jsonSerializer;
 
-    public InOperatorTest(ILogger<InOperatorTest> logger, IDapperRepository dapperRepository, IJsonSerializer jsonSerializer)
+    public InOperatorTest(ILogger<InOperatorTest> logger)
     {
         _logger = logger;
-        _dapperRepository = dapperRepository;
-        _jsonSerializer = jsonSerializer;
     }
 
     [Fact]

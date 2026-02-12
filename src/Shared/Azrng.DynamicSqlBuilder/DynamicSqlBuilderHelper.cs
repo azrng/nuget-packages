@@ -1,5 +1,6 @@
 using Azrng.DynamicSqlBuilder.Model;
 using Azrng.DynamicSqlBuilder.SqlOperation;
+using Azrng.DynamicSqlBuilder.Validation;
 using Dapper;
 using System.Text;
 
@@ -23,6 +24,56 @@ public static class DynamicSqlBuilderHelper
         List<SortFieldDto> sortFields = null,
         bool isQueryTotalCount = false)
     {
+        // 验证表名
+        FieldNameValidator.ValidateFieldName(tableName, nameof(tableName));
+
+        // 验证查询字段
+        if (queryResultFields == null || queryResultFields.Count == 0)
+        {
+            throw new ArgumentException("查询字段列表不能为空", nameof(queryResultFields));
+        }
+
+        if (!FieldNameValidator.AreValidFieldNames(queryResultFields, out var invalidFields))
+        {
+            throw new ArgumentException($"查询字段包含无效的字段名: {string.Join(", ", invalidFields)}", nameof(queryResultFields));
+        }
+
+        // 验证WHERE子句中的字段名
+        if (sqlWhereClauses != null)
+        {
+            foreach (var whereClause in sqlWhereClauses)
+            {
+                FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(sqlWhereClauses));
+            }
+        }
+
+        // 验证IN操作符字段名
+        if (inOperatorFields != null)
+        {
+            foreach (var inField in inOperatorFields)
+            {
+                FieldNameValidator.ValidateFieldName(inField.Field, nameof(inOperatorFields));
+            }
+        }
+
+        // 验证NOT IN操作符字段名
+        if (notInOperatorFields != null)
+        {
+            foreach (var notInField in notInOperatorFields)
+            {
+                FieldNameValidator.ValidateFieldName(notInField.Field, nameof(notInOperatorFields));
+            }
+        }
+
+        // 验证排序字段名
+        if (sortFields != null)
+        {
+            foreach (var sortField in sortFields)
+            {
+                FieldNameValidator.ValidateFieldName(sortField.Field, nameof(sortFields));
+            }
+        }
+
         var parameters = new DynamicParameters();
 
         if (string.IsNullOrEmpty(necessaryCondition))
@@ -84,7 +135,7 @@ public static class DynamicSqlBuilderHelper
     public static (string QuerySql, string CountSql, DynamicParameters Parameters) BuilderSqlQueryCountStatementGeneric(
         string tableName,
         string necessaryCondition,
-        IEnumerable<string> queryResultFields,
+        List<string> queryResultFields,
         IReadOnlyCollection<SqlWhereClauseInfoDto> sqlWhereClauses,
         List<InOperatorFieldDto> inOperatorFields = null,
         List<NotInOperatorFieldDto> notInOperatorFields = null,
@@ -92,6 +143,57 @@ public static class DynamicSqlBuilderHelper
         int? pageSize = null,
         IReadOnlyCollection<SortFieldDto> sortFields = null)
     {
+        // 验证表名
+        FieldNameValidator.ValidateFieldName(tableName, nameof(tableName));
+
+        // 验证查询字段
+        var queryFields = queryResultFields.ToList();
+        if (queryFields.Count == 0)
+        {
+            throw new ArgumentException("查询字段列表不能为空", nameof(queryResultFields));
+        }
+
+        if (!FieldNameValidator.AreValidFieldNames(queryFields, out var invalidFields))
+        {
+            throw new ArgumentException($"查询字段包含无效的字段名: {string.Join(", ", invalidFields)}", nameof(queryResultFields));
+        }
+
+        // 验证WHERE子句中的字段名
+        if (sqlWhereClauses != null)
+        {
+            foreach (var whereClause in sqlWhereClauses)
+            {
+                FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(sqlWhereClauses));
+            }
+        }
+
+        // 验证IN操作符字段名
+        if (inOperatorFields != null)
+        {
+            foreach (var inField in inOperatorFields)
+            {
+                FieldNameValidator.ValidateFieldName(inField.Field, nameof(inOperatorFields));
+            }
+        }
+
+        // 验证NOT IN操作符字段名
+        if (notInOperatorFields != null)
+        {
+            foreach (var notInField in notInOperatorFields)
+            {
+                FieldNameValidator.ValidateFieldName(notInField.Field, nameof(notInOperatorFields));
+            }
+        }
+
+        // 验证排序字段名
+        if (sortFields != null)
+        {
+            foreach (var sortField in sortFields)
+            {
+                FieldNameValidator.ValidateFieldName(sortField.Field, nameof(sortFields));
+            }
+        }
+
         var parameters = new DynamicParameters();
 
         if (string.IsNullOrEmpty(necessaryCondition))

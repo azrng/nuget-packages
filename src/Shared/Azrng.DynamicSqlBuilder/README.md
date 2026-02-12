@@ -279,27 +279,62 @@ string sql = $"SELECT * FROM Users WHERE Name = '{userName}'";  // ❌ 危险
 
 ### 字段名验证
 
-⚠️ **当前状态：** 字段名直接使用，未进行验证
+✅ **新功能：** 从 v1.1.0 开始，项目内置字段名验证功能
 
-**建议改进：**
+**自动验证：**
+所有字段名在构建SQL时都会自动验证，防止SQL注入：
+
 ```csharp
-// 添加字段名白名单验证
-private static readonly HashSet<string> AllowedFields = new(StringComparer)
-{
-    "Id", "Name", "Email", "Status", "CreateTime"
-};
+// 以下字段名会被拒绝：
+// - SQL关键字：SELECT, DROP, DELETE等
+// - 包含特殊字符：; -- ' " /* */
+// - 空字段名或纯空格
+// - 超长字段名（>128字符）
 
-public static bool ValidateFieldName(string fieldName)
-{
-    return AllowedFields.Contains(fieldName);
-}
-
-// 使用正则表达式验证
-public static bool IsValidFieldName(string fieldName)
-{
-    return Regex.IsMatch(fieldName, @"^[a-zA-Z_][a-zA-Z0-9_]*$");
-}
+var (sql, parameters) = DynamicSqlBuilderHelper.BuilderSqlQueryStatementGeneric(
+    "Users",                          // ✅ 表名会被验证
+    new List<string> { "Id", "Name" }, // ✅ 查询字段会被验证
+    new List<SqlWhereClauseInfoDto>
+    {
+        new SqlWhereClauseInfoDto("Email", MatchOperator.Equal, "test@test.com") // ✅ WHERE字段会被验证
+    },
+    sortFields: new List<SortFieldDto>
+    {
+        new SortFieldDto("CreateTime", false) // ✅ 排序字段会被验证
+    }
+);
 ```
+
+**自定义验证：**
+您也可以使用 `FieldNameValidator` 类进行自定义验证：
+
+```csharp
+using Azrng.DynamicSqlBuilder.Validation;
+
+// 验证单个字段名
+FieldNameValidator.ValidateFieldName("UserName"); // ✅ 有效
+FieldNameValidator.ValidateFieldName("DROP TABLE"); // ❌ 抛出 ArgumentException
+
+// 验证多个字段名
+var fields = new[] { "Id", "Name", "Email" };
+if (!FieldNameValidator.AreValidFieldNames(fields, out var invalidFields))
+{
+    Console.WriteLine($"无效字段: {string.Join(", ", invalidFields)}");
+}
+
+// 使用白名单验证
+var allowedFields = new[] { "Id", "Name", "Email" };
+FieldNameValidator.ValidateFieldNameWhitelist("Name", allowedFields); // ✅
+FieldNameValidator.ValidateFieldNameWhitelist("Password", allowedFields); // ❌
+```
+
+**验证规则：**
+1. 字段名不能为空或纯空格
+2. 字段名长度不能超过128字符
+3. 字段名必须以字母或下划线开头
+4. 字段名只能包含字母、数字和下划线
+5. 字段名不能是SQL关键字（SELECT, DROP, DELETE等）
+6. 字段名不能包含SQL注入模式（--、;、'等）
 
 ## 最佳实践
 
@@ -392,11 +427,29 @@ catch
 - 后台管理系统 - 需要灵活的查询条件组合
 - API 系统 - 需要安全地构建动态 SQL
 
+
 ## 相关链接
 
 - GitHub 仓库：[https://github.com/azrng/nuget-packages](https://github.com/azrng/nuget-packages)
 
 ## 版本历史
+
+### 1.1.0 (最新)
+- ✨ 新增字段名自动验证功能
+  - 自动验证表名、查询字段、WHERE字段、排序字段
+  - 防止SQL注入和无效字段名
+  - 新增 FieldNameValidator 验证器类
+- ✨ 新增全面的测试覆盖
+  - 边界条件测试（BoundaryTests）
+  - 安全测试（SecurityTest）
+  - 错误处理测试（ErrorHandlingTests）
+- 🎨 重构现有测试代码
+  - 引入 TestDataFactory 统一测试数据管理
+  - 引入 TestHelper 统一测试辅助方法
+  - 消除硬编码和重复代码
+- 📝 完善项目文档
+  - 更新安全特性说明
+  - 新增测试指南
 
 ### 1.0.0
 - 初始版本

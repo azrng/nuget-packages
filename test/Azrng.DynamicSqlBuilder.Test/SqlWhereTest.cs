@@ -7,11 +7,11 @@ namespace Azrng.DynamicSqlBuilder.Test;
 
 public class SqlWhereTest
 {
-    private readonly ILogger<CollectionTest> _logger;
+    private readonly ILogger<SqlWhereTest> _logger;
     private readonly IDapperRepository _dapperRepository;
     private readonly IJsonSerializer _jsonSerializer;
 
-    public SqlWhereTest(ILogger<CollectionTest> logger, IDapperRepository dapperRepository, IJsonSerializer jsonSerializer)
+    public SqlWhereTest(ILogger<SqlWhereTest> logger, IDapperRepository dapperRepository, IJsonSerializer jsonSerializer)
     {
         _logger = logger;
         _dapperRepository = dapperRepository;
