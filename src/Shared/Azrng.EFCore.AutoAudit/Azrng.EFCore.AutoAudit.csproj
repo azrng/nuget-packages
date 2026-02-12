@@ -10,7 +10,6 @@
         <Version>1.0.0-beat1</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.EFCore.AutoAudit.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -37,6 +36,5 @@
     <ItemGroup>
         <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
     </ItemGroup>
-
 
 </Project>
