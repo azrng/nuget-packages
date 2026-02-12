@@ -50,11 +50,15 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 添加any cors规则
+    /// 添加允许任何来源的 CORS 策略
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">服务集合</param>
     /// <param name="corsOptionsHandler">自定义策略</param>
-    /// <returns></returns>
+    /// <returns>服务集合</returns>
+    /// <remarks>
+    /// ⚠️ 警告: 此方法允许任何来源的请求，仅适用于开发环境。
+    /// 生产环境应使用配置的 CORS 策略，限制允许的来源、方法和头部。
+    /// </remarks>
     public static IServiceCollection AddAnyCors(this IServiceCollection services,
                                                 Action<CorsOptions>? corsOptionsHandler = default)
     {
@@ -140,14 +144,14 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 注册 返回值包装过滤器 过滤器
+    /// 注册 返回值包装过滤器
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">服务集合</param>
     /// <param name="ignoreRoutePrefix">不需要包装的路由前缀</param>
-    /// <returns></returns>
+    /// <returns>服务集合</returns>
     /// <remarks>在不需要包装的Action上面标注特性：NoWrapperAttribute</remarks>
-    public static IServiceCollection AddMvcResultPackFilterFilter(this IServiceCollection services,
-                                                                  params string[]? ignoreRoutePrefix)
+    public static IServiceCollection AddMvcResultPackFilter(this IServiceCollection services,
+                                                             params string[]? ignoreRoutePrefix)
     {
         services.Configure<MvcOptions>(options =>
         {
@@ -155,6 +159,19 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// 注册 返回值包装过滤器 (已过时的方法名，请使用 AddMvcResultPackFilter)
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="ignoreRoutePrefix">不需要包装的路由前缀</param>
+    /// <returns>服务集合</returns>
+    [Obsolete("请使用 AddMvcResultPackFilter 代替", true)]
+    public static IServiceCollection AddMvcResultPackFilterFilter(this IServiceCollection services,
+                                                                  params string[]? ignoreRoutePrefix)
+    {
+        return services.AddMvcResultPackFilter(ignoreRoutePrefix);
     }
 
     #region 服务注册

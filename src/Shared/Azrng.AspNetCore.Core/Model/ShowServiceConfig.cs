@@ -15,6 +15,6 @@ namespace Azrng.AspNetCore.Core.Model
         /// <summary>
         /// 服务列表
         /// </summary>
-        public List<ServiceDescriptor> Services { get; set; } = new List<ServiceDescriptor>();
+        public List<ServiceDescriptor> Services { get; set; } = new();
     }
 }

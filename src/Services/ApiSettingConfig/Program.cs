@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen()
-    .AddMvcResultPackFilterFilter("/api/configDashboard");
+    .AddMvcResultPackFilter("/api/configDashboard");
 
 var conn = builder.Configuration.GetConnectionString("pgsql");
 builder.Services.AddSettingConfig(options =>

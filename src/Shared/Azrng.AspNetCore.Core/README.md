@@ -504,6 +504,16 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.2.0
+  * 支持.Net10并优化
+  * 新增 AuditLogOptions 配置类，提供灵活的审计日志配置选项
+  * 支持配置需要记录的 HTTP 方法（默认记录 POST、PUT、DELETE，不记录 GET）
+  * 支持配置最大响应体大小，超过自动截断
+  * 支持配置是否只记录 /api/ 开头的路由
+  * 支持配置是否格式化 JSON 输出
+  * 新增 UseAutoAuditLog 配置选项重载方法
+  * CustomResultPackFilter 优化，不包装 ProblemDetails 类型
+  * AddMvcResultPackFilterFilter 方法标记为过时（请使用 AddMvcResultPackFilter）
 * 1.1.0
   * 移出Microsoft.AspNetCore.Mvc.NewtonsoftJson依赖
   * 将对于序列化类的依赖使用System.Text.Json替换

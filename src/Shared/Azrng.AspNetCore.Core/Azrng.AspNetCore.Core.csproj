@@ -1,20 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
-        <!--<TargetFramework>net6.0</TargetFramework>-->
-        <!--<TargetFramework>net7.0</TargetFramework>-->
-        <!--<TargetFramework>net8.0</TargetFramework>-->
+        <IsAotCompatible>true</IsAotCompatible>
+        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
         <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的公共类库</Description>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
         <PackageId>Azrng.AspNetCore.Core</PackageId>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.AspNetCore.Core.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-        <NoWarn>1701;1702;1591</NoWarn>
+        <NoWarn>1701;1702;1591;IL2026;IL3050;CA1416</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
@@ -26,8 +25,4 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
         <PackageReference Include="Azrng.Core" Version="1.8.4"/>
     </ItemGroup>
-
-    <!--    <ItemGroup>-->
-    <!--        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>-->
-    <!--    </ItemGroup>-->
 </Project>
