@@ -7,7 +7,12 @@
         <Nullable>disable</Nullable>
         <Description>动态参数化构建SQL</Description>
         <IsPackable>false</IsPackable>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Azrng.Core" Version="1.8.4"/>

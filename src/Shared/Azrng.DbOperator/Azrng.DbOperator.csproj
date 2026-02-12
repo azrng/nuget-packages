@@ -6,32 +6,38 @@
         <Nullable>enable</Nullable>
         <Description>数据库系统操作示例</Description>
         <IsPackable>false</IsPackable>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.1.66" />
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Dapper" Version="2.1.66"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
         <PackageReference Include="ClickHouse.Client" Version="6.8.1"/>
         <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0"/>
-        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.3" />
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.3"/>
         <PackageReference Include="MySqlConnector" Version="2.3.5"/>
         <PackageReference Include="Npgsql" Version="8.0.2"/>
         <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.120"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj" />
+        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
     </ItemGroup>
 
-<!--    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">-->
-<!--        <PackageReference Include="ClickHouse.Client" Version="6.8.1"/>-->
-<!--        <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0"/>-->
-<!--        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.3" />-->
-<!--        <PackageReference Include="MySqlConnector" Version="2.4.0"/>-->
-<!--        <PackageReference Include="Npgsql" Version="9.0.1"/>-->
-<!--        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.120"/>-->
-<!--    </ItemGroup>-->
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+        <PackageReference Include="ClickHouse.Client" Version="6.8.1"/>
+        <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0"/>
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.3"/>
+        <PackageReference Include="MySqlConnector" Version="2.4.0"/>
+        <PackageReference Include="Npgsql" Version="9.0.1"/>
+        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.120"/>
+    </ItemGroup>
 
 </Project>

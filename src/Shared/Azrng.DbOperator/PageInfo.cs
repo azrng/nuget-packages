@@ -1,4 +1,4 @@
-﻿namespace Azrng.DbOperateHelper
+﻿namespace Azrng.DbOperator
 {
     /// <summary>
     /// 分页类

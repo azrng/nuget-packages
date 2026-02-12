@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Shared\Azrng.DbOperateHelper\Azrng.DbOperateHelper.csproj"/>
+        <ProjectReference Include="..\..\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj"/>
     </ItemGroup>
 
 </Project>
