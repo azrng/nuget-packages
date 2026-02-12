@@ -1,9 +1,12 @@
-﻿using Azrng.Core.Extension;
+using Azrng.Core.Extension;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace Azrng.Core.NewtonsoftJson.Utils
 {
+    /// <summary>
+    /// Json 静态工具类
+    /// </summary>
     public static class JsonHelper
     {
         /// <summary>

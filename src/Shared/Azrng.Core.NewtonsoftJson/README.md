@@ -80,32 +80,20 @@ public class MyService
 
 #### 静态工具方法
 
-除了通过依赖注入使用外，还提供了一个静态帮助类用于直接操作 JSON：
+除了通过依赖注入使用外，还提供了部分静态帮助类用于便利操作：
 
 ```c#
 using Azrng.Core.NewtonsoftJson.Utils;
 
-// 对象转JSON
-var obj = new MyObject { Name = "test" };
-string json = JsonHelper.ToJson(obj);
-
-// JSON转对象
-var deserializedObj = JsonHelper.ToObject<MyObject>(json);
-
-// JSON转列表
+// JSON 转列表
 var list = JsonHelper.ToList<MyObject>("[{\"Name\":\"item1\"},{\"Name\":\"item2\"}]");
 
-// 对象深拷贝
-var clonedObj = JsonHelper.Clone(obj);
-
-// 验证是否是有效的JSON数组字符串
-bool isArray = JsonHelper.IsJArrayString(json);
-
-// 验证是否是有效的JSON字符串
+// 验证 JSON 格式
 bool isValid = JsonHelper.IsJsonString(json);
+bool isArray = JsonHelper.IsJArrayString(json);
 ```
 
-#### 内置转换器
+**注意**：其他序列化操作（如对象转 JSON、JSON 转对象、对象深拷贝）建议使用依赖注入的 `IJsonSerializer` 接口，以获得更好的可维护性和一致性。
 
 该库包含以下内置转换器：
 

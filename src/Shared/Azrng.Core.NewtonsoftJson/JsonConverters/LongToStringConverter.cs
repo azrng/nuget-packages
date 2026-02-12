@@ -1,17 +1,16 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Azrng.Core.NewtonsoftJson.JsonConverters
 {
     /// <summary>
-    /// Newtonsoft long 转换string
+    /// long 转字符串转换器
     /// </summary>
     public class LongToStringConverter : JsonConverter
     {
         public override object ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
         {
             var jt = JToken.ReadFrom(reader);
-
             return jt.Value<long>();
         }
 
