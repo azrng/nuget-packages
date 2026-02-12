@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Azrng.Core.NewtonsoftJson" Version="1.2.6-beta1" />
+        <PackageReference Include="Azrng.Core.NewtonsoftJson" Version="1.3.0" />
         <PackageReference Include="Common.Dapper" Version="0.0.1-beta1" />
         <PackageReference Include="coverlet.collector" Version="6.0.4"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
