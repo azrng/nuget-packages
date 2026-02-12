@@ -5,7 +5,7 @@ namespace Azrng.DbOperator.DbBridge
     /// <summary>
     /// mysql 系统操作
     /// </summary>
-    public class MySqlBasicDbBridge : BasicBasicDbBridge
+    public class MySqlBasicDbBridge : BasicDbBridge
     {
         public MySqlBasicDbBridge(string connectionString) : base(connectionString) { }
 

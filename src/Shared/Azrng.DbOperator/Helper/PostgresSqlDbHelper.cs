@@ -4,7 +4,7 @@ using System.Data.Common;
 
 namespace Azrng.DbOperator.Helper
 {
-    public class PostgreSqlDbHelper : DbHelperBase
+    public class PostgresSqlDbHelper : DbHelperBase
     {
         /// <summary>
         /// 连接字符串格式
@@ -12,9 +12,9 @@ namespace Azrng.DbOperator.Helper
         private static string ConnectionStringFormat =>
             "host={0};port={1};database={2};username={3};password={4};PersistSecurityInfo=true;Maximum Pool Size=100;Connection Idle Lifetime=5;Connection Pruning Interval=5;";
 
-        public PostgreSqlDbHelper(string connectionString) : base(connectionString) { }
+        public PostgresSqlDbHelper(string connectionString) : base(connectionString) { }
 
-        public PostgreSqlDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
+        public PostgresSqlDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
             ConnectionString = string.Format(ConnectionStringFormat, dataSourceConfig.Host, dataSourceConfig.Port,
                 dataSourceConfig.DbName, dataSourceConfig.User, dataSourceConfig.Password);

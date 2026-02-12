@@ -1,5 +1,4 @@
-﻿using Azrng.DbOperator.Dto;
-using System.Data.Common;
+﻿using System.Data.Common;
 
 namespace Azrng.DbOperator
 {

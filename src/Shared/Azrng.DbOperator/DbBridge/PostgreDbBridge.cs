@@ -2,7 +2,7 @@
 
 namespace Azrng.DbOperator.DbBridge
 {
-    public class PostgreBasicDbBridge : BasicBasicDbBridge
+    public class PostgreBasicDbBridge : BasicDbBridge
     {
         public PostgreBasicDbBridge(DataSourceConfig dataSourceConfig) : base(dataSourceConfig) { }
 
@@ -302,7 +302,7 @@ WHERE n.nspname not in ('pg_catalog', 'information_schema');"
 
         public override IDbHelper DbHelper =>
             _dbHelper ??= ConnectionString is null
-                ? new PostgreSqlDbHelper(DataSourceConfig)
-                : new PostgreSqlDbHelper(ConnectionString);
+                ? new PostgresSqlDbHelper(DataSourceConfig)
+                : new PostgresSqlDbHelper(ConnectionString);
     }
 }

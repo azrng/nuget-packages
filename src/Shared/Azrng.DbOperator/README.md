@@ -34,36 +34,27 @@ dotnet add package Azrng.DbOperator
 
 ```
 Azrng.DbOperator/
-├── Abstractions/          # 抽象接口层
-│   ├── DataBase.cs        # 数据库连接抽象
-│   ├── DatabaseType.cs   # 数据库类型枚举
-│   ├── IDataReaderEx.cs  # 数据读取器扩展
-│   ├── PageHelper.cs       # 分页帮助类
-│   ├── DbBridgeFactory.cs  # 桥接工厂
-│   ├── DbBridge/            # 各数据库桥接实现
-│   │   ├── BasicDbBridge.cs      # 基础桥接抽象
-│   │   ├── MySqlDbBridge.cs      # MySQL 实现
-│   │   ├── SqlServerDbBridge.cs    # SQL Server 实现
-│   │   ├── PostgreSqlDbBridge.cs # PostgreSQL 实现
-│   │   ├── OracleDbBridge.cs      # Oracle 实现
-│   │   ├── SqliteDbBridge.cs       # SQLite 实现
-│   │   └── ClickHouseDbBridge.cs # ClickHouse 实现
-│   ├── Dto/                   # 数据传输对象
-│   ├── DataSourceConfig.cs    # 数据源配置类
-│   ├── SystemOperatorConst.cs  # 系统常量
-│   ├── GlobalUsings.cs       # 全局 using
-│   ├── Helper/                 # 数据库帮助类
-│   │   ├── DbHelperBase.cs      # 帮助基类
-│   │   ├── MySQLDbHelper.cs     # MySQL 实现
-│   │   ├── PostgreSqlDbHelper.cs # PostgreSQL 实现
-│   │   ├── SqlServerDbHelper.cs    # SQL Server 实现
-│   │   ├── OracleDbHelper.cs     # Oracle 实现
-│   │   ├── SqliteDbHelper.cs      # SQLite 实现
-│   │   └── ClickHouseDbHelper.cs # ClickHouse 实现
-│   ├── IBasicDbBridge.cs     # 基础桥接接口
-│   ├── IDbHelper.cs            # 数据库帮助接口
-│   └── IDataReaderEx.cs      # 数据读取器扩展
-├── Dto/                       # 数据传输对象
+├── DatabaseType.cs           # 数据库类型枚举
+├── DataSourceConfig.cs       # 数据源配置类
+├── SystemOperatorConst.cs    # 系统常量
+├── GlobalUsings.cs         # 全局 using
+├── DbBridgeFactory.cs       # 桥接工厂
+├── DbBridge/               # 各数据库桥接实现
+│   ├── BasicDbBridge.cs      # 基础桥接抽象
+│   ├── MySqlDbBridge.cs       # MySQL 实现
+│   ├── SqlServerDbBridge.cs    # SQL Server 实现
+│   ├── PostgreDbBridge.cs    # PostgreSQL 实现
+│   ├── OracleDbBridge.cs      # Oracle 实现
+│   └── ClickHouseDbBridge.cs  # ClickHouse 实现
+├── Helper/                 # 数据库帮助类
+│   ├── DbHelperBase.cs       # 帮助基类
+│   ├── MySQLDbHelper.cs       # MySQL 实现
+│   ├── PostgreSqlDbHelper.cs # PostgreSQL 实现
+│   ├── SqlServerDbHelper.cs   # SQL Server 实现
+│   ├── OracleDbHelper.cs      # Oracle 实现
+│   ├── SqliteDbHelper.cs     # SQLite 实现
+│   └── ClickHouseDbHelper.cs  # ClickHouse 实现
+├── Dto/                    # 数据传输对象
 │   ├── ForeignModel.cs
 │   ├── GetSchemaColumnInfoDto.cs
 │   ├── GetSchemaListDto.cs
@@ -73,7 +64,9 @@ Azrng.DbOperator/
 │   ├── ProcModel.cs
 │   ├── SchemaTableDto.cs
 │   └── ViewModel.cs
-└── README.md                  # 项目文档
+├── IBasicDbBridge.cs        # 基础桥接接口
+├── IDbHelper.cs            # 数据库操作帮助接口
+└── README.md               # 项目文档
 ```
 
 ## 支持的数据库
@@ -123,7 +116,9 @@ services.ConfigureDataSource<DataSourceConfig>(options =>
     options.DatabaseType = DatabaseType.SqlServer;
     options.Host = "localhost";
     options.Port = 1433;
-    options.IntegratedSecurity = true;
+    options.DbName = "mydb";
+    options.User = "sa";
+    options.Password = "password";
 });
 
 services.AddTransient<IDbHelper, SqlServerDbHelper>(serviceProvider => new SqlServerDbHelper(connectionString));
@@ -176,7 +171,7 @@ var users = await _dbHelper.QueryAsync<User>(
 services.ConfigureDataSource<DataSourceConfig>(options =>
 {
     options.DatabaseType = DatabaseType.SqLite;
-    options.DataSource = "./data/myapp.db";
+    options.DbName = "./data/myapp.db";
 });
 
 services.AddTransient<IDbHelper, SqliteDbHelper>(serviceProvider => new SqliteDbHelper(connectionString));
@@ -198,10 +193,12 @@ services.ConfigureDataSource<DataSourceConfig>(options =>
     options.DatabaseType = DatabaseType.ClickHouse;
     options.Host = "localhost";
     options.Port = 8123;
-    options.Database = "mydb";
+    options.DbName = "mydb";
     options.User = "default";
     options.Password = "";
 });
+
+services.AddTransient<IDbHelper, ClickHouseDbHelper>(serviceProvider => new ClickHouseDbHelper(connectionString));
 ```
 
 ### 6. Oracle
@@ -223,6 +220,8 @@ services.ConfigureDataSource<DataSourceConfig>(options =>
     options.UserId = "your_user";
     options.Password = "your_password";
 });
+
+services.AddTransient<IDbHelper, OracleDbHelper>(serviceProvider => new OracleDbHelper(connectionString));
 ```
 
 ## 使用方法
@@ -233,7 +232,7 @@ services.ConfigureDataSource<DataSourceConfig>(options =>
 services.ConfigureDataSource<DataSourceConfig>(options =>
 {
     // 根据数据库类型选择配置
-    options.DatabaseType = DatabaseType.MySql, // 或 DatabaseType.SqlServer, 等
+    options.DatabaseType = DatabaseType.MySql; // 或 DatabaseType.SqlServer, 等
 
     // 连接字符串
     options.Host = "your_host";
@@ -241,6 +240,14 @@ services.ConfigureDataSource<DataSourceConfig>(options =>
     options.DbName = "your_database";
     options.User = "username";
     options.Password = "password";
+
+    // 时区配置（可选，默认 Asia/Shanghai）
+    options.TimeZoneId = "Asia/Shanghai";
+
+    // 连接池配置（可选）
+    options.Pooling = true;
+    options.MinPoolSize = 5;
+    options.MaxPoolSize = 100;
 });
 ```
 
@@ -266,21 +273,19 @@ public class UserService
     // 创建用户
     public async Task CreateAsync(User user)
     {
-        var sql = $"INSERT INTO Users (Name, Email, CreateTime) VALUES (@Name, @Email, @CreateTime)";
+        var sql = "INSERT INTO Users (Name, Email, CreateTime) VALUES (@Name, @Email, @CreateTime)";
         return await _dbHelper.ExecuteAsync(sql, user);
     }
 
     // 分页查询
-    public async Task<PagedList<User>> GetUsersAsync(int pageIndex, int pageSize)
+    public async Task<IEnumerable<User>> GetUsersAsync(int pageIndex, int pageSize)
     {
-        var input = new GetSplitPageDataInput
-        {
-            PageIndex = pageIndex,
-            PageSize = pageSize,
-            PageIndex = "CreateTime" // 按创建时间降序
-        };
-
-        return await _dbHelper.GetSplitPageDataAsync<User>(sql, input);
+        return await _dbHelper.GetSplitPageDataAsync<User>(
+            "SELECT * FROM Users",
+            pageIndex,
+            pageSize,
+            orderColumn: "CreateTime",
+            orderDirection: "DESC");
     }
 }
 ```
@@ -298,15 +303,9 @@ var users = await _dbHelper.GetSplitPageDataAsync<User>(
     orderColumn: "CreateTime",
     orderDirection: "DESC");
 
-// 分页并统计总数
-var page = await _dbHelper.GetSplitPageDataAsync<User>(
-    "SELECT * FROM Users",
-    pageIndex: 1,
-    pageSize: 20,
-    orderColumn: "CreateTime",
-    orderDirection: "DESC");
-
-Console.WriteLine($"总记录数：{page.TotalCount}");
+// 获取总数和分页数据
+var count = await _dbHelper.GetDataCountAsync("SELECT * FROM Users");
+Console.WriteLine($"总记录数：{count}");
 ```
 
 #### 批量操作
@@ -374,13 +373,6 @@ public async Task<User?> GetUserAsync(int userId)
     var sql = "SELECT * FROM Users WHERE UserId = @UserId";
     return await _dbHelper.QueryFirstOrDefaultAsync<User>(sql, new { UserId = userId });
 }
-
-// 错误示例
-public async Task<User?> GetUserByNameAsync(string name)
-{
-    var sql = "SELECT * FROM Users WHERE Name = @Name";
-    return await _dbHelper.QueryFirstOrDefaultAsync<User>(sql, new { Name = name });
-}
 ```
 
 ### 3. 异步编程
@@ -396,7 +388,7 @@ public async Task<IEnumerable<User>> GetAllUsersAsync()
 
 public async Task<int> CreateAsync(User user)
 {
-    var sql = $"INSERT INTO Users (Name, Email) VALUES (@Name, @Email)";
+    var sql = "INSERT INTO Users (Name, Email) VALUES (@Name, @Email)";
     return await _dbHelper.ExecuteAsync(sql, user);
 }
 ```
@@ -419,15 +411,6 @@ catch (Exception ex)
 ### 5. 分页最佳实践
 
 ```csharp
-// 使用分页输入对象
-public class GetUsersInput : GetSplitPageDataInput
-{
-    public int PageIndex { get; set; }
-    public int PageSize { get; set; }
-    public string PageIndex { get; set; }
-    public string OrderDirection { get; set; }
-}
-
 // 不要返回过大的页尺寸
 const int MaxPageSize = 100;
 
@@ -438,9 +421,9 @@ if (input.PageSize > MaxPageSize)
 }
 
 // 记录总数用于前端显示
-var page = await _dbHelper.GetSplitPageDataAsync<User>(sql, input);
-
-Console.WriteLine($"当前页：{input.PageIndex}，总记录数：{page.TotalCount}");
+var page = await _dbHelper.GetSplitPageDataAsync<User>(sql, pageIndex, pageSize);
+var count = await _dbHelper.GetDataCountAsync("SELECT * FROM Users");
+Console.WriteLine($"当前页：{pageIndex}，总记录数：{count}");
 ```
 
 ## 适用场景

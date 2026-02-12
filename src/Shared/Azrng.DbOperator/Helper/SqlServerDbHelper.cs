@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using System.Data.Common;
 
 namespace Azrng.DbOperator.Helper
@@ -21,9 +22,34 @@ namespace Azrng.DbOperator.Helper
             return new SqlConnection(ConnectionString);
         }
 
-        public override Task<object[][]> QueryArrayAsync(string sql, object? parameters = null, bool header = true)
+        public override async Task<object[][]> QueryArrayAsync(string sql, object? parameters = null, bool header = true)
         {
-            throw new NotImplementedException();
+            var rows = new List<object[]>();
+
+            await using var conn = GetConnection();
+            await using var reader = await conn.ExecuteReaderAsync(sql, parameters).ConfigureAwait(false);
+
+            if (header)
+            {
+                var columns = new List<string>();
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    columns.Add(reader.GetName(i));
+                }
+                rows.Add(columns.ToArray());
+            }
+
+            while (await reader.ReadAsync().ConfigureAwait(false))
+            {
+                var row = new object[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    row[i] = reader[i];
+                }
+                rows.Add(row);
+            }
+
+            return rows.ToArray();
         }
 
         public override DbParameter SetParameter(string key, object value)
@@ -34,14 +60,12 @@ namespace Azrng.DbOperator.Helper
         public override string BuildSplitPageSql(string sourceSql, int pageIndex, int pageSize,
                                                  string? orderColumn = null, string? orderDirection = null)
         {
-            var orderData = "(select NULL)";
+            var orderData = "(SELECT NULL)";
             if (orderColumn.IsNotNullOrWhiteSpace() && orderDirection.IsNotNullOrWhiteSpace())
                 orderData = $"{orderColumn} {orderDirection}";
 
-            var sql = $"select *,row_number() over(order by {orderData}) as rownumber  from ({sourceSql}) t ";
-
-            var ret =
-                $"select * from ({sql}) t2  where rownumber between {(pageIndex - 1) * pageSize + 1} and {pageIndex * pageSize} ";
+            var sql = $"SELECT *, ROW_NUMBER() OVER (ORDER BY {orderData}) AS RowNumber FROM ({sourceSql}) t ";
+            var ret = $"SELECT * FROM ({sql}) t2 WHERE RowNumber BETWEEN {(pageIndex - 1) * pageSize + 1} AND {pageIndex * pageSize}";
             return ret;
         }
     }

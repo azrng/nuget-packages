@@ -38,7 +38,7 @@ namespace Azrng.DbOperator.Helper
                 await conn.OpenAsync();
                 return true;
             }
-            catch
+            catch (Exception)
             {
                 return false;
             }
@@ -130,13 +130,14 @@ namespace Azrng.DbOperator.Helper
             {
                 if (DataSourceConfig.TimeIsUtc)
                 {
+                    var timeZone = TimeZoneInfo.FindSystemTimeZoneById(DataSourceConfig.TimeZoneId);
                     return TimeZoneInfo
-                           .ConvertTimeFromUtc(Convert.ToDateTime(readerValue), TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai"))
+                           .ConvertTimeFromUtc(Convert.ToDateTime(readerValue), timeZone)
                            .ToStandardString();
                 }
                 else
                 {
-                    return readerValue.ToString().ToDateTime().ToStandardString();
+                    return readerValue.ToString()!.ToDateTime().ToStandardString();
                 }
             }
             else if (DataSourceConfig.DecimalIsTwo &&

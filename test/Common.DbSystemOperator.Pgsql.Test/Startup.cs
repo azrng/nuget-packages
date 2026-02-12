@@ -29,7 +29,7 @@ public class Startup
             return systemOperator;
         });
 
-        services.AddScoped<IDbHelper>(p => new PostgreSqlDbHelper(pgConfig));
+        services.AddScoped<IDbHelper>(p => new PostgresSqlDbHelper(pgConfig));
         services.ConfigureDefaultJson((options) => { });
     }
 

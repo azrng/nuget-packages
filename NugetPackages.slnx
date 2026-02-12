@@ -7,7 +7,6 @@
     <Project Path="src\Services\CacheAPI\CacheAPI.csproj" />
     <Project Path="src\Services\ConsoleAppDI\ConsoleAppDI.csproj" />
     <Project Path="src\Services\DbEnvConfigSample\DbEnvConfigSample.csproj" />
-    <Project Path="src\Services\DbOperateHelper.ConsoleApp\DbOperateHelper.ConsoleApp.csproj" />
     <Project Path="src\Services\DistributeLockSample\DistributeLockSample.csproj" />
     <Project Path="src\Services\InjectSample.Application\InjectSample.Application.csproj" />
     <Project Path="src\Services\InjectSampleApi\InjectSampleApi.csproj" />

@@ -5,7 +5,7 @@ namespace Azrng.DbOperator.DbBridge
     /// <summary>
     /// oracle 系统操作
     /// </summary>
-    public class OracleBasicDbBridge : BasicBasicDbBridge
+    public class OracleBasicDbBridge : BasicDbBridge
     {
         public OracleBasicDbBridge(string connectionString) : base(connectionString) { }
         public OracleBasicDbBridge(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)

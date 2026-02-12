@@ -5,7 +5,7 @@ namespace Azrng.DbOperator.DbBridge
     /// <summary>
     /// sqlserver 系统操作
     /// </summary>
-    public class SqlServerBasicDbBridge : BasicBasicDbBridge
+    public class SqlServerBasicDbBridge : BasicDbBridge
     {
         public SqlServerBasicDbBridge(string connectionString) : base(connectionString) { }
 

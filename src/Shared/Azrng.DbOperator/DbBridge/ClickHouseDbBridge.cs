@@ -5,7 +5,7 @@ namespace Azrng.DbOperator.DbBridge
     /// <summary>
     /// ch 系统操作
     /// </summary>
-    public class ClickHouseBasicDbBridge : BasicBasicDbBridge
+    public class ClickHouseBasicDbBridge : BasicDbBridge
     {
         public ClickHouseBasicDbBridge(string connectionString) : base(connectionString) { }
 
