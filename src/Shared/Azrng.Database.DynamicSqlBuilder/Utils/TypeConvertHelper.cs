@@ -1,7 +1,7 @@
-using Azrng.DynamicSqlBuilder.Model;
-using Azrng.DynamicSqlBuilder.SqlOperation;
+using Azrng.Database.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.SqlOperation;
 
-namespace Azrng.DynamicSqlBuilder.Utils;
+namespace Azrng.Database.DynamicSqlBuilder.Utils;
 
 public class TypeConvertHelper
 {

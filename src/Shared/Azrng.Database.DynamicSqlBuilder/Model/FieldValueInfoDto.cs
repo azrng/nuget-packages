@@ -1,4 +1,4 @@
-﻿namespace Azrng.DynamicSqlBuilder.Model
+﻿namespace Azrng.Database.DynamicSqlBuilder.Model
 {
     /// <summary>
     ///列字段值信息

@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Shared\Azrng.DynamicSqlBuilder\Azrng.DynamicSqlBuilder.csproj" />
+      <ProjectReference Include="..\..\src\Shared\Azrng.Database.DynamicSqlBuilder\Azrng.Database.DynamicSqlBuilder.csproj" />
     </ItemGroup>
 
 </Project>

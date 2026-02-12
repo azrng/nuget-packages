@@ -1,4 +1,4 @@
-namespace Azrng.DynamicSqlBuilder.Model;
+namespace Azrng.Database.DynamicSqlBuilder.Model;
 
 public enum MatchOperator
 {

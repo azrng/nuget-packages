@@ -1,4 +1,4 @@
-﻿namespace Azrng.DynamicSqlBuilder.SqlOperation
+﻿namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 {
     /// <summary>
     /// sql 不等于 运算符

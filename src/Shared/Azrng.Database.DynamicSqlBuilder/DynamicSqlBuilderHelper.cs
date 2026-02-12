@@ -1,10 +1,10 @@
-using Azrng.DynamicSqlBuilder.Model;
-using Azrng.DynamicSqlBuilder.SqlOperation;
-using Azrng.DynamicSqlBuilder.Validation;
+using Azrng.Database.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.SqlOperation;
+using Azrng.Database.DynamicSqlBuilder.Validation;
 using Dapper;
 using System.Text;
 
-namespace Azrng.DynamicSqlBuilder;
+namespace Azrng.Database.DynamicSqlBuilder;
 
 public static class DynamicSqlBuilderHelper
 {
@@ -87,7 +87,7 @@ public static class DynamicSqlBuilderHelper
             : $" SELECT {string.Join(",", queryResultFields)} FROM {tableName} {necessaryCondition}";
         querySqlBuilder.Append(basicTemplate);
 
-        foreach (var sqlWhereClauseItem in sqlWhereClauses ?? [])
+        foreach (var sqlWhereClauseItem in sqlWhereClauses ?? new List<SqlWhereClauseInfoDto>())
         {
             var whereConditionSql = SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters);
             querySqlBuilder.Append(whereConditionSql);
@@ -203,7 +203,7 @@ public static class DynamicSqlBuilderHelper
 
         var baseQuerySqlBuilder = new StringBuilder();
 
-        foreach (var sqlWhereClauseItem in sqlWhereClauses ?? [])
+        foreach (var sqlWhereClauseItem in sqlWhereClauses ?? new List<SqlWhereClauseInfoDto>())
         {
             var whereConditionSql = SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters);
             baseQuerySqlBuilder.Append(whereConditionSql);

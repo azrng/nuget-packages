@@ -1,4 +1,4 @@
-﻿namespace Azrng.DynamicSqlBuilder.SqlOperation
+﻿namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 {
     /// <summary>
     /// Sql操作符常量

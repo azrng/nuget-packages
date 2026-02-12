@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Azrng.DynamicSqlBuilder.Validation
+namespace Azrng.Database.DynamicSqlBuilder.Validation
 {
     /// <summary>
     /// 字段名验证器 - 防止SQL注入和无效字段名

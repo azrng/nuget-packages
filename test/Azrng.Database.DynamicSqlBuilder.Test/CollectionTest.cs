@@ -1,9 +1,9 @@
 ﻿using Azrng.Core;
-using Azrng.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.Model;
 using Common.Dapper.Repository;
 using Microsoft.Extensions.Logging;
 
-namespace Azrng.DynamicSqlBuilder.Test
+namespace Azrng.Database.DynamicSqlBuilder.Test
 {
     public class CollectionTest
     {

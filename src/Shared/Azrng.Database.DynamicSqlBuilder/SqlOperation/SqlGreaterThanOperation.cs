@@ -1,6 +1,6 @@
 ﻿using Dapper;
 
-namespace Azrng.DynamicSqlBuilder.SqlOperation
+namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 {
     /// <summary>
     /// sql 大于 运算符

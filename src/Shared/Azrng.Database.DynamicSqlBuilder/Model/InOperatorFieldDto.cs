@@ -1,4 +1,4 @@
-namespace Azrng.DynamicSqlBuilder.Model
+namespace Azrng.Database.DynamicSqlBuilder.Model
 {
     /// <summary>
     /// 用于sql 条件表达式 in查询的字段

@@ -1,11 +1,11 @@
 ﻿using Azrng.Core.Exceptions;
 using Azrng.Core.Extension;
-using Azrng.DynamicSqlBuilder.Model;
-using Azrng.DynamicSqlBuilder.SqlOperation;
+using Azrng.Database.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.SqlOperation;
 using Dapper;
 using System.Text;
 
-namespace Azrng.DynamicSqlBuilder;
+namespace Azrng.Database.DynamicSqlBuilder;
 
 public class SqlWhereClauseHelper
 {

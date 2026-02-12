@@ -1,7 +1,7 @@
-﻿using Azrng.DynamicSqlBuilder.Utils;
+﻿using Azrng.Database.DynamicSqlBuilder.Utils;
 using Dapper;
 
-namespace Azrng.DynamicSqlBuilder.SqlOperation
+namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 {
     /// <summary>
     /// SQL in 操作符

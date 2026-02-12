@@ -1,7 +1,7 @@
-using Azrng.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.Model;
 using Microsoft.Extensions.Logging;
 
-namespace Azrng.DynamicSqlBuilder.Test;
+namespace Azrng.Database.DynamicSqlBuilder.Test;
 
 public class InOperatorTest
 {

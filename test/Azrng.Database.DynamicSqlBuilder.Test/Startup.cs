@@ -5,7 +5,7 @@ using Npgsql;
 using System.Data;
 using Xunit.DependencyInjection.Logging;
 
-namespace Azrng.DynamicSqlBuilder.Test;
+namespace Azrng.Database.DynamicSqlBuilder.Test;
 
 public class Startup
 {

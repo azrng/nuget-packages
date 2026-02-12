@@ -1,6 +1,6 @@
-﻿using Azrng.DynamicSqlBuilder.SqlOperation;
+﻿using Azrng.Database.DynamicSqlBuilder.SqlOperation;
 
-namespace Azrng.DynamicSqlBuilder.Model
+namespace Azrng.Database.DynamicSqlBuilder.Model
 {
     /// <summary>
     /// 排序字段的信息
