@@ -2,15 +2,23 @@
 
 namespace NewInMemoryEventBusSample;
 
-public class OrderIntegrationEventHandler(
-    ILogger<OrderIntegrationEventHandler> logger) : IIntegrationEventHandler<OrderIntegrationEvent>
+public class OrderIntegrationEventHandler : IIntegrationEventHandler<OrderIntegrationEvent>
 {
-    public async Task Handle(OrderIntegrationEvent @event)
+    private readonly ILogger<OrderIntegrationEventHandler> _logger;
+
+    public OrderIntegrationEventHandler(ILogger<OrderIntegrationEventHandler> logger)
     {
-        logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id,
+        this._logger = logger;
+    }
+
+    public Task Handle(OrderIntegrationEvent @event, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id,
             @event);
 
-        logger.LogInformation($"接收到信息：{@event.OrderId}");
+        _logger.LogInformation($"接收到信息：{@event.OrderId}");
+
+        return Task.CompletedTask;
     }
 }
 
@@ -23,11 +31,12 @@ public class OrderIntegrationEventHandler2 : IIntegrationEventHandler<OrderInteg
         this._logger = logger;
     }
 
-    public async Task Handle(OrderIntegrationEvent @event)
+    public Task Handle(OrderIntegrationEvent @event, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id,
             @event);
 
         _logger.LogInformation($"消费着2 接收到信息：{@event.OrderId}");
+        return Task.CompletedTask;
     }
 }

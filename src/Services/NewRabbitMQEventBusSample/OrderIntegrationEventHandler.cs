@@ -5,7 +5,7 @@ namespace NewRabbitMQEventBusSample;
 public class OrderIntegrationEventHandler(
     ILogger<OrderIntegrationEventHandler> logger) : IIntegrationEventHandler<OrderIntegrationEvent>
 {
-    public async Task Handle(OrderIntegrationEvent @event)
+    public async Task Handle(OrderIntegrationEvent @event, CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id,
             @event);
@@ -23,7 +23,7 @@ public class OrderIntegrationEventHandler2 : IIntegrationEventHandler<OrderInteg
         this._logger = logger;
     }
 
-    public async Task Handle(OrderIntegrationEvent @event)
+    public async Task Handle(OrderIntegrationEvent @event, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Handling integration event: {IntegrationEventId} - ({@IntegrationEvent})", @event.Id,
             @event);

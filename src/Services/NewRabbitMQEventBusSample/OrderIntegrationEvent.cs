@@ -2,5 +2,10 @@
 
 namespace NewRabbitMQEventBusSample;
 
-public record OrderIntegrationEvent(int OrderId, IEnumerable<string> OrderStockItems)
-    : IntegrationEvent;
+public class OrderIntegrationEvent(int OrderId, IEnumerable<string> OrderStockItems)
+    : IntegrationEvent
+{
+    public int OrderId { get; set; }
+
+    public IEnumerable<string> OrderStockItems { get; set; }
+}
