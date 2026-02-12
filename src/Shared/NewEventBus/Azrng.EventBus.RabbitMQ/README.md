@@ -166,18 +166,6 @@ public class OrderService
 - `EventTypes`: 已注册的事件类型字典
 - `JsonSerializerOptions`: JSON 序列化配置选项
 
-## 实现原理
-
-RabbitMQ 事件总线基于 RabbitMQ.Client 库实现，使用了直接交换机（Direct Exchange）模式：
-
-1. 使用 `AddKeyedTransient` 注册事件处理器，支持同一事件类型的多个处理器
-2. 通过 `IKeyedServiceProvider.GetKeyedService` 获取事件处理器实例
-3. 使用 JSON 序列化/反序列化事件对象
-4. 通过 RabbitMQ 实现事件的发布和订阅
-5. 支持消息确认机制，确保消息被正确处理
-6. 使用 Polly 实现重试策略，提高系统的容错能力
-7. 通过后台服务（IHostedService）实现消息的持续监听和处理
-
 ## 适用场景
 
 - 微服务架构中的服务间通信
@@ -194,3 +182,10 @@ RabbitMQ 事件总线基于 RabbitMQ.Client 库实现，使用了直接交换机
 4. 事件会持久化到 RabbitMQ，即使应用程序重启也不会丢失
 5. 支持事件的重试机制，默认重试10次
 6. 需要合理设置队列和交换机的参数以满足业务需求
+
+## 版本更新记录
+
+* 1.1.0
+    * 支持.Net10并优化
+* 1.0.0
+    * 初始版本
