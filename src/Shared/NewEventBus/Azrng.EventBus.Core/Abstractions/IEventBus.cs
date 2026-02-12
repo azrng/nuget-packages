@@ -8,9 +8,10 @@ namespace Azrng.EventBus.Core.Abstractions;
 public interface IEventBus
 {
     /// <summary>
-    /// 发布
+    /// 发布事件
     /// </summary>
-    /// <param name="event"></param>
-    /// <returns></returns>
-    Task PublishAsync(IntegrationEvent @event);
+    /// <param name="integrationEvent">要发布的事件</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步任务</returns>
+    Task PublishAsync(IntegrationEvent integrationEvent, CancellationToken cancellationToken = default);
 }

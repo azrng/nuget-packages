@@ -7,5 +7,5 @@ namespace Azrng.EventBus.Core.Abstractions;
 /// </summary>
 public interface IEventBusBuilder
 {
-    public IServiceCollection Services { get; }
+    IServiceCollection Services { get; }
 }

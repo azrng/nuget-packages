@@ -143,15 +143,6 @@ public class OrderService
 - `EventTypes`: 已注册的事件类型字典
 - `JsonSerializerOptions`: JSON 序列化配置选项
 
-## 实现原理
-
-内存事件总线基于 .NET 的依赖注入容器和服务定位器模式实现：
-
-1. 使用 `AddKeyedTransient` 注册事件处理器，支持同一事件类型的多个处理器
-2. 通过 `IKeyedServiceProvider.GetKeyedService` 获取事件处理器实例
-3. 使用 JSON 序列化/反序列化事件对象
-4. 在内存中直接调用事件处理器，无需外部消息队列
-
 ## 适用场景
 
 - 单体应用程序中的事件驱动架构
@@ -175,3 +166,10 @@ public class OrderService
 - 不支持跨进程/跨机器通信
 - 不提供事件持久化和可靠性保证
 - 适用于开发测试环境而非生产环境
+
+## 版本更新记录
+
+* 1.1.0
+    * 支持.Net10并优化
+* 1.0.0
+    * 初始版本

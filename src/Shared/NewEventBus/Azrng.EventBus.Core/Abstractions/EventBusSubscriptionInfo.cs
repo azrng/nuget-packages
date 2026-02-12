@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
 namespace Azrng.EventBus.Core.Abstractions;
@@ -18,13 +19,15 @@ public class EventBusSubscriptionInfo
     /// </summary>
     public JsonSerializerOptions JsonSerializerOptions { get; } = new(DefaultSerializerOptions);
 
-    internal static readonly JsonSerializerOptions DefaultSerializerOptions = new()
-                                                                              {
-                                                                                  TypeInfoResolver = JsonSerializer
-                                                                                      .IsReflectionEnabledByDefault
-                                                                                      ? CreateDefaultTypeResolver()
-                                                                                      : JsonTypeInfoResolver.Combine()
-                                                                              };
+    private static readonly JsonSerializerOptions DefaultSerializerOptions = new()
+                                                                             {
+                                                                                 TypeInfoResolver = JsonSerializer
+                                                                                     .IsReflectionEnabledByDefault
+                                                                                     ? CreateDefaultTypeResolver()
+                                                                                     : JsonTypeInfoResolver.Combine()
+                                                                             };
 
+    [RequiresUnreferencedCode("Calls System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver.DefaultJsonTypeInfoResolver()")]
+    [RequiresDynamicCode("Calls System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver.DefaultJsonTypeInfoResolver()")]
     private static IJsonTypeInfoResolver CreateDefaultTypeResolver() => new DefaultJsonTypeInfoResolver();
 }

@@ -27,19 +27,18 @@ public static class EventBusBuilderExtensions
     /// </summary>
     /// <param name="eventBusBuilder"></param>
     /// <typeparam name="T"></typeparam>
-    /// <typeparam name="TH"></typeparam>
+    /// <typeparam name="Th"></typeparam>
     /// <returns></returns>
-    public static IEventBusBuilder AddSubscription<T,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-        TH>(
+    public static IEventBusBuilder AddSubscription<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+        Th>(
         this IEventBusBuilder eventBusBuilder)
         where T : IntegrationEvent
-        where TH : class, IIntegrationEventHandler<T>
+        where Th : class, IIntegrationEventHandler<T>
     {
         // Use keyed services to register multiple handlers for the same event type
         // the consumer can use IKeyedServiceProvider.GetKeyedService<IIntegrationEventHandler>(typeof(T)) to get all
         // handlers for the event type.
-        eventBusBuilder.Services.AddKeyedTransient<IIntegrationEventHandler, TH>(typeof(T));
+        eventBusBuilder.Services.AddKeyedTransient<IIntegrationEventHandler, Th>(typeof(T));
 
         eventBusBuilder.Services.Configure<EventBusSubscriptionInfo>(o =>
         {
