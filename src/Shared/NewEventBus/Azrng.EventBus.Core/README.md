@@ -368,6 +368,8 @@ public class OrderService
 
 ## 可用实现
 
+
+
 本核心库的具体实现：
 
 - **Azrng.EventBus.InMemory** - 基于内存的事件总线实现，适用于单机环境

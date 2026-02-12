@@ -262,6 +262,79 @@ services.RegisterBusinessServices("MySQL_NetCoreAPI_EFCore.*.dll");
 services.RegisterUniteServices(assemblies, typeof(ISingletonDependency), ServiceLifetime.Singleton);
 ```
 
+### 对象访问和预配置
+
+#### AddObjectAccessor - 对象访问器
+
+将对象实例直接添加到服务容器中，作为单例使用。与常规依赖注入不同，这种方式可以直接添加已创建的对象实例。
+
+```csharp
+// 定义选项类
+public class AppOptions
+{
+    public string AppName { get; set; }
+    public string Version { get; set; }
+}
+
+// 在 Startup 或 Program 中注册
+services.AddObjectAccessor(new AppOptions
+{
+    AppName = "MyApp",
+    Version = "1.0.0"
+});
+
+// 获取已注册的对象
+var options = services.GetObjectOrNull<AppOptions>();
+Console.WriteLine($"App: {options?.AppName} v{options?.Version}");
+```
+
+**特点：**
+- 直接添加对象实例，不依赖依赖注入容器创建
+- 只能通过 `GetObjectOrNull<T>` 方法获取
+- 同一类型只能注册一次，重复注册会抛出异常
+
+#### PreConfigure - 预配置
+
+在 Options 正式配置之前执行预配置动作，适用于设置默认值或修改配置的场景。
+
+```csharp
+public class DatabaseOptions
+{
+    public string ConnectionString { get; set; }
+    public int CommandTimeout { get; set; }
+}
+
+// 在 Startup 或 Program 中添加预配置
+services.PreConfigure<DatabaseOptions>(options =>
+{
+    // 设置默认值
+    options.CommandTimeout = 30;
+});
+
+// 可以添加多个预配置动作，会按顺序执行
+services.PreConfigure<DatabaseOptions>(options =>
+{
+    options.ConnectionString = "Server=localhost;Database=MyDb;";
+});
+
+// 后续可以通过 Configure 进行正式配置
+services.Configure<DatabaseOptions>(configuration.GetSection("Database"));
+
+// 或者手动执行所有预配置
+var preConfigActions = services.GetPreConfigureActions<DatabaseOptions>();
+var configuredOptions = preConfigActions.Configure();
+```
+
+**使用场景：**
+- 设置默认配置值
+- 在应用启动前修改配置
+- 多个模块需要配置同一选项时，按优先级组合配置
+
+**执行顺序：**
+1. PreConfigure 动作（按添加顺序）
+2. Configure 动作（正式配置）
+3. 最终配置完成后注入到容器
+
 ### 中间件
 
 #### 显示所有服务信息

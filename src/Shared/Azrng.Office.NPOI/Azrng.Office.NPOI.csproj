@@ -7,7 +7,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的公共核心类库</Description>
-        <Version>0.0.1-beta2</Version>
+        <Version>0.0.1</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.Core.xml</DocumentationFile>

@@ -38,17 +38,17 @@ public class Employee
 {
     [ColumnName("员工编号")]
     public string Id { get; set; }
-    
+
     [ColumnName("姓名")]
     public string Name { get; set; }
-    
+
     [ColumnName("部门")]
     public string Department { get; set; }
-    
+
     [ColumnName("入职日期")]
     [StringFormatter("yyyy-MM-dd")]
     public DateTime EntryDate { get; set; }
-    
+
     [ColumnName("薪资")]
     public decimal Salary { get; set; }
 }
@@ -85,11 +85,11 @@ workbook.SaveToFile("employees.xlsx");
 // 创建带标题的工作表
 var title = new ExportSheetTitle("员工信息统计表")
 {
-    Style = new BaseStyle 
-    { 
-        FontSize = 16, 
-        IsBold = true, 
-        HorizontalAlignment = HorizontalAlignment.Center 
+    Style = new BaseStyle
+    {
+        FontSize = 16,
+        IsBold = true,
+        HorizontalAlignment = HorizontalAlignment.Center
     },
     RowHeight = 30
 };
@@ -105,18 +105,18 @@ public class Product
     [PrimaryKey]
     [ColumnName("产品编码")]
     public string Code { get; set; }
-    
+
     [ColumnName("产品名称")]
     public string Name { get; set; }
-    
+
     [ColumnName("分类")]
     [MergeRow] // 相同值的行将被合并
     public string Category { get; set; }
-    
+
     [ColumnName("价格")]
     [ColumnStyle(typeof(CurrencyStyle))] // 使用货币样式
     public decimal Price { get; set; }
-    
+
     [IgnoreColumn] // 忽略该列不导出
     public string InternalNotes { get; set; }
 }
@@ -171,6 +171,8 @@ sheet.AppendListBatch(largeDataSet, batchSize: 1000);
 
 ## 版本更新记录
 
+* 0.0.1
+  * 发布正式版本
 * 0.0.1-beta2
   * 处理导出样式报错问题
 * 0.0.1-beta1
