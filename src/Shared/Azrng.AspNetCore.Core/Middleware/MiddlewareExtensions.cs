@@ -12,7 +12,16 @@ public static class MiddlewareExtensions
     /// <summary>
     /// 使用全局异常处理中间件
     /// </summary>
+    [Obsolete("改为使用UseGlobalException")]
     public static IApplicationBuilder UseCustomExceptionMiddleware(this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware<CustomExceptionMiddleware>();
+    }
+
+    /// <summary>
+    /// 使用全局异常处理中间件
+    /// </summary>
+    public static IApplicationBuilder UseGlobalException(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<CustomExceptionMiddleware>();
     }

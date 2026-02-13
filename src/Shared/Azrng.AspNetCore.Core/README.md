@@ -577,6 +577,8 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.2.1
+  * 更新异常中间件
 * 1.2.0
   * 支持.Net10并优化
   * 新增 AuditLogOptions 配置类，提供灵活的审计日志配置选项

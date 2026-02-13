@@ -8,7 +8,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的公共类库</Description>
-        <Version>1.2.0</Version>
+        <Version>1.2.1</Version>
         <PackageId>Azrng.AspNetCore.Core</PackageId>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.AspNetCore.Core.xml</DocumentationFile>
