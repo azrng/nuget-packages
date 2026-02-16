@@ -7,10 +7,12 @@ using Microsoft.IdentityModel.Tokens;
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
-    /// 服务扩展
+    /// JWT Bearer 认证服务扩展
     /// </summary>
     public static class ServiceCollectionExtensions
     {
+        private const string UnauthorizedResponseMessage = "{\"isSuccess\":false,\"message\":\"您无权访问该接口，请确保已经登录\",\"code\":\"401\"}";
+
         /// <summary>
         /// 添加jwt Bearer认证
         /// </summary>
@@ -79,8 +81,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                    context.Response.ContentType = "application/json;charset=utf-8";
                                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
 
-                                   await context.Response.WriteAsync(
-                                       "{\"isSuccess\":false,\"message\":\"您无权访问该接口，请确保已经登录\",\"code\":\"401\"}");
+                                   await context.Response.WriteAsync(UnauthorizedResponseMessage);
                                }
                            };
             });
