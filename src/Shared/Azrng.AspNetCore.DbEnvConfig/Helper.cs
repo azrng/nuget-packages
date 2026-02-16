@@ -2,30 +2,27 @@
 
 namespace Azrng.AspNetCore.DbEnvConfig;
 
+/// <summary>
+/// 辅助工具类
+/// </summary>
 internal static class Helper
 {
     /// <summary>
-    /// 深拷贝
+    /// 深拷贝字典
     /// </summary>
-    /// <param name="dict"></param>
-    /// <returns></returns>
-    public static IDictionary<string, string?> Clone(this IDictionary<string, string> dict)
+    /// <param name="dict">要拷贝的字典</param>
+    /// <returns>字典的深拷贝副本</returns>
+    public static IDictionary<string, string?> Clone(this IDictionary<string, string?> dict)
     {
-        var newDict = new Dictionary<string, string?>();
-        foreach (var kv in dict)
-        {
-            newDict[kv.Key] = kv.Value;
-        }
-
-        return newDict;
+        return new Dictionary<string, string?>(dict, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// 检测是否发生变化
+    /// 检测两个字典是否发生变化
     /// </summary>
-    /// <param name="oldDict"></param>
-    /// <param name="newDict"></param>
-    /// <returns></returns>
+    /// <param name="oldDict">旧字典</param>
+    /// <param name="newDict">新字典</param>
+    /// <returns>如果字典内容发生变化返回 true，否则返回 false</returns>
     public static bool IsChanged(IDictionary<string, string?> oldDict,
                                  IDictionary<string, string?> newDict)
     {
@@ -51,26 +48,22 @@ internal static class Helper
     }
 
     /// <summary>
-    /// 获取值
+    /// 从 JsonElement 获取适用于配置的字符串值
     /// </summary>
-    /// <param name="e"></param>
-    /// <returns></returns>
+    /// <param name="e">JSON 元素</param>
+    /// <returns>配置值，如果元素为 null 或 undefined 则返回 null</returns>
     public static string? GetValueForConfig(this JsonElement e)
     {
         if (e.ValueKind == JsonValueKind.String)
         {
-            //remove the quotes, "ab"-->ab
             return e.GetString();
         }
 
         if (e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
-            //remove the quotes, "null"-->null
             return null;
         }
-        else
-        {
-            return e.GetRawText();
-        }
+
+        return e.GetRawText();
     }
 }

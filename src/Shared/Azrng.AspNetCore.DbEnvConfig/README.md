@@ -190,6 +190,9 @@ public class CustomScriptService : IScriptService
 
 ### 版本更新记录
 
+* 1.2.0
+  * 添加了 net7.0 目标框架
+  * 改进了参数验证，添加了详细的错误消息和参数名
 * 1.1.0
   * 支持.Net9、.Net10
 * 1.0.0
