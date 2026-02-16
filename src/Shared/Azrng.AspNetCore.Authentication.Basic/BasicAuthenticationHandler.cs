@@ -11,19 +11,27 @@ using System.Text.Encodings.Web;
 namespace Azrng.AspNetCore.Authentication.Basic;
 
 /// <summary>
-/// 继承已实现的基类
+/// Basic 认证处理器
 /// </summary>
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicOptions>
 {
+    private const string MissingAuthorizationHeaderMessage = "未标注 Authorization 请求头";
+    private const string InvalidAuthorizationHeaderFormatMessage = "Authorization 请求头格式不正确";
+    private const string InvalidCredentialsHeaderMessage = "无效的认证头";
+    private const string InvalidCredentialsFormatMessage = "认证头格式无效";
+    private const string InvalidUserNameOrPasswordMessage = "无效用户名或密码";
+
     private readonly ILogger<BasicAuthenticationHandler> _logger;
     private readonly IBasicAuthorizeVerify _basicAuthorizeVerify;
     private readonly IJsonSerializer _jsonSerializer;
 
-    public BasicAuthenticationHandler(IOptionsMonitor<BasicOptions> options,
-                                      ILoggerFactory logger,
-                                      UrlEncoder encoder,
-                                      ISystemClock clock, IBasicAuthorizeVerify basicAuthorizeVerify,
-                                      IJsonSerializer jsonSerializer) : base(options, logger, encoder, clock)
+    public BasicAuthenticationHandler(
+        IOptionsMonitor<BasicOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock,
+        IBasicAuthorizeVerify basicAuthorizeVerify,
+        IJsonSerializer jsonSerializer) : base(options, logger, encoder, clock)
     {
         _basicAuthorizeVerify = basicAuthorizeVerify;
         _jsonSerializer = jsonSerializer;
@@ -34,19 +42,19 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicOptions>
     {
         if (!Request.Headers.ContainsKey("Authorization"))
         {
-            return AuthenticateResult.Fail("未标注Authorization请求头。");
+            return AuthenticateResult.Fail(MissingAuthorizationHeaderMessage);
         }
 
         var authHeader = Request.Headers["Authorization"].ToString();
         if (!authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
         {
-            return AuthenticateResult.Fail("Authorization请求头格式不正确。");
+            return AuthenticateResult.Fail(InvalidAuthorizationHeaderFormatMessage);
         }
 
         var base64EncodedValue = authHeader["Basic ".Length..];
         if (string.IsNullOrWhiteSpace(base64EncodedValue))
         {
-            return AuthenticateResult.Fail("无效的认证头");
+            return AuthenticateResult.Fail(InvalidCredentialsHeaderMessage);
         }
 
         string userName, password;
@@ -56,7 +64,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicOptions>
             var userNamePasswordArray = userNamePassword.Split(':');
             if (userNamePasswordArray.Length != 2)
             {
-                return AuthenticateResult.Fail("无效的认证头");
+                return AuthenticateResult.Fail(InvalidCredentialsHeaderMessage);
             }
 
             userName = userNamePasswordArray[0];
@@ -64,13 +72,13 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicOptions>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"转换格式报错，错误信息：{ex.Message}");
-            return AuthenticateResult.Fail("认证头格式无效");
+            _logger.LogError(ex, "Basic 认证头解析失败: {Message}", ex.Message);
+            return AuthenticateResult.Fail(InvalidCredentialsFormatMessage);
         }
 
         var valid = await Options.UserCredentialValidator.Invoke(Request.HttpContext, userName, password);
         if (!valid)
-            return AuthenticateResult.Fail("无效用户名或密码。");
+            return AuthenticateResult.Fail(InvalidUserNameOrPasswordMessage);
 
         var claims = await _basicAuthorizeVerify.GetCurrentUserClaims(userName);
 
@@ -91,6 +99,6 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicOptions>
     {
         Response.ContentType = "application/json";
         Response.StatusCode = StatusCodes.Status403Forbidden;
-        await Response.WriteAsync(_jsonSerializer.ToJson(ResultModel<string>.Error("您的访问权限不够，请联系管理员", "401")));
+        await Response.WriteAsync(_jsonSerializer.ToJson(ResultModel<string>.Error("您的访问权限不够，请联系管理员", "403")));
     }
 }
