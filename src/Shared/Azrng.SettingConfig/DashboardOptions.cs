@@ -1,84 +1,94 @@
-﻿using Azrng.Core.Extension;
-using Azrng.SettingConfig.Service;
+﻿using Azrng.SettingConfig.Service;
 
 namespace Azrng.SettingConfig;
 
 /// <summary>
-/// 配置Dashboard选项设置
+/// 配置 Dashboard 选项设置
 /// </summary>
 public class DashboardOptions
 {
-    private static readonly IDashboardAuthorizationFilter[] DefaultAuthorization =
-        new[] { new LocalRequestsOnlyAuthorizationFilter() };
-
-    public DashboardOptions()
-    {
-        RoutePrefix = "systemSetting";
-        ApiRoutePrefix = "/api/setting";
-        Authorization = DefaultAuthorization;
-        ConfigCacheTime = 60;
-    }
-
     /// <summary>
-    /// 配置中心页面路由
+    /// 获取或设置配置中心页面路由
     /// </summary>
-    public string RoutePrefix { get; set; }
+    public string RoutePrefix { get; set; } = "systemSetting";
 
     /// <summary>
-    /// 配置中心业务接口前缀
+    /// 获取或设置配置中心业务接口前缀
     /// </summary>
-    public string ApiRoutePrefix { get; set; }
+    public string ApiRoutePrefix { get; set; } = "/api/setting";
 
     /// <summary>
-    /// 环境变量库连接字符串
+    /// 获取或设置环境变量数据库连接字符串
     /// </summary>
-    public string DbConnectionString { get; set; }
+    public string? DbConnectionString { get; set; }
 
     /// <summary>
-    /// 数据库模式
+    /// 获取或设置数据库模式（Schema）
     /// </summary>
     public string DbSchema { get; set; } = "setting";
 
-    // /// <summary>应用的登录页面前端路由</summary>
-    // public string LogInUrl { get; set; } = "login";
+    /// <summary>
+    /// 获取或设置授权过滤器集合
+    /// </summary>
+    public IEnumerable<IDashboardAuthorizationFilter>? Authorization { get; set; }
 
-    // /// <summary>localStorge获取登录授权token的路径</summary>
-    // public IList<string> TokenKeys { get; set; } = new List<string>()
-    // {
-    //     "currentUser",
-    //     "access_token"
-    // };
-
-    public IEnumerable<IDashboardAuthorizationFilter> Authorization { get; set; }
-
-    /// <summary>页面Title</summary>
+    /// <summary>
+    /// 获取或设置页面标题
+    /// </summary>
     public string PageTitle { get; set; } = "系统配置页面";
 
     /// <summary>
-    /// 页面说明
+    /// 获取或设置页面说明
     /// </summary>
     public string PageDescription { get; set; } = "系统设置界面";
 
     /// <summary>
-    /// 配置key缓存时间(分钟)
+    /// 获取或设置配置键缓存时间（分钟）
     /// </summary>
-    public int ConfigCacheTime { get; set; }
+    public int ConfigCacheTime { get; set; } = 60;
 
     /// <summary>
-    /// 参数校验
+    /// 初始化 <see cref="DashboardOptions"/> 的新实例
     /// </summary>
-    /// <exception cref="ArgumentNullException"></exception>
+    public DashboardOptions()
+    {
+        // 设置默认授权过滤器（仅允许本地请求）
+        Authorization = new IDashboardAuthorizationFilter[]
+        {
+            new LocalRequestsOnlyAuthorizationFilter()
+        };
+    }
+
+    /// <summary>
+    /// 验证配置参数
+    /// </summary>
+    /// <exception cref="ArgumentNullException">当必需参数为空时抛出</exception>
+    /// <exception cref="ArgumentOutOfRangeException">当参数值不在有效范围内时抛出</exception>
     public void ParamVerify()
     {
-        if (DbConnectionString.IsNullOrWhiteSpace())
-            throw new ArgumentNullException("数据库地址参数不能为空");
-        if (DbSchema.IsNullOrWhiteSpace())
-            throw new ArgumentNullException("数据库schema地址不能为空");
-        if (PageTitle.IsNullOrWhiteSpace())
-            throw new ArgumentNullException("页面Title不能为空");
-        if (PageDescription.IsNullOrWhiteSpace())
-            throw new ArgumentNullException("页面说明不能为空");
+        if (string.IsNullOrWhiteSpace(DbConnectionString))
+        {
+            throw new ArgumentNullException(nameof(DbConnectionString), "数据库连接字符串不能为空");
+        }
+
+        if (string.IsNullOrWhiteSpace(DbSchema))
+        {
+            throw new ArgumentNullException(nameof(DbSchema), "数据库 Schema 不能为空");
+        }
+
+        if (string.IsNullOrWhiteSpace(PageTitle))
+        {
+            throw new ArgumentNullException(nameof(PageTitle), "页面标题不能为空");
+        }
+
+        if (string.IsNullOrWhiteSpace(PageDescription))
+        {
+            throw new ArgumentNullException(nameof(PageDescription), "页面说明不能为空");
+        }
+
         if (ConfigCacheTime <= 0)
-            throw new ArgumentNullException("配置缓存时间不能小于0");
+        {
+            throw new ArgumentOutOfRangeException(nameof(ConfigCacheTime), "配置缓存时间必须大于 0");
+        }
     }
 }

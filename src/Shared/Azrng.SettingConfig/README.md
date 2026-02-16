@@ -78,15 +78,21 @@ var aa = await _configSettingService.GetConfigAsync<List<string>>("aaa");
 
 ## 版本更新记录
 
+* 1.3.0 (最新)
+  * 🆕 新增：支持 .NET 9.0
+  * ✅ 优化：启用可空引用类型支持
+  * ✅ 优化：改进包版本管理，使用浮动版本号
+  * ✅ 优化：完善 `DashboardOptions` 的 XML 文档注释
+  * ✅ 重构：移除注释代码，清理构造函数逻辑
 * 1.2.0
-  * 适配.Net10
+  * 支持 .NET 10
 * 1.1.0
-    * 适配Azrng.Core1.2.1的修改
+    * 适配 Azrng.Core 1.2.1 的修改
 * 1.0.1
-    * 支持通过调用AddIfNotExistsAsync接口初始化数据
+    * 支持通过调用 AddIfNotExistsAsync 接口初始化数据
 * 1.0.0
     * 增加了历史版本配置的复制
-    * 增加Basic认证方案
+    * 增加 Basic 认证方案
 * 0.0.1
     * 基本的配置更新
 ## 扩展
