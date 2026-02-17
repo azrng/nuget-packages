@@ -38,7 +38,7 @@ services.AddInMemory();
 
 ### 在服务中使用
 
-注入 [ILockProvider]() 接口并在代码中使用：
+注入 `ILockProvider` 接口并在代码中使用：
 
 ```csharp
 public class MyService
@@ -88,7 +88,7 @@ public class MyService
 
 ### 参数说明
 
-[LockAsync]() 方法参数：
+`LockAsync` 方法参数：
 
 - `lockKey`: 分布式锁的唯一标识
 - `expire`: 锁的过期时间，默认30秒
@@ -97,7 +97,7 @@ public class MyService
 
 ## 实现原理
 
-内存分布式锁基于 [ConcurrentDictionary]() 实现，适用于单台机器上的多进程环境。当多个线程或进程尝试获取同一个锁时：
+内存分布式锁基于 `ConcurrentDictionary` 实现，适用于单台机器上的多进程环境。当多个线程或进程尝试获取同一个锁时：
 
 1. 第一个请求会成功获取锁，键值对会被添加到字典中
 2. 后续请求会进入等待状态，直到锁被释放或超时
