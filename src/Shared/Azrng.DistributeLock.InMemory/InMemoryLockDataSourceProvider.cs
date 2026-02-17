@@ -30,9 +30,9 @@ namespace Azrng.DistributeLock.InMemory
             return flag;
         }
 
-        public Task ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
+        public Task<bool> ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         public Task ReleaseLockAsync(string lockKey, string lockValue)

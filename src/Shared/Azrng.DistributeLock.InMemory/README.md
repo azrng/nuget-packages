@@ -118,6 +118,8 @@ public class MyService
 
 ## 版本更新记录
 
+* 0.3.0
+  * 更新延期代码
 * 0.2.0
   * 更新README.md
 * 0.1.1

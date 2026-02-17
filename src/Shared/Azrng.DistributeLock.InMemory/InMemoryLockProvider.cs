@@ -22,8 +22,8 @@ namespace Azrng.DistributeLock.InMemory
             getLockTimeOut ??= TimeSpan.FromSeconds(5);
 
             var lockData = new LockInstance(_inMemoryLockDataSourceProvider, lockKey, lockValue, _logger,
-                autoExtend);
-            var flag = await lockData.LockAsync(expire.Value, getLockTimeOut.Value);
+                autoExtend, getLockTimeOut.Value);
+            var flag = await lockData.LockAsync(expire.Value, expire.Value);
 
             return flag ? lockData : null;
         }
