@@ -76,13 +76,12 @@ public sealed class LockInstance : IAsyncDisposable
     /// <param name="logger">日志记录器</param>
     /// <param name="autoExtend">是否自动延长锁</param>
     /// <param name="expireTime">锁的过期时间</param>
-    public LockInstance(
-        ILockDataSourceProvider lockDataSourceProvider,
-        string lockKey,
-        string lockValue,
-        ILogger logger,
-        bool autoExtend,
-        TimeSpan expireTime)
+    public LockInstance(ILockDataSourceProvider lockDataSourceProvider,
+                        string lockKey,
+                        string lockValue,
+                        ILogger logger,
+                        bool autoExtend,
+                        TimeSpan expireTime)
     {
         _lockDataSourceProvider = lockDataSourceProvider;
         _lockKey = lockKey;

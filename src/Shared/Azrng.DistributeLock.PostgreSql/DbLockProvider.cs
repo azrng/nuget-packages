@@ -38,7 +38,7 @@ public class DbLockProvider : ILockProvider
         expire ??= _options.DefaultExpireTime;
         getLockTimeOut ??= TimeSpan.FromSeconds(5);
 
-        var lockData = new LockInstance(_dbLockDataSourceProvider, lockKey, lockValue, _logger, autoExtend);
+        var lockData = new LockInstance(_dbLockDataSourceProvider, lockKey, lockValue, _logger, autoExtend,expire.Value);
 
         var flag = await lockData.LockAsync(expire.Value, getLockTimeOut.Value);
         return flag ? lockData : null;

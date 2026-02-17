@@ -29,8 +29,17 @@ namespace Microsoft.Extensions.DependencyInjection
 
             var config = new JwtTokenConfig();
             jwtConfigAction?.Invoke(config);
-            if (config.JwtSecretKey.Length < 16)
-                throw new ArgumentException("密钥必须大于或等于16位");
+
+            // 验证密钥长度和复杂度
+            if (string.IsNullOrWhiteSpace(config.JwtSecretKey))
+                throw new ArgumentException("JWT 密钥不能为空");
+
+            if (config.JwtSecretKey.Length < 32)
+                throw new ArgumentException("JWT 密钥长度必须至少为 32 位字符，以确保安全性");
+
+            // 检查密钥复杂度（避免全为相同字符或简单模式）
+            if (config.JwtSecretKey.Distinct().Count() < 8)
+                throw new ArgumentException("JWT 密钥复杂度不足，请使用包含多种字符的密钥");
 
             builder.Services.AddScoped<IBearerAuthService, JwtBearerAuthService>();
             if (jwtConfigAction is not null)
@@ -46,7 +55,8 @@ namespace Microsoft.Extensions.DependencyInjection
                                               {
                                                   // 是否开启签名认证
                                                   ValidateIssuerSigningKey = true,
-                                                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(config.JwtSecretKey)),
+                                                  // 使用 UTF-8 编码以支持更广泛的字符集
+                                                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.JwtSecretKey)),
 
                                                   // 发行人验证，这里要和 token 类中 Claim 类型的发行人保持一致
                                                   ValidateIssuer = true,

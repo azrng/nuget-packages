@@ -40,21 +40,34 @@ internal class DbLockDataSourceProvider : ILockDataSourceProvider
         TimeSpan getLockTimeOut)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
-        connection.Open();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         var flag = false;
         using var tokenSource = new CancellationTokenSource(getLockTimeOut);
         var cancellationToken = tokenSource.Token;
+
+        // 使用参数化查询防止SQL注入
+        var insertSql = $"INSERT INTO {_schema}.{_table}(key, value, expire_time) VALUES (@lockKey, @lockValue, @expireTime) ON CONFLICT (key) DO NOTHING;";
+        var deleteExpiredSql = $"DELETE FROM {_schema}.{_table} WHERE expire_time < @currentTime;";
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var num = await connection.ExecuteAsync(
-                $"insert into {_schema}.{_table}(key,value,expire_time) values ('{lockKey}','{lockValue}','{SystemDateTime.Now().Add(expireTime):yyyy-MM-dd HH:mm:ss}') ON CONFLICT (key) DO NOTHING;");
+                insertSql,
+                new
+                {
+                    lockKey,
+                    lockValue,
+                    expireTime = SystemDateTime.Now().Add(expireTime)
+                }).ConfigureAwait(false);
+
             if (num == 0)
             {
                 await connection.ExecuteAsync(
-                    @$"delete from {_schema}.{_table} where expire_time<'{SystemDateTime.Now():yyyy-MM-dd HH:mm:ss}';");
-                await Task.Delay(10, cancellationToken);
+                    deleteExpiredSql,
+                    new { currentTime = SystemDateTime.Now() }).ConfigureAwait(false);
+                await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                 continue;
             }
 
@@ -75,30 +88,77 @@ internal class DbLockDataSourceProvider : ILockDataSourceProvider
     public async Task ReleaseLockAsync(string lockKey, string lockValue)
     {
         await using var connection = new NpgsqlConnection(_connectionString);
-        connection.Open();
-        await connection.ExecuteAsync($"delete from {_schema}.{_table} where key='{lockKey}' and value='{lockValue}';");
-    }
+        await connection.OpenAsync().ConfigureAwait(false);
 
-    public Task ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
-    {
-        // todo 还没实现
-        throw new NotImplementedException();
+        // 使用参数化查询防止SQL注入
+        var deleteSql = $"DELETE FROM {_schema}.{_table} WHERE key = @lockKey AND value = @lockValue;";
+        await connection.ExecuteAsync(deleteSql, new { lockKey, lockValue }).ConfigureAwait(false);
     }
 
     /// <summary>
-    ///检测锁定的表是否存在，不存在则初始化表
+    /// 延长锁的过期时间
+    /// </summary>
+    /// <param name="lockKey">锁键</param>
+    /// <param name="lockValue">值</param>
+    /// <param name="extendTime">延长时间</param>
+    /// <returns>延长成功返回true，否则返回false</returns>
+    public async Task<bool> ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
+    {
+        await using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+
+        // 使用参数化查询防止SQL注入
+        var updateSql = $"UPDATE {_schema}.{_table} SET expire_time = @newExpireTime WHERE key = @lockKey AND value = @lockValue;";
+        var affectedRows = await connection.ExecuteAsync(
+            updateSql,
+            new
+            {
+                lockKey,
+                lockValue,
+                newExpireTime = SystemDateTime.Now().Add(extendTime)
+            }).ConfigureAwait(false);
+
+        return affectedRows > 0;
+    }
+
+    /// <summary>
+    /// 检测锁定的表是否存在，不存在则初始化表
     /// </summary>
     public void Init()
     {
+        // 验证 schema 和 table 名称，防止 SQL 注入
+        if (!IsValidIdentifier(_schema) || !IsValidIdentifier(_table))
+        {
+            throw new ArgumentException("Schema 或 table 名称包含非法字符");
+        }
+
         var sql = $@"CREATE SCHEMA IF NOT EXISTS {_schema};
-                        create table if not exists {_schema}.{_table}
+                        CREATE TABLE IF NOT EXISTS {_schema}.{_table}
                         (
-	                        key text not null constraint {_table}_pk primary key,
-	                        value text not null,
-	                        expire_time timestamp without time zone not null
+	                        key TEXT NOT NULL CONSTRAINT {_table}_pk PRIMARY KEY,
+	                        value TEXT NOT NULL,
+	                        expire_time TIMESTAMP WITHOUT TIME ZONE NOT NULL
                         );";
         using var connection = new NpgsqlConnection(_connectionString);
         connection.Open();
         connection.Execute(sql);
+    }
+
+    /// <summary>
+    /// 验证标识符是否合法，防止 SQL 注入
+    /// </summary>
+    /// <param name="identifier">要验证的标识符</param>
+    /// <returns>合法返回 true，否则返回 false</returns>
+    private static bool IsValidIdentifier(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+            return false;
+
+        // PostgreSQL 标识符规则：只能包含字母、数字、下划线，且不能以数字开头
+        // 同时限制长度和防止关键字
+        if (identifier.Length > 63)
+            return false;
+
+        return identifier.All(c => char.IsLetterOrDigit(c) || c == '_') && !char.IsDigit(identifier[0]);
     }
 }
