@@ -80,31 +80,19 @@ internal sealed class InternalAuditEntryDto : AuditEntryDto
     public InternalAuditEntryDto(EntityEntry entityEntry)
     {
         TableName = entityEntry.Metadata.GetTableName() ?? entityEntry.Metadata.Name;
-
-        if (entityEntry.Properties.Any(x => x.IsTemporary))
+        OperationType = entityEntry.State switch
         {
-            TemporaryProperties = new List<PropertyEntry>(4);
-        }
+            EntityState.Added => DataOperationType.Add,
+            EntityState.Deleted => DataOperationType.Delete,
+            EntityState.Modified => DataOperationType.Update,
+            _ => OperationType
+        };
 
-        switch (entityEntry.State)
-        {
-            case EntityState.Added:
-                OperationType = DataOperationType.Add;
-                NewValues = new Dictionary<string, object?>();
-                break;
-            case EntityState.Deleted:
-                OperationType = DataOperationType.Delete;
-                OriginalValues = new Dictionary<string, object?>();
-                break;
-            case EntityState.Modified:
-                OperationType = DataOperationType.Update;
-                OriginalValues = new Dictionary<string, object?>();
-                NewValues = new Dictionary<string, object?>();
-                break;
-        }
-
+        // 预检查是否有临时属性
+        var hasTemporaryProperties = false;
         foreach (var propertyEntry in entityEntry.Properties)
         {
+            // 应用属性过滤器
             if (AuditConfig.Options.PropertyFilters.Any(f => f.Invoke(entityEntry, propertyEntry) == false))
             {
                 continue;
@@ -112,33 +100,41 @@ internal sealed class InternalAuditEntryDto : AuditEntryDto
 
             if (propertyEntry.IsTemporary)
             {
-                TemporaryProperties!.Add(propertyEntry);
+                hasTemporaryProperties = true;
+                TemporaryProperties ??= new List<PropertyEntry>(4);
+                TemporaryProperties.Add(propertyEntry);
                 continue;
             }
 
             var columnName = propertyEntry.GetColumnName();
+
+            // 处理主键
             if (propertyEntry.Metadata.IsPrimaryKey())
             {
                 KeyValues[columnName] = propertyEntry.CurrentValue;
             }
 
+            // 根据操作类型处理属性值
             switch (entityEntry.State)
             {
                 case EntityState.Added:
-                    NewValues![columnName] = propertyEntry.CurrentValue;
+                    NewValues ??= new Dictionary<string, object?>();
+                    NewValues[columnName] = propertyEntry.CurrentValue;
                     break;
 
                 case EntityState.Deleted:
-                    OriginalValues![columnName] = propertyEntry.OriginalValue;
+                    OriginalValues ??= new Dictionary<string, object?>();
+                    OriginalValues[columnName] = propertyEntry.OriginalValue;
                     break;
 
                 case EntityState.Modified:
                     if (propertyEntry.IsModified || AuditConfig.Options.SaveUnModifiedProperties)
                     {
-                        OriginalValues![columnName] = propertyEntry.OriginalValue;
-                        NewValues![columnName] = propertyEntry.CurrentValue;
+                        OriginalValues ??= new Dictionary<string, object?>();
+                        NewValues ??= new Dictionary<string, object?>();
+                        OriginalValues[columnName] = propertyEntry.OriginalValue;
+                        NewValues[columnName] = propertyEntry.CurrentValue;
                     }
-
                     break;
             }
         }

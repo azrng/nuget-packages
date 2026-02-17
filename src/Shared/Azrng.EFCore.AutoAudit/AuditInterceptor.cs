@@ -11,6 +11,28 @@ namespace Azrng.EFCore.AutoAudit;
 /// </summary>
 public class AuditInterceptor : SaveChangesInterceptor
 {
+    /// <summary>
+    /// 敏感属性名称集合，这些属性的值不会被记录到审计日志中
+    /// </summary>
+    private static readonly HashSet<string> SensitiveProperties = new(StringComparer.OrdinalIgnoreCase)
+                                                                  {
+                                                                      "Password",
+                                                                      "Token",
+                                                                      "Secret",
+                                                                      "Key",
+                                                                      "ApiKey",
+                                                                      "AccessToken",
+                                                                      "RefreshToken",
+                                                                      "PrivateKey",
+                                                                      "PublicKey",
+                                                                      "CreditCard",
+                                                                      "SSN",
+                                                                      "SocialSecurityNumber",
+                                                                      "Pin",
+                                                                      "Otp",
+                                                                      "VerificationCode"
+                                                                  };
+
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -66,20 +88,22 @@ public class AuditInterceptor : SaveChangesInterceptor
 
     /// <summary>
     /// 在保存完成后（同步）执行后处理逻辑
+    /// 注意：由于 EF Core 的限制，此同步方法无法调用异步方法。
+    /// 建议使用 SavedChangesAsync 方法以获得更好的性能和避免潜在的死锁。
     /// </summary>
     /// <param name="eventData">上下文事件数据</param>
     /// <param name="result">保存结果</param>
     /// <returns>保存结果</returns>
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
-        if (eventData.Context is null)
+        if (eventData.Context is not null)
         {
-            return base.SavedChanges(eventData, result);
+            // 警告：同步方法中调用异步方法可能导致死锁
+            // 建议使用异步方法 SavedChangesAsync
+            PostSaveChanges().GetAwaiter().GetResult();
         }
 
-        PostSaveChanges().GetAwaiter().GetResult(); // 异步处理后置逻辑
-        var savedChanges = base.SavedChanges(eventData, result);
-        return savedChanges;
+        return base.SavedChanges(eventData, result);
     }
 
     /// <summary>
@@ -108,12 +132,7 @@ public class AuditInterceptor : SaveChangesInterceptor
     /// <param name="eventData">上下文错误事件数据</param>
     public override void SaveChangesFailed(DbContextErrorEventData eventData)
     {
-        if (eventData.Context is null)
-        {
-            base.SaveChangesFailed(eventData);
-        }
-
-        base.SaveChangesFailed(eventData); // 调用基类处理
+        base.SaveChangesFailed(eventData);
     }
 
     /// <summary>
@@ -122,14 +141,9 @@ public class AuditInterceptor : SaveChangesInterceptor
     /// <param name="eventData">上下文错误事件数据</param>
     /// <param name="cancellationToken">取消令牌</param>
     public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData,
-                                                CancellationToken cancellationToken = new CancellationToken())
+                                                CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is null)
-        {
-            return base.SaveChangesFailedAsync(eventData, cancellationToken);
-        }
-
-        return base.SaveChangesFailedAsync(eventData, cancellationToken); // 调用基类处理
+        return base.SaveChangesFailedAsync(eventData, cancellationToken);
     }
 
     /// <summary>
@@ -194,6 +208,12 @@ public class AuditInterceptor : SaveChangesInterceptor
                 {
                     var colName = temporaryProperty.GetColumnName();
 
+                    // 检查是否为敏感属性
+                    if (IsSensitiveProperty(colName))
+                    {
+                        continue; // 跳过敏感属性的记录
+                    }
+
                     if (temporaryProperty.Metadata.IsPrimaryKey())
                     {
                         auditEntry.KeyValues[colName] = temporaryProperty.CurrentValue; // 记录主键值
@@ -223,6 +243,20 @@ public class AuditInterceptor : SaveChangesInterceptor
         }
 
         await Task.WhenAll(_serviceProvider.GetServices<IAuditStore>()
-                                           .Select(store => store.SaveAsync(AuditEntryDtos))); // 保存所有审计日志
+                                           .Select(store => store.SaveAsync(AuditEntryDtos)))
+                  .ConfigureAwait(false); // 保存所有审计日志
+    }
+
+    /// <summary>
+    /// 检查属性名是否为敏感属性
+    /// </summary>
+    /// <param name="propertyName">属性名称</param>
+    /// <returns>如果是敏感属性返回 true，否则返回 false</returns>
+    private static bool IsSensitiveProperty(string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName))
+            return false;
+
+        return SensitiveProperties.Contains(propertyName);
     }
 }

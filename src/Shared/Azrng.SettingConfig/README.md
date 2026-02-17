@@ -99,7 +99,7 @@ var aa = await _configSettingService.GetConfigAsync<List<string>>("aaa");
 
 ### Basic认证
 
-需要安装nuget包：Azrng.SettingConfig.BasicAuthorization ,然后
+需要安装nuget包：Azrng.SettingConfig.BasicAuthorization (>= 1.2.0)，然后
 
 ```csharp
 var conn = builder.Configuration.GetConnectionString("pgsql");
@@ -125,8 +125,3 @@ builder.Services.AddSettingConfig(options =>
 #### 缓存扩展
 
 该项目默认使用内存缓存进行存储，你可以自行继承接口来替换默认的缓存方案。
-
-* 1.1.0
-  * 适配.Net10
-* 1.0.0
-    * 基本的Basic认证

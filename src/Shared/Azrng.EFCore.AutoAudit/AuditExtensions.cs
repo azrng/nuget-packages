@@ -78,9 +78,8 @@ public static class AuditExtensions
     public static IAuditConfigBuilder WithEntityFilter(this IAuditConfigBuilder configBuilder,
                                                        Func<EntityEntry, bool> filterFunc)
     {
-        // 设置实体过滤器
-        configBuilder.WithEntityFilter(filterFunc);
-        return configBuilder;
+        ArgumentNullException.ThrowIfNull(filterFunc);
+        return ((IAuditConfigBuilder)configBuilder).WithEntityFilter(filterFunc);
     }
 
     /// <summary>
@@ -97,7 +96,7 @@ public static class AuditExtensions
         var propertyName = propertyExpression.GetMemberName();
 
         // 设置属性过滤器，跳过指定的属性
-        configBuilder.WithPropertyFilter(propertyEntry => propertyEntry.Metadata.Name != propertyName);
+        configBuilder.WithPropertyFilter((_, propertyEntry) => propertyEntry.Metadata.Name != propertyName);
         return configBuilder;
     }
 
@@ -110,7 +109,7 @@ public static class AuditExtensions
     public static IAuditConfigBuilder IgnoreProperty(this IAuditConfigBuilder configBuilder, string propertyName)
     {
         // 设置属性过滤器，跳过指定的属性
-        configBuilder.WithPropertyFilter(propertyEntry => propertyEntry.Metadata.Name != propertyName);
+        configBuilder.WithPropertyFilter((_, propertyEntry) => propertyEntry.Metadata.Name != propertyName);
         return configBuilder;
     }
 
@@ -123,7 +122,7 @@ public static class AuditExtensions
     public static IAuditConfigBuilder IgnoreColumn(this IAuditConfigBuilder configBuilder, string columnName)
     {
         // 设置属性过滤器，跳过指定的列
-        configBuilder.WithPropertyFilter(propertyEntry => propertyEntry.GetColumnName() != columnName);
+        configBuilder.WithPropertyFilter((_, propertyEntry) => propertyEntry.GetColumnName() != columnName);
         return configBuilder;
     }
 
@@ -137,23 +136,14 @@ public static class AuditExtensions
     public static IAuditConfigBuilder IgnoreColumn(this IAuditConfigBuilder configBuilder, string tableName,
                                                    string columnName)
     {
-        // 设置属性过滤器，跳过指定表中的列
+        // 设置属性过滤器，跳过指定表中的指定列
+        // 使用 || 运算符：只要表名匹配或列名匹配就忽略
         configBuilder.WithPropertyFilter((entityEntry, propertyEntry) =>
-            entityEntry.Metadata.GetTableName() != tableName && propertyEntry.GetColumnName() != columnName);
-        return configBuilder;
-    }
-
-    /// <summary>
-    /// 设置属性过滤器，用于决定哪些属性需要被审计。
-    /// </summary>
-    /// <param name="configBuilder">配置构建器</param>
-    /// <param name="filterFunc">用于判断属性是否需要审计的函数</param>
-    /// <returns>返回当前配置构建器，支持链式调用。</returns>
-    public static IAuditConfigBuilder WithPropertyFilter(this IAuditConfigBuilder configBuilder,
-                                                         Func<PropertyEntry, bool> filterFunc)
-    {
-        // 使用闭包包装，转换为接受 EntityEntry 和 PropertyEntry 的函数
-        configBuilder.WithPropertyFilter((entity, prop) => filterFunc.Invoke(prop));
+        {
+            var currentTableName = entityEntry.Metadata.GetTableName();
+            var currentColumnName = propertyEntry.GetColumnName();
+            return currentTableName != tableName || currentColumnName != columnName;
+        });
         return configBuilder;
     }
 
