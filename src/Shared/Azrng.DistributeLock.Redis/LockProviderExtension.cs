@@ -1,5 +1,7 @@
 ﻿using Azrng.DistributeLock.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Azrng.DistributeLock.Redis
 {
@@ -18,12 +20,24 @@ namespace Azrng.DistributeLock.Redis
         public static IServiceCollection AddRedisLockProvider(this IServiceCollection services, string connectionString,
             TimeSpan? defaultExpireTime = null)
         {
-            services.AddSingleton<ILockProvider, RedisLockProvider>();
+            // 注册 RedisLockOptions
             services.AddOptions().Configure<RedisLockOptions>(x =>
             {
                 x.ConnectionString = connectionString;
                 x.DefaultExpireTime = defaultExpireTime ?? TimeSpan.FromSeconds(5);
             });
+
+            // 注册 ConnectionMultiplexer 为单例
+            services.AddSingleton(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<RedisLockOptions>>();
+                var configurationOptions = ConfigurationOptions.Parse(options.Value.ConnectionString);
+                return ConnectionMultiplexer.Connect(configurationOptions);
+            });
+
+            // 注册 ILockProvider
+            services.AddSingleton<ILockProvider, RedisLockProvider>();
+
             return services;
         }
     }

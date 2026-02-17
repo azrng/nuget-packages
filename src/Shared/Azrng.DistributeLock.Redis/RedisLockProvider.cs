@@ -1,6 +1,7 @@
 ﻿using Azrng.DistributeLock.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Azrng.DistributeLock.Redis
 {
@@ -11,16 +12,19 @@ namespace Azrng.DistributeLock.Redis
     {
         private readonly ILogger<RedisLockProvider> _logger;
         private readonly RedisLockOptions _options;
-        private readonly RedisLockDataSourceProvider _redisLockDataSourceProvider;
+        private readonly ConnectionMultiplexer _connection;
+        private readonly IDatabase _database;
 
-        public RedisLockProvider(IOptions<RedisLockOptions> options, ILogger<RedisLockProvider> logger)
+        public RedisLockProvider(IOptions<RedisLockOptions> options, ILogger<RedisLockProvider> logger,
+            ConnectionMultiplexer connection)
         {
             _options = options.Value;
             _logger = logger;
+            _connection = connection;
 
             try
             {
-                _redisLockDataSourceProvider = new RedisLockDataSourceProvider(_options.ConnectionString);
+                _database = _connection.GetDatabase();
             }
             catch (Exception ex)
             {
@@ -36,8 +40,9 @@ namespace Azrng.DistributeLock.Redis
             expire ??= _options.DefaultExpireTime;
             getLockTimeOut ??= TimeSpan.FromSeconds(5);
 
-            var lockData = new LockInstance(_redisLockDataSourceProvider, lockKey, lockValue, _logger,
-                autoExtend);
+            var dataSource = new RedisLockDataSourceProvider(_database, _connection);
+            var lockData = new LockInstance(dataSource, lockKey, lockValue, _logger,
+                autoExtend, expire.Value);
             var flag = await lockData.LockAsync(expire.Value, getLockTimeOut.Value);
 
             return flag ? lockData : null;

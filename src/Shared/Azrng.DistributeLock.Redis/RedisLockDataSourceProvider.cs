@@ -9,17 +9,28 @@ namespace Azrng.DistributeLock.Redis
     internal class RedisLockDataSourceProvider : ILockDataSourceProvider
     {
         private readonly IDatabase _database;
+        private readonly ConnectionMultiplexer _connection;
 
-        public RedisLockDataSourceProvider(string connectionString)
+        public RedisLockDataSourceProvider(IDatabase database, ConnectionMultiplexer connection)
         {
-            var configurationOptions = ConfigurationOptions.Parse(connectionString);
-            var connection = ConnectionMultiplexer.Connect(configurationOptions);
-            _database = connection.GetDatabase();
+            _database = database;
+            _connection = connection;
         }
+
+        /// <summary>
+        /// 检查Redis连接是否可用
+        /// </summary>
+        public bool IsConnected => _connection.IsConnected;
 
         public async Task<bool> TakeLockAsync(string lockKey, string lockValue, TimeSpan expireTime,
             TimeSpan getLockTimeOut)
         {
+            // 检查连接状态
+            if (!IsConnected)
+            {
+                throw new InvalidOperationException("Redis连接不可用，无法获取锁");
+            }
+
             var flag = await _database.LockTakeAsync(lockKey, lockValue, expireTime);
             if (flag)
                 return true;
@@ -46,9 +57,9 @@ namespace Azrng.DistributeLock.Redis
             await _database.LockReleaseAsync(lockKey, lockValue);
         }
 
-        public async Task ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
+        public async Task<bool> ExtendLockAsync(string lockKey, string lockValue, TimeSpan extendTime)
         {
-            await _database.LockExtendAsync(lockKey, lockValue, extendTime);
+            return await _database.LockExtendAsync(lockKey, lockValue, extendTime);
         }
     }
 }
