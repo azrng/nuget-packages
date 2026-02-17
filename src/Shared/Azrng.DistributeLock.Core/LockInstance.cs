@@ -138,6 +138,7 @@ public sealed class LockInstance : IAsyncDisposable
             var flag = await _lockDataSourceProvider.TakeLockAsync(_lockKey, _lockValue, expire, getLockTimeOut);
             if (!flag)
             {
+                // 获取锁失败（超时或其他原因）是正常行为，不记录错误日志
                 return false;
             }
 
@@ -150,14 +151,14 @@ public sealed class LockInstance : IAsyncDisposable
 
             return true;
         }
-        catch (TaskCanceledException ex)
+        catch (OperationCanceledException ex)
         {
-            // 因为一直获取不到锁才导致的报错
-            _logger.LogError(ex, "等待后仍获取分布式锁失败：Key:{LockKey}, Value:{LockValue}", _lockKey, _lockValue);
+            // 操作被取消（正常行为，不记录错误）
             return false;
         }
         catch (Exception ex)
         {
+            // 其他异常才记录错误日志
             _logger.LogError(ex, "获取分布式锁失败：Key:{LockKey}, Value:{LockValue}", _lockKey, _lockValue);
             throw;
         }
