@@ -20,7 +20,7 @@ namespace Azrng.Core
         /// <param name="json"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        T ToObject<T>(string json);
+        T? ToObject<T>(string json);
 
         /// <summary>
         /// 深拷贝
@@ -28,7 +28,7 @@ namespace Azrng.Core
         /// <param name="obj"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        T Clone<T>(T obj) where T : class;
+        T? Clone<T>(T obj) where T : class;
 
         /// <summary>
         /// json字符串转对象集合
@@ -36,6 +36,6 @@ namespace Azrng.Core
         /// <param name="json"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        List<T> ToList<T>(string json);
+        List<T>? ToList<T>(string json);
     }
 }

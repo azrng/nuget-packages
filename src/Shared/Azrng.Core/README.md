@@ -258,6 +258,8 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 版本更新记录
 
+* 1.15.6
+  * 修复IJsonSerializer的null问题
 * 1.15.5
   * 新增DictionaryExtension、DoublelExtension、ByteExtensions、CollectionExtensions、DataTableExtensions的完整单元测试
   * 完善DateTimeExtension、DecimalExtension单元测试
