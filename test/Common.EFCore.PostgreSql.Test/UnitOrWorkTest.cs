@@ -160,6 +160,7 @@ public class UnitOrWorkTest
             // 添加数据
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "TransactionScope rollback test"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             // 模拟异常
@@ -202,14 +203,13 @@ public class UnitOrWorkTest
         var contentList = new List<string>();
 
         // 创建事务作用域但不提交
-        await using (var tranScope = await unitOfWork.BeginTransactionScopeAsync())
-        {
-            var content1 = Guid.NewGuid().ToString();
-            await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Auto rollback test"));
-            contentList.Add(content1);
+        await using var tranScope = await unitOfWork.BeginTransactionScopeAsync();
+        var content1 = Guid.NewGuid().ToString();
+        await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Auto rollback test"));
+        await unitOfWork.SaveChangesAsync();
+        contentList.Add(content1);
 
-            // 不调用 CommitAsync，让 Dispose 自动回滚
-        }
+        // 不调用 CommitAsync，让 Dispose 自动回滚
 
         // 验证数据未保存（自动回滚）
         var savedEntities = await testRep.GetListAsync(t => contentList.Contains(t.Content));
@@ -247,6 +247,7 @@ public class UnitOrWorkTest
         {
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Explicit rollback test"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             // 显式回滚
@@ -294,6 +295,7 @@ public class UnitOrWorkTest
         {
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Duplicate commit test"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             // 第一次提交
@@ -342,31 +344,30 @@ public class UnitOrWorkTest
 
         var contentList = new List<string>();
 
-        await using (var tranScope = unitOfWork.BeginTransactionScope())
+        await using var tranScope = unitOfWork.BeginTransactionScope();
+        try
         {
-            try
-            {
-                // 添加数据
-                var content1 = Guid.NewGuid().ToString();
-                await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Sync TransactionScope test"));
-                contentList.Add(content1);
+            // 添加数据
+            var content1 = Guid.NewGuid().ToString();
+            await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Sync TransactionScope test"));
+            await unitOfWork.SaveChangesAsync();
+            contentList.Add(content1);
 
-                // 提交事务
-                await tranScope.CommitAsync();
+            // 提交事务
+            await tranScope.CommitAsync();
 
-                // 验证数据已保存
-                var savedEntities = await testRep.GetListAsync(t => contentList.Contains(t.Content));
-                Assert.Single(savedEntities);
+            // 验证数据已保存
+            var savedEntities = await testRep.GetListAsync(t => contentList.Contains(t.Content));
+            Assert.Single(savedEntities);
 
-                // 清理测试数据
-                await testRep.DeleteAsync(t => contentList.Contains(t.Content));
-            }
-            catch (Exception ex)
-            {
-                await tranScope.RollbackAsync();
-                _testOutputHelper.WriteLine($"Test failed: {ex.Message}");
-                throw;
-            }
+            // 清理测试数据
+            await testRep.DeleteAsync(t => contentList.Contains(t.Content));
+        }
+        catch (Exception ex)
+        {
+            await tranScope.RollbackAsync();
+            _testOutputHelper.WriteLine($"Test failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -401,6 +402,7 @@ public class UnitOrWorkTest
         {
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "IsolationLevel test"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             await tranScope.CommitAsync();
@@ -451,6 +453,7 @@ public class UnitOrWorkTest
         {
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Rollback after commit test"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             await tranScope.CommitAsync();
