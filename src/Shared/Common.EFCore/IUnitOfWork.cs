@@ -1,4 +1,5 @@
 ﻿using Azrng.EFCore.Entities;
+using Azrng.EFCore.Transactions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,20 @@ namespace Azrng.EFCore
         /// <param name="func"></param>
         /// <param name="isolationLevel"></param>
         Task CommitTransactionAsync(Func<Task> func, IsolationLevel isolationLevel = IsolationLevel.Unspecified);
+
+        /// <summary>
+        /// 开启一个显式事务作用域
+        /// </summary>
+        /// <param name="isolationLevel">隔离级别</param>
+        /// <returns>事务作用域</returns>
+        ITransactionScope BeginTransactionScope(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
+
+        /// <summary>
+        /// 开启一个显式事务作用域（异步）
+        /// </summary>
+        /// <param name="isolationLevel">隔离级别</param>
+        /// <returns>事务作用域</returns>
+        Task<ITransactionScope> BeginTransactionScopeAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified);
 
 #if NET7_0_OR_GREATER
         /// <summary>

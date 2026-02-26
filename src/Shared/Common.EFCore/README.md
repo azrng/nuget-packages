@@ -257,7 +257,7 @@ public class OrderService
         _orderItemRep = orderItemRep;
     }
 
-    // 方式1：使用 CommitTransactionAsync
+    // 方式1：使用 CommitTransactionAsync（Lambda表达式方式）
     public async Task CreateOrderAsync(Order order, List<OrderItem> items)
     {
         await _unitOfWork.CommitTransactionAsync(async () =>
@@ -271,7 +271,28 @@ public class OrderService
         });
     }
 
-    // 方式2：手动管理事务
+    // 方式2：使用 BeginTransactionScopeAsync（显式事务作用域，推荐）
+    public async Task CreateOrderWithScopeAsync(Order order, List<OrderItem> items)
+    {
+        await using var scope = await _unitOfWork.BeginTransactionScopeAsync();
+        try
+        {
+            await _orderRep.AddAsync(order);
+            foreach (var item in items)
+            {
+                item.OrderId = order.Id;
+                await _orderItemRep.AddAsync(item);
+            }
+            await scope.CommitAsync();
+        }
+        catch
+        {
+            await scope.RollbackAsync();
+            throw;
+        }
+    }
+
+    // 方式3：手动管理事务
     public async Task CreateOrderAsync2(Order order, List<OrderItem> items)
     {
         await using var tran = await _unitOfWork.GetDatabase().BeginTransactionAsync();
@@ -483,14 +504,22 @@ var (items, totalCount) = await query.ToPageListAsync(1, 20);
 
 ### IUnitOfWork
 
-| 方法                                   | 说明        |
-|--------------------------------------|-----------|
-| `SaveChangesAsync()`                 | 保存更改      |
-| `CommitTransactionAsync(action)`     | 在事务中执行操作  |
-| `GetDatabase()`                      | 获取数据库上下文  |
-| `ExecuteSqlCommand(sql, parameters)` | 执行 SQL 命令 |
-| `ExecuteScalar<T>(sql, parameters)`  | 查询标量值     |
-| `GetRepository<TEntity>()`           | 获取指定实体的仓储 |
+| 方法                                             | 说明                    |
+|------------------------------------------------|-----------------------|
+| `SaveChangesAsync()`                             | 保存更改                  |
+| `CommitTransactionAsync(action)`                 | 在事务中执行操作（Lambda方式）      |
+| `BeginTransactionScopeAsync()`                   | 开启显式事务作用域（推荐）          |
+| `GetDatabase()`                                  | 获取数据库上下文               |
+| `ExecuteSqlCommand(sql, parameters)`             | 执行 SQL 命令             |
+| `ExecuteScalar<T>(sql, parameters)`              | 查询标量值                  |
+| `GetRepository<TEntity>()`                       | 获取指定实体的仓储              |
+
+### ITransactionScope（事务作用域接口）
+
+| 方法              | 说明   |
+|-----------------|------|
+| `CommitAsync()`  | 提交事务 |
+| `RollbackAsync()` | 回滚事务 |
 
 ## 配置选项
 
@@ -550,7 +579,73 @@ await _userRep.UpdateAsync(
 var users = await _userRep.GetListAsync(x => !x.IsDeleted);
 ```
 
+### 5. 三种事务管理方式如何选择
+
+该库提供了三种事务管理方式，各有适用场景：
+
+#### Lambda表达式方式（`CommitTransactionAsync`）
+```csharp
+await _unitOfWork.CommitTransactionAsync(async () =>
+{
+    // 业务逻辑
+});
+```
+**适用场景**：简单事务，代码量少的操作
+
+#### 显式事务作用域（`BeginTransactionScopeAsync`）推荐
+```csharp
+await using var scope = await _unitOfWork.BeginTransactionScopeAsync();
+try
+{
+    // 业务逻辑
+    await scope.CommitAsync();
+}
+catch
+{
+    await scope.RollbackAsync();
+    throw;
+}
+```
+**适用场景**：
+- 需要更清晰的事务边界
+- 复杂业务逻辑，代码量大
+- 需要在事务前/后执行其他操作
+- 便于调试和错误追踪
+
+#### 手动管理事务
+```csharp
+await using var tran = await _unitOfWork.GetDatabase().BeginTransactionAsync();
+try
+{
+    // 业务逻辑
+    await tran.CommitAsync();
+}
+catch
+{
+    await tran.RollbackAsync();
+    throw;
+}
+```
+**适用场景**：需要直接访问 EF Core 事务对象
+
+**推荐使用显式事务作用域**，因为它提供了：
+- 更清晰的代码结构（using语法）
+- 自动资源管理（Dispose自动回滚未提交的事务）
+- 防止重复提交/回滚的状态检查
+- 完整的日志记录
+
 ## 版本更新记录
+
+### 1.6.2
+
+- 新增显式事务作用域支持：
+    - 添加 `ITransactionScope` 接口，提供更清晰的事务管理方式
+    - 新增 `BeginTransactionScope` 和 `BeginTransactionScopeAsync` 方法
+    - 支持显式提交和回滚操作
+    - 自动资源管理，Dispose 时自动回滚未提交的事务
+    - 防止重复提交/回滚的状态检查
+    - 完整的日志记录功能
+    - 保持向后兼容，原有的 `CommitTransactionAsync` 方法继续可用
 
 ### 1.6.1
 

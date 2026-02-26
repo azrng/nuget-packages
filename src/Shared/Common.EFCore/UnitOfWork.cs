@@ -1,5 +1,6 @@
 ﻿using Azrng.EFCore.Entities;
 using Azrng.EFCore.Extensions;
+using Azrng.EFCore.Transactions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -105,6 +106,19 @@ namespace Azrng.EFCore
                 await transaction.DisposeAsync().ConfigureAwait(false);
             }
         }
+
+        public ITransactionScope BeginTransactionScope(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
+        {
+            var transaction = _context.Database.BeginTransaction(isolationLevel);
+            return new TransactionScope(transaction, _logger);
+        }
+
+        public async Task<ITransactionScope> BeginTransactionScopeAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
+        {
+            var transaction = await _context.Database.BeginTransactionAsync(isolationLevel).ConfigureAwait(false);
+            return new TransactionScope(transaction, _logger);
+        }
+
 #if NET7_0_OR_GREATER
         public IQueryable<T> SqlQuery<T>(FormattableString sql)
         {
