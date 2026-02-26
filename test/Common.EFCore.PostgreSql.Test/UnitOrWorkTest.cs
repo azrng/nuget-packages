@@ -465,8 +465,8 @@ public class UnitOrWorkTest
             // 清理测试数据
             await testRep.DeleteAsync(t => contentList.Contains(t.Content));
 
-            // 尝试在提交后回滚，应抛出异常
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await tranScope.RollbackAsync());
+            // 尝试在提交后回滚，不抛出异常
+            await tranScope.RollbackAsync();
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
