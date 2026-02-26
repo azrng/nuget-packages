@@ -103,11 +103,13 @@ public class UnitOrWorkTest
             // 添加第一条数据
             var content1 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "TransactionScope test 1"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content1);
 
             // 添加第二条数据
             var content2 = Guid.NewGuid().ToString();
             await testRep.AddAsync(new TestEntity(content2, "Test User 2", "test2@example.com", "TransactionScope test 2"));
+            await unitOfWork.SaveChangesAsync();
             contentList.Add(content2);
 
             // 提交事务
@@ -203,13 +205,15 @@ public class UnitOrWorkTest
         var contentList = new List<string>();
 
         // 创建事务作用域但不提交
-        await using var tranScope = await unitOfWork.BeginTransactionScopeAsync();
-        var content1 = Guid.NewGuid().ToString();
-        await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Auto rollback test"));
-        await unitOfWork.SaveChangesAsync();
-        contentList.Add(content1);
+        await using (var tranScope = await unitOfWork.BeginTransactionScopeAsync())
+        {
+            var content1 = Guid.NewGuid().ToString();
+            await testRep.AddAsync(new TestEntity(content1, "Test User 1", "test1@example.com", "Auto rollback test"));
+            await unitOfWork.SaveChangesAsync();
+            contentList.Add(content1);
 
-        // 不调用 CommitAsync，让 Dispose 自动回滚
+            // 不调用 CommitAsync，让 Dispose 自动回滚
+        }
 
         // 验证数据未保存（自动回滚）
         var savedEntities = await testRep.GetListAsync(t => contentList.Contains(t.Content));
