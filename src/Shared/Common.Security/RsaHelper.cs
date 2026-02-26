@@ -97,6 +97,11 @@ namespace Common.Security
         public static string Encrypt(string plaintext, string publicKey, RSAKeyType keyType = RSAKeyType.PEM,
                                      OutType outputType = OutType.Base64)
         {
+            if (plaintext == null)
+                throw new ArgumentNullException(nameof(plaintext));
+            if (string.IsNullOrWhiteSpace(publicKey))
+                throw new ArgumentNullException(nameof(publicKey));
+
             var valueBytes = Encoding.UTF8.GetBytes(plaintext);
 
             using var rsa = RSA.Create();
@@ -116,24 +121,25 @@ namespace Common.Security
                     break;
             }
 
-            var maxBlockSize = rsa.KeySize / 8; //解密块最大长度限制
-            if (valueBytes.Length <= maxBlockSize)
+            var keyByteSize = rsa.KeySize / 8;
+            var maxEncryptBlockSize = keyByteSize - 11; // PKCS#1 v1.5 padding overhead
+            if (valueBytes.Length <= maxEncryptBlockSize)
             {
                 var cipherBytes = rsa.Encrypt(valueBytes, RSAEncryptionPadding.Pkcs1);
                 return cipherBytes.GetString(outputType);
             }
 
-            using var plaiStream = new MemoryStream(maxBlockSize);
+            using var plaiStream = new MemoryStream(valueBytes);
             using var crypStream = new MemoryStream();
-            var buffer = new byte[maxBlockSize];
-            var blockSize = plaiStream.Read(buffer, 0, maxBlockSize);
+            var buffer = new byte[maxEncryptBlockSize];
+            var blockSize = plaiStream.Read(buffer, 0, maxEncryptBlockSize);
             while (blockSize > 0)
             {
                 var toEncrypt = new byte[blockSize];
                 Array.Copy(buffer, 0, toEncrypt, 0, blockSize);
                 var cryptograph = rsa.Encrypt(toEncrypt, RSAEncryptionPadding.Pkcs1);
                 crypStream.Write(cryptograph, 0, cryptograph.Length);
-                blockSize = plaiStream.Read(buffer, 0, maxBlockSize);
+                blockSize = plaiStream.Read(buffer, 0, maxEncryptBlockSize);
             }
 
             return crypStream.ToArray().GetString(outputType);
@@ -152,6 +158,11 @@ namespace Common.Security
         public static string Decrypt(string encryptStr, string privateKey, RSAKeyType keyType = RSAKeyType.PEM,
                                      RsaKeyFormat privateKeyFormat = RsaKeyFormat.PKCS8, OutType inputType = OutType.Base64)
         {
+            if (encryptStr == null)
+                throw new ArgumentNullException(nameof(encryptStr));
+            if (string.IsNullOrWhiteSpace(privateKey))
+                throw new ArgumentNullException(nameof(privateKey));
+
             var valueBytes = encryptStr.GetBytes(inputType);
             using var rsa = RSA.Create();
             switch (keyType)
@@ -177,12 +188,15 @@ namespace Common.Security
                     throw new ArgumentOutOfRangeException(nameof(keyType), keyType, null);
             }
 
-            var maxBlockSize = rsa.KeySize / 8; //解密块最大长度限制
+            var maxBlockSize = rsa.KeySize / 8; // 解密块最大长度
             if (valueBytes.Length <= maxBlockSize)
             {
                 var cipherBytes = rsa.Decrypt(valueBytes, RSAEncryptionPadding.Pkcs1);
                 return Encoding.UTF8.GetString(cipherBytes);
             }
+
+            if (valueBytes.Length % maxBlockSize != 0)
+                throw new ArgumentException("Invalid RSA encrypted payload length.", nameof(encryptStr));
 
             using var crypStream = new MemoryStream(valueBytes);
             using var plaiStream = new MemoryStream();
@@ -190,6 +204,9 @@ namespace Common.Security
             var blockSize = crypStream.Read(buffer, 0, maxBlockSize);
             while (blockSize > 0)
             {
+                if (blockSize != maxBlockSize)
+                    throw new ArgumentException("Invalid RSA encrypted block length.", nameof(encryptStr));
+
                 var toDecrypt = new byte[blockSize];
                 Array.Copy(buffer, 0, toDecrypt, 0, blockSize);
                 var cryptograph = rsa.Decrypt(toDecrypt, RSAEncryptionPadding.Pkcs1);
@@ -214,12 +231,24 @@ namespace Common.Security
                                       Encoding encoding = null, OutType privateKeyType = OutType.Base64,
                                       OutType outputType = OutType.Base64)
         {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (privateKey == null)
+                throw new ArgumentNullException(nameof(privateKey));
+
             encoding ??= Encoding.UTF8;
             var dataBytes = encoding.GetBytes(data);
 
             var privateKeyBytes = privateKey.GetBytes(privateKeyType);
             using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+            try
+            {
+                rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+            }
+            catch (CryptographicException)
+            {
+                rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _);
+            }
 
             var signatureBytes = rsa.SignData(dataBytes, hash, RSASignaturePadding.Pkcs1);
 

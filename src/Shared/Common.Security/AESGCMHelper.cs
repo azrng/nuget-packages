@@ -21,6 +21,7 @@ namespace Common.Security
         public const int MinTagSize = 12; // 96位标签（最小安全值）
         public const int MaxTagSize = 16; // 128位标签（最大）
         public const int NonceSize = 12; // 96位Nonce（推荐）
+        private static readonly int[] ValidAesKeySizes = { 16, 24, 32 };
 
         /// <summary>
         /// 组合字节数组：Nonce + Cipher + Tag
@@ -58,6 +59,12 @@ namespace Common.Security
             return (nonce, cipher, tag);
         }
 
+        private static void ValidateAesKey(byte[] key)
+        {
+            if (key == null || Array.IndexOf(ValidAesKeySizes, key.Length) < 0)
+                throw new ArgumentException("AES key length must be 16, 24 or 32 bytes.");
+        }
+
         /// <summary>
         /// AES-GCM 加密
         /// </summary>
@@ -83,6 +90,8 @@ namespace Common.Security
             var plainBytes = Encoding.UTF8.GetBytes(plainText);
             var cipherBytes = new byte[plainBytes.Length];
             var tag = new byte[tagSize];
+
+            ValidateAesKey(key);
 
             // 执行加密
             using (var aesGcm = new AesGcm(key))
@@ -159,6 +168,12 @@ namespace Common.Security
             var plainBytes = new byte[cipherText.Length];
 
             // 执行解密
+            ValidateAesKey(key);
+            if (nonce == null || nonce.Length != NonceSize)
+                throw new ArgumentException($"Nonce size must be {NonceSize} bytes.");
+            if (tag == null || tag.Length != tagSize)
+                throw new ArgumentException($"Tag size must be {tagSize} bytes.");
+
             using (var aesGcm = new AesGcm(key))
             {
                 aesGcm.Decrypt(nonce, cipherText, tag, plainBytes);

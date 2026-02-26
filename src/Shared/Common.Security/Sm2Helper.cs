@@ -47,7 +47,7 @@ namespace Common.Security
             var d = privateKeyParameters.D;
 
             var publicKey = publicKeyParameters.Q.GetEncoded().GetString(outType);
-            var privateKey = d.ToByteArray().GetString(outType);
+            var privateKey = ToFixedLengthPrivateKey(d, 32).GetString(outType);
 
             return (publicKey, privateKey);
         }
@@ -132,6 +132,24 @@ namespace Common.Security
 
             // 将解密结果转换为字符串
             return encoding.GetString(decryptedData);
+        }
+
+        private static byte[] ToFixedLengthPrivateKey(BigInteger d, int size)
+        {
+            var unsignedBytes = d.ToByteArrayUnsigned();
+            if (unsignedBytes.Length == size)
+                return unsignedBytes;
+
+            if (unsignedBytes.Length > size)
+            {
+                var trimmed = new byte[size];
+                Array.Copy(unsignedBytes, unsignedBytes.Length - size, trimmed, 0, size);
+                return trimmed;
+            }
+
+            var padded = new byte[size];
+            Array.Copy(unsignedBytes, 0, padded, size - unsignedBytes.Length, unsignedBytes.Length);
+            return padded;
         }
 
         // public static string Sm2Sign(string source, string privateKey, bool isSignForSoft = true)

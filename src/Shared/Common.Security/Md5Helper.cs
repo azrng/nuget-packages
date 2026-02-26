@@ -33,14 +33,14 @@ namespace Common.Security
             return is16
                 ? Convert.ToHexString(hashResultNew, 4, 8)
                 : hashResultNew.GetString(outputType);
-
-#endif
+#else
             using var md5 = MD5.Create();
             var buffer = Encoding.UTF8.GetBytes(plaintext);
             var hashResult = md5.ComputeHash(buffer);
             return is16
                 ? BitConverter.ToString(hashResult, 4, 8).Replace("-", string.Empty)
                 : hashResult.GetString(outputType);
+#endif
         }
 
         /// <summary>
@@ -57,7 +57,7 @@ namespace Common.Security
                 throw new ArgumentNullException(nameof(plaintext));
 
             if (secret is null)
-                throw new ArgumentException(nameof(secret));
+                throw new ArgumentNullException(nameof(secret));
 
             using var sha = new HMACMD5();
             sha.Key = Encoding.UTF8.GetBytes(secret);

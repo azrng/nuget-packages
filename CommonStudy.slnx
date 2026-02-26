@@ -22,6 +22,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Test/">
+    <Project Path="test/Common.Security.Test/Common.Security.Test.csproj" />
     <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
   </Folder>
   <Folder Name="/Test/Http/">

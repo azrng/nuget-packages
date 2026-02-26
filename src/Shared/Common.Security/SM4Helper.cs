@@ -19,6 +19,8 @@ namespace Common.Security
     /// </remarks>
     public static class Sm4Helper
     {
+        private const int Sm4BlockSize = 16;
+
         /// <summary>
         /// 加密
         /// </summary>
@@ -45,6 +47,7 @@ namespace Common.Security
 
             var plaintextBytes = encoding.GetBytes(plaintext);
             var secretBytes = encoding.GetBytes(secretKey);
+            ValidateKey(secretBytes);
 
             var engine = new SM4Engine();
             var secretParameter = new KeyParameter(secretBytes);
@@ -58,8 +61,10 @@ namespace Common.Security
             }
             else
             {
+                var ivBytes = encoding.GetBytes(iv);
+                ValidateIv(ivBytes);
                 var cipher = new PaddedBufferedBlockCipher(new CbcBlockCipher(engine));
-                cipher.Init(true, new ParametersWithIV(secretParameter, encoding.GetBytes(iv)));
+                cipher.Init(true, new ParametersWithIV(secretParameter, ivBytes));
                 var encryptedBytes = cipher.DoFinal(plaintextBytes);
                 return encryptedBytes.GetString(outType);
             }
@@ -91,6 +96,7 @@ namespace Common.Security
 
             var encryptedTextBytes = encryptedText.GetBytes(inputType);
             var secretBytes = encoding.GetBytes(secretKey);
+            ValidateKey(secretBytes);
 
             var engine = new SM4Engine();
             var secretParameter = new KeyParameter(secretBytes);
@@ -104,11 +110,25 @@ namespace Common.Security
             }
             else
             {
+                var ivBytes = encoding.GetBytes(iv);
+                ValidateIv(ivBytes);
                 var cipher = new PaddedBufferedBlockCipher(new CbcBlockCipher(engine));
-                cipher.Init(false, new ParametersWithIV(secretParameter, encoding.GetBytes(iv)));
+                cipher.Init(false, new ParametersWithIV(secretParameter, ivBytes));
                 var decryptedBytes = cipher.DoFinal(encryptedTextBytes);
                 return encoding.GetString(decryptedBytes);
             }
+        }
+
+        private static void ValidateKey(byte[] keyBytes)
+        {
+            if (keyBytes == null || keyBytes.Length != Sm4BlockSize)
+                throw new ArgumentException("SM4 key length must be exactly 16 bytes.");
+        }
+
+        private static void ValidateIv(byte[] ivBytes)
+        {
+            if (ivBytes == null || ivBytes.Length != Sm4BlockSize)
+                throw new ArgumentException("SM4 IV length must be exactly 16 bytes.");
         }
     }
 }

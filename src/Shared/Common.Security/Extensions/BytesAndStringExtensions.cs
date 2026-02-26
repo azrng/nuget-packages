@@ -19,13 +19,13 @@ namespace Common.Security.Extensions
             if (bytes == null || bytes.Length == 0)
                 return string.Empty;
 
-            // ToHexString和BitConverter的区别是前者输出为小写，后者为大写
+            // Convert.ToHexString outputs uppercase.
 
 #if NET6_0_OR_GREATER
             return Convert.ToHexString(bytes);
-#endif
-
+#else
             return Hex.ToHexString(bytes);
+#endif
 
             // Convert.ToHexString() // .net6以及之上版本支持
             //return BitConverter.ToString(bytes).Replace("-", string.Empty);
@@ -91,7 +91,7 @@ namespace Common.Security.Extensions
         internal static byte[] ToBytesFromHex(this string hex)
         {
             if (hex.Length == 0)
-                return new byte[1];
+                return Array.Empty<byte>();
             if (hex.Length % 2 == 1)
                 hex = "0" + hex;
             var bytes = new byte[hex.Length / 2];
@@ -102,7 +102,7 @@ namespace Common.Security.Extensions
 
         internal static byte[] GetBytes(this string strUtf8) =>
             string.IsNullOrEmpty(strUtf8) || strUtf8.Length == 0
-                ? new byte[1]
+                ? Array.Empty<byte>()
                 : Encoding.UTF8.GetBytes(strUtf8);
 
         public static byte[] HexToByte(this string hex) => Hex.Decode(hex);
@@ -226,7 +226,10 @@ namespace Common.Security.Extensions
 
         public static BigInteger byteConvertInteger(this byte[] b)
         {
-            if (b[0] >= 0)
+            if (b == null || b.Length == 0)
+                throw new ArgumentException("Argument b (byte array) is null or empty!", nameof(b));
+
+            if ((b[0] & 0x80) == 0)
                 return new BigInteger(b);
             var destinationArray = new byte[b.Length + 1];
             destinationArray[0] = 0;

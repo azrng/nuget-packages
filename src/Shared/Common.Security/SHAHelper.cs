@@ -25,7 +25,8 @@ namespace Common.Security
         public static string GetSha1Hash(string str, OutType outputType = OutType.Hex)
         {
             ValidateInput(str);
-            return ComputeHash(str, SHA1.Create(), outputType);
+            using var hashAlgorithm = SHA1.Create();
+            return ComputeHash(str, hashAlgorithm, outputType);
         }
 
         /// <summary>
@@ -53,7 +54,8 @@ namespace Common.Security
         public static string GetSha256Hash(string str, OutType outputType = OutType.Hex)
         {
             ValidateInput(str);
-            return ComputeHash(str, SHA256.Create(), outputType);
+            using var hashAlgorithm = SHA256.Create();
+            return ComputeHash(str, hashAlgorithm, outputType);
         }
 
         /// <summary>
@@ -94,7 +96,8 @@ namespace Common.Security
         public static string GetSha512Hash(string str, OutType outputType = OutType.Hex)
         {
             ValidateInput(str);
-            return ComputeHash(str, SHA512.Create(), outputType);
+            using var hashAlgorithm = SHA512.Create();
+            return ComputeHash(str, hashAlgorithm, outputType);
         }
 
         /// <summary>
@@ -129,13 +132,18 @@ namespace Common.Security
         /// 验证输入参数
         /// </summary>
         /// <param name="str"></param>
-        /// <param name="secret"></param>
-        private static void ValidateInput(string str, string secret = null)
+        private static void ValidateInput(string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+        }
+
+        private static void ValidateInput(string str, string secret)
         {
             if (str == null)
                 throw new ArgumentNullException(nameof(str));
 
-            if (secret != null && secret == null)
+            if (secret == null)
                 throw new ArgumentNullException(nameof(secret));
         }
 

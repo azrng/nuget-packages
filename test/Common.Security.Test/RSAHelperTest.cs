@@ -88,4 +88,28 @@ public class RsaHelperTest
         var verifyResult = RsaHelper.VerifyData(source, signData, publicKey, HashAlgorithmName.SHA1);
         Assert.True(verifyResult);
     }
+
+    [Fact]
+    public void LongText_EncryptAndDecrypt_ReturnOk()
+    {
+        var source = new string('A', 1024);
+        var (publicKey, privateKey) = RsaHelper.ExportPemRsaKey(RsaKeyFormat.PKCS1);
+
+        var encryptResult = RsaHelper.Encrypt(source, publicKey);
+        var decryptResult = RsaHelper.Decrypt(encryptResult, privateKey, privateKeyFormat: RsaKeyFormat.PKCS1);
+
+        Assert.Equal(source, decryptResult);
+    }
+
+    [Fact]
+    public void Pkcs8SignAndVerify_ReturnOk()
+    {
+        var source = "pkcs8-sign-verify";
+        var (publicKey, privateKey) = RsaHelper.ExportBase64RsaKey();
+
+        var signData = RsaHelper.SignData(source, privateKey, HashAlgorithmName.SHA256, privateKeyType: OutType.Base64);
+        var verifyResult = RsaHelper.VerifyData(source, signData, publicKey, HashAlgorithmName.SHA256, publicKeyType: OutType.Base64);
+
+        Assert.True(verifyResult);
+    }
 }

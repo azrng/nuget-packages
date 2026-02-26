@@ -117,4 +117,18 @@ public class Sm4HelperTest
 
         Assert.Equal("ED0A37CCADFAC11E2E4982BF68BA5CDE3D95A527F59808C56056279C1CF236B6", encryptStr.ToUpper());
     }
+    [Fact]
+    public void Encrypt_InvalidKeyLength_ThrowsArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => Sm4Helper.Encrypt("123456", "short-key"));
+        Assert.Contains("16 bytes", ex.Message);
+    }
+
+    [Fact]
+    public void Encrypt_CbcInvalidIvLength_ThrowsArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Sm4Helper.Encrypt("123456", SecretKey, Sm4CryptoEnum.CBC, iv: "short-iv"));
+        Assert.Contains("16 bytes", ex.Message);
+    }
 }

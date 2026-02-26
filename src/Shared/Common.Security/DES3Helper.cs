@@ -3,6 +3,7 @@ using Common.Security.Extensions;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.IO;
 using Org.BouncyCastle.Security;
+using System;
 using System.IO;
 using System.Text;
 
@@ -25,7 +26,12 @@ namespace Common.Security
         public string Encrypt(string plaintext, string secretKey, OutType outType = OutType.Base64,
             Encoding encoding = null)
         {
-            _ = encoding ?? Encoding.UTF8;
+            if (plaintext == null)
+                throw new ArgumentNullException(nameof(plaintext));
+            if (string.IsNullOrWhiteSpace(secretKey))
+                throw new ArgumentNullException(nameof(secretKey));
+
+            encoding ??= Encoding.UTF8;
             var inCipher = CreateCipher(true, secretKey);
             var inputArray = encoding.GetBytes(plaintext);
             var cipherData = inCipher.DoFinal(inputArray);
@@ -43,16 +49,23 @@ namespace Common.Security
         public string Decrypt(string source, string secretKey, OutType inputType = OutType.Base64,
             Encoding encoding = null)
         {
-            _ = encoding ?? Encoding.UTF8;
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (string.IsNullOrWhiteSpace(secretKey))
+                throw new ArgumentNullException(nameof(secretKey));
+
+            encoding ??= Encoding.UTF8;
             var inputArray = source.GetBytes(inputType);
             var outCipher = CreateCipher(false, secretKey);
             using var encryptedDataStream = new MemoryStream(inputArray, false);
             using var dataStream = new MemoryStream();
-            using var outCipherStream = new CipherStream(dataStream, null, outCipher);
-            int ch;
-            while ((ch = encryptedDataStream.ReadByte()) >= 0)
+            using (var outCipherStream = new CipherStream(dataStream, null, outCipher))
             {
-                outCipherStream.WriteByte((byte)ch);
+                int ch;
+                while ((ch = encryptedDataStream.ReadByte()) >= 0)
+                {
+                    outCipherStream.WriteByte((byte)ch);
+                }
             }
 
             var dataBytes = dataStream.ToArray();
