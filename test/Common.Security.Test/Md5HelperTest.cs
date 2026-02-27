@@ -1,4 +1,4 @@
-﻿using Xunit.Abstractions;
+using Xunit.Abstractions;
 
 namespace Common.Security.Test
 {
@@ -40,6 +40,28 @@ namespace Common.Security.Test
             _testOutputHelper.WriteLine(result);
 
             Assert.Equal(value, result);
+        }
+
+        [Fact]
+        public void GetFileMd5Hash_ReturnOk()
+        {
+            var filePath = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(filePath, "123456");
+                var value = Md5Helper.GetFileMd5Hash(filePath);
+                Assert.Equal("E10ADC3949BA59ABBE56E057F20F883E", value, ignoreCase: true);
+            }
+            finally
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        [Fact]
+        public void GetHmacMd5Hash_NullSecret_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => Md5Helper.GetHmacMd5Hash("123", null));
         }
     }
 }

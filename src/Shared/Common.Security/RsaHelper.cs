@@ -17,6 +17,7 @@ namespace Common.Security
     public static class RsaHelper
     {
         private const int DefaultKeySize = 2048;
+        private const int Sha256HashSize = 32;
 
         /*
          * RSA 算法的加密和解密操作都要对大整数进行计算，在数据量很大时，一次性进行加解密操作会导致内存不足或计算时间过长。因此，需要将数据分成若干个小块，分别进行加解密，最后再将结果合并起来。
@@ -83,6 +84,156 @@ namespace Common.Security
         public static bool QuickVerify(string data, string sign, string publicKey)
         {
             return VerifyData(data, sign, publicKey, HashAlgorithmName.SHA256);
+        }
+
+        /// <summary>
+        /// 快速签名（使用SHA256 + PSS和Base64编码）
+        /// </summary>
+        public static string QuickSignPss(string data, string privateKey)
+        {
+            return SignDataPss(data, privateKey, HashAlgorithmName.SHA256);
+        }
+
+        /// <summary>
+        /// 快速验证签名（使用SHA256 + PSS和Base64编码）
+        /// </summary>
+        public static bool QuickVerifyPss(string data, string sign, string publicKey)
+        {
+            return VerifyDataPss(data, sign, publicKey, HashAlgorithmName.SHA256);
+        }
+
+        /// <summary>
+        /// 使用 OAEP-SHA256 加密（长文本会自动分段）
+        /// </summary>
+        public static string EncryptOaepSha256(string plaintext, string publicKey, RSAKeyType keyType = RSAKeyType.PEM,
+                                               OutType outputType = OutType.Base64)
+        {
+            if (plaintext == null)
+                throw new ArgumentNullException(nameof(plaintext));
+            if (string.IsNullOrWhiteSpace(publicKey))
+                throw new ArgumentNullException(nameof(publicKey));
+
+            var valueBytes = Encoding.UTF8.GetBytes(plaintext);
+            using var rsa = InitializeRsa(publicKey, keyType);
+            var keyByteSize = rsa.KeySize / 8;
+            var maxEncryptBlockSize = keyByteSize - (2 * Sha256HashSize) - 2;
+            if (maxEncryptBlockSize <= 0)
+                throw new InvalidOperationException("RSA key size is too small for OAEP-SHA256.");
+
+            if (valueBytes.Length <= maxEncryptBlockSize)
+            {
+                var cipherBytes = rsa.Encrypt(valueBytes, RSAEncryptionPadding.OaepSHA256);
+                return cipherBytes.GetString(outputType);
+            }
+
+            using var plaiStream = new MemoryStream(valueBytes);
+            using var crypStream = new MemoryStream();
+            var buffer = new byte[maxEncryptBlockSize];
+            var blockSize = plaiStream.Read(buffer, 0, maxEncryptBlockSize);
+            while (blockSize > 0)
+            {
+                var toEncrypt = new byte[blockSize];
+                Array.Copy(buffer, 0, toEncrypt, 0, blockSize);
+                var cryptograph = rsa.Encrypt(toEncrypt, RSAEncryptionPadding.OaepSHA256);
+                crypStream.Write(cryptograph, 0, cryptograph.Length);
+                blockSize = plaiStream.Read(buffer, 0, maxEncryptBlockSize);
+            }
+
+            return crypStream.ToArray().GetString(outputType);
+        }
+
+        /// <summary>
+        /// 使用 OAEP-SHA256 解密（长文本会自动分段）
+        /// </summary>
+        public static string DecryptOaepSha256(string encryptStr, string privateKey, RSAKeyType keyType = RSAKeyType.PEM,
+                                               RsaKeyFormat privateKeyFormat = RsaKeyFormat.PKCS8, OutType inputType = OutType.Base64)
+        {
+            if (encryptStr == null)
+                throw new ArgumentNullException(nameof(encryptStr));
+            if (string.IsNullOrWhiteSpace(privateKey))
+                throw new ArgumentNullException(nameof(privateKey));
+
+            var valueBytes = encryptStr.GetBytes(inputType);
+            using var rsa = InitializeRsa(privateKey, keyType, privateKeyFormat);
+            var maxBlockSize = rsa.KeySize / 8;
+            if (valueBytes.Length <= maxBlockSize)
+            {
+                var cipherBytes = rsa.Decrypt(valueBytes, RSAEncryptionPadding.OaepSHA256);
+                return Encoding.UTF8.GetString(cipherBytes);
+            }
+
+            if (valueBytes.Length % maxBlockSize != 0)
+                throw new ArgumentException("Invalid RSA encrypted payload length.", nameof(encryptStr));
+
+            using var crypStream = new MemoryStream(valueBytes);
+            using var plaiStream = new MemoryStream();
+            var buffer = new byte[maxBlockSize];
+            var blockSize = crypStream.Read(buffer, 0, maxBlockSize);
+            while (blockSize > 0)
+            {
+                if (blockSize != maxBlockSize)
+                    throw new ArgumentException("Invalid RSA encrypted block length.", nameof(encryptStr));
+
+                var toDecrypt = new byte[blockSize];
+                Array.Copy(buffer, 0, toDecrypt, 0, blockSize);
+                var cryptograph = rsa.Decrypt(toDecrypt, RSAEncryptionPadding.OaepSHA256);
+                plaiStream.Write(cryptograph, 0, cryptograph.Length);
+                blockSize = crypStream.Read(buffer, 0, maxBlockSize);
+            }
+
+            return Encoding.UTF8.GetString(plaiStream.ToArray());
+        }
+
+        /// <summary>
+        /// 使用 RSA-PSS 签名
+        /// </summary>
+        public static string SignDataPss(string data, string privateKey, HashAlgorithmName hash,
+                                         Encoding encoding = null, OutType privateKeyType = OutType.Base64,
+                                         OutType outputType = OutType.Base64)
+        {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (privateKey == null)
+                throw new ArgumentNullException(nameof(privateKey));
+
+            encoding ??= Encoding.UTF8;
+            var dataBytes = encoding.GetBytes(data);
+            var privateKeyBytes = privateKey.GetBytes(privateKeyType);
+            using var rsa = RSA.Create();
+            try
+            {
+                rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+            }
+            catch (CryptographicException)
+            {
+                rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _);
+            }
+
+            var signatureBytes = rsa.SignData(dataBytes, hash, RSASignaturePadding.Pss);
+            return signatureBytes.GetString(outputType);
+        }
+
+        /// <summary>
+        /// 使用 RSA-PSS 验证签名
+        /// </summary>
+        public static bool VerifyDataPss(string data, string sign, string publicKey, HashAlgorithmName hash,
+                                         Encoding encoding = null, OutType signType = OutType.Base64,
+                                         OutType publicKeyType = OutType.Base64)
+        {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (sign == null)
+                throw new ArgumentNullException(nameof(sign));
+            if (publicKey == null)
+                throw new ArgumentNullException(nameof(publicKey));
+
+            encoding ??= Encoding.UTF8;
+            var dataBytes = encoding.GetBytes(data);
+            var signBytes = sign.GetBytes(signType);
+            var publicKeyBytes = publicKey.GetBytes(publicKeyType);
+            using var rsa = RSA.Create();
+            rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _);
+            return rsa.VerifyData(dataBytes, signBytes, hash, RSASignaturePadding.Pss);
         }
 
         /// <summary>

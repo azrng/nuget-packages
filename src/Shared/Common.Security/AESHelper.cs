@@ -15,6 +15,8 @@ namespace Common.Security
     /// </remarks>
     public static class AesHelper
     {
+        private static readonly int[] ValidAesKeySizes = { 128, 192, 256 };
+
         /// <summary>
         /// Aes密钥产生
         /// <param name="outType">输出密钥的类型</param>
@@ -29,6 +31,47 @@ namespace Common.Security
             var iv = aes.IV.GetString(outType);
 
             return (secretKey, iv);
+        }
+
+        /// <summary>
+        /// 按指定密钥位数生成Aes密钥与IV
+        /// </summary>
+        /// <param name="keySize">密钥位数，仅支持128/192/256</param>
+        /// <param name="outType">输出格式</param>
+        public static (string, string) ExportSecretAndIv(int keySize, OutType outType = OutType.Base64)
+        {
+            if (Array.IndexOf(ValidAesKeySizes, keySize) < 0)
+                throw new ArgumentOutOfRangeException(nameof(keySize), "Key size must be 128, 192, or 256 bits.");
+
+            using var aes = Aes.Create();
+            aes.KeySize = keySize;
+            aes.GenerateKey();
+            var secretKey = aes.Key.GetString(outType);
+
+            aes.GenerateIV();
+            var iv = aes.IV.GetString(outType);
+
+            return (secretKey, iv);
+        }
+
+        /// <summary>
+        /// 使用推荐参数进行AES-CBC加密（CBC + PKCS7）
+        /// </summary>
+        public static string EncryptCbcPkcs7(string plaintext, string secretKey, string iv,
+                                             SecretType secretType = SecretType.Base64,
+                                             OutType outType = OutType.Base64)
+        {
+            return Encrypt(plaintext, secretKey, iv, CipherMode.CBC, PaddingMode.PKCS7, secretType, outType);
+        }
+
+        /// <summary>
+        /// 使用推荐参数进行AES-CBC解密（CBC + PKCS7）
+        /// </summary>
+        public static string DecryptCbcPkcs7(string cipherText, string secretKey, string iv,
+                                             SecretType secretType = SecretType.Base64,
+                                             OutType cipherTextType = OutType.Base64)
+        {
+            return Decrypt(cipherText, secretKey, iv, CipherMode.CBC, PaddingMode.PKCS7, secretType, cipherTextType);
         }
 
         /// <summary>

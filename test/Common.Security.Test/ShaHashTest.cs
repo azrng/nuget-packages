@@ -1,4 +1,7 @@
-﻿namespace Common.Security.Test
+using Common.Security.Enums;
+using System.Text;
+
+namespace Common.Security.Test
 {
     public class ShaHashTest
     {
@@ -59,6 +62,111 @@
 
             var result = ShaHelper.GetHmacSha512Hash(str, secret);
             Assert.Equal(value, result, ignoreCase: true);
+        }
+
+        [Fact]
+        public void Get_Sha256Hash_Stream_ReturnOk()
+        {
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("123456"));
+            var value = ShaHelper.GetSha256Hash(stream);
+            Assert.Equal("8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", value, ignoreCase: true);
+        }
+
+        [Fact]
+        public void Get_Sha512Hash_Stream_ReturnOk()
+        {
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes("123456"));
+            var value = ShaHelper.GetSha512Hash(stream);
+            Assert.Equal("ba3253876aed6bc22d4a6ff53d8406c6ad864195ed144ab5c87621b6c233b548baeae6956df346ec8c17f5ea10f35ee3cbc514797ed7ddd3145464e2a0bab413", value, ignoreCase: true);
+        }
+
+        [Fact]
+        public void Get_FileSha256Hash_ReturnOk()
+        {
+            var filePath = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(filePath, "123456");
+                var value = ShaHelper.GetFileSha256Hash(filePath, OutType.Hex);
+                Assert.Equal("8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", value, ignoreCase: true);
+            }
+            finally
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        [Fact]
+        public void Get_FileSha512Hash_ReturnOk()
+        {
+            var filePath = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(filePath, "123456");
+                var value = ShaHelper.GetFileSha512Hash(filePath, OutType.Hex);
+                Assert.Equal("ba3253876aed6bc22d4a6ff53d8406c6ad864195ed144ab5c87621b6c233b548baeae6956df346ec8c17f5ea10f35ee3cbc514797ed7ddd3145464e2a0bab413", value, ignoreCase: true);
+            }
+            finally
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        [Fact]
+        public void Verify_HmacSha1Hash_ReturnExpected()
+        {
+            var str = "verify-sha1";
+            var secret = "s1";
+            var hash = ShaHelper.GetHmacSha1Hash(str, secret, OutType.Base64);
+
+            Assert.True(ShaHelper.VerifyHmacSha1Hash(str, secret, hash, OutType.Base64));
+            Assert.False(ShaHelper.VerifyHmacSha1Hash(str, secret, Convert.ToBase64String(new byte[20]), OutType.Base64));
+        }
+
+        [Fact]
+        public void Verify_HmacSha256Hash_ReturnExpected()
+        {
+            var str = "verify-sha256";
+            var secret = "s2";
+            var hash = ShaHelper.GetHmacSha256Hash(str, secret, OutType.Base64);
+
+            Assert.True(ShaHelper.VerifyHmacSha256Hash(str, secret, hash, OutType.Base64));
+            Assert.False(ShaHelper.VerifyHmacSha256Hash(str, secret, Convert.ToBase64String(new byte[32]), OutType.Base64));
+        }
+
+        [Fact]
+        public void Verify_HmacSha512Hash_ReturnExpected()
+        {
+            var str = "verify-sha512";
+            var secret = "s3";
+            var hash = ShaHelper.GetHmacSha512Hash(str, secret, OutType.Base64);
+
+            Assert.True(ShaHelper.VerifyHmacSha512Hash(str, secret, hash, OutType.Base64));
+            Assert.False(ShaHelper.VerifyHmacSha512Hash(str, secret, Convert.ToBase64String(new byte[64]), OutType.Base64));
+        }
+
+        [Fact]
+        public void Get_Sha256Hash_NullStream_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => ShaHelper.GetSha256Hash((Stream)null!));
+        }
+
+        [Fact]
+        public void Get_Sha512Hash_NullStream_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => ShaHelper.GetSha512Hash((Stream)null!));
+        }
+
+        [Fact]
+        public void Get_FileSha256Hash_NullPath_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => ShaHelper.GetFileSha256Hash(null!));
+        }
+
+        [Fact]
+        public void Get_FileSha512Hash_NullPath_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => ShaHelper.GetFileSha512Hash(null!));
         }
     }
 }

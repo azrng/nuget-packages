@@ -112,4 +112,52 @@ public class RsaHelperTest
 
         Assert.True(verifyResult);
     }
+
+    [Fact]
+    public void OaepSha256_LongText_EncryptAndDecrypt_ReturnOk()
+    {
+        var source = new string('B', 1024);
+        var (publicKey, privateKey) = RsaHelper.ExportPemRsaKey(RsaKeyFormat.PKCS1);
+
+        var encryptResult = RsaHelper.EncryptOaepSha256(source, publicKey);
+        var decryptResult = RsaHelper.DecryptOaepSha256(encryptResult, privateKey, privateKeyFormat: RsaKeyFormat.PKCS1);
+
+        Assert.Equal(source, decryptResult);
+    }
+
+    [Fact]
+    public void SignAndVerify_Pss_ReturnOk()
+    {
+        var source = "pss-sign-verify";
+        var (publicKey, privateKey) = RsaHelper.ExportBase64RsaKey();
+
+        var signData = RsaHelper.SignDataPss(source, privateKey, HashAlgorithmName.SHA256, privateKeyType: OutType.Base64);
+        var verifyResult = RsaHelper.VerifyDataPss(source, signData, publicKey, HashAlgorithmName.SHA256, publicKeyType: OutType.Base64);
+
+        Assert.True(verifyResult);
+    }
+
+    [Fact]
+    public void QuickSignAndQuickVerify_Pss_ReturnOk()
+    {
+        var source = "quick-pss";
+        var (publicKey, privateKey) = RsaHelper.ExportBase64RsaKey();
+
+        var signData = RsaHelper.QuickSignPss(source, privateKey);
+        var verifyResult = RsaHelper.QuickVerifyPss(source, signData, publicKey);
+
+        Assert.True(verifyResult);
+    }
+
+    [Fact]
+    public void QuickVerify_Pss_TamperedData_ReturnFalse()
+    {
+        var source = "quick-pss-source";
+        var (publicKey, privateKey) = RsaHelper.ExportBase64RsaKey();
+        var signData = RsaHelper.QuickSignPss(source, privateKey);
+
+        var verifyResult = RsaHelper.QuickVerifyPss(source + "-x", signData, publicKey);
+
+        Assert.False(verifyResult);
+    }
 }

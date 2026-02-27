@@ -1,208 +1,215 @@
 # AzrngCommon.Security
 
-## 概述
-AzrngCommon.Security 是一个全面的加密工具库，提供了常用的加密、解密、签名和哈希算法实现。
+`AzrngCommon.Security` 是一个常用加密工具库，覆盖国际通用算法与国密算法，提供统一的编码输入输出（`Base64`/`Hex`）。
 
-该包封装了常见的加密公共类，支持国密算法（SM2、SM3、SM4）以及国际通用算法（AES、DES、RSA、MD5、SHA等）。
-
-## 功能特性
-
-- 支持多种加密算法：AES、DES、RSA、SM2、SM4等
-- 支持多种哈希算法：MD5、SHA1/SHA256/SHA512、SM3等
-- 支持多种输出格式：Base64、Hex
-- 支持国密算法（SM系列）
-- 支持对称和非对称加密
-- 支持数字签名和验证
-- 支持文件哈希计算
-- 支持多框架：.NET Standard 2.1、.NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
+- 对称加密：AES、AES-GCM、DES、3DES、SM4
+- 非对称加密：RSA、SM2
+- 哈希与消息认证：MD5、SHA1/SHA256/SHA512、SM3、HMAC
+- 目标框架：`netstandard2.1; net6.0; net7.0; net8.0; net9.0; net10.0`
 
 ## 安装
 
-通过 NuGet 安装:
-
-```
+```powershell
 Install-Package AzrngCommon.Security
 ```
 
-或通过 .NET CLI:
-
-```
+```bash
 dotnet add package AzrngCommon.Security
 ```
 
-## 使用方法
+## 快速开始
 
-### 哈希算法
+### 1) AES-GCM（推荐，具备完整性校验）
 
-#### MD5 哈希算法
+```csharp
+using Common.Security;
+using Common.Security.Enums;
 
-```c#
-// 字符串MD5哈希算法
-string md5Hash = Md5Helper.GetMd5Hash("Hello World");
+var plain = "hello aes-gcm";
+var (key, _) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
 
-// 获取16位MD5哈希
-string md5Hash16 = Md5Helper.GetMd5Hash("Hello World", is16: true);
+// 推荐使用命名参数，明确调用 GCM 重载
+var cipher = AesGcmHelper.Encrypt(
+    plainText: plain,
+    secretKey: key,
+    secretType: SecretType.Base64,
+    outType: OutType.Base64);
 
-// 获取HMAC-MD5哈希
-string hmacMd5Hash = Md5Helper.GetHmacMd5Hash("Hello World", "secretKey");
-
-// 文件获取MD5
-string fileMd5Hash = Md5Helper.GetFileMd5Hash("path/to/file.txt");
+var restored = AesGcmHelper.Decrypt(
+    cipherCombined: cipher,
+    secretKey: key,
+    secretType: SecretType.Base64,
+    cipherTextType: OutType.Base64);
 ```
 
-#### SHA 哈希算法
+### 2) AES-CBC（兼容场景）
 
-```c#
-// 获取字符串SHA1值
-string sha1Hash = ShaHelper.GetSha1Hash("Hello World");
+```csharp
+using Common.Security;
+using Common.Security.Enums;
 
-// 获取字符串SHA256值
-string sha256Hash = ShaHelper.GetSha256Hash("Hello World");
+var plain = "hello aes-cbc";
+var (key, iv) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
 
-// 获取字符串SHA512值
-string sha512Hash = ShaHelper.GetSha512Hash("Hello World");
-
-// 获取HMAC-SHA系列哈希值
-string hmacSha1Hash = ShaHelper.GetHmacSha1Hash("Hello World", "secretKey");
-string hmacSha256Hash = ShaHelper.GetHmacSha256Hash("Hello World", "secretKey");
-string hmacSha512Hash = ShaHelper.GetHmacSha512Hash("Hello World", "secretKey");
+// 安全默认包装：CBC + PKCS7
+var cipher = AesHelper.EncryptCbcPkcs7(plain, key, iv);
+var restored = AesHelper.DecryptCbcPkcs7(cipher, key, iv);
 ```
 
-#### SM3 哈希算法（国密）
+### 3) RSA（推荐 OAEP-SHA256 + PSS）
 
-```c#
-// 获取字符串SM3哈希值
-string sm3Hash = Sm3Helper.GetSm3Hash("Hello World");
-```
+```csharp
+using Common.Security;
+using Common.Security.Enums;
+using System.Security.Cryptography;
 
-### 对称加密算法
-
-#### DES 加密算法
-
-```c#
-// 加密
-string encrypted = DesHelper.Encrypt("Hello World", "12345678");
-
-// 解密
-string decrypted = DesHelper.Decrypt(encrypted, "12345678");
-```
-
-#### AES 加密算法
-
-```c#
-// 加密
-string encrypted = AESHelper.Encrypt("Hello World", "mySecretKey12345");
-
-// 解密
-string decrypted = AESHelper.Decrypt(encrypted, "mySecretKey12345");
-```
-
-#### SM4 加密算法（国密）
-
-```c#
-// ECB模式加密
-string encryptedEcb = Sm4Helper.Encrypt("Hello World", "1234567890123456");
-
-// CBC模式加密
-string encryptedCbc = Sm4Helper.Encrypt("Hello World", "1234567890123456", Sm4CryptoEnum.CBC, "1234567890123456");
-
-// ECB模式解密
-string decryptedEcb = Sm4Helper.Decrypt(encryptedEcb, "1234567890123456");
-
-// CBC模式解密
-string decryptedCbc = Sm4Helper.Decrypt(encryptedCbc, "1234567890123456", Sm4CryptoEnum.CBC, "1234567890123456");
-```
-
-### 非对称加密算法
-
-#### RSA 非对称加密算法
-
-```c#
-// 生成RSA密钥对
+var source = "hello rsa";
 var (publicKey, privateKey) = RsaHelper.ExportBase64RsaKey();
 
-// 加密
-string encrypted = RsaHelper.Encrypt("Hello World", publicKey);
+// 加解密（推荐 OAEP-SHA256）
+var cipher = RsaHelper.EncryptOaepSha256(source, publicKey, keyType: RSAKeyType.PEM);
+var restored = RsaHelper.DecryptOaepSha256(cipher, privateKey, keyType: RSAKeyType.PEM, privateKeyFormat: RsaKeyFormat.PKCS8);
 
-// 解密
-string decrypted = RsaHelper.Decrypt(encrypted, privateKey);
-
-// 签名
-string signature = RsaHelper.QuickSign("Hello World", privateKey);
-
-// 验证签名
-bool isValid = RsaHelper.QuickVerify("Hello World", signature, publicKey);
+// 签名验签（推荐 PSS）
+var sign = RsaHelper.SignDataPss(source, privateKey, HashAlgorithmName.SHA256, privateKeyType: OutType.Base64);
+var ok = RsaHelper.VerifyDataPss(source, sign, publicKey, HashAlgorithmName.SHA256, publicKeyType: OutType.Base64);
 ```
 
-#### SM2 非对称加密算法（国密）
+## 详细用法
 
-```c#
-// 生成SM2密钥对
-var (publicKey, privateKey) = Sm2Helper.ExportKey();
+### 哈希与 HMAC
 
-// 加密
-string encrypted = Sm2Helper.Encrypt("Hello World", publicKey);
+```csharp
+using Common.Security;
+using Common.Security.Enums;
 
-// 解密
-string decrypted = Sm2Helper.Decrypt(encrypted, privateKey);
+var md5 = Md5Helper.GetMd5Hash("abc");
+var md5_16 = Md5Helper.GetMd5Hash("abc", is16: true);
+var fileMd5 = Md5Helper.GetFileMd5Hash("appsettings.json");
+
+var sha256 = ShaHelper.GetSha256Hash("abc");
+var sha512 = ShaHelper.GetSha512Hash("abc");
+var fileSha256 = ShaHelper.GetFileSha256Hash("appsettings.json", OutType.Hex);
+var fileSha512 = ShaHelper.GetFileSha512Hash("appsettings.json", OutType.Hex);
+
+var hmac = ShaHelper.GetHmacSha256Hash("payload", "secret", OutType.Base64);
+var verified = ShaHelper.VerifyHmacSha256Hash("payload", "secret", hmac, OutType.Base64);
 ```
 
-## API 参考
+### AES-GCM 分段输出
 
-### 哈希算法类
+适合将 `Cipher/Nonce/Tag` 分开存储或跨系统传输。
 
-- `Md5Helper`: MD5 哈希算法
-  - `GetMd5Hash`: 获取字符串 MD5 哈希值
-  - `GetHmacMd5Hash`: 获取 HMAC-MD5 哈希值
-  - `GetFileMd5Hash`: 获取文件 MD5 哈希值
+```csharp
+using Common.Security;
+using Common.Security.Enums;
 
-- `ShaHelper`: SHA 哈希算法
-  - `GetSha1Hash`: 获取字符串 SHA1 哈希值
-  - `GetSha256Hash`: 获取字符串 SHA256 哈希值
-  - `GetSha512Hash`: 获取字符串 SHA512 哈希值
-  - `GetHmacSha1Hash`: 获取 HMAC-SHA1 哈希值
-  - `GetHmacSha256Hash`: 获取 HMAC-SHA256 哈希值
-  - `GetHmacSha512Hash`: 获取 HMAC-SHA512 哈希值
+var (key, _) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
+var (cipher, nonce, tag) = AesGcmHelper.EncryptToParts("hello", key, outType: OutType.Base64);
+var plain = AesGcmHelper.DecryptFromParts(cipher, nonce, tag, key, cipherTextType: OutType.Base64);
+```
 
-- `Sm3Helper`: SM3 哈希算法（国密）
-  - `GetSm3Hash`: 获取字符串 SM3 哈希值
+### RSA 兼容接口（历史系统）
 
-### 对称加密类
+```csharp
+using Common.Security;
+using Common.Security.Enums;
+using System.Security.Cryptography;
 
-- `DesHelper`: DES 对称加密算法
-  - `Encrypt`: 加密
-  - `Decrypt`: 解密
+var (pub, pri) = RsaHelper.ExportPemRsaKey(RsaKeyFormat.PKCS1);
 
-- `AESHelper`: AES 对称加密算法
-  - `Encrypt`: 加密
-  - `Decrypt`: 解密
+// 兼容模式：PKCS#1 v1.5
+var cipher = RsaHelper.Encrypt("legacy-data", pub);
+var plain = RsaHelper.Decrypt(cipher, pri, privateKeyFormat: RsaKeyFormat.PKCS1);
 
-- `Sm4Helper`: SM4 对称加密算法（国密）
-  - `Encrypt`: 加密
-  - `Decrypt`: 解密
+var sign = RsaHelper.SignData("legacy-data", pri, HashAlgorithmName.SHA256);
+var ok = RsaHelper.VerifyData("legacy-data", sign, pub, HashAlgorithmName.SHA256);
+```
 
-### 非对称加密类
+### SM 系列
 
-- `RsaHelper`: RSA 非对称加密算法
-  - `ExportBase64RsaKey`: 生成 RSA 密钥对
-  - `Encrypt`: 加密
-  - `Decrypt`: 解密
-  - `QuickSign`: 快速签名
-  - `QuickVerify`: 快速验证签名
+```csharp
+using Common.Security;
+using Common.Security.Enums;
 
-- `Sm2Helper`: SM2 非对称加密算法（国密）
-  - `ExportKey`: 生成 SM2 密钥对
-  - `Encrypt`: 加密
-  - `Decrypt`: 解密
+// SM3
+var sm3 = Sm3Helper.GetSm3Hash("hello");
+
+// SM4
+var key = "1234567890123456";
+var iv = "1234567890123456";
+var cipherSm4 = Sm4Helper.Encrypt("hello", key, Sm4CryptoEnum.CBC, outType: OutType.Base64, iv: iv);
+var plainSm4 = Sm4Helper.Decrypt(cipherSm4, key, Sm4CryptoEnum.CBC, inputType: OutType.Base64, iv: iv);
+
+// SM2
+var (publicKey, privateKey) = Sm2Helper.ExportKey(OutType.Hex);
+var cipherSm2 = Sm2Helper.Encrypt("hello", publicKey, publicKeyType: OutType.Hex, outType: OutType.Hex);
+var plainSm2 = Sm2Helper.Decrypt(cipherSm2, privateKey, privateKeyType: OutType.Hex, inputType: OutType.Hex);
+```
+
+## 常用枚举说明
+
+- `OutType`
+    - `Base64`：Base64 编码字符串
+    - `Hex`：十六进制字符串
+- `SecretType`
+    - `Text`：原始文本密钥（UTF8）
+    - `Base64`：Base64 编码密钥
+    - `Hex`：十六进制密钥
+
+## 安全建议
+
+- 新项目优先：
+    - 对称加密：`AesGcmHelper`（GCM）
+    - 非对称加密：`EncryptOaepSha256/DecryptOaepSha256`
+    - 数字签名：`SignDataPss/VerifyDataPss`
+- DES/3DES 仅建议兼容历史系统，不建议新系统使用。
+- 固定密钥、固定 IV、明文落库都会显著降低安全性。
+
+## 兼容与迁移
+
+- `AesGcmHelper` 中历史非 GCM 重载（`Encrypt/Decrypt` 带 `CipherMode/PaddingMode`）已标记 `[Obsolete]`。
+- 迁移建议：
+    - 历史 AES 调用迁移到 `AesHelper.Encrypt/Decrypt` 或 `AesHelper.EncryptCbcPkcs7/DecryptCbcPkcs7`
+    - 新业务优先使用 `AesGcmHelper` 的 GCM 重载
+
+## 主要 API 一览
+
+- `Md5Helper`
+    - `GetMd5Hash`
+    - `GetHmacMd5Hash`
+    - `GetFileMd5Hash`
+- `ShaHelper`
+    - `GetSha1Hash` `GetSha256Hash` `GetSha512Hash`
+    - `GetHmacSha1Hash` `GetHmacSha256Hash` `GetHmacSha512Hash`
+    - `VerifyHmacSha1Hash` `VerifyHmacSha256Hash` `VerifyHmacSha512Hash`
+    - `GetFileSha256Hash` `GetFileSha512Hash`
+- `AesHelper`
+    - `ExportSecretAndIv`
+    - `EncryptCbcPkcs7` `DecryptCbcPkcs7`
+    - `Encrypt` `Decrypt`
+- `AesGcmHelper`
+    - `Encrypt` `Decrypt`
+    - `EncryptToParts` `DecryptFromParts`
+- `RsaHelper`
+    - `ExportBase64RsaKey` `ExportPemRsaKey` `ExportXmlRsaKey`
+    - `EncryptOaepSha256` `DecryptOaepSha256`
+    - `SignDataPss` `VerifyDataPss`
+    - `QuickSign` `QuickVerify` `QuickSignPss` `QuickVerifyPss`
+- `Sm2Helper` `Sm3Helper` `Sm4Helper` `DesHelper` `Des3Helper` `MurmurHashHelper`
+
+## 版本记录
 
 ## 更新记录
 
+* 1.2.1
+    * 更新加密方法
 * 1.2.0
-  * 适配.Net10
+    * 适配.Net10
 * 1.1.2
-  * 更新与十六进制互转操作
+    * 更新与十六进制互转操作
 * 1.1.1
-  * 将扩展方法改为静态方法
+    * 将扩展方法改为静态方法
 * 1.1.0
     * 升级依赖包
     * 补充文档

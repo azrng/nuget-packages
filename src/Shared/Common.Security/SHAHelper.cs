@@ -81,9 +81,24 @@ namespace Common.Security
         /// <returns></returns>
         public static string GetSha256Hash(Stream stream, OutType outputType = OutType.Hex)
         {
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
             using var sha256Hash = SHA256.Create();
             var hashResult = sha256Hash.ComputeHash(stream);
             return hashResult.GetString(outputType);
+        }
+
+        /// <summary>
+        /// 获取文件sha256值
+        /// </summary>
+        public static string GetFileSha256Hash(string path, OutType outputType = OutType.Hex)
+        {
+            if (path == null)
+                throw new ArgumentNullException(nameof(path));
+
+            using var stream = File.OpenRead(path);
+            return GetSha256Hash(stream, outputType);
         }
 
         /// <summary>
@@ -123,9 +138,66 @@ namespace Common.Security
         /// <returns></returns>
         public static string GetSha512Hash(Stream stream, OutType outputType = OutType.Hex)
         {
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
             using var sha512Hash = SHA512.Create();
             var hashResult = sha512Hash.ComputeHash(stream);
             return hashResult.GetString(outputType);
+        }
+
+        /// <summary>
+        /// 获取文件sha512值
+        /// </summary>
+        public static string GetFileSha512Hash(string path, OutType outputType = OutType.Hex)
+        {
+            if (path == null)
+                throw new ArgumentNullException(nameof(path));
+
+            using var stream = File.OpenRead(path);
+            return GetSha512Hash(stream, outputType);
+        }
+
+        /// <summary>
+        /// 验证HMAC-SHA1
+        /// </summary>
+        public static bool VerifyHmacSha1Hash(string str, string secret, string hash, OutType hashType = OutType.Hex)
+        {
+            ValidateInput(str, secret);
+            if (hash == null)
+                throw new ArgumentNullException(nameof(hash));
+
+            var expected = GetHmacSha1Hash(str, secret, hashType).GetBytes(hashType);
+            var actual = hash.GetBytes(hashType);
+            return CryptographicOperations.FixedTimeEquals(expected, actual);
+        }
+
+        /// <summary>
+        /// 验证HMAC-SHA256
+        /// </summary>
+        public static bool VerifyHmacSha256Hash(string str, string secret, string hash, OutType hashType = OutType.Hex)
+        {
+            ValidateInput(str, secret);
+            if (hash == null)
+                throw new ArgumentNullException(nameof(hash));
+
+            var expected = GetHmacSha256Hash(str, secret, hashType).GetBytes(hashType);
+            var actual = hash.GetBytes(hashType);
+            return CryptographicOperations.FixedTimeEquals(expected, actual);
+        }
+
+        /// <summary>
+        /// 验证HMAC-SHA512
+        /// </summary>
+        public static bool VerifyHmacSha512Hash(string plaintext, string secret, string hash, OutType hashType = OutType.Hex)
+        {
+            ValidateInput(plaintext, secret);
+            if (hash == null)
+                throw new ArgumentNullException(nameof(hash));
+
+            var expected = GetHmacSha512Hash(plaintext, secret, hashType).GetBytes(hashType);
+            var actual = hash.GetBytes(hashType);
+            return CryptographicOperations.FixedTimeEquals(expected, actual);
         }
 
         /// <summary>

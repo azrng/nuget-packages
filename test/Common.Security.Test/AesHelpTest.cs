@@ -22,6 +22,20 @@ namespace Common.Security.Test
         }
 
         [Fact]
+        public void ExportSecretAndIv_WithKeySize_ReturnExpectedLength()
+        {
+            var (secretKey, iv) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
+            Assert.Equal(32, Convert.FromBase64String(secretKey).Length);
+            Assert.Equal(16, Convert.FromBase64String(iv).Length);
+        }
+
+        [Fact]
+        public void ExportSecretAndIv_WithInvalidKeySize_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => AesHelper.ExportSecretAndIv(111, OutType.Base64));
+        }
+
+        [Fact]
         public void CbcEncryptAndDecrypt_Base64_ReturnOk()
         {
             var sourceStr = "hello world";
@@ -73,6 +87,18 @@ namespace Common.Security.Test
             var decryptStr = AesHelper.Decrypt(encryptStr, secretKey, cipherMode: CipherMode.ECB, paddingMode: PaddingMode.PKCS7,
                 secretType: SecretType.Text, cipherTextType: OutType.Base64);
             _testOutputHelper.WriteLine(decryptStr);
+            Assert.Equal(sourceStr, decryptStr);
+        }
+
+        [Fact]
+        public void EncryptCbcPkcs7AndDecrypt_ReturnOk()
+        {
+            var sourceStr = "secure-default-cbc";
+            var (secretKey, iv) = AesHelper.ExportSecretAndIv();
+
+            var encryptStr = AesHelper.EncryptCbcPkcs7(sourceStr, secretKey, iv);
+            var decryptStr = AesHelper.DecryptCbcPkcs7(encryptStr, secretKey, iv);
+
             Assert.Equal(sourceStr, decryptStr);
         }
     }

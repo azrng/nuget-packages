@@ -62,4 +62,18 @@ public class AesGcmHelperTest
             cipherTextType: OutType.Base64,
             tagSize: AesGcmHelper.DefaultTagSize));
     }
+
+    [Fact]
+    public void LegacyAesApi_ForwardToAesHelper_ReturnOk()
+    {
+        var source = "legacy-aes-forward";
+        var (secret, iv) = AesHelper.ExportSecretAndIv();
+
+#pragma warning disable CS0618
+        var cipher = AesGcmHelper.Encrypt(source, secret, iv, CipherMode.CBC, PaddingMode.PKCS7);
+        var plain = AesGcmHelper.Decrypt(cipher, secret, iv, CipherMode.CBC, PaddingMode.PKCS7);
+#pragma warning restore CS0618
+
+        Assert.Equal(source, plain);
+    }
 }
