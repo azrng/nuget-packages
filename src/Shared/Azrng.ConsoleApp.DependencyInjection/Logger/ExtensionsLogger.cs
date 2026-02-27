@@ -7,6 +7,15 @@ namespace Azrng.ConsoleApp.DependencyInjection.Logger
 {
     public class ExtensionsLogger : ILogger
     {
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
+
         private readonly string _categoryName;
 
         public ExtensionsLogger(string categoryName)
@@ -14,9 +23,9 @@ namespace Azrng.ConsoleApp.DependencyInjection.Logger
             _categoryName = categoryName;
         }
 
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
-            return null;
+            return NullScope.Instance;
         }
 
         public bool IsEnabled(LogLevel logLevel)
@@ -24,15 +33,22 @@ namespace Azrng.ConsoleApp.DependencyInjection.Logger
             return logLevel != LogLevel.None && (int)logLevel >= (int)CoreGlobalConfig.MinimumLevel;
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
-                                Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
         {
             if (!IsEnabled(logLevel))
                 return;
 
+            var formattedMessage = formatter(state, exception);
             var logMessage = _categoryName.IsNotNullOrEmpty()
-                ? string.Format("{0} {1}", _categoryName, formatter(state, exception))
-                : formatter(state, exception);
+                ? $"{_categoryName} {formattedMessage}"
+                : formattedMessage;
+
+            if (exception is not null)
+            {
+                logMessage = $"{logMessage}{Environment.NewLine}{exception}";
+            }
+
             switch (logLevel)
             {
                 case LogLevel.Trace:

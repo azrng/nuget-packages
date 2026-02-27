@@ -15,9 +15,19 @@ public class ConsoleAppServer
 {
     public ConsoleAppServer(string[] args)
     {
+        args ??= Array.Empty<string>();
+
         var configBuilder = new ConfigurationBuilder();
-        configBuilder.SetBasePath(Environment.CurrentDirectory);
-        configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        configBuilder.SetBasePath(AppContext.BaseDirectory);
+        configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+
+        var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                              ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (!string.IsNullOrWhiteSpace(environmentName))
+        {
+            configBuilder.AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false);
+        }
+
         // AddEnvironmentVariables("ASPNETCORE_") 会移除前缀，所以这里用 读取的时候要去掉这个前缀
         configBuilder.AddEnvironmentVariables("ASPNETCORE_");
         configBuilder.AddCommandLine(args);
@@ -30,7 +40,7 @@ public class ConsoleAppServer
         catch (Exception ex)
         {
             Console.WriteLine($"配置文件加载失败！请检查配置文件是不是哪里写错了？\n错误信息：{ex.Message}");
-            throw new ArgumentException("配置文件加载失败!");
+            throw new InvalidOperationException("配置文件加载失败!", ex);
         }
 
         Services = new ServiceCollection();
@@ -59,6 +69,7 @@ public class ConsoleAppServer
         Console.WriteLine("Application Starting");
         Services.AddLogging(loggingBuilder =>
         {
+            loggingBuilder.ClearProviders();
             loggingBuilder.AddConfiguration(Configuration.GetSection("Logging"));
             loggingBuilder.AddConsole();
             loggingBuilder.AddDebug();
@@ -74,10 +85,9 @@ public class ConsoleAppServer
     public ServiceProvider Build<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
         where T : class, IServiceStart
     {
-        // 先注册服务本身
-        Services.AddSingleton<IServiceStart, T>();
+        RegisterStartService<T>();
 
-        return Services.BuildServiceProvider();
+        return BuildProvider();
     }
 
     /// <summary>
@@ -89,13 +99,36 @@ public class ConsoleAppServer
     public ServiceProvider Build<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStart>(
         Action<IServiceCollection>? registerServicesAction) where TStart : class, IServiceStart
     {
-        // 先注册服务本身
-        Services.AddSingleton<IServiceStart, TStart>();
-
         // 使用委托注册服务
         registerServicesAction?.Invoke(Services);
 
-        return Services.BuildServiceProvider();
+        RegisterStartService<TStart>();
+
+        return BuildProvider();
+    }
+
+    private void RegisterStartService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStart>()
+        where TStart : class, IServiceStart
+    {
+        for (var i = Services.Count - 1; i >= 0; i--)
+        {
+            if (Services[i].ServiceType == typeof(IServiceStart))
+            {
+                Services.RemoveAt(i);
+            }
+        }
+
+        // 以 Transient 注册，避免单例启动服务意外捕获 Scoped 依赖。
+        Services.AddTransient<IServiceStart, TStart>();
+    }
+
+    private ServiceProvider BuildProvider()
+    {
+        return Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
     }
 }
 
@@ -105,11 +138,12 @@ public static class ServiceProviderExtensions
     /// 启动入口
     /// </summary>
     /// <param name="serviceProvider"></param>
-    public static async Task RunAsync(this ServiceProvider serviceProvider)
+    public static async Task RunAsync(this IServiceProvider serviceProvider)
     {
         try
         {
-            var service = serviceProvider.GetRequiredService<IServiceStart>();
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IServiceStart>();
             ConsoleTool.PrintTitle(service.Title);
             await service.RunAsync();
         }

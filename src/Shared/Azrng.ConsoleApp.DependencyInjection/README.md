@@ -3,7 +3,7 @@
 控制台依赖注入扩展
 
 * 支持读取appsettings.json配置文件
-* 默认使用了Serilog日志输出
+* 默认使用 Microsoft.Extensions.Logging（Console + Debug + 本地文件）日志输出
 
 ## 构建方法
 
@@ -42,6 +42,11 @@ await sp.RunAsync();
 
 ## 版本更新记录
 
+* 1.3.3
+  * 配置文件基路径改为 `AppContext.BaseDirectory`，并支持按环境加载 `appsettings.{Environment}.json`
+  * 优化 DI 启动流程：`IServiceStart` 使用作用域解析并启用容器校验（`ValidateOnBuild`、`ValidateScopes`）
+  * 修复 `ExtensionsLogger` 的可空签名告警并完善异常日志内容
+  * 文档修正：默认日志实现为 `Microsoft.Extensions.Logging`，不再描述为 Serilog
 * 1.3.2
   * 发布正式版
 * 1.3.2-beta3
