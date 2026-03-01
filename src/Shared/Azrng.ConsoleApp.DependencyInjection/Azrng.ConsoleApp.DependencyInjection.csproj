@@ -7,7 +7,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的控制台依赖注入类库</Description>
-        <Version>1.3.3</Version>
+        <Version>1.3.4</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <DocumentationFile>Azrng.ConsoleApp.DependencyInjection.xml</DocumentationFile>

@@ -42,6 +42,10 @@ await sp.RunAsync();
 
 ## 版本更新记录
 
+* 1.3.4
+  * `ConsoleAppServer` 构造函数参数支持可空，默认值为 `null`
+  * `IServiceStart.Title` 属性简化为隐式 public 访问修饰符
+  * 优化代码格式
 * 1.3.3
   * 配置文件基路径改为 `AppContext.BaseDirectory`，并支持按环境加载 `appsettings.{Environment}.json`
   * 优化 DI 启动流程：`IServiceStart` 使用作用域解析并启用容器校验（`ValidateOnBuild`、`ValidateScopes`）

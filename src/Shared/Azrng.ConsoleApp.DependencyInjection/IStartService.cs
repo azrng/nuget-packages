@@ -8,7 +8,7 @@ public interface IServiceStart
     /// <summary>
     /// 标题
     /// </summary>
-    public string Title { get; }
+    string Title { get; }
 
     /// <summary>
     /// 控制台入口

@@ -2,7 +2,7 @@
 using Azrng.Core.Json;
 using ConsoleAppDI;
 
-var builder = new ConsoleAppServer(args);
+var builder = new ConsoleAppServer();
 
 // 注册JSON序列化服务
 builder.Services.ConfigureDefaultJson();

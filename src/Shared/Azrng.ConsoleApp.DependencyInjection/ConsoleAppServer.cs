@@ -13,7 +13,7 @@ namespace Azrng.ConsoleApp.DependencyInjection;
 /// </summary>
 public class ConsoleAppServer
 {
-    public ConsoleAppServer(string[] args)
+    public ConsoleAppServer(string[]? args = null)
     {
         args ??= Array.Empty<string>();
 
@@ -21,8 +21,8 @@ public class ConsoleAppServer
         configBuilder.SetBasePath(AppContext.BaseDirectory);
         configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
 
-        var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
-                              ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+                              Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         if (!string.IsNullOrWhiteSpace(environmentName))
         {
             configBuilder.AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false);
@@ -124,11 +124,7 @@ public class ConsoleAppServer
 
     private ServiceProvider BuildProvider()
     {
-        return Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        return Services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
 }
 
