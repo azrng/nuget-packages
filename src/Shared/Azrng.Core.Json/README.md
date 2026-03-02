@@ -111,6 +111,8 @@ services.ConfigureDefaultJson(options =>
 
 ### 版本更新记录
 
+* 1.3.1
+  * 更新包引用
 * 1.3.0
   * 更新JsonHelper方法
 * 1.2.6
