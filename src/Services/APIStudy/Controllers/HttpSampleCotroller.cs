@@ -57,7 +57,7 @@ public class HttpSampleController : BaseController
     /// </summary>
     [HttpPost("stream-upload")]
     [Consumes("multipart/form-data")]
-    public async Task StreamAnalyzeUpload([FromForm] IFormFile? file, CancellationToken cancellationToken)
+    public async Task StreamAnalyzeUpload(IFormFile? file, CancellationToken cancellationToken)
     {
         _logger.LogInformation($"{DateTime.Now.ToStandardString()} fileName:{file?.FileName}");
         await Task.Delay(100, cancellationToken);

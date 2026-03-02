@@ -38,7 +38,7 @@ namespace Azrng.Swashbuckle
                 c.OrderActionsBy(o => o.RelativePath);
 
                 // 添加文件上传操作过滤器，支持 IFormFile 参数
-                c.OperationFilter<FileUploadOperationFilter>();
+                //c.OperationFilter<FileUploadOperationFilter>();
 
                 //设置文档描述
                 Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.xml")
