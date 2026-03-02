@@ -37,6 +37,9 @@ namespace Azrng.Swashbuckle
                 // action 排序
                 c.OrderActionsBy(o => o.RelativePath);
 
+                // 添加文件上传操作过滤器，支持 IFormFile 参数
+                c.OperationFilter<FileUploadOperationFilter>();
+
                 //设置文档描述
                 Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.xml")
                          .ToList()
@@ -46,18 +49,18 @@ namespace Azrng.Swashbuckle
                 {
 #if NET10_0_OR_GREATER
                     var security = new OpenApiSecurityScheme
-                    {
-                        Name = "Authorization", //jwt默认的参数名称
-                        Description = "JWT授权(数据将在请求头中进行传输) 在下方输入Bearer {token} 即可，注意两者之间有空格",
-                        In = ParameterLocation.Header, //jwt默认存放Authorization信息的位置(请求头中)
-                        Type = SecuritySchemeType.ApiKey,
-                        BearerFormat = "JWT"
-                    };
+                                   {
+                                       Name = "Authorization", //jwt默认的参数名称
+                                       Description = "JWT授权(数据将在请求头中进行传输) 在下方输入Bearer {token} 即可，注意两者之间有空格",
+                                       In = ParameterLocation.Header, //jwt默认存放Authorization信息的位置(请求头中)
+                                       Type = SecuritySchemeType.ApiKey,
+                                       BearerFormat = "JWT"
+                                   };
                     c.AddSecurityDefinition("Bearer", security);
                     c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-                    {
-                        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-                    });
+                                                         {
+                                                             [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                                                         });
 #else
                       var security = new OpenApiSecurityScheme
                                    {

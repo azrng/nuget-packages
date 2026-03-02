@@ -1,4 +1,5 @@
-﻿using Azrng.Core.Helpers;
+﻿using Azrng.Core.Extension;
+using Azrng.Core.Helpers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIStudy.Controllers;
@@ -8,6 +9,13 @@ namespace APIStudy.Controllers;
 /// </summary>
 public class HttpSampleController : BaseController
 {
+    private readonly ILogger<HttpSampleController> _logger;
+
+    public HttpSampleController(ILogger<HttpSampleController> logger)
+    {
+        _logger = logger;
+    }
+
     [HttpGet]
     public TestHttpRequest Get(string name)
     {
@@ -41,6 +49,19 @@ public class HttpSampleController : BaseController
     public string Upload(IFormFile request)
     {
         return "success" + request.FileName;
+    }
+
+    /// <summary>
+    /// 流式分析上传的日志文件（SSE）
+    /// POST /api/log-analysis/stream-upload
+    /// </summary>
+    [HttpPost("stream-upload")]
+    [Consumes("multipart/form-data")]
+    public async Task StreamAnalyzeUpload([FromForm] IFormFile? file, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation($"{DateTime.Now.ToStandardString()} fileName:{file?.FileName}");
+        await Task.Delay(100, cancellationToken);
+        return;
     }
 }
 

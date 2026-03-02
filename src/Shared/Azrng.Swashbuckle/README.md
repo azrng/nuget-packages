@@ -7,6 +7,7 @@
 - 简化 Swagger 配置流程
 - 自动加载 XML 注释文档
 - 内置 JWT 认证支持
+- **内置文件上传支持 (IFormFile/IFormFileCollection)**
 - 支持多框架：.NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 - 默认优化的 UI 设置
 - 支持开发环境控制
@@ -102,6 +103,35 @@ services.AddDefaultSwaggerGen(apiInfo: new OpenApiInfo
 </PropertyGroup>
 ```
 
+#### 文件上传支持
+
+该库内置了对文件上传的支持，可以直接使用 `IFormFile` 或 `IFormFileCollection` 参数：
+
+```csharp
+[HttpPost("upload")]
+public IActionResult UploadFile([FromForm] IFormFile file)
+{
+    // 处理文件上传
+    return Ok(new { fileName = file.FileName, size = file.Length });
+}
+
+[HttpPost("upload-multiple")]
+public IActionResult UploadFiles([FromForm] IFormFileCollection files)
+{
+    // 处理多个文件上传
+    return Ok(new { count = files.Count });
+}
+
+[HttpPost("upload-with-data")]
+public IActionResult UploadWithData([FromForm] IFormFile file, [FromForm] string description)
+{
+    // 处理文件上传和其他表单数据
+    return Ok(new { fileName = file.FileName, description });
+}
+```
+
+Swagger UI 会自动显示文件上传界面，无需额外配置。
+
 ### 参数说明
 
 #### AddDefaultSwaggerGen 方法参数
@@ -118,6 +148,8 @@ services.AddDefaultSwaggerGen(apiInfo: new OpenApiInfo
 
 ## 版本更新记录
 
+* 0.5.0
+  * 新增文件上传支持 (IFormFile/IFormFileCollection)
 * 0.4.0
   * 更新Jwt授权操作
 * 0.3.0

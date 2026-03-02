@@ -37,7 +37,16 @@ public static class MiddlewareExtensions
     /// <summary>
     /// 显示所有服务中间件  需要先注册服务：services.AddShowAllServices();
     /// </summary>
+    [Obsolete("改为使用UseGlobalException")]
     public static IApplicationBuilder UseShowAllServicesMiddleware(this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware<ShowAllServicesMiddleware>();
+    }
+
+    /// <summary>
+    /// 显示所有服务中间件  需要先注册服务：services.AddShowAllServices();
+    /// </summary>
+    public static IApplicationBuilder UseShowAllServices(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<ShowAllServicesMiddleware>();
     }

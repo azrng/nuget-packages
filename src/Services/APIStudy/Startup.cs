@@ -49,7 +49,7 @@ public class Startup
     {
         app.UseDefaultSwagger();
 
-        app.UseShowAllServicesMiddleware();
+        app.UseShowAllServices();
         app.UseRequestBodyRepetitionRead();
 
         app.UseRouting();
