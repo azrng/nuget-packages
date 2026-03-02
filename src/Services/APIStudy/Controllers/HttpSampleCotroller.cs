@@ -31,6 +31,17 @@ public class HttpSampleController : BaseController
     {
         return "success" + id;
     }
+
+    /// <summary>
+    /// 上传文件
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPost]
+    public string Upload(IFormFile request)
+    {
+        return "success" + request.FileName;
+    }
 }
 
 public class TestHttpRequest

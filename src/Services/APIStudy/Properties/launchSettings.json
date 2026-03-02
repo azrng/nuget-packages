@@ -4,7 +4,7 @@
         "APIStudy-Dev": {
             "commandName": "Project",
             "launchBrowser": true,
-            "launchUrl": "index.html",
+            "launchUrl": "",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
@@ -13,7 +13,7 @@
         "APIStudy-Prod": {
             "commandName": "Project",
             "launchBrowser": true,
-            "launchUrl": "index.html",
+            "launchUrl": "",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Production"
             },

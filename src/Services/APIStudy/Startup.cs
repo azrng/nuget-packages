@@ -56,7 +56,7 @@ public class Startup
         app.UseStaticFiles();
 
         // app.UseAutoAuditLog();
-        app.UseCustomExceptionMiddleware();
+        app.UseGlobalException();
 
         //使用跨域
         app.UseAnyCors();
