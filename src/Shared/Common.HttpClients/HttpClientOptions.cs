@@ -16,6 +16,11 @@
         public bool AuditLog { get; set; } = true;
 
         /// <summary>
+        /// 是否启用日志脱敏
+        /// </summary>
+        public bool EnableLogRedaction { get; set; } = true;
+
+        /// <summary>
         /// 超时时间（秒）
         /// </summary>
         public int Timeout { get; set; } = 100;

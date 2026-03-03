@@ -33,6 +33,11 @@ namespace Common.HttpClients
                 throw new ArgumentException($"{nameof(opt.Timeout)}无效");
             }
 
+            if (opt.MaxOutputResponseLength < 0)
+            {
+                throw new ArgumentException($"{nameof(opt.MaxOutputResponseLength)}无效");
+            }
+
             // 配置HttpClient选项
             services.Configure(configure);
 
@@ -46,10 +51,10 @@ namespace Common.HttpClients
             var clientBuilder = services.AddHttpClient<IHttpHelper, HttpClientHelper>("default")
 
                                         // 配置主要的消息处理器，处理SSL证书验证
-                                        .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
-                                        {
-                                            var config = serviceProvider.GetService<IOptions<HttpClientOptions>>().Value;
-                                            var handler = new HttpClientHandler();
+                                         .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                                         {
+                                             var config = serviceProvider.GetRequiredService<IOptions<HttpClientOptions>>().Value;
+                                             var handler = new HttpClientHandler();
 
                                             // 根据配置决定是否忽略不安全证书
                                             if (config.IgnoreUntrustedCertificate)
@@ -88,13 +93,13 @@ namespace Common.HttpClients
                                         {
                                             // 如果配置了不抛出异常,返回一个 OK 状态的空响应
                                             // 否则保持原始异常,让它向上传播
-                                            if (!httpOptions.FailThrowException)
-                                            {
-                                                return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.OK)
-                                                                                     {
-                                                                                         Content = new StringContent(string.Empty)
-                                                                                     });
-                                            }
+                                             if (!httpOptions.FailThrowException)
+                                             {
+                                                 return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.OK)
+                                                                                      {
+                                                                                          Content = new StringContent("Fallback: request failed.")
+                                                                                      });
+                                             }
 
                                             // 如果配置要抛出异常,则重新抛出原始异常
                                             return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(args.Outcome.Exception!);
@@ -143,9 +148,6 @@ namespace Common.HttpClients
                        .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
             });
 
-            // 注册HTTP助手服务
-            services.AddScoped<IHttpHelper, HttpClientHelper>();
-
             return services;
         }
 
@@ -159,6 +161,7 @@ namespace Common.HttpClients
             return services.AddHttpClientService(config =>
             {
                 config.AuditLog = true;
+                config.EnableLogRedaction = true;
                 config.FailThrowException = false;
                 config.Timeout = 100;
                 config.MaxOutputResponseLength = 1024 * 1024; // 1MB

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -16,6 +17,29 @@ namespace Common.HttpClients
     /// </summary>
     public class LoggingHandler : DelegatingHandler
     {
+        private static readonly HashSet<string> SensitiveHeaderNames = new(StringComparer.OrdinalIgnoreCase)
+                                                                       {
+                                                                           "Authorization",
+                                                                           "Proxy-Authorization",
+                                                                           "Cookie",
+                                                                           "Set-Cookie",
+                                                                           "X-Api-Key",
+                                                                           "Api-Key",
+                                                                           "X-Auth-Token"
+                                                                       };
+
+        private static readonly Regex JsonSensitiveValuePattern = new(
+            "(\"(?:password|passwd|pwd|secret|token|access_token|refresh_token|client_secret|api[_-]?key)\"\\s*:\\s*\")([^\"]*)(\")",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex KvSensitiveValuePattern = new(
+            "\\b(password|passwd|pwd|secret|token|access_token|refresh_token|client_secret|api[_-]?key)=([^&\\s]+)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex BearerValuePattern = new(
+            "(Bearer\\s+)[A-Za-z0-9\\-._~+/]+=*",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         private readonly ILogger<LoggingHandler> _logger;
         private readonly HttpClientOptions _httpConfig;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,21 +54,12 @@ namespace Common.HttpClients
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            // 记录请求开始时间
             var startTime = DateTime.UtcNow;
-
-            // 添加或获取追踪ID
             var traceId = AddOrGetTraceId(request);
-
-            // 记录请求开始日志
             LogRequestStart(request, traceId);
 
-            // 调用基类的 SendAsync 方法发送请求
-            var response = await base.SendAsync(request, cancellationToken);
-
-            // 记录完整的审计日志（包含响应）
-            await LogAuditAsync(request, response, startTime, traceId);
-
+            var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            await LogAuditAsync(request, response, startTime, traceId).ConfigureAwait(false);
             return response;
         }
 
@@ -71,6 +86,11 @@ namespace Common.HttpClients
                 {
                     traceId = contextTraceId.FirstOrDefault();
                 }
+
+                if (string.IsNullOrEmpty(traceId))
+                {
+                    traceId = httpContext.TraceIdentifier;
+                }
             }
 
             // 3. 如果还是没有，生成一个新的
@@ -96,30 +116,27 @@ namespace Common.HttpClients
             try
             {
                 if (!_httpConfig.AuditLog || ShouldSkipLogging(request))
+                {
                     return;
+                }
 
-                _logger.LogInformation($"Http请求开始.TraceId：{traceId} Url：{request.RequestUri} Method：{request.Method}");
+                _logger.LogInformation("Http请求开始 TraceId:{TraceId} Url:{Url} Method:{Method}",
+                    traceId, request.RequestUri, request.Method);
             }
             catch (Exception logEx)
             {
-                _logger.LogError(logEx, $"记录Http请求开始日志时发生错误 {logEx.Message}");
+                _logger.LogError(logEx, "记录Http请求开始日志时发生错误");
             }
         }
 
-        /// <summary>
-        /// 记录审计日志
-        /// </summary>
         private async Task LogAuditAsync(HttpRequestMessage request, HttpResponseMessage response, DateTime startTime, string traceId)
         {
             try
             {
-                // 检查是否启用审计日志
-                if (!_httpConfig.AuditLog)
+                if (!_httpConfig.AuditLog || ShouldSkipLogging(request))
+                {
                     return;
-
-                // 检查是否跳过日志记录
-                if (ShouldSkipLogging(request))
-                    return;
+                }
 
                 var reqHeader = ReadRequestHeader(request);
                 var reqContent = await ReadRequestContentAsync(request).ConfigureAwait(false);
@@ -127,60 +144,49 @@ namespace Common.HttpClients
                 var respHeader = ReadResponseHeader(response);
                 var respContent = await ReadResponseContentAsync(response).ConfigureAwait(false);
                 var statusCode = response.StatusCode.ToString();
-
-                // 检查响应内容长度，如果超过阈值则截断
                 var finalRespContent = TruncateResponseContent(respContent);
-
-                // 计算请求耗时
                 var elapsed = DateTime.UtcNow - startTime;
 
                 _logger.LogInformation(
-                    $"Http请求审计日志.TraceId：{traceId} Url：{request.RequestUri} Method：{request.Method} StatusCode：{statusCode} 耗时：{elapsed.TotalMilliseconds}ms" +
-                    $"{Environment.NewLine} RequestHeader：{reqHeader} " +
-                    $"{Environment.NewLine} RequestContent：{reqContent} " +
-                    $"{Environment.NewLine} ResponseHeader：{respHeader} " +
-                    $"{Environment.NewLine} ResponseContent：{finalRespContent}");
+                    "Http请求审计日志.TraceId:{TraceId} Url:{Url} Method:{Method} StatusCode:{StatusCode} 耗时:{ElapsedMs}ms\n" +
+                    "RequestHeader:{RequestHeader}\nRequestContent:{RequestContent}\n" +
+                    "ResponseHeader:{ResponseHeader}\nResponseContent:{ResponseContent}",
+                    traceId, request.RequestUri, request.Method, statusCode, elapsed.TotalMilliseconds,
+                    reqHeader, reqContent, respHeader, finalRespContent);
             }
             catch (Exception logEx)
             {
                 // 记录日志失败，避免影响主流程
-                _logger.LogError(logEx, $"记录Http审计日志时发生错误 {logEx.Message}");
+                _logger.LogError(logEx, "记录Http审计日志时发生错误");
             }
         }
 
-        /// <summary>
-        /// 检查是否应该跳过日志记录
-        /// </summary>
-        /// <param name="request">HTTP请求</param>
-        /// <returns>true表示跳过日志记录</returns>
         private bool ShouldSkipLogging(HttpRequestMessage request)
         {
-            // 检查请求头中是否包含跳过日志的标记
             if (request.Headers.Contains("X-Skip-Logger"))
+            {
                 return true;
+            }
 
-            // 检查请求头中是否包含跳过日志的标记（值）
             if (request.Headers.TryGetValues("X-Logger", out var values))
             {
                 var level = values.FirstOrDefault()?.ToLowerInvariant();
                 if (level == "none" || level == "skip")
+                {
                     return true;
+                }
             }
 
             return false;
         }
 
-        /// <summary>
-        /// 截断响应内容，避免日志过长
-        /// </summary>
-        /// <param name="content">原始响应内容</param>
-        /// <returns>截断后的响应内容</returns>
         private string TruncateResponseContent(string content)
         {
             if (string.IsNullOrEmpty(content))
+            {
                 return content;
+            }
 
-            // 如果内容长度超过配置的最大长度，则截断
             if (_httpConfig.MaxOutputResponseLength > 0 && content.Length > _httpConfig.MaxOutputResponseLength)
             {
                 var truncatedContent = content.Substring(0, _httpConfig.MaxOutputResponseLength);
@@ -190,21 +196,23 @@ namespace Common.HttpClients
             return content;
         }
 
-        /// <summary>
-        /// 读取请求内容
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
         private async Task<string> ReadRequestContentAsync(HttpRequestMessage context)
         {
             try
             {
                 var content = context.Content;
-                if (content == null) return null;
+                if (content == null)
+                {
+                    return null;
+                }
 
                 if (content is MultipartFormDataContent)
+                {
                     return "...";
-                return await content.ReadAsStringAsync().ConfigureAwait(false);
+                }
+
+                var contentStr = await content.ReadAsStringAsync().ConfigureAwait(false);
+                return ApplyRedaction(contentStr);
             }
             catch (Exception)
             {
@@ -212,32 +220,24 @@ namespace Common.HttpClients
             }
         }
 
-        /// <summary>
-        /// 读取响应内容
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
         private async Task<string> ReadResponseContentAsync(HttpResponseMessage context)
         {
             try
             {
                 var content = context.Content;
+                if (content == null)
+                {
+                    return null;
+                }
 
                 var headerValue = string.Join("", content.Headers.SelectMany(t => t.Value).ToList());
-
-                if (headerValue.Contains("image") ||
-                    headerValue.Contains("video") ||
-                    headerValue.Contains("audio") ||
-                    headerValue.Contains("octet-stream") ||
-                    headerValue.Contains("pdf") ||
-                    headerValue.Contains("rar") ||
-                    headerValue.Contains("7z") ||
-                    headerValue.Contains("tar") ||
-                    headerValue.Contains("gz") ||
-                    headerValue.Contains("zip"))
+                if (ContainsBinaryContentType(headerValue))
+                {
                     return string.Empty;
+                }
 
                 var str = await content.ReadAsStringAsync().ConfigureAwait(false);
+                str = ApplyRedaction(str);
 
                 try
                 {
@@ -258,7 +258,22 @@ namespace Common.HttpClients
         {
             try
             {
-                return JsonHelper.ToJson(context.Headers);
+                var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var header in context.Headers)
+                {
+                    headerMap[header.Key] = string.Join(",", header.Value);
+                }
+
+                if (context.Content != null)
+                {
+                    foreach (var header in context.Content.Headers)
+                    {
+                        headerMap[header.Key] = string.Join(",", header.Value);
+                    }
+                }
+
+                return JsonHelper.ToJson(RedactHeaders(headerMap));
             }
             catch (Exception)
             {
@@ -270,12 +285,81 @@ namespace Common.HttpClients
         {
             try
             {
-                return JsonHelper.ToJson(context?.Headers);
+                var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                if (context != null)
+                {
+                    foreach (var header in context.Headers)
+                    {
+                        headerMap[header.Key] = string.Join(",", header.Value);
+                    }
+
+                    if (context.Content != null)
+                    {
+                        foreach (var header in context.Content.Headers)
+                        {
+                            headerMap[header.Key] = string.Join(",", header.Value);
+                        }
+                    }
+                }
+
+                return JsonHelper.ToJson(RedactHeaders(headerMap));
             }
             catch (Exception)
             {
                 return "filter_read_response_header_error";
             }
+        }
+
+        private IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+        {
+            if (!_httpConfig.EnableLogRedaction || headers == null || headers.Count == 0)
+            {
+                return headers;
+            }
+
+            var redacted = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
+            foreach (var key in redacted.Keys.ToList())
+            {
+                if (SensitiveHeaderNames.Contains(key))
+                {
+                    redacted[key] = "***";
+                }
+            }
+
+            return redacted;
+        }
+
+        private string ApplyRedaction(string content)
+        {
+            if (!_httpConfig.EnableLogRedaction || string.IsNullOrEmpty(content))
+            {
+                return content;
+            }
+
+            var redacted = JsonSensitiveValuePattern.Replace(content, "$1***$3");
+            redacted = KvSensitiveValuePattern.Replace(redacted, "$1=***");
+            redacted = BearerValuePattern.Replace(redacted, "$1***");
+            return redacted;
+        }
+
+        private static bool ContainsBinaryContentType(string headerValue)
+        {
+            if (string.IsNullOrWhiteSpace(headerValue))
+            {
+                return false;
+            }
+
+            return headerValue.Contains("image", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("video", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("audio", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("octet-stream", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("pdf", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("rar", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("7z", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("tar", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("gz", StringComparison.OrdinalIgnoreCase) ||
+                   headerValue.Contains("zip", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
