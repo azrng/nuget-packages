@@ -6,15 +6,16 @@
 
 - 🚀 高性能HTTP客户端
 - 📝 智能日志记录和审计（包含请求前后日志）
-- ⚙️ 灵活的配置管理
+- ⚙️ 灵活的配置管理（支持运行时验证）
 - 🔒 请求/响应拦截
 - 📊 响应内容长度控制
 - 🎯 请求级别的日志控制
-- 🔄 异常或超时自动重试（支持自定义超时时间）
+- 🔄 异常或超时自动重试（支持自定义超时时间、重试次数、延迟）
 - 🛡️ 完整的 Polly 弹性策略（降级、并发限制、重试、熔断器、超时）
 - 🔍 分布式追踪支持（X-Trace-Id 自动传播）
-- 🔐 支持忽略不安全的SSL证书
+- 🔐 支持忽略不安全的SSL证书（仅建议开发/测试环境使用）
 - ⚡ 401未授权错误可配置重试
+- 🔏 可扩展的日志脱敏（支持自定义敏感头和字段）
 
 ## 安装
 
@@ -35,16 +36,22 @@ services.AddHttpClientService(options =>
 {
     options.AuditLog = true;                        // 启用审计日志
     options.FailThrowException = false;              // 失败时不抛出异常，返回 null
-    options.Timeout = 30;                            // 自定义超时时间（秒），超时后会自动重试
-    options.MaxRetryAttempts = 3;                    // 最大重试次数
-    options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒，指数退避）
-    options.ConcurrencyLimit = 100;                  // 并发限制
+    options.Timeout = 30;                            // 自定义超时时间（秒），范围：1-3600
+    options.MaxRetryAttempts = 3;                    // 最大重试次数，范围：0-10
+    options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒），范围：1-300
+    options.ConcurrencyLimit = 100;                  // 并发限制，范围：1-10000
     options.MaxOutputResponseLength = 1024 * 1024;   // 日志最大输出长度 1MB
-    options.IgnoreUntrustedCertificate = true;       // 忽略不安全的SSL证书
+    options.IgnoreUntrustedCertificate = false;      // ⚠️ 生产环境建议设为 false
     options.RetryOnUnauthorized = true;              // 401未授权错误时自动重试
     options.AdditionalSensitiveHeaders = new[] { "X-Secret" }; // 额外脱敏请求头
     options.AdditionalSensitiveFields = new[] { "mobile" };    // 额外脱敏字段
 });
+
+// ⚠️ 无效配置将抛出异常
+// services.AddHttpClientService(options =>
+// {
+//     options.Timeout = 5000; // ❌ ArgumentOutOfRangeException: Timeout必须在1-3600秒之间
+// });
 ```
 
 ### 2. 使用HTTP客户端
@@ -74,15 +81,18 @@ public class MyService
 |------|------|--------|------|
 | `AuditLog` | bool | true | 是否启用审计日志 |
 | `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 null，true 时抛出异常 |
-| `Timeout` | int | 100 | 超时时间（秒） |
-| `ConcurrencyLimit` | int | 100 | 并发限制（建议按下游容量调整） |
-| `MaxRetryAttempts` | int | 3 | 最大重试次数 |
-| `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避 |
-| `MaxOutputResponseLength` | int | 0 | 日志最大输出响应长度（字节）。0 表示不限制，超过长度会截断 |
-| `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书 |
+| `EnableLogRedaction` | bool | true | 是否启用日志脱敏 |
+| `Timeout` | int | 100 | 超时时间（秒），范围：1-3600 |
+| `ConcurrencyLimit` | int | 100 | 并发限制，范围：1-10000，建议按下游容量调整 |
+| `MaxRetryAttempts` | int | 3 | 最大重试次数，范围：0-10 |
+| `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避，范围：1-300 |
+| `MaxOutputResponseLength` | int | 0 | 日志最大输出响应长度（字节），≥0。0 表示不限制 |
+| `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书，⚠️ 仅建议开发/测试环境使用 |
 | `RetryOnUnauthorized` | bool | false | 401未授权错误时是否重试 |
-| `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头 |
-| `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名（JSON/key=value） |
+| `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头（不区分大小写） |
+| `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名（JSON/key=value，不区分大小写） |
+
+> **配置验证**：所有参数都有范围限制，超出范围将抛出 `ArgumentOutOfRangeException`。
 
 
 ## 请求
@@ -171,7 +181,8 @@ var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
 
 ### 1. 降级处理（Fallback）
 当所有策略都失败时的最后保障：
-- 如果 `FailThrowException = false`：返回空响应，方法返回 `null`
+- 如果 `FailThrowException = false`：返回 503 响应，方法返回 `null`
+  - 响应包含 `X-Fallback-Response: true` 头，可区分真实服务端错误
 - 如果 `FailThrowException = true`：重新抛出原始异常
 
 ### 2. 并发限制（Concurrency Limiter）
@@ -262,6 +273,7 @@ options.FailThrowException = false;
 - 请求失败或超时：返回 `null` 或 `default(T)`
 - 错误信息记录在日志中
 - 适合不需要中断业务流程的场景
+- Fallback 产生的 503 响应包含 `X-Fallback-Response: true` 头，可据此判断是否为 Fallback 响应
 
 ### FailThrowException = true
 ```csharp
@@ -271,14 +283,81 @@ options.FailThrowException = true;
 - 需要业务代码使用 try-catch 处理
 - 适合需要明确处理错误的场景
 
+### 识别 Fallback 响应示例
+
+```csharp
+// 使用原始 SendAsync 获取完整响应
+using var request = new HttpRequestMessage(HttpMethod.Get, url);
+var response = await _httpHelper.SendAsync(request);
+
+if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+{
+    var isFallback = response.Headers.Contains("X-Fallback-Response");
+    if (isFallback)
+    {
+        // 这是 Fallback 产生的响应，说明所有重试都失败了
+        _logger.LogWarning("All retries failed for {Url}", url);
+    }
+    else
+    {
+        // 这是真实的服务端 503 错误
+        _logger.LogWarning("Service unavailable at {Url}", url);
+    }
+}
+```
+
+## 安全注意事项
+
+### SSL证书验证
+
+⚠️ **生产环境安全警告**：
+
+```csharp
+// ❌ 不要在生产环境使用
+options.IgnoreUntrustedCertificate = true;
+```
+
+`IgnoreUntrustedCertificate` 选项会完全禁用SSL证书验证，这会使您的应用容易受到中间人攻击（MITM）。
+
+**建议做法**：
+- 仅在开发/测试环境使用此选项
+- 生产环境应使用有效的SSL证书
+- 考虑使用环境变量控制：
+  ```csharp
+  #if DEBUG
+  options.IgnoreUntrustedCertificate = true;
+  #else
+  options.IgnoreUntrustedCertificate = false;
+  #endif
+  ```
+
+### 敏感信息日志
+
+默认情况下，库会自动脱敏常见的敏感字段和请求头。但如果您的 API 使用自定义字段名（如 `userSecret`、`apiKey` 等），请务必配置：
+
+```csharp
+options.AdditionalSensitiveFields = new[] { "userSecret", "customToken" };
+options.AdditionalSensitiveHeaders = new[] { "X-Custom-Auth" };
+```
+
 ## 版本更新记录
 
 * 2.0.0
-  * 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
+  * **[破坏性变更]** 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
   * 请求超时统一由 `AddHttpClientService(options => options.Timeout = xx)` 全局配置控制
   * 单次请求如需提前终止，请使用 `CancellationToken`
-  * 增加可配置项：`ConcurrencyLimit`、`MaxRetryAttempts`、`RetryDelaySeconds`
+  * 新增可配置项：
+    * `ConcurrencyLimit`：并发限制数量（默认 100）
+    * `MaxRetryAttempts`：最大重试次数（默认 3）
+    * `RetryDelaySeconds`：重试基础延迟（默认 1 秒）
+    * `AdditionalSensitiveHeaders`：额外脱敏请求头
+    * `AdditionalSensitiveFields`：额外脱敏字段
   * 日志脱敏支持自定义扩展字段与请求头
+  * 新增配置参数验证（范围限制）
+  * Fallback 响应添加 `X-Fallback-Response` 标识头
+  * 优化 `JsonHelper` 性能（使用静态配置）
+  * 优化 `ResponseStream.DisposeAsync` 释放顺序
+  * 修复流式请求日志审计冲突（`GetStreamAsync` 自动跳过响应体审计）
 * 1.3.3
   * 传递bearerToken的时候主动判断是否拼接Bearer头
 * 1.3.2
