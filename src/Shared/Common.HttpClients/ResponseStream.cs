@@ -4,12 +4,20 @@ using System.Threading.Tasks;
 
 namespace Common.HttpClients
 {
+    /// <summary>
+    /// 包装响应流，确保响应消息在流释放时也被正确释放
+    /// </summary>
     internal sealed class ResponseStream : Stream
     {
         private readonly Stream _innerStream;
         private readonly HttpResponseMessage _response;
         private bool _disposed;
 
+        /// <summary>
+        /// 初始化 <see cref="ResponseStream"/> 的新实例
+        /// </summary>
+        /// <param name="innerStream">内部响应流</param>
+        /// <param name="response">HTTP响应消息</param>
         public ResponseStream(Stream innerStream, HttpResponseMessage response)
         {
             _innerStream = innerStream;
@@ -55,6 +63,10 @@ namespace Common.HttpClients
             _innerStream.Write(buffer, offset, count);
         }
 
+        /// <summary>
+        /// 释放流和响应消息使用的资源
+        /// </summary>
+        /// <param name="disposing">是否在释放托管资源</param>
         protected override void Dispose(bool disposing)
         {
             if (_disposed)
@@ -72,6 +84,10 @@ namespace Common.HttpClients
             base.Dispose(disposing);
         }
 
+        /// <summary>
+        /// 异步释放流和响应消息使用的资源
+        /// </summary>
+        /// <returns>表示异步释放操作的值任务</returns>
         public override async ValueTask DisposeAsync()
         {
             if (_disposed)

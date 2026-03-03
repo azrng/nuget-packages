@@ -6,8 +6,14 @@ using Xunit;
 
 namespace Common.HttpClients.Test
 {
+    /// <summary>
+    /// HttpClientHelper 功能和风险修复测试
+    /// </summary>
     public class HttpClientHelperRiskFixTests
     {
+        /// <summary>
+        /// 测试 SendAsync 方法在请求内容为 null 时能正常工作
+        /// </summary>
         [Fact]
         public async Task SendAsync_GetWithNullContent_ShouldReturnResponse()
         {
@@ -23,6 +29,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("ok", result);
         }
 
+        /// <summary>
+        /// 测试泛型 GetAsync 方法能正确反序列化 JSON 响应
+        /// </summary>
         [Fact]
         public async Task GetAsync_Generic_ShouldDeserializeJson()
         {
@@ -40,6 +49,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("az", result.Name);
         }
 
+        /// <summary>
+        /// 测试传递 Bearer Token 时会自动添加 "Bearer " 前缀
+        /// </summary>
         [Fact]
         public async Task GetAsync_WithBearerToken_ShouldAutoPrefixAuthorization()
         {
@@ -59,6 +71,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("Bearer abc", authorization);
         }
 
+        /// <summary>
+        /// 测试 PostAsync 方法能正确将对象序列化为 JSON
+        /// </summary>
         [Fact]
         public async Task PostAsync_Object_ShouldSerializeToJson()
         {
@@ -80,6 +95,9 @@ namespace Common.HttpClients.Test
             Assert.Contains("\"name\":\"az\"", payload);
         }
 
+        /// <summary>
+        /// 测试 PostFormDataAsync 方法能正确发送 application/x-www-form-urlencoded 格式的数据
+        /// </summary>
         [Fact]
         public async Task PostFormDataAsync_KeyValue_ShouldSendFormUrlEncoded()
         {
@@ -110,6 +128,9 @@ namespace Common.HttpClients.Test
             Assert.Contains("token=123", payload);
         }
 
+        /// <summary>
+        /// 测试 PostSoapAsync 方法使用正确的 SOAP Content-Type
+        /// </summary>
         [Fact]
         public async Task PostSoapAsync_ShouldUseSoapContentType()
         {
@@ -131,6 +152,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("application/soap+xml", mediaType);
         }
 
+        /// <summary>
+        /// 测试 PutAsync 方法使用 PUT HTTP 方法
+        /// </summary>
         [Fact]
         public async Task PutAsync_ShouldUsePutMethod()
         {
@@ -151,6 +175,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("put", result?.Name);
         }
 
+        /// <summary>
+        /// 测试 PatchAsync 方法使用 PATCH HTTP 方法
+        /// </summary>
         [Fact]
         public async Task PatchAsync_ShouldUsePatchMethod()
         {
@@ -171,6 +198,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("patch", result?.Name);
         }
 
+        /// <summary>
+        /// 测试 SendAsync 方法能正确覆盖 Content-Type 头
+        /// </summary>
         [Fact]
         public async Task SendAsync_WithMediaTypeHeader_ShouldOverrideContentType()
         {
@@ -191,6 +221,9 @@ namespace Common.HttpClients.Test
             Assert.Equal("text/plain", mediaType);
         }
 
+        /// <summary>
+        /// 测试 GetStreamAsync 在响应错误且不抛出异常时返回 Stream.Null
+        /// </summary>
         [Fact]
         public async Task GetStreamAsync_WhenStatusErrorAndFailThrowDisabled_ShouldReturnStreamNull()
         {
@@ -206,6 +239,9 @@ namespace Common.HttpClients.Test
             Assert.Same(Stream.Null, result);
         }
 
+        /// <summary>
+        /// 测试 GetStreamAsync 在响应错误且启用异常抛出时抛出 HttpRequestException
+        /// </summary>
         [Fact]
         public async Task GetStreamAsync_WhenStatusErrorAndFailThrowEnabled_ShouldThrow()
         {
@@ -221,6 +257,9 @@ namespace Common.HttpClients.Test
                 await helper.GetStreamAsync("https://unit.test/error"));
         }
 
+        /// <summary>
+        /// 测试 GetAsync 在响应错误且不抛出异常时返回 null（非泛型版本返回错误体，泛型版本返回 null）
+        /// </summary>
         [Fact]
         public async Task GetAsync_WhenStatusErrorAndFailThrowDisabled_ShouldReturnNull()
         {
@@ -236,6 +275,9 @@ namespace Common.HttpClients.Test
             Assert.Null(result);
         }
 
+        /// <summary>
+        /// 测试 DeleteAsync 泛型方法在响应错误且不抛出异常时返回 default(T)
+        /// </summary>
         [Fact]
         public async Task DeleteAsync_Generic_WhenStatusErrorAndFailThrowDisabled_ShouldReturnDefault()
         {
@@ -251,6 +293,9 @@ namespace Common.HttpClients.Test
             Assert.Null(result);
         }
 
+        /// <summary>
+        /// 测试 SendAsync 使用不支持的请求类型时抛出 ArgumentOutOfRangeException
+        /// </summary>
         [Fact]
         public async Task SendAsync_WithUnsupportedMethod_ShouldThrow()
         {
@@ -262,6 +307,9 @@ namespace Common.HttpClients.Test
                 await helper.SendAsync((HttpRequestEnum)999, "https://unit.test/send", null!));
         }
 
+        /// <summary>
+        /// 测试 SendAsync 使用 HttpRequestMessage 能正确传递
+        /// </summary>
         [Fact]
         public async Task SendAsync_RequestMessage_ShouldPassThrough()
         {
@@ -283,6 +331,9 @@ namespace Common.HttpClients.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
+        /// <summary>
+        /// 测试 SendAsync 使用 null HttpRequestMessage 时抛出 ArgumentNullException
+        /// </summary>
         [Fact]
         public async Task SendAsync_RequestMessageNull_ShouldThrow()
         {
@@ -293,6 +344,9 @@ namespace Common.HttpClients.Test
             await Assert.ThrowsAsync<ArgumentNullException>(async () => await helper.SendAsync((HttpRequestMessage)null!));
         }
 
+        /// <summary>
+        /// 测试 GetAsync 使用空 URL 时抛出 ArgumentNullException
+        /// </summary>
         [Fact]
         public async Task GetAsync_WithEmptyUrl_ShouldThrow()
         {
@@ -303,6 +357,9 @@ namespace Common.HttpClients.Test
             await Assert.ThrowsAsync<ArgumentNullException>(async () => await helper.GetAsync(string.Empty));
         }
 
+        /// <summary>
+        /// 测试 GetAsync 能正确响应 CancellationToken 取消请求
+        /// </summary>
         [Fact]
         public async Task GetAsync_WithCancellationToken_ShouldCancel()
         {
@@ -322,6 +379,9 @@ namespace Common.HttpClients.Test
                 await helper.GetAsync("https://unit.test/slow", cancellation: cts.Token));
         }
 
+        /// <summary>
+        /// 测试 GetAsync 在不设置超时参数的情况下仍然能成功完成
+        /// </summary>
         [Fact]
         public async Task GetAsync_WithoutTimeoutParameter_ShouldStillSucceed()
         {
@@ -340,6 +400,12 @@ namespace Common.HttpClients.Test
             Assert.Equal("slow-but-ok", result);
         }
 
+        /// <summary>
+        /// 创建用于测试的 HttpClientHelper 实例
+        /// </summary>
+        /// <param name="client">测试用的 HttpClient</param>
+        /// <param name="failThrowException">失败时是否抛出异常</param>
+        /// <returns>配置好的 HttpClientHelper 实例</returns>
         private static HttpClientHelper CreateHelper(HttpClient client, bool failThrowException = true)
         {
             var logger = new ListLogger<HttpClientHelper>();
@@ -351,9 +417,19 @@ namespace Common.HttpClients.Test
             return new HttpClientHelper(client, options, logger);
         }
 
+        /// <summary>
+        /// 用于测试的示例响应类
+        /// </summary>
         private sealed class SampleResponse
         {
+            /// <summary>
+            /// 获取或设置ID
+            /// </summary>
             public int Id { get; set; }
+
+            /// <summary>
+            /// 获取或设置名称
+            /// </summary>
             public string? Name { get; set; }
         }
     }

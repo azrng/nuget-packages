@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Common.HttpClients
 {
     /// <summary>
-    /// 日志处理
+    /// HTTP请求日志处理器，负责记录请求/响应审计日志和敏感信息脱敏
     /// </summary>
     public class LoggingHandler : DelegatingHandler
     {
@@ -53,6 +53,12 @@ namespace Common.HttpClients
         private readonly Regex _jsonSensitiveValuePattern;
         private readonly Regex _kvSensitiveValuePattern;
 
+        /// <summary>
+        /// 初始化 <see cref="LoggingHandler"/> 的新实例
+        /// </summary>
+        /// <param name="logger">日志记录器</param>
+        /// <param name="options">HTTP配置选项</param>
+        /// <param name="httpContextAccessor">HTTP上下文访问器（可选）</param>
         public LoggingHandler(ILogger<LoggingHandler> logger, IOptions<HttpClientOptions> options,
                               IHttpContextAccessor httpContextAccessor = null)
         {
@@ -70,6 +76,12 @@ namespace Common.HttpClients
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
         }
 
+        /// <summary>
+        /// 发送HTTP请求并记录审计日志
+        /// </summary>
+        /// <param name="request">HTTP请求消息</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>HTTP响应消息</returns>
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var startTime = DateTime.UtcNow;
@@ -129,6 +141,8 @@ namespace Common.HttpClients
         /// <summary>
         /// 记录请求开始日志
         /// </summary>
+        /// <param name="request">HTTP请求消息</param>
+        /// <param name="traceId">追踪ID</param>
         private void LogRequestStart(HttpRequestMessage request, string traceId)
         {
             try
@@ -147,6 +161,13 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 记录完整的审计日志（包括请求和响应）
+        /// </summary>
+        /// <param name="request">HTTP请求消息</param>
+        /// <param name="response">HTTP响应消息</param>
+        /// <param name="startTime">请求开始时间</param>
+        /// <param name="traceId">追踪ID</param>
         private async Task LogAuditAsync(HttpRequestMessage request, HttpResponseMessage response, DateTime startTime, string traceId)
         {
             try
@@ -179,6 +200,11 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 判断是否应该跳过日志记录
+        /// </summary>
+        /// <param name="request">HTTP请求消息</param>
+        /// <returns>如果应该跳过日志则返回true</returns>
         private bool ShouldSkipLogging(HttpRequestMessage request)
         {
             if (request.Headers.Contains("X-Skip-Logger"))
@@ -198,6 +224,11 @@ namespace Common.HttpClients
             return false;
         }
 
+        /// <summary>
+        /// 截断过长的响应内容
+        /// </summary>
+        /// <param name="content">原始内容</param>
+        /// <returns>截断后的内容或原始内容</returns>
         private string TruncateResponseContent(string content)
         {
             if (string.IsNullOrEmpty(content))
@@ -214,6 +245,11 @@ namespace Common.HttpClients
             return content;
         }
 
+        /// <summary>
+        /// 读取请求内容并应用脱敏
+        /// </summary>
+        /// <param name="context">HTTP请求消息</param>
+        /// <returns>脱敏后的请求内容</returns>
         private async Task<string> ReadRequestContentAsync(HttpRequestMessage context)
         {
             try
@@ -238,6 +274,12 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 读取响应内容并应用脱敏
+        /// </summary>
+        /// <param name="request">HTTP请求消息（用于检查跳过标志）</param>
+        /// <param name="context">HTTP响应消息</param>
+        /// <returns>脱敏后的响应内容</returns>
         private async Task<string> ReadResponseContentAsync(HttpRequestMessage request, HttpResponseMessage context)
         {
             try
@@ -279,6 +321,11 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 读取请求头并应用脱敏
+        /// </summary>
+        /// <param name="context">HTTP请求消息</param>
+        /// <returns>脱敏后的请求头JSON字符串</returns>
         private string ReadRequestHeader(HttpRequestMessage context)
         {
             try
@@ -306,6 +353,11 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 读取响应头并应用脱敏
+        /// </summary>
+        /// <param name="context">HTTP响应消息</param>
+        /// <returns>脱敏后的响应头JSON字符串</returns>
         private string ReadResponseHeader(HttpResponseMessage context)
         {
             try
@@ -336,6 +388,11 @@ namespace Common.HttpClients
             }
         }
 
+        /// <summary>
+        /// 对请求头进行脱敏处理
+        /// </summary>
+        /// <param name="headers">原始请求头字典</param>
+        /// <returns>脱敏后的请求头字典</returns>
         private IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
         {
             if (!_httpConfig.EnableLogRedaction || headers == null || headers.Count == 0)
@@ -355,6 +412,11 @@ namespace Common.HttpClients
             return redacted;
         }
 
+        /// <summary>
+        /// 对内容应用敏感信息脱敏
+        /// </summary>
+        /// <param name="content">原始内容</param>
+        /// <returns>脱敏后的内容</returns>
         private string ApplyRedaction(string content)
         {
             if (!_httpConfig.EnableLogRedaction || string.IsNullOrEmpty(content))
@@ -368,6 +430,11 @@ namespace Common.HttpClients
             return redacted;
         }
 
+        /// <summary>
+        /// 构建敏感请求头集合
+        /// </summary>
+        /// <param name="additionalHeaders">额外的敏感请求头</param>
+        /// <returns>包含默认和自定义敏感请求头的集合</returns>
         private static HashSet<string> BuildSensitiveHeaders(ICollection<string> additionalHeaders)
         {
             var result = new HashSet<string>(DefaultSensitiveHeaderNames, StringComparer.OrdinalIgnoreCase);
@@ -389,6 +456,11 @@ namespace Common.HttpClients
             return result;
         }
 
+        /// <summary>
+        /// 构建敏感字段正则表达式模式
+        /// </summary>
+        /// <param name="additionalFields">额外的敏感字段名</param>
+        /// <returns>用于匹配敏感字段的正则表达式模式</returns>
         private static string BuildSensitiveFieldPattern(ICollection<string> additionalFields)
         {
             var allFields = new HashSet<string>(DefaultSensitiveFieldNames, StringComparer.OrdinalIgnoreCase);
@@ -409,6 +481,11 @@ namespace Common.HttpClients
             return escaped.Length == 0 ? "a^" : string.Join("|", escaped);
         }
 
+        /// <summary>
+        /// 检查内容类型是否为二进制格式
+        /// </summary>
+        /// <param name="headerValue">内容类型头值</param>
+        /// <returns>如果是二进制内容类型则返回true</returns>
         private static bool ContainsBinaryContentType(string headerValue)
         {
             if (string.IsNullOrWhiteSpace(headerValue))

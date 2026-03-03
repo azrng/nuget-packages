@@ -212,6 +212,17 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="services">服务集合</param>
         /// <returns>服务集合</returns>
+        /// <remarks>
+        /// 默认配置：
+        /// - AuditLog = true
+        /// - EnableLogRedaction = true
+        /// - FailThrowException = false
+        /// - Timeout = 100 秒
+        /// - MaxOutputResponseLength = 1MB
+        /// - ConcurrencyLimit = 100
+        /// - MaxRetryAttempts = 3
+        /// - RetryDelaySeconds = 1
+        /// </remarks>
         public static IServiceCollection AddHttpClientService(this IServiceCollection services)
         {
             if (services == null)
