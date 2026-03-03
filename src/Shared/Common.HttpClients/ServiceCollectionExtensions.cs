@@ -85,10 +85,17 @@ namespace Common.HttpClients
                 // 1. 降级处理策略 - 当所有策略都失败时的最后保障
                 builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>()
                                     {
-                                        ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                                                       .Handle<HttpRequestException>()
-                                                       .Handle<TaskCanceledException>()
-                                                       .Handle<TimeoutException>(),
+                                        ShouldHandle = args =>
+                                        {
+                                            if (args.Context.CancellationToken.IsCancellationRequested)
+                                            {
+                                                return ValueTask.FromResult(false);
+                                            }
+
+                                            var ex = args.Outcome.Exception;
+                                            var shouldHandle = ex is HttpRequestException or TaskCanceledException or TimeoutException;
+                                            return ValueTask.FromResult(shouldHandle);
+                                        },
                                         FallbackAction = args =>
                                         {
                                             // 如果配置了不抛出异常,返回一个 OK 状态的空响应
@@ -111,34 +118,49 @@ namespace Common.HttpClients
 
                        // 3. 重试策略 - 根据配置决定是否重试，最多重试3次，使用指数退避
                        // 注意：重试策略放在超时策略之前（外层），这样超时异常会被重试策略捕获并触发重试
-                       .AddRetry(new HttpRetryStrategyOptions
-                                 {
-                                     // 重试3次
-                                     MaxRetryAttempts = 3,
+                        .AddRetry(new HttpRetryStrategyOptions
+                                  {
+                                      // 重试3次
+                                      MaxRetryAttempts = 3,
 
-                                     // 初始延迟时间
-                                     Delay = TimeSpan.FromSeconds(1),
+                                      // 初始延迟时间
+                                      Delay = TimeSpan.FromSeconds(1),
 
-                                     // 指数退避策略，避免对服务器造成过大压力
-                                     BackoffType = DelayBackoffType.Exponential,
+                                      // 指数退避策略，避免对服务器造成过大压力
+                                      BackoffType = DelayBackoffType.Exponential,
 
-                                     // 自定义判断是否需要重试的条件
-                                     ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                                         .HandleResult(response =>
-                                         {
-                                             // 如果配置了对401未授权错误进行重试
-                                             if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
-                                                 return true;
+                                      // 自定义判断是否需要重试的条件
+                                      ShouldHandle = args =>
+                                      {
+                                          if (args.Context.CancellationToken.IsCancellationRequested)
+                                          {
+                                              return ValueTask.FromResult(false);
+                                          }
 
-                                             // 默认的重试条件（5xx服务器错误和408请求超时）
-                                             return response.StatusCode >= HttpStatusCode.InternalServerError ||
-                                                    response.StatusCode == HttpStatusCode.RequestTimeout;
-                                         })
-                                         .Handle<HttpRequestException>()
-                                         .Handle<TaskCanceledException>() // 处理 HttpClient 超时异常
-                                         .Handle<TimeoutException>() // 处理 System.TimeoutException
-                                         .Handle<TimeoutRejectedException>() // 处理 Polly 的 TimeoutRejectedException
-                                 })
+                                          if (args.Outcome.Exception != null)
+                                          {
+                                              var shouldRetryException =
+                                                  args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
+                                              return ValueTask.FromResult(shouldRetryException);
+                                          }
+
+                                          var response = args.Outcome.Result;
+                                          if (response == null)
+                                          {
+                                              return ValueTask.FromResult(false);
+                                          }
+
+                                          if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
+                                          {
+                                              return ValueTask.FromResult(true);
+                                          }
+
+                                          // 默认的重试条件（5xx服务器错误和408请求超时）
+                                          var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
+                                                                      response.StatusCode == HttpStatusCode.RequestTimeout;
+                                          return ValueTask.FromResult(shouldRetryStatusCode);
+                                      }
+                                  })
 
                        // 4. 熔断器策略 - 当错误率达到阈值时暂时停止请求，保护系统
                        .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions())

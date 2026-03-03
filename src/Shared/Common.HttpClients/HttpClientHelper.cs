@@ -21,35 +21,59 @@ namespace Common.HttpClients
         private readonly HttpClientOptions _httpConfig;
         private readonly ILogger<HttpClientHelper> _logger;
 
-        public HttpClientHelper(IHttpClientFactory httpClientFactory, IOptions<HttpClientOptions> httpConfig,
+        public HttpClientHelper(HttpClient client, IOptions<HttpClientOptions> httpConfig,
                                 ILogger<HttpClientHelper> logger)
         {
             _logger = logger;
-            _client = httpClientFactory.CreateClient("default");
+            _client = client ?? throw new ArgumentNullException(nameof(client));
             _httpConfig = httpConfig.Value;
         }
 
         public async Task<Stream> GetStreamAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null,
                                                  int? timeout = null, CancellationToken cancellation = default)
         {
-            VerifyParam(url, jwtToken, headers);
-            return await _client.GetStreamAsync(url, cancellation);
+            using var request = CreateRequestMessage(HttpMethod.Get, url, jwtToken, headers);
+            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead)
+                .ConfigureAwait(false);
+
+            try
+            {
+                if (_httpConfig.FailThrowException)
+                {
+                    response.EnsureSuccessStatusCode();
+                }
+                else if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellation).ConfigureAwait(false);
+                    _logger.LogError("API:{Url} error: {StatusCode} - {ErrorContent}", url, (int)response.StatusCode, errorContent);
+                    response.Dispose();
+                    return Stream.Null;
+                }
+
+                var stream = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
+                return new ResponseStream(stream, response);
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
         }
 
         public async Task<string> GetAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null,
                                            int? timeout = null, CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            return await _client.GetStringAsync(url, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Get, url, bearerToken, headers);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
         public async Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null,
                                          int? timeout = null,
                                          CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-
-            var response = await _client.GetAsync(url, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Get, url, bearerToken, headers);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -57,10 +81,10 @@ namespace Common.HttpClients
                                             IDictionary<string, string> headers = null, int? timeout = null,
                                             CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
-            var response = await _client.PostAsync(url, content, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, content);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
@@ -68,64 +92,30 @@ namespace Common.HttpClients
                                           IDictionary<string, string> headers = null, int? timeout = null,
                                           CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
-            var response = await _client.PostAsync(url, content, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, content);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
-
-        // public async IAsyncEnumerable<string> PostGetStreamAsync<T>(string url, object data, string bearerToken = "",
-        //                                                             IDictionary<string, string> headers = null)
-        // {
-        //     VerifyParam(url, bearerToken, headers);
-        //     var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
-        //     using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
-        //     // 添加 HttpCompletionOption.ResponseHeadersRead 选项以支持流式响应
-        //     using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-        //     var response = await _client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-        //     if (_httpConfig.FailThrowException)
-        //     {
-        //         //确保成功完成，不是成功就返回具体错误信息
-        //         response.EnsureSuccessStatusCode();
-        //     }
-        //     else if (!response.IsSuccessStatusCode)
-        //     {
-        //         var errorContent = await response.Content.ReadAsStringAsync();
-        //         _logger.LogError($"API error: {response.StatusCode} - {errorContent}");
-        //         yield break;
-        //     }
-        //
-        //     await using var stream = await response.Content.ReadAsStreamAsync();
-        //     using var reader = new StreamReader(stream);
-        //
-        //     while (!reader.EndOfStream)
-        //     {
-        //         var line = await reader.ReadLineAsync();
-        //         if (!string.IsNullOrEmpty(line))
-        //         {
-        //             yield return line;
-        //         }
-        //     }
-        // }
 
         public async Task<string> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
                                                     IDictionary<string, string> headers = null, int? timeout = null,
                                                     CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
             using var httpContent = new FormUrlEncodedContent(data);
-            var response = await _client.PostAsync(url, httpContent, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult(response, url);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, httpContent);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
         public async Task<T> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
                                                   IDictionary<string, string> headers = null, int? timeout = null,
                                                   CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            var httpContent = new FormUrlEncodedContent(data);
-            var response = await _client.PostAsync(url, httpContent, cancellation).ConfigureAwait(false);
+            using var httpContent = new FormUrlEncodedContent(data);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, httpContent);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -133,21 +123,18 @@ namespace Common.HttpClients
                                                   IDictionary<string, string> headers = null, int? timeout = null,
                                                   CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            var result = await _client.PostAsync(url, data, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(result, url);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, data);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
         public async Task<T> PostSoapAsync<T>(string url, string xmlData, string bearerToken = "",
                                               IDictionary<string, string> headers = null, int? timeout = null,
                                               CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            _client.DefaultRequestHeaders.Add("Content-Type", "application/soap+xml");
-
-            using var content = new StringContent(xmlData, Encoding.UTF8, "application/soap+xml");
-
-            var response = await _client.PostAsync(url, content, cancellation).ConfigureAwait(false);
+            using var content = new StringContent(xmlData ?? string.Empty, Encoding.UTF8, "application/soap+xml");
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, content);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -156,8 +143,7 @@ namespace Common.HttpClients
                                                   IDictionary<string, string> headers = null, int? timeout = null,
                                                   CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            var formData = new MultipartFormDataContent();
+            using var formData = new MultipartFormDataContent();
             using var byteContent = new StreamContent(stream);
             byteContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
                                                      {
@@ -165,7 +151,8 @@ namespace Common.HttpClients
                                                      };
             formData.Add(byteContent);
 
-            var response = await _client.PostAsync(url, formData, cancellation);
+            using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, formData);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -173,10 +160,10 @@ namespace Common.HttpClients
                                          IDictionary<string, string> headers = null, int? timeout = null,
                                          CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
-            var response = await _client.PutAsync(url, content, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Put, url, bearerToken, headers, content);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -184,8 +171,8 @@ namespace Common.HttpClients
                                               IDictionary<string, string> headers = null, int? timeout = null,
                                               CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            var response = await _client.DeleteAsync(url, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Delete, url, bearerToken, headers);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
@@ -193,8 +180,8 @@ namespace Common.HttpClients
                                             IDictionary<string, string> headers = null, int? timeout = null,
                                             CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
-            var response = await _client.DeleteAsync(url, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Delete, url, bearerToken, headers);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -202,10 +189,10 @@ namespace Common.HttpClients
                                            IDictionary<string, string> headers = null, int? timeout = null,
                                            CancellationToken cancellation = default)
         {
-            VerifyParam(url, bearerToken, headers);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
-            var response = await _client.PatchAsync(url, content, cancellation).ConfigureAwait(false);
+            using var request = CreateRequestMessage(HttpMethod.Patch, url, bearerToken, headers, content);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, url).ConfigureAwait(false);
         }
 
@@ -213,129 +200,135 @@ namespace Common.HttpClients
                                             MediaTypeHeaderValue mediaTypeHeader = null, int? timeout = null,
                                             CancellationToken cancellation = default)
         {
-            var method = "GET";
-            switch (requestEnum)
+            var method = requestEnum switch
             {
-                case HttpRequestEnum.Get:
-                    method = "GET";
-                    break;
+                HttpRequestEnum.Get => HttpMethod.Get,
+                HttpRequestEnum.Put => HttpMethod.Put,
+                HttpRequestEnum.Post => HttpMethod.Post,
+                HttpRequestEnum.Delete => HttpMethod.Delete,
+                _ => throw new ArgumentOutOfRangeException(nameof(requestEnum), requestEnum, "不支持的请求类型")
+            };
 
-                case HttpRequestEnum.Put:
-                    method = "PUT";
-                    break;
-
-                case HttpRequestEnum.Post:
-                    method = "POST";
-                    break;
-
-                case HttpRequestEnum.Delete:
-                    method = "DELETE";
-                    break;
+            using var request = CreateRequestMessage(method, url, string.Empty, null, httpContent);
+            if (request.Content != null && mediaTypeHeader != null)
+            {
+                request.Content.Headers.ContentType = mediaTypeHeader;
+            }
+            else if (request.Content != null && request.Content.Headers.ContentType == null)
+            {
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             }
 
-            var request = new HttpRequestMessage { Method = new HttpMethod(method), RequestUri = new Uri(url), Content = httpContent };
-            request.Content.Headers.ContentType = mediaTypeHeader ?? new MediaTypeHeaderValue("application/json");
-
-            var response = await _client.SendAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult(response, url);
+            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
-        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellation = default)
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellation = default)
         {
-            return _client.SendAsync(request, cancellation);
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            return await _client.SendAsync(request, cancellation).ConfigureAwait(false);
         }
 
-        #region 私有方法
-
-        /// <summary>
-        /// 转换返回的结果
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="response"></param>
-        /// <param name="url"></param>
-        /// <returns></returns>
         private async Task<T> ConvertResponseResult<T>(HttpResponseMessage response, string url)
         {
             if (_httpConfig.FailThrowException)
             {
-                //确保成功完成，不是成功就返回具体错误信息
                 response.EnsureSuccessStatusCode();
             }
             else if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError($"API:{url} error: {(int)response.StatusCode} - {errorContent}");
+                var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _logger.LogError("API:{Url} error: {StatusCode} - {ErrorContent}", url, (int)response.StatusCode, errorContent);
                 return default;
             }
 
-            var resStr = await response.Content.ReadAsStringAsync();
-
-            // 如果响应内容为空(例如从 Fallback 策略返回的空响应),返回 default
+            var resStr = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (string.IsNullOrEmpty(resStr))
             {
                 return default;
             }
 
             if (typeof(T) == typeof(string))
+            {
                 return (T)Convert.ChangeType(resStr, typeof(string));
+            }
 
             return JsonHelper.ToObject<T>(resStr);
         }
 
-        /// <summary>
-        /// 转换返回的结果
-        /// </summary>
-        /// <param name="response"></param>
-        /// <param name="url"></param>
-        /// <returns></returns>
         private async Task<string> ConvertResponseResult(HttpResponseMessage response, string url)
         {
             if (_httpConfig.FailThrowException)
             {
-                //确保成功完成，不是成功就返回具体错误信息
                 response.EnsureSuccessStatusCode();
             }
             else if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError($"API:{url} error: {(int)response.StatusCode} - {errorContent}");
+                var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _logger.LogError("API:{Url} error: {StatusCode} - {ErrorContent}", url, (int)response.StatusCode, errorContent);
             }
 
-            return await response.Content.ReadAsStringAsync();
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// 参数校验
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="bearerToken"></param>
-        /// <param name="headers"></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        private void VerifyParam(string url, string bearerToken, IDictionary<string, string> headers)
+        private HttpRequestMessage CreateRequestMessage(HttpMethod method, string url, string bearerToken,
+                                                        IDictionary<string, string> headers, HttpContent content = null)
         {
-            _client.DefaultRequestHeaders.Clear();
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                throw new ArgumentNullException(nameof(url), "url不能为null");
-            }
+            ValidateUrl(url);
+
+            var request = new HttpRequestMessage(method, url) { Content = content };
 
             if (!string.IsNullOrWhiteSpace(bearerToken))
             {
-                var bearerTokenStr = bearerToken.StartsWith("Bearer ") ? bearerToken : "Bearer " + bearerToken;
-                _client.DefaultRequestHeaders.Add("Authorization", bearerTokenStr);
+                var bearerTokenStr = bearerToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? bearerToken
+                    : "Bearer " + bearerToken;
+                request.Headers.TryAddWithoutValidation("Authorization", bearerTokenStr);
             }
 
-            if (!(headers?.Count > 0))
+            if (headers == null || headers.Count == 0)
             {
-                return;
+                return request;
             }
 
             foreach (var (key, value) in headers)
             {
-                _client.DefaultRequestHeaders.Add(key, value);
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    continue;
+                }
+
+                if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    request.Content?.Headers.TryAddWithoutValidation(key, value);
+                    continue;
+                }
+
+                if (!request.Headers.TryAddWithoutValidation(key, value))
+                {
+                    request.Content?.Headers.TryAddWithoutValidation(key, value);
+                }
+            }
+
+            return request;
+        }
+
+        private Task<HttpResponseMessage> SendCoreAsync(HttpRequestMessage request, CancellationToken cancellation,
+                                                        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
+        {
+            return _client.SendAsync(request, completionOption, cancellation);
+        }
+
+        private static void ValidateUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException(nameof(url), "api url不能为空");
             }
         }
     }
-
-    #endregion 私有方法
 }
