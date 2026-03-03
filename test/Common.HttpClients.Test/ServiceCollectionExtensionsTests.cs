@@ -24,7 +24,7 @@ namespace Common.HttpClients.Test
         public void AddHttpClientService_WithInvalidTimeout_ShouldThrow()
         {
             var services = new ServiceCollection();
-            Assert.Throws<ArgumentException>(() =>
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
                 services.AddHttpClientService(options =>
                 {
                     options.Timeout = 0;
@@ -32,14 +32,61 @@ namespace Common.HttpClients.Test
         }
 
         [Fact]
+        public void AddHttpClientService_WithTimeoutTooLarge_ShouldThrow()
+        {
+            var services = new ServiceCollection();
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                services.AddHttpClientService(options =>
+                {
+                    options.Timeout = 3601;
+                }));
+        }
+
+        [Fact]
         public void AddHttpClientService_WithInvalidMaxOutputResponseLength_ShouldThrow()
         {
             var services = new ServiceCollection();
-            Assert.Throws<ArgumentException>(() =>
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
                 services.AddHttpClientService(options =>
                 {
                     options.Timeout = 1;
                     options.MaxOutputResponseLength = -1;
+                }));
+        }
+
+        [Fact]
+        public void AddHttpClientService_WithInvalidConcurrencyLimit_ShouldThrow()
+        {
+            var services = new ServiceCollection();
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                services.AddHttpClientService(options =>
+                {
+                    options.Timeout = 1;
+                    options.ConcurrencyLimit = 0;
+                }));
+        }
+
+        [Fact]
+        public void AddHttpClientService_WithInvalidMaxRetryAttempts_ShouldThrow()
+        {
+            var services = new ServiceCollection();
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                services.AddHttpClientService(options =>
+                {
+                    options.Timeout = 1;
+                    options.MaxRetryAttempts = 11;
+                }));
+        }
+
+        [Fact]
+        public void AddHttpClientService_WithInvalidRetryDelaySeconds_ShouldThrow()
+        {
+            var services = new ServiceCollection();
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                services.AddHttpClientService(options =>
+                {
+                    options.Timeout = 1;
+                    options.RetryDelaySeconds = 0;
                 }));
         }
 
@@ -57,6 +104,9 @@ namespace Common.HttpClients.Test
             Assert.True(options.EnableLogRedaction);
             Assert.Equal(100, options.Timeout);
             Assert.False(options.FailThrowException);
+            Assert.Equal(100, options.ConcurrencyLimit);
+            Assert.Equal(3, options.MaxRetryAttempts);
+            Assert.Equal(1, options.RetryDelaySeconds);
         }
 
         [Fact]
@@ -71,6 +121,9 @@ namespace Common.HttpClients.Test
                 options.FailThrowException = true;
                 options.Timeout = 5;
                 options.MaxOutputResponseLength = 128;
+                options.ConcurrencyLimit = 50;
+                options.MaxRetryAttempts = 5;
+                options.RetryDelaySeconds = 2;
             });
 
             using var provider = services.BuildServiceProvider();
@@ -81,6 +134,9 @@ namespace Common.HttpClients.Test
             Assert.True(options.FailThrowException);
             Assert.Equal(5, options.Timeout);
             Assert.Equal(128, options.MaxOutputResponseLength);
+            Assert.Equal(50, options.ConcurrencyLimit);
+            Assert.Equal(5, options.MaxRetryAttempts);
+            Assert.Equal(2, options.RetryDelaySeconds);
         }
     }
 }

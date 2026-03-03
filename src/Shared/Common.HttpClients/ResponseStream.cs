@@ -81,9 +81,9 @@ namespace Common.HttpClients
             }
 
             _disposed = true;
-            _response.Dispose();
             await _innerStream.DisposeAsync().ConfigureAwait(false);
             await base.DisposeAsync().ConfigureAwait(false);
+            _response.Dispose();
         }
     }
 }

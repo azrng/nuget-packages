@@ -222,7 +222,7 @@ namespace Common.HttpClients.Test
         }
 
         [Fact]
-        public async Task GetAsync_WhenStatusErrorAndFailThrowDisabled_ShouldReturnErrorBody()
+        public async Task GetAsync_WhenStatusErrorAndFailThrowDisabled_ShouldReturnNull()
         {
             using var client = new HttpClient(new DelegateHttpMessageHandler((_, _) =>
                 Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -233,7 +233,7 @@ namespace Common.HttpClients.Test
             var helper = CreateHelper(client, failThrowException: false);
             var result = await helper.GetAsync("https://unit.test/error");
 
-            Assert.Equal("error-body", result);
+            Assert.Null(result);
         }
 
         [Fact]

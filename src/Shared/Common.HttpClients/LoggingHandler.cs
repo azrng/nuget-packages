@@ -17,24 +17,30 @@ namespace Common.HttpClients
     /// </summary>
     public class LoggingHandler : DelegatingHandler
     {
-        private static readonly HashSet<string> SensitiveHeaderNames = new(StringComparer.OrdinalIgnoreCase)
-                                                                       {
-                                                                           "Authorization",
-                                                                           "Proxy-Authorization",
-                                                                           "Cookie",
-                                                                           "Set-Cookie",
-                                                                           "X-Api-Key",
-                                                                           "Api-Key",
-                                                                           "X-Auth-Token"
-                                                                       };
+        private static readonly string[] DefaultSensitiveHeaderNames =
+        {
+            "Authorization",
+            "Proxy-Authorization",
+            "Cookie",
+            "Set-Cookie",
+            "X-Api-Key",
+            "Api-Key",
+            "X-Auth-Token"
+        };
 
-        private static readonly Regex JsonSensitiveValuePattern = new(
-            "(\"(?:password|passwd|pwd|secret|token|access_token|refresh_token|client_secret|api[_-]?key)\"\\s*:\\s*\")([^\"]*)(\")",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex KvSensitiveValuePattern = new(
-            "\\b(password|passwd|pwd|secret|token|access_token|refresh_token|client_secret|api[_-]?key)=([^&\\s]+)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly string[] DefaultSensitiveFieldNames =
+        {
+            "password",
+            "passwd",
+            "pwd",
+            "secret",
+            "token",
+            "access_token",
+            "refresh_token",
+            "client_secret",
+            "api_key",
+            "api-key"
+        };
 
         private static readonly Regex BearerValuePattern = new(
             "(Bearer\\s+)[A-Za-z0-9\\-._~+/]+=*",
@@ -43,6 +49,9 @@ namespace Common.HttpClients
         private readonly ILogger<LoggingHandler> _logger;
         private readonly HttpClientOptions _httpConfig;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly HashSet<string> _sensitiveHeaderNames;
+        private readonly Regex _jsonSensitiveValuePattern;
+        private readonly Regex _kvSensitiveValuePattern;
 
         public LoggingHandler(ILogger<LoggingHandler> logger, IOptions<HttpClientOptions> options,
                               IHttpContextAccessor httpContextAccessor = null)
@@ -50,6 +59,15 @@ namespace Common.HttpClients
             _logger = logger;
             _httpConfig = options.Value;
             _httpContextAccessor = httpContextAccessor;
+
+            _sensitiveHeaderNames = BuildSensitiveHeaders(_httpConfig.AdditionalSensitiveHeaders);
+            var sensitiveFieldPattern = BuildSensitiveFieldPattern(_httpConfig.AdditionalSensitiveFields);
+            _jsonSensitiveValuePattern = new Regex(
+                "(\"(?:" + sensitiveFieldPattern + ")\"\\s*:\\s*\")([^\"]*)(\")",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            _kvSensitiveValuePattern = new Regex(
+                "\\b(" + sensitiveFieldPattern + ")=([^&\\s]+)",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -142,7 +160,7 @@ namespace Common.HttpClients
                 var reqContent = await ReadRequestContentAsync(request).ConfigureAwait(false);
 
                 var respHeader = ReadResponseHeader(response);
-                var respContent = await ReadResponseContentAsync(response).ConfigureAwait(false);
+                var respContent = await ReadResponseContentAsync(request, response).ConfigureAwait(false);
                 var statusCode = response.StatusCode.ToString();
                 var finalRespContent = TruncateResponseContent(respContent);
                 var elapsed = DateTime.UtcNow - startTime;
@@ -220,10 +238,17 @@ namespace Common.HttpClients
             }
         }
 
-        private async Task<string> ReadResponseContentAsync(HttpResponseMessage context)
+        private async Task<string> ReadResponseContentAsync(HttpRequestMessage request, HttpResponseMessage context)
         {
             try
             {
+                if (request != null &&
+                    request.Options.TryGetValue(HttpClientRequestOptionKeys.SkipResponseBodyAudit, out var skipBodyAudit) &&
+                    skipBodyAudit)
+                {
+                    return "[response body skipped for streaming request]";
+                }
+
                 var content = context.Content;
                 if (content == null)
                 {
@@ -321,7 +346,7 @@ namespace Common.HttpClients
             var redacted = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
             foreach (var key in redacted.Keys.ToList())
             {
-                if (SensitiveHeaderNames.Contains(key))
+                if (_sensitiveHeaderNames.Contains(key))
                 {
                     redacted[key] = "***";
                 }
@@ -337,10 +362,51 @@ namespace Common.HttpClients
                 return content;
             }
 
-            var redacted = JsonSensitiveValuePattern.Replace(content, "$1***$3");
-            redacted = KvSensitiveValuePattern.Replace(redacted, "$1=***");
+            var redacted = _jsonSensitiveValuePattern.Replace(content, "$1***$3");
+            redacted = _kvSensitiveValuePattern.Replace(redacted, "$1=***");
             redacted = BearerValuePattern.Replace(redacted, "$1***");
             return redacted;
+        }
+
+        private static HashSet<string> BuildSensitiveHeaders(ICollection<string> additionalHeaders)
+        {
+            var result = new HashSet<string>(DefaultSensitiveHeaderNames, StringComparer.OrdinalIgnoreCase);
+            if (additionalHeaders == null)
+            {
+                return result;
+            }
+
+            foreach (var header in additionalHeaders)
+            {
+                if (string.IsNullOrWhiteSpace(header))
+                {
+                    continue;
+                }
+
+                result.Add(header.Trim());
+            }
+
+            return result;
+        }
+
+        private static string BuildSensitiveFieldPattern(ICollection<string> additionalFields)
+        {
+            var allFields = new HashSet<string>(DefaultSensitiveFieldNames, StringComparer.OrdinalIgnoreCase);
+            if (additionalFields != null)
+            {
+                foreach (var field in additionalFields)
+                {
+                    if (string.IsNullOrWhiteSpace(field))
+                    {
+                        continue;
+                    }
+
+                    allFields.Add(field.Trim());
+                }
+            }
+
+            var escaped = allFields.Select(Regex.Escape).ToArray();
+            return escaped.Length == 0 ? "a^" : string.Join("|", escaped);
         }
 
         private static bool ContainsBinaryContentType(string headerValue)

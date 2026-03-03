@@ -1,4 +1,6 @@
-﻿namespace Common.HttpClients
+﻿using System.Collections.Generic;
+
+namespace Common.HttpClients
 {
     /// <summary>
     /// HttpClient配置
@@ -39,5 +41,30 @@
         /// 401未授权错误时是否重试
         /// </summary>
         public bool RetryOnUnauthorized { get; set; } = false;
+
+        /// <summary>
+        /// 并发限制数量
+        /// </summary>
+        public int ConcurrencyLimit { get; set; } = 100;
+
+        /// <summary>
+        /// 最大重试次数
+        /// </summary>
+        public int MaxRetryAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// 重试基础延迟时间（秒）
+        /// </summary>
+        public int RetryDelaySeconds { get; set; } = 1;
+
+        /// <summary>
+        /// 额外需要脱敏的请求头名称（不区分大小写）
+        /// </summary>
+        public ICollection<string> AdditionalSensitiveHeaders { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 额外需要脱敏的字段名（用于json和key=value文本）
+        /// </summary>
+        public ICollection<string> AdditionalSensitiveFields { get; set; } = new List<string>();
     }
 }

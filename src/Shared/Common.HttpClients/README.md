@@ -36,9 +36,14 @@ services.AddHttpClientService(options =>
     options.AuditLog = true;                        // 启用审计日志
     options.FailThrowException = false;              // 失败时不抛出异常，返回 null
     options.Timeout = 30;                            // 自定义超时时间（秒），超时后会自动重试
+    options.MaxRetryAttempts = 3;                    // 最大重试次数
+    options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒，指数退避）
+    options.ConcurrencyLimit = 100;                  // 并发限制
     options.MaxOutputResponseLength = 1024 * 1024;   // 日志最大输出长度 1MB
     options.IgnoreUntrustedCertificate = true;       // 忽略不安全的SSL证书
     options.RetryOnUnauthorized = true;              // 401未授权错误时自动重试
+    options.AdditionalSensitiveHeaders = new[] { "X-Secret" }; // 额外脱敏请求头
+    options.AdditionalSensitiveFields = new[] { "mobile" };    // 额外脱敏字段
 });
 ```
 
@@ -69,10 +74,15 @@ public class MyService
 |------|------|--------|------|
 | `AuditLog` | bool | true | 是否启用审计日志 |
 | `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 null，true 时抛出异常 |
-| `Timeout` | int | 100 | 超时时间（秒）。超时后会自动重试，最多重试3次 |
+| `Timeout` | int | 100 | 超时时间（秒） |
+| `ConcurrencyLimit` | int | 100 | 并发限制（建议按下游容量调整） |
+| `MaxRetryAttempts` | int | 3 | 最大重试次数 |
+| `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避 |
 | `MaxOutputResponseLength` | int | 0 | 日志最大输出响应长度（字节）。0 表示不限制，超过长度会截断 |
 | `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书 |
 | `RetryOnUnauthorized` | bool | false | 401未授权错误时是否重试 |
+| `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头 |
+| `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名（JSON/key=value） |
 
 
 ## 请求
@@ -146,6 +156,15 @@ var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
 
 可以通过在请求头设置`X-Skip-Logger`或者设置`X-Logger`值为none、skip进行跳过日志
 
+### 日志脱敏说明
+
+- 默认脱敏字段包含：`password`、`token`、`access_token`、`refresh_token`、`api_key` 等常见字段
+- 默认脱敏请求头包含：`Authorization`、`Cookie`、`X-Api-Key` 等
+- 可通过 `AdditionalSensitiveFields`、`AdditionalSensitiveHeaders` 扩展脱敏范围
+- 当前脱敏主要覆盖 JSON 和 `key=value` 文本，不保证覆盖所有嵌套/编码场景（例如复杂嵌套 JSON、base64 token）
+
+> `GetStreamAsync` 会自动跳过响应体审计，避免流式读取场景下日志提前消费响应流。
+
 ## 弹性策略
 
 本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
@@ -156,12 +175,12 @@ var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
 - 如果 `FailThrowException = true`：重新抛出原始异常
 
 ### 2. 并发限制（Concurrency Limiter）
-限制同时进行的HTTP请求数量为 100，防止资源耗尽
+限制同时进行的HTTP请求数量，默认 `ConcurrencyLimit = 100`，可按业务压测结果调整
 
 ### 3. 重试策略（Retry）
 自动重试失败的请求：
-- **重试次数**：最多重试 3 次
-- **重试延迟**：初始延迟 1 秒，使用指数退避策略（1s → 2s → 4s）
+- **重试次数**：`MaxRetryAttempts`（默认 3）
+- **重试延迟**：`RetryDelaySeconds`（默认 1 秒）作为基础值，使用指数退避
 - **重试条件**：
   - HTTP 5xx 服务器错误
   - HTTP 408 请求超时
@@ -178,7 +197,7 @@ var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
 - 每次重试都会重新应用超时限制
 - 超时后会触发重试机制
 
-> **重要说明**：超时策略放在最内层，每次重试都会应用超时限制。例如设置 `Timeout = 30` 秒时，如果单次请求超过 30 秒会触发重试，最多重试 3 次，总计最长时间约为 90 秒（30s × 3次）+ 重试延迟。
+> **重要说明**：超时策略放在最内层，每次重试都会应用超时限制。总超时上界约为：`Timeout × (MaxRetryAttempts + 1) + 重试延迟总和`。
 
 ## 分布式追踪
 
@@ -203,25 +222,28 @@ Http请求审计日志.TraceId：a1b2c3d4e5f6 Url：https://api.example.com/data
 ### 超时机制
 - **HttpClient.Timeout**：设置为无限，不控制超时
 - **Polly Timeout 策略**：完全控制超时行为，使用配置的 `Timeout` 值
+- **CancellationToken**：用于调用方主动取消请求，不与 Resilience 超时策略冲突
 
 ### 重试机制示例
 
 #### 场景1：自定义超时 30 秒
 ```csharp
 options.Timeout = 30;
+options.MaxRetryAttempts = 2;
+options.RetryDelaySeconds = 1;
 ```
 - 单次请求超过 30 秒 → 触发重试
-- 最多重试 3 次，每次都有 30 秒超时限制
-- 重试延迟：1s → 2s → 4s
-- 总耗时：最长约 97 秒（30s×3 + 1s + 2s + 4s）
+- 最多重试 2 次（共 3 次尝试），每次都有 30 秒超时限制
+- 重试延迟：1s → 2s
+- 总耗时：最长约 93 秒（30s×3 + 1s + 2s）
 
 #### 场景2：使用默认超时 100 秒
 ```csharp
 // 不设置 Timeout，使用默认值 100 秒
 ```
 - 单次请求超过 100 秒 → 触发重试
-- 最多重试 3 次，每次都有 100 秒超时限制
-- 总耗时：最长约 307 秒（100s×3 + 1s + 2s + 4s）
+- 默认最多重试 3 次（共 4 次尝试），每次都有 100 秒超时限制
+- 默认总耗时：最长约 407 秒（100s×4 + 1s + 2s + 4s）
 
 #### 场景3：401 未授权重试
 ```csharp
@@ -251,10 +273,12 @@ options.FailThrowException = true;
 
 ## 版本更新记录
 
-* 1.3.4
+* 2.0.0
   * 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
   * 请求超时统一由 `AddHttpClientService(options => options.Timeout = xx)` 全局配置控制
   * 单次请求如需提前终止，请使用 `CancellationToken`
+  * 增加可配置项：`ConcurrencyLimit`、`MaxRetryAttempts`、`RetryDelaySeconds`
+  * 日志脱敏支持自定义扩展字段与请求头
 * 1.3.3
   * 传递bearerToken的时候主动判断是否拼接Bearer头
 * 1.3.2

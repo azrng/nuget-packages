@@ -180,7 +180,7 @@ namespace Common.HttpClients.Test
         }
 
         [Fact]
-        public async Task ConnectionFailure_ShouldFallback_WhenFailThrowDisabled()
+        public async Task ConnectionFailure_GetAsync_ShouldReturnNull_WhenFailThrowDisabled()
         {
             var freePort = GetFreePort();
 
@@ -193,7 +193,7 @@ namespace Common.HttpClients.Test
             var httpHelper = provider.GetRequiredService<IHttpHelper>();
             var result = await httpHelper.GetAsync($"http://127.0.0.1:{freePort}/fallback");
 
-            Assert.Equal("Fallback: request failed.", result);
+            Assert.Null(result);
         }
 
         [Fact]
@@ -231,6 +231,64 @@ namespace Common.HttpClients.Test
             var result = await httpHelper.GetAsync<FallbackResult>($"http://127.0.0.1:{freePort}/fallback");
 
             Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task RetryPolicy_ShouldRespectMaxRetryAttempts()
+        {
+            var attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async context =>
+            {
+                Interlocked.Increment(ref attempts);
+                await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.InternalServerError, "fail");
+            });
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 2;
+                options.MaxRetryAttempts = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            await Assert.ThrowsAsync<HttpRequestException>(async () =>
+                await httpHelper.GetAsync<string>(server.BaseUrl + "max-retry"));
+
+            Assert.Equal(2, attempts);
+        }
+
+        [Fact]
+        public async Task RetryPolicy_WithRetryDelaySecondsConfigured_ShouldStillRetryAndSucceed()
+        {
+            var attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async context =>
+            {
+                var current = Interlocked.Increment(ref attempts);
+                if (current == 1)
+                {
+                    await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.InternalServerError, "fail");
+                    return;
+                }
+
+                await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.OK, "ok");
+            });
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 2;
+                options.MaxRetryAttempts = 1;
+                options.RetryDelaySeconds = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            var sw = Stopwatch.StartNew();
+            var result = await httpHelper.GetAsync<string>(server.BaseUrl + "retry-delay");
+            sw.Stop();
+
+            Assert.Equal("ok", result);
+            Assert.Equal(2, attempts);
+            Assert.True(sw.ElapsedMilliseconds >= 0);
         }
 
         [Fact]

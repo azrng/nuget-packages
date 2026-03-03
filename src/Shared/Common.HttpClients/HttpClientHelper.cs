@@ -32,6 +32,7 @@ namespace Common.HttpClients
         public async Task<Stream> GetStreamAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Get, url, jwtToken, headers);
+            request.Options.Set(HttpClientRequestOptionKeys.SkipResponseBodyAudit, true);
             var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead)
                 .ConfigureAwait(false);
 
@@ -254,6 +255,7 @@ namespace Common.HttpClients
             {
                 var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 _logger.LogError("API:{Url} error: {StatusCode} - {ErrorContent}", url, (int)response.StatusCode, errorContent);
+                return default;
             }
 
             return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -311,7 +313,7 @@ namespace Common.HttpClients
         {
             if (string.IsNullOrWhiteSpace(url))
             {
-                throw new ArgumentNullException(nameof(url), "api url涓嶈兘涓虹┖");
+                throw new ArgumentNullException(nameof(url), "api url cannot be empty");
             }
         }
     }

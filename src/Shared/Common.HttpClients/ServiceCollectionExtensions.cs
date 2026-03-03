@@ -5,6 +5,7 @@ using Polly;
 using Polly.Fallback;
 using Polly.Timeout;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -38,14 +39,36 @@ namespace Common.HttpClients
             var opt = new HttpClientOptions();
             configure.Invoke(opt);
 
-            if (opt.Timeout <= 0)
+            opt.AdditionalSensitiveHeaders ??= new List<string>();
+            opt.AdditionalSensitiveFields ??= new List<string>();
+
+            if (opt.Timeout < 1 || opt.Timeout > 3600)
             {
-                throw new ArgumentException($"{nameof(opt.Timeout)}无效");
+                throw new ArgumentOutOfRangeException(nameof(opt.Timeout), opt.Timeout, "Timeout必须在1-3600秒之间");
             }
 
             if (opt.MaxOutputResponseLength < 0)
             {
-                throw new ArgumentException($"{nameof(opt.MaxOutputResponseLength)}无效");
+                throw new ArgumentOutOfRangeException(nameof(opt.MaxOutputResponseLength), opt.MaxOutputResponseLength,
+                    "MaxOutputResponseLength不能小于0");
+            }
+
+            if (opt.ConcurrencyLimit < 1 || opt.ConcurrencyLimit > 10000)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opt.ConcurrencyLimit), opt.ConcurrencyLimit,
+                    "ConcurrencyLimit必须在1-10000之间");
+            }
+
+            if (opt.MaxRetryAttempts < 0 || opt.MaxRetryAttempts > 10)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opt.MaxRetryAttempts), opt.MaxRetryAttempts,
+                    "MaxRetryAttempts必须在0-10之间");
+            }
+
+            if (opt.RetryDelaySeconds < 1 || opt.RetryDelaySeconds > 300)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opt.RetryDelaySeconds), opt.RetryDelaySeconds,
+                    "RetryDelaySeconds必须在1-300之间");
             }
 
             // 配置HttpClient选项
@@ -108,13 +131,14 @@ namespace Common.HttpClients
                                         },
                                         FallbackAction = args =>
                                         {
-                                            // 如果配置了不抛出异常,返回一个服务不可用响应,避免伪装成成功
+                                            // 如果配置了不抛出异常,返回一个服务不可用响应,添加标识头以区分真实服务端响应
                                             // 否则保持原始异常,让它向上传播
                                              if (!httpOptions.FailThrowException)
                                              {
                                                  return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                                                                                       {
-                                                                                          Content = new StringContent("Fallback: request failed.")
+                                                                                          Content = new StringContent("Fallback: request failed."),
+                                                                                          Headers = { { "X-Fallback-Response", "true" } }
                                                                                       });
                                              }
 
@@ -124,17 +148,17 @@ namespace Common.HttpClients
                                     })
 
                        // 2. 并发限制策略 - 限制同时进行的HTTP请求数量，防止资源耗尽
-                       .AddConcurrencyLimiter(100)
+                       .AddConcurrencyLimiter(httpOptions.ConcurrencyLimit)
 
                        // 3. 重试策略 - 根据配置决定是否重试，最多重试3次，使用指数退避
                        // 注意：重试策略放在超时策略之前（外层），这样超时异常会被重试策略捕获并触发重试
                         .AddRetry(new HttpRetryStrategyOptions
                                   {
-                                      // 重试3次
-                                      MaxRetryAttempts = 3,
+                                      // 最大重试次数由配置控制
+                                      MaxRetryAttempts = httpOptions.MaxRetryAttempts,
 
-                                      // 初始延迟时间
-                                      Delay = TimeSpan.FromSeconds(1),
+                                      // 初始延迟时间由配置控制
+                                      Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
 
                                       // 指数退避策略，避免对服务器造成过大压力
                                       BackoffType = DelayBackoffType.Exponential,
@@ -202,6 +226,9 @@ namespace Common.HttpClients
                 config.FailThrowException = false;
                 config.Timeout = 100;
                 config.MaxOutputResponseLength = 1024 * 1024; // 1MB
+                config.ConcurrencyLimit = 100;
+                config.MaxRetryAttempts = 3;
+                config.RetryDelaySeconds = 1;
             });
         }
     }

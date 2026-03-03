@@ -143,15 +143,74 @@ namespace Common.HttpClients.Test
             Assert.DoesNotContain("binary-secret", logs);
         }
 
+        [Fact]
+        public async Task Logging_ShouldRedact_CustomSensitiveField()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: true,
+                additionalSensitiveFields: new[] { "mobile" });
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://unit.test/custom-redaction")
+                                {
+                                    Content = new StringContent("{\"mobile\":\"13800000000\",\"name\":\"az\"}",
+                                        Encoding.UTF8, "application/json")
+                                };
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+
+            Assert.DoesNotContain("13800000000", logs);
+            Assert.Contains("\"mobile\":\"***\"", logs);
+        }
+
+        [Fact]
+        public async Task Logging_ShouldRedact_CustomSensitiveHeader()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: true,
+                additionalSensitiveHeaders: new[] { "X-Secret" });
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://unit.test/header-redaction");
+            request.Headers.TryAddWithoutValidation("X-Secret", "my-secret-header-value");
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+
+            Assert.DoesNotContain("my-secret-header-value", logs);
+            Assert.Contains("***", logs);
+        }
+
+        [Fact]
+        public async Task Logging_ShouldSkipResponseBodyAudit_ForStreamingRequest()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: true, responseBody: "stream-body-secret");
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://unit.test/stream");
+            request.Options.Set(new HttpRequestOptionsKey<bool>("Common.HttpClients.SkipResponseBodyAudit"), true);
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+
+            Assert.DoesNotContain("stream-body-secret", logs);
+            Assert.Contains("response body skipped for streaming request", logs);
+        }
+
         private static LoggingHandler CreateLoggingClientHandler(ListLogger<LoggingHandler> logger, bool enableLogRedaction,
             bool auditLog = true, int maxOutputLength = 0, string responseBody = "{\"access_token\":\"resp-secret-token\",\"message\":\"ok\"}",
-            string responseContentType = "application/json", IHttpContextAccessor? accessor = null, Action<HttpRequestMessage>? onRequest = null)
+            string responseContentType = "application/json", IHttpContextAccessor? accessor = null, Action<HttpRequestMessage>? onRequest = null,
+            string[]? additionalSensitiveFields = null, string[]? additionalSensitiveHeaders = null)
         {
             var options = Options.Create(new HttpClientOptions
                                          {
                                              AuditLog = auditLog,
                                              EnableLogRedaction = enableLogRedaction,
-                                             MaxOutputResponseLength = maxOutputLength
+                                             MaxOutputResponseLength = maxOutputLength,
+                                             AdditionalSensitiveFields = additionalSensitiveFields ?? Array.Empty<string>(),
+                                             AdditionalSensitiveHeaders = additionalSensitiveHeaders ?? Array.Empty<string>()
                                          });
 
             var loggingHandler = new LoggingHandler(logger, options, accessor);
