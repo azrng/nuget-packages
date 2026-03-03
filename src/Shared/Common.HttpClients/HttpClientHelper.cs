@@ -1,4 +1,4 @@
-using Common.HttpClients.Utils;
+﻿using Common.HttpClients.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -29,8 +29,7 @@ namespace Common.HttpClients
             _httpConfig = httpConfig.Value;
         }
 
-        public async Task<Stream> GetStreamAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null,
-                                                 int? timeout = null, CancellationToken cancellation = default)
+        public async Task<Stream> GetStreamAsync(string url, string jwtToken = "", IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Get, url, jwtToken, headers);
             var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead)
@@ -60,17 +59,14 @@ namespace Common.HttpClients
             }
         }
 
-        public async Task<string> GetAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null,
-                                           int? timeout = null, CancellationToken cancellation = default)
+        public async Task<string> GetAsync(string url, string bearerToken = "", IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Get, url, bearerToken, headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
             return await ConvertResponseResult(response, url).ConfigureAwait(false);
         }
 
-        public async Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null,
-                                         int? timeout = null,
-                                         CancellationToken cancellation = default)
+        public async Task<T> GetAsync<T>(string url, string bearerToken = "", IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Get, url, bearerToken, headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -78,8 +74,7 @@ namespace Common.HttpClients
         }
 
         public async Task<string> PostAsync(string url, object data, string bearerToken = "",
-                                            IDictionary<string, string> headers = null, int? timeout = null,
-                                            CancellationToken cancellation = default)
+                                            IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
@@ -89,8 +84,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PostAsync<T>(string url, object data, string bearerToken = "",
-                                          IDictionary<string, string> headers = null, int? timeout = null,
-                                          CancellationToken cancellation = default)
+                                          IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
@@ -100,8 +94,7 @@ namespace Common.HttpClients
         }
 
         public async Task<string> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
-                                                    IDictionary<string, string> headers = null, int? timeout = null,
-                                                    CancellationToken cancellation = default)
+                                                    IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var httpContent = new FormUrlEncodedContent(data);
             using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, httpContent);
@@ -110,8 +103,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, string bearerToken = "",
-                                                  IDictionary<string, string> headers = null, int? timeout = null,
-                                                  CancellationToken cancellation = default)
+                                                  IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var httpContent = new FormUrlEncodedContent(data);
             using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, httpContent);
@@ -120,8 +112,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PostFormDataAsync<T>(string url, MultipartFormDataContent data, string bearerToken = "",
-                                                  IDictionary<string, string> headers = null, int? timeout = null,
-                                                  CancellationToken cancellation = default)
+                                                  IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, data);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -129,8 +120,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PostSoapAsync<T>(string url, string xmlData, string bearerToken = "",
-                                              IDictionary<string, string> headers = null, int? timeout = null,
-                                              CancellationToken cancellation = default)
+                                              IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var content = new StringContent(xmlData ?? string.Empty, Encoding.UTF8, "application/soap+xml");
             using var request = CreateRequestMessage(HttpMethod.Post, url, bearerToken, headers, content);
@@ -140,8 +130,7 @@ namespace Common.HttpClients
 
         public async Task<T> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName,
                                                   string bearerToken = "",
-                                                  IDictionary<string, string> headers = null, int? timeout = null,
-                                                  CancellationToken cancellation = default)
+                                                  IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var formData = new MultipartFormDataContent();
             using var byteContent = new StreamContent(stream);
@@ -157,8 +146,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PutAsync<T>(string url, object data, string bearerToken = "",
-                                         IDictionary<string, string> headers = null, int? timeout = null,
-                                         CancellationToken cancellation = default)
+                                         IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
@@ -168,8 +156,7 @@ namespace Common.HttpClients
         }
 
         public async Task<string> DeleteAsync(string url, string bearerToken = "",
-                                              IDictionary<string, string> headers = null, int? timeout = null,
-                                              CancellationToken cancellation = default)
+                                              IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Delete, url, bearerToken, headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -177,8 +164,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> DeleteAsync<T>(string url, string bearerToken = "",
-                                            IDictionary<string, string> headers = null, int? timeout = null,
-                                            CancellationToken cancellation = default)
+                                            IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             using var request = CreateRequestMessage(HttpMethod.Delete, url, bearerToken, headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -186,8 +172,7 @@ namespace Common.HttpClients
         }
 
         public async Task<T> PatchAsync<T>(string url, object data, string bearerToken = "",
-                                           IDictionary<string, string> headers = null, int? timeout = null,
-                                           CancellationToken cancellation = default)
+                                           IDictionary<string, string> headers = null, CancellationToken cancellation = default)
         {
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
@@ -197,8 +182,7 @@ namespace Common.HttpClients
         }
 
         public async Task<string> SendAsync(HttpRequestEnum requestEnum, string url, HttpContent httpContent,
-                                            MediaTypeHeaderValue mediaTypeHeader = null, int? timeout = null,
-                                            CancellationToken cancellation = default)
+                                            MediaTypeHeaderValue mediaTypeHeader = null, CancellationToken cancellation = default)
         {
             var method = requestEnum switch
             {
@@ -327,7 +311,7 @@ namespace Common.HttpClients
         {
             if (string.IsNullOrWhiteSpace(url))
             {
-                throw new ArgumentNullException(nameof(url), "api url不能为空");
+                throw new ArgumentNullException(nameof(url), "api url涓嶈兘涓虹┖");
             }
         }
     }

@@ -251,6 +251,10 @@ options.FailThrowException = true;
 
 ## 版本更新记录
 
+* 1.3.4
+  * 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
+  * 请求超时统一由 `AddHttpClientService(options => options.Timeout = xx)` 全局配置控制
+  * 单次请求如需提前终止，请使用 `CancellationToken`
 * 1.3.3
   * 传递bearerToken的时候主动判断是否拼接Bearer头
 * 1.3.2

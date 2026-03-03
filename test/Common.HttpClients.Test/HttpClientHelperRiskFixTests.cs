@@ -323,7 +323,7 @@ namespace Common.HttpClients.Test
         }
 
         [Fact]
-        public async Task GetAsync_WithTimeoutArgument_ShouldNotApplyLocalTimeout()
+        public async Task GetAsync_WithoutTimeoutParameter_ShouldStillSucceed()
         {
             using var client = new HttpClient(new DelegateHttpMessageHandler(async (_, cancellation) =>
             {
@@ -335,7 +335,7 @@ namespace Common.HttpClients.Test
             }));
 
             var helper = CreateHelper(client);
-            var result = await helper.GetAsync("https://unit.test/slow", timeout: 1, cancellation: CancellationToken.None);
+            var result = await helper.GetAsync("https://unit.test/slow", cancellation: CancellationToken.None);
 
             Assert.Equal("slow-but-ok", result);
         }
