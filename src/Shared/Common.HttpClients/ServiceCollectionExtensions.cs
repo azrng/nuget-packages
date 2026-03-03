@@ -25,6 +25,16 @@ namespace Common.HttpClients
         /// <returns>服务集合</returns>
         public static IServiceCollection AddHttpClientService(this IServiceCollection services, Action<HttpClientOptions> configure)
         {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
             var opt = new HttpClientOptions();
             configure.Invoke(opt);
 
@@ -93,16 +103,16 @@ namespace Common.HttpClients
                                             }
 
                                             var ex = args.Outcome.Exception;
-                                            var shouldHandle = ex is HttpRequestException or TaskCanceledException or TimeoutException;
+                                            var shouldHandle = ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
                                             return ValueTask.FromResult(shouldHandle);
                                         },
                                         FallbackAction = args =>
                                         {
-                                            // 如果配置了不抛出异常,返回一个 OK 状态的空响应
+                                            // 如果配置了不抛出异常,返回一个服务不可用响应,避免伪装成成功
                                             // 否则保持原始异常,让它向上传播
                                              if (!httpOptions.FailThrowException)
                                              {
-                                                 return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.OK)
+                                                 return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                                                                                       {
                                                                                           Content = new StringContent("Fallback: request failed.")
                                                                                       });
@@ -180,6 +190,11 @@ namespace Common.HttpClients
         /// <returns>服务集合</returns>
         public static IServiceCollection AddHttpClientService(this IServiceCollection services)
         {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
             return services.AddHttpClientService(config =>
             {
                 config.AuditLog = true;

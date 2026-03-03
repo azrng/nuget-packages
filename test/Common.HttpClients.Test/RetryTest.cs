@@ -2,6 +2,7 @@ using Common.HttpClients.Test.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using Xunit;
 
 namespace Common.HttpClients.Test
@@ -94,6 +95,161 @@ namespace Common.HttpClients.Test
             Assert.Equal(1, attempts);
         }
 
+        [Fact]
+        public async Task Unauthorized_ShouldRetry_WhenEnabled()
+        {
+            var attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async context =>
+            {
+                var current = Interlocked.Increment(ref attempts);
+                if (current <= 2)
+                {
+                    await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.Unauthorized, "unauthorized");
+                    return;
+                }
+
+                await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.OK, "ok");
+            });
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 3;
+                options.RetryOnUnauthorized = true;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            var result = await httpHelper.GetAsync<string>(server.BaseUrl + "unauthorized");
+
+            Assert.Equal("ok", result);
+            Assert.Equal(3, attempts);
+        }
+
+        [Fact]
+        public async Task Unauthorized_ShouldNotRetry_WhenDisabled()
+        {
+            var attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async context =>
+            {
+                Interlocked.Increment(ref attempts);
+                await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.Unauthorized, "unauthorized");
+            });
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 3;
+                options.RetryOnUnauthorized = false;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+
+            await Assert.ThrowsAsync<HttpRequestException>(async () =>
+                await httpHelper.GetAsync<string>(server.BaseUrl + "unauthorized"));
+
+            Assert.Equal(1, attempts);
+        }
+
+        [Fact]
+        public async Task RequestTimeoutStatus_ShouldRetry_AndFinallySucceed()
+        {
+            var attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async context =>
+            {
+                var current = Interlocked.Increment(ref attempts);
+                if (current <= 2)
+                {
+                    await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.RequestTimeout, "request-timeout");
+                    return;
+                }
+
+                await ScriptedHttpListenerServer.WriteResponseAsync(context, HttpStatusCode.OK, "ok");
+            });
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 3;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            var result = await httpHelper.GetAsync<string>(server.BaseUrl + "request-timeout");
+
+            Assert.Equal("ok", result);
+            Assert.Equal(3, attempts);
+        }
+
+        [Fact]
+        public async Task ConnectionFailure_ShouldFallback_WhenFailThrowDisabled()
+        {
+            var freePort = GetFreePort();
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = false;
+                options.Timeout = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            var result = await httpHelper.GetAsync($"http://127.0.0.1:{freePort}/fallback");
+
+            Assert.Equal("Fallback: request failed.", result);
+        }
+
+        [Fact]
+        public async Task ConnectionFailure_SendAsync_ShouldReturn503_WhenFailThrowDisabled()
+        {
+            var freePort = GetFreePort();
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = false;
+                options.Timeout = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"http://127.0.0.1:{freePort}/fallback");
+            using var response = await httpHelper.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            Assert.Equal("Fallback: request failed.", content);
+        }
+
+        [Fact]
+        public async Task ConnectionFailure_GenericGet_ShouldReturnDefault_WhenFailThrowDisabled()
+        {
+            var freePort = GetFreePort();
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = false;
+                options.Timeout = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+            var result = await httpHelper.GetAsync<FallbackResult>($"http://127.0.0.1:{freePort}/fallback");
+
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task ConnectionFailure_ShouldThrow_WhenFailThrowEnabled()
+        {
+            var freePort = GetFreePort();
+
+            using var provider = BuildServiceProvider(options =>
+            {
+                options.FailThrowException = true;
+                options.Timeout = 1;
+            });
+
+            var httpHelper = provider.GetRequiredService<IHttpHelper>();
+
+            await Assert.ThrowsAnyAsync<Exception>(async () =>
+                await httpHelper.GetAsync<string>($"http://127.0.0.1:{freePort}/fallback"));
+        }
+
         private static ServiceProvider BuildServiceProvider(Action<HttpClientOptions> setup)
         {
             var services = new ServiceCollection();
@@ -109,6 +265,20 @@ namespace Common.HttpClients.Test
             });
 
             return services.BuildServiceProvider();
+        }
+
+        private static int GetFreePort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
+
+        private sealed class FallbackResult
+        {
+            public string? Name { get; set; }
         }
     }
 }
