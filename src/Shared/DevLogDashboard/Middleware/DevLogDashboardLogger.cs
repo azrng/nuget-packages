@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using DevLogDashboard.Storage;
 using DevLogDashboard.Options;
 using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Http;
 
 namespace DevLogDashboard.Middleware;
 
@@ -13,16 +14,19 @@ public class DevLogDashboardLogger : ILogger, IDisposable
     private readonly string _category;
     private readonly ILogStore _logStore;
     private readonly DevLogDashboardOptions _options;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
     private readonly IDisposable? _scope;
 
     public DevLogDashboardLogger(
         string category,
         ILogStore logStore,
-        DevLogDashboardOptions options)
+        DevLogDashboardOptions options,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         _category = category;
         _logStore = logStore;
         _options = options;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public IDisposable? BeginScope<TState>(TState state)
@@ -58,14 +62,27 @@ public class DevLogDashboardLogger : ILogger, IDisposable
             return;
         }
 
+        // 获取当前 HTTP 上下文
+        var httpContext = _httpContextAccessor?.HttpContext;
+        var requestId = httpContext?.TraceIdentifier;
+        var connectionId = httpContext?.Connection.Id;
+        var requestPath = httpContext?.Request.Path;
+        var requestMethod = httpContext?.Request.Method;
+        var responseStatusCode = httpContext?.Response.StatusCode;
+
         var logEntry = new LogEntry
         {
             Id = Guid.NewGuid().ToString("N"),
+            RequestId = requestId,
+            ConnectionId = connectionId,
             Level = ConvertLogLevel(logLevel),
             Message = message,
             Timestamp = DateTime.Now,
             Source = _category,
             EventId = eventId.Id,
+            RequestPath = requestPath?.ToString(),
+            RequestMethod = requestMethod,
+            ResponseStatusCode = responseStatusCode,
             Exception = exception?.ToString(),
             StackTrace = exception?.StackTrace,
             MachineName = Environment.MachineName,

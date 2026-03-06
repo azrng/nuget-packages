@@ -31,12 +31,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILogStore>(sp =>
             new InMemoryLogStore(options.MaxLogCount));
 
+        // 注册 HTTP 上下文访问器
+        services.AddHttpContextAccessor();
+
         // 注册日志提供程序
         services.AddSingleton<ILoggerProvider>(sp =>
         {
             var logStore = sp.GetRequiredService<ILogStore>();
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
-            return new DevLogDashboardLoggerProvider(logStore, opts);
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
         });
 
         return new DefaultLogDashboardBuilder(services, options);
@@ -60,12 +64,6 @@ public static class ServiceCollectionExtensions
                 loggerFactory.AddProvider(provider);
             }
         }
-
-        // 注册端点
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapDashboardEndpoints();
-        });
 
         // 使用请求日志中间件（需要在最前面）
         app.Use(async (context, next) =>
@@ -94,18 +92,18 @@ public static class ServiceCollectionExtensions
             }
         });
 
-        // 使用仪表板中间件（处理 UI 请求）
-        app.UseMiddleware<DevLogDashboardMiddleware>(options);
+        // 使用 Map 方式注册仪表板，完全自包含，不需要 UseRouting 和 UseEndpoints
+        app.Map(options.EndpointPath, branch => branch.UseMiddleware<DevLogDashboardMiddleware>());
 
         return app;
     }
 
     private static bool ShouldSkipRequest(HttpContext context, DevLogDashboardOptions options)
     {
-        // 检查是否跳过仪表板路径
+        // 检查是否跳过仪表板路径（组件本身的请求不应该被记录）
         if (context.Request.Path.StartsWithSegments(options.EndpointPath))
         {
-            return false;
+            return true; // 跳过仪表板自身的日志
         }
 
         // 检查路径

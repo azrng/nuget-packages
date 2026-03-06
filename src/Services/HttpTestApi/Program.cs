@@ -37,12 +37,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    // 使用 DevLogDashboard（仅在开发环境）
+    // 使用 DevLogDashboard（完全自包含，不需要额外的路由设置）
     app.UseDevLogDashboard();
 }
 
 app.UseAuthorization();
-
 app.MapControllers();
 
 // 输出访问地址

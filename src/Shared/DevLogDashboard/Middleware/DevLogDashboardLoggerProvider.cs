@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using DevLogDashboard.Storage;
 using DevLogDashboard.Options;
+using Microsoft.AspNetCore.Http;
 
 namespace DevLogDashboard.Middleware;
 
@@ -13,19 +14,21 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
 {
     private readonly ILogStore _logStore;
     private readonly DevLogDashboardOptions _options;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ConcurrentDictionary<string, DevLogDashboardLogger> _loggers = new();
     private IExternalScopeProvider? _scopeProvider;
 
-    public DevLogDashboardLoggerProvider(ILogStore logStore, DevLogDashboardOptions options)
+    public DevLogDashboardLoggerProvider(ILogStore logStore, DevLogDashboardOptions options, IHttpContextAccessor httpContextAccessor)
     {
         _logStore = logStore;
         _options = options;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName, name =>
-            new DevLogDashboardLogger(name, _logStore, _options));
+            new DevLogDashboardLogger(name, _logStore, _options, _httpContextAccessor));
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)

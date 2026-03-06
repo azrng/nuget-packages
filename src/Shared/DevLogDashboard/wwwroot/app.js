@@ -1,6 +1,6 @@
 // DevLogDashboard 前端应用
 
-const API_BASE = '/dev-logs-api';
+const API_BASE = 'api'; // 相对于当前页面的 API 路径
 
 // 状态
 let currentPage = 1;
@@ -155,11 +155,17 @@ function renderLogList(result) {
         return;
     }
 
-    listEl.innerHTML = result.items.map(log => `
+    listEl.innerHTML = result.items.map(log => {
+        // 将 level 转换为字符串（处理数字枚举和字符串两种情况）
+        const levelStr = typeof log.level === 'number'
+            ? ['trace', 'debug', 'information', 'warning', 'error', 'critical'][log.level] || 'unknown'
+            : String(log.level).toLowerCase();
+
+        return `
         <div class="log-item ${getLogClass(log.level)}" data-log-id="${log.id}" onclick="toggleLogDetail('${log.id}')">
             <div class="log-header">
                 <span class="log-time">${formatTimestamp(log.timestamp)}</span>
-                <span class="log-level-dot ${log.level.toLowerCase()}" title="${log.level}"></span>
+                <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                 <span class="log-message">${escapeHtml(log.message)}</span>
             </div>
             <div class="log-detail" id="detail-${log.id}">
@@ -169,7 +175,8 @@ function renderLogList(result) {
                 ${log.exception ? `<div class="stack-trace">${escapeHtml(log.exception)}</div>` : ''}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 渲染属性行
@@ -403,7 +410,14 @@ document.addEventListener('click', (e) => {
 // 工具函数
 
 function getLogClass(level) {
-    const levelLower = level.toLowerCase();
+    if (!level) return '';
+
+    // 如果是数字（LogLevel 枚举），转换为字符串
+    const levelStr = typeof level === 'number'
+        ? ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'][level] || ''
+        : String(level);
+
+    const levelLower = levelStr.toLowerCase();
     if (levelLower === 'error' || levelLower === 'fatal' || levelLower === 'critical') return 'error';
     if (levelLower === 'warn' || levelLower === 'warning') return 'warn';
     return '';
