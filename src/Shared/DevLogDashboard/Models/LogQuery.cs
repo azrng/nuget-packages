@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace DevLogDashboard;
+namespace Azrng.DevLogDashboard.Models;
 
 /// <summary>
 /// 日志查询条件

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace DevLogDashboard.Options;
+namespace Azrng.DevLogDashboard.Options;
 
 /// <summary>
 /// DevLogDashboard 配置选项

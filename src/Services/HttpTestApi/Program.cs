@@ -1,5 +1,5 @@
+using Azrng.DevLogDashboard.Extensions;
 using Common.HttpClients;
-using DevLogDashboard.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

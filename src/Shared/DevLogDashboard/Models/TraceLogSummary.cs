@@ -1,4 +1,4 @@
-namespace DevLogDashboard;
+namespace Azrng.DevLogDashboard.Models;
 
 /// <summary>
 /// 追踪日志汇总信息

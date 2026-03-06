@@ -1,6 +1,7 @@
+using Azrng.DevLogDashboard.Models;
 using Microsoft.Extensions.Logging;
 
-namespace DevLogDashboard.Storage;
+namespace Azrng.DevLogDashboard.Storage;
 
 /// <summary>
 /// 日志存储接口

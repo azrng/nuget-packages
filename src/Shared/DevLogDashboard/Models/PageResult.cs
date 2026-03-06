@@ -1,4 +1,4 @@
-namespace DevLogDashboard;
+namespace Azrng.DevLogDashboard.Models;
 
 /// <summary>
 /// 分页结果模型

@@ -1,7 +1,8 @@
-using System.Collections.Concurrent;
+using Azrng.DevLogDashboard.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
-namespace DevLogDashboard.Storage;
+namespace Azrng.DevLogDashboard.Storage;
 
 /// <summary>
 /// 内存日志存储实现
@@ -19,7 +20,7 @@ public class InMemoryLogStore : ILogStore
 
     public int Count => _logs.Count;
 
-    public void Add(LogEntry entry)
+    public void Add(LogEntry? entry)
     {
         if (entry == null) return;
 

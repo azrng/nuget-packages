@@ -1,4 +1,4 @@
-namespace DevLogDashboard;
+namespace Azrng.DevLogDashboard;
 
 /// <summary>
 /// DevLogDashboard 常量定义

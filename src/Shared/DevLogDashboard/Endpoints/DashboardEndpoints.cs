@@ -1,6 +1,5 @@
-using DevLogDashboard;
-using DevLogDashboard.Models;
-using DevLogDashboard.Storage;
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

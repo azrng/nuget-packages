@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
-using DevLogDashboard.Storage;
-using DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
-namespace DevLogDashboard.Middleware;
+namespace Azrng.DevLogDashboard.Middleware;
 
 /// <summary>
 /// DevLogDashboard 日志提供程序
@@ -16,7 +16,6 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ConcurrentDictionary<string, DevLogDashboardLogger> _loggers = new();
-    private IExternalScopeProvider? _scopeProvider;
 
     public DevLogDashboardLoggerProvider(ILogStore logStore, DevLogDashboardOptions options, IHttpContextAccessor httpContextAccessor)
     {
@@ -32,9 +31,7 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
-    {
-        _scopeProvider = scopeProvider;
-    }
+    { }
 
     public void Dispose()
     {

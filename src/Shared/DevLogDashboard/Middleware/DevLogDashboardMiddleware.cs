@@ -1,10 +1,10 @@
-using System.Reflection;
-using DevLogDashboard.Options;
-using DevLogDashboard.Storage;
+using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
-namespace DevLogDashboard.Middleware;
+namespace Azrng.DevLogDashboard.Middleware;
 
 /// <summary>
 /// DevLogDashboard 仪表板中间件
@@ -30,7 +30,7 @@ public class DevLogDashboardMiddleware
         // 从服务容器获取所需服务
         var options = context.RequestServices.GetRequiredService<DevLogDashboardOptions>();
         var logStore = context.RequestServices.GetRequiredService<ILogStore>();
-        var apiHandler = new DevLogDashboardApiHandler(logStore, options);
+        var apiHandler = new DevLogDashboardApiHandler(logStore);
 
         var path = context.Request.Path.Value ?? "";
 

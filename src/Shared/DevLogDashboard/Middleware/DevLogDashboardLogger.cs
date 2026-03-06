@@ -1,10 +1,10 @@
-using Microsoft.Extensions.Logging;
-using DevLogDashboard.Storage;
-using DevLogDashboard.Options;
-using Microsoft.Extensions.Primitives;
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
-namespace DevLogDashboard.Middleware;
+namespace Azrng.DevLogDashboard.Middleware;
 
 /// <summary>
 /// DevLogDashboard 日志记录器

@@ -1,4 +1,4 @@
-namespace DevLogDashboard.Models;
+namespace Azrng.DevLogDashboard.Models;
 
 /// <summary>
 /// 仪表板首页数据模型

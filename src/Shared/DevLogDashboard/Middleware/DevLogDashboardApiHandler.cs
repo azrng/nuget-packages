@@ -1,11 +1,10 @@
-using System.Text.Json;
-using DevLogDashboard.Models;
-using DevLogDashboard.Options;
-using DevLogDashboard.Storage;
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
-namespace DevLogDashboard.Middleware;
+namespace Azrng.DevLogDashboard.Middleware;
 
 /// <summary>
 /// DevLogDashboard API 处理器
@@ -19,12 +18,10 @@ internal class DevLogDashboardApiHandler
     };
 
     private readonly ILogStore _logStore;
-    private readonly DevLogDashboardOptions _options;
 
-    public DevLogDashboardApiHandler(ILogStore logStore, DevLogDashboardOptions options)
+    public DevLogDashboardApiHandler(ILogStore logStore)
     {
         _logStore = logStore;
-        _options = options;
     }
 
     public async Task HandleApiRequestAsync(HttpContext context)

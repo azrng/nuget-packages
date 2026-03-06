@@ -1,13 +1,13 @@
-using Azrng.DevLogDashboard.Endpoints;
-using DevLogDashboard.Middleware;
-using DevLogDashboard.Options;
-using DevLogDashboard.Storage;
-using Microsoft.Extensions.Logging;
+using Azrng.DevLogDashboard.Middleware;
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-namespace DevLogDashboard.Extensions;
+namespace Azrng.DevLogDashboard.Extensions;
 
 /// <summary>
 /// ServiceCollection 扩展方法

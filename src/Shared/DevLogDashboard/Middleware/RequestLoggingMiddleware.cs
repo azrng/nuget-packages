@@ -1,10 +1,11 @@
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using DevLogDashboard.Storage;
-using DevLogDashboard.Options;
 
-namespace DevLogDashboard.Middleware;
+namespace Azrng.DevLogDashboard.Middleware;
 
 /// <summary>
 /// 日志采集中间件
