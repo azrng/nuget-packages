@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevLogDashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <div class="header-left">
+                <nav class="tabs">
+                    <a href="#" class="tab active" data-tab="logs">Logs</a>
+                    <a href="#" class="tab" data-tab="traces">Traces</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="btn-icon" id="btnRefresh" title="刷新">⟳</button>
+                <button class="btn-icon" id="btnClear" title="清空日志">🗑</button>
+            </div>
+        </header>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <div class="search-input-wrapper">
+                <input type="text" id="searchInput" class="search-input"
+                       placeholder="例：精准查询：message=&quot;message&quot;, 模糊查询：message like &quot;message&quot;, 使用 and 或者 or 组合表达式">
+                <button class="btn-search" id="btnSearch">🔍</button>
+            </div>
+        </div>
+
+        <!-- 筛选工具栏 -->
+        <div class="filter-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="chkOrderByTime"> 按时间排序
+            </label>
+            <select id="ddlLevel" class="select">
+                <option value="">All Levels</option>
+                <option value="TRACE">TRACE</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="ERROR">ERROR</option>
+                <option value="FATAL">FATAL</option>
+            </select>
+            <select id="ddlApplication" class="select">
+                <option value="">All Applications</option>
+            </select>
+            <div class="date-range">
+                <input type="datetime-local" id="txtStartTime" class="date-input">
+                <span class="date-separator">~</span>
+                <input type="datetime-local" id="txtEndTime" class="date-input">
+                <button class="btn-date" id="btnDateRange">📅</button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- Logs 面板 -->
+            <div id="panelLogs" class="panel active">
+                <div id="logList" class="log-list">
+                    <div class="empty-state">
+                        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-width="2"/>
+                        </svg>
+                        <p>没有相关日志</p>
+                    </div>
+                </div>
+                <div id="logPagination" class="pagination"></div>
+            </div>
+
+            <!-- Traces 面板 -->
+            <div id="panelTraces" class="panel">
+                <div id="traceList" class="trace-list">
+                    <div class="empty-state">
+                        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/>
+                        </svg>
+                        <p>没有追踪记录</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 日志详情弹窗 -->
+    <div id="logDetailModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>日志详情</h3>
+                <button class="btn-close" onclick="closeLogDetail()">&times;</button>
+            </div>
+            <div class="modal-body" id="logDetailBody">
+                <!-- 详情内容动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -14,5 +14,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Shared\Common.HttpClients\Common.HttpClients.csproj"/>
+        <ProjectReference Include="..\..\Shared\DevLogDashboard\DevLogDashboard.csproj" />
     </ItemGroup>
 </Project>

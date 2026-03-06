@@ -1,4 +1,5 @@
 using Common.HttpClients;
+using DevLogDashboard.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,15 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// 添加 DevLogDashboard 服务
+builder.Services.AddDevLogDashboard(options =>
+{
+    options.EndpointPath = "/dev-logs";
+    options.MaxLogCount = 10000;
+    options.ApplicationName = "SampleWebApi";
+    options.ApplicationVersion = "1.0.0";
+});
 
 builder.Services.AddHttpClientService(options =>
 {
@@ -26,10 +36,19 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // 使用 DevLogDashboard（仅在开发环境）
+    app.UseDevLogDashboard();
 }
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+// 输出访问地址
+Console.WriteLine("===========================================");
+Console.WriteLine($"访问地址：http://localhost:5132/dev-logs");
+Console.WriteLine($"Swagger 地址：http://localhost:5132/swagger");
+Console.WriteLine("===========================================");
 
 app.Run();

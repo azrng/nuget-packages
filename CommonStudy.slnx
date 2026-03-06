@@ -3,6 +3,7 @@
     <Project Path="src/Services/HttpTestApi/HttpTestApi.csproj" Id="e45752b4-f3b3-4d38-871b-32b2b093d503" />
   </Folder>
   <Folder Name="/Shared/">
+    <Project Path="src/Shared/DevLogDashboard/DevLogDashboard.csproj" />
     <Project Path="src\Shared\CommonCollect\CommonCollect.csproj" />
     <Project Path="src\Shared\StudyUse\StudyUse.csproj" />
   </Folder>
