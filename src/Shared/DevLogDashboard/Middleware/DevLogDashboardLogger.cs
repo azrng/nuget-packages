@@ -38,9 +38,9 @@ public class DevLogDashboardLogger : ILogger
         return logLevel >= ConvertLogLevel(_options.MinLogLevel);
     }
 
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    IDisposable ILogger.BeginScope<TState>(TState state)
     {
-        return null;
+        return null!;
     }
 
     public void Log<TState>(

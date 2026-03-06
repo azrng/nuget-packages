@@ -90,10 +90,10 @@ public class InMemoryLogStore : ILogStore
 
         var summaries = queryable
             .Where(x => !string.IsNullOrEmpty(x.RequestId))
-            .GroupBy(x => x.RequestId)
+            .GroupBy(x => x.RequestId!)
             .Select(g => new TraceLogSummary
             {
-                RequestId = g.Key,
+                RequestId = g.Key!,
                 LogCount = g.Count(),
                 FirstTimestamp = g.Min(x => x.Timestamp),
                 LastTimestamp = g.Max(x => x.Timestamp),
