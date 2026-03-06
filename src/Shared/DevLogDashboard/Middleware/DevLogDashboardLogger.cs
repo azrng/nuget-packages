@@ -28,9 +28,9 @@ public class DevLogDashboardLogger : ILogger
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel)
+    public bool IsEnabled(LogLevel logLevel)
     {
-        if (_options.OnlyLogErrors && logLevel < Microsoft.Extensions.Logging.LogLevel.Warning)
+        if (_options.OnlyLogErrors && logLevel < LogLevel.Warning)
         {
             return false;
         }
@@ -110,16 +110,16 @@ public class DevLogDashboardLogger : ILogger
         _logStore.Add(logEntry);
     }
 
-    private static LogLevel ConvertLogLevel(Microsoft.Extensions.Logging.LogLevel logLevel)
+    private static LogLevel ConvertLogLevel(LogLevel logLevel)
     {
         return logLevel switch
         {
-            Microsoft.Extensions.Logging.LogLevel.Trace => LogLevel.Trace,
-            Microsoft.Extensions.Logging.LogLevel.Debug => LogLevel.Debug,
-            Microsoft.Extensions.Logging.LogLevel.Information => LogLevel.Information,
-            Microsoft.Extensions.Logging.LogLevel.Warning => LogLevel.Warning,
-            Microsoft.Extensions.Logging.LogLevel.Error => LogLevel.Error,
-            Microsoft.Extensions.Logging.LogLevel.Critical => LogLevel.Critical,
+            LogLevel.Trace => LogLevel.Trace,
+            LogLevel.Debug => LogLevel.Debug,
+            LogLevel.Information => LogLevel.Information,
+            LogLevel.Warning => LogLevel.Warning,
+            LogLevel.Error => LogLevel.Error,
+            LogLevel.Critical => LogLevel.Critical,
             _ => LogLevel.Information
         };
     }

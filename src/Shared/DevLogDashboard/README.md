@@ -118,22 +118,6 @@ public class ValuesController : ControllerBase
 
 ## 高级用法
 
-### 流式构建器配置
-
-```csharp
-builder.Services.AddDevLogDashboard()
-    .WithEndpointPath("/logs")
-    .WithMaxLogCount(5000)
-    .WithApplicationName("MyApi")
-    .WithApplicationVersion("1.0.0")
-    .WithIgnoredPaths(new[] { "/health", "/metrics" })
-    .WithAuthorization(async context =>
-    {
-        // 自定义授权逻辑
-        return await Task.FromResult(context.User.Identity?.IsAuthenticated ?? false);
-    });
-```
-
 ### 只记录错误日志
 
 ```csharp

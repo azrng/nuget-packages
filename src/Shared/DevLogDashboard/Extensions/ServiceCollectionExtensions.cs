@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// 添加 DevLogDashboard 服务
     /// </summary>
-    public static ILogDashboardBuilder AddDevLogDashboard(
+    public static IServiceCollection AddDevLogDashboard(
         this IServiceCollection services,
         Action<DevLogDashboardOptions>? configureOptions = null)
     {
@@ -43,7 +43,7 @@ public static class ServiceCollectionExtensions
             return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
         });
 
-        return new DefaultLogDashboardBuilder(services, options);
+        return services;
     }
 
     /// <summary>
@@ -187,83 +187,5 @@ public static class ServiceCollectionExtensions
         logEntry.Properties["EventType"] = "Exception";
 
         logStore.Add(logEntry);
-    }
-}
-
-/// <summary>
-/// DevLogDashboard 构建器接口
-/// </summary>
-public interface ILogDashboardBuilder
-{
-    IServiceCollection Services { get; }
-    DevLogDashboardOptions Options { get; }
-}
-
-/// <summary>
-/// 默认 DevLogDashboard 构建器
-/// </summary>
-internal class DefaultLogDashboardBuilder : ILogDashboardBuilder
-{
-    public IServiceCollection Services { get; }
-    public DevLogDashboardOptions Options { get; }
-
-    public DefaultLogDashboardBuilder(IServiceCollection services, DevLogDashboardOptions options)
-    {
-        Services = services;
-        Options = options;
-    }
-
-    /// <summary>
-    /// 配置授权过滤器
-    /// </summary>
-    public ILogDashboardBuilder WithAuthorization(Func<HttpContext, Task<bool>> filter)
-    {
-        Options.AuthorizationFilter = filter;
-        return this;
-    }
-
-    /// <summary>
-    /// 配置最大日志数量
-    /// </summary>
-    public ILogDashboardBuilder WithMaxLogCount(int maxLogCount)
-    {
-        Options.MaxLogCount = maxLogCount;
-        return this;
-    }
-
-    /// <summary>
-    /// 配置仪表板路径
-    /// </summary>
-    public ILogDashboardBuilder WithEndpointPath(string path)
-    {
-        Options.EndpointPath = path;
-        return this;
-    }
-
-    /// <summary>
-    /// 配置忽略的路径
-    /// </summary>
-    public ILogDashboardBuilder WithIgnoredPaths(IEnumerable<string> paths)
-    {
-        Options.IgnoredPaths = paths.ToList();
-        return this;
-    }
-
-    /// <summary>
-    /// 配置应用名称
-    /// </summary>
-    public ILogDashboardBuilder WithApplicationName(string name)
-    {
-        Options.ApplicationName = name;
-        return this;
-    }
-
-    /// <summary>
-    /// 配置应用版本
-    /// </summary>
-    public ILogDashboardBuilder WithApplicationVersion(string version)
-    {
-        Options.ApplicationVersion = version;
-        return this;
     }
 }
