@@ -98,6 +98,11 @@ body {
     border-color: var(--primary-color);
 }
 
+.icon-trash {
+    width: 18px;
+    height: 18px;
+}
+
 /* 搜索栏样式 */
 .search-bar {
     background: var(--card-bg);
@@ -342,7 +347,7 @@ body {
     border-top: 1px solid var(--border-color);
 }
 
-.log-item.expanded .log-detail {
+.log-item.show-detail .log-detail {
     display: block;
 }
 
@@ -379,6 +384,12 @@ body {
 
 .prop-status.exists {
     color: var(--success-color);
+    cursor: pointer;
+}
+
+.prop-status.exists:hover {
+    color: #4caf50;
+    text-decoration: underline;
 }
 
 .prop-status.missing {

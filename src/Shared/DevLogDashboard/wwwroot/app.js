@@ -168,7 +168,7 @@ function renderLogList(result) {
                 <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                 <span class="log-message">${escapeHtml(log.message)}</span>
             </div>
-            <div class="log-detail" id="detail-${log.id}">
+            <div class="log-detail" id="detail-${log.id}" onclick="event.stopPropagation();">
                 <table class="property-table">
                     ${renderPropertyRows(log)}
                 </table>
@@ -198,10 +198,12 @@ function renderPropertyRows(log) {
         html += `
             <tr>
                 <th>
-                    <span class="prop-status ${exists ? 'exists' : 'missing'}">${exists ? '✓' : '✗'}</span>
+                    <span class="prop-status ${exists ? 'exists' : 'missing'}"
+                          ${exists ? `onclick="quickSearch('${escapeJs(key)}', '${escapeJs(displayValue)}'); event.stopPropagation();"` : ''}
+                          title="${exists ? '点击搜索相同值' : ''}">${exists ? '✓' : '✗'}</span>
                     ${key}
                 </th>
-                <td>${escapeHtml(displayValue)}</td>
+                <td colspan="2">${escapeHtml(displayValue)}</td>
             </tr>
         `;
     }
@@ -226,23 +228,32 @@ function renderPropertyRows(log) {
     return html;
 }
 
-// 切换日志详情
+// 切换日志详情（点击展开，再次点击关闭）
 function toggleLogDetail(logId) {
     const logItem = document.querySelector(`[data-log-id="${logId}"]`);
-    const detailEl = document.getElementById(`detail-${logId}`);
+    if (!logItem) return;
 
-    if (!detailEl) return;
+    const isExpanded = logItem.classList.contains('show-detail');
 
-    const isExpanded = logItem.classList.contains('expanded');
-
-    // 关闭其他展开的项
-    document.querySelectorAll('.log-item.expanded').forEach(item => {
-        item.classList.remove('expanded');
+    // 关闭其他展开的项（不包括当前点击的）
+    document.querySelectorAll('.log-item.show-detail').forEach(item => {
+        if (item !== logItem) {
+            item.classList.remove('show-detail');
+        }
     });
 
-    if (!isExpanded) {
-        logItem.classList.add('expanded');
+    // 切换当前项的状态：如果已展开则关闭，未展开则展开
+    if (isExpanded) {
+        logItem.classList.remove('show-detail');
+    } else {
+        logItem.classList.add('show-detail');
     }
+}
+
+// 快捷搜索
+function quickSearch(key, value) {
+    document.getElementById('searchInput').value = `${key}="${value}"`;
+    performSearch();
 }
 
 // 渲染分页
@@ -440,4 +451,14 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function escapeJs(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
 }

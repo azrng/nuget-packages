@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevLogDashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=2">
+    <link rel="stylesheet" href="./styles.css?v=3">
 </head>
 <body>
     <div id="app">
@@ -18,7 +18,11 @@
             </div>
             <div class="header-right">
                 <button class="btn-icon" id="btnRefresh" title="刷新">⟳</button>
-                <button class="btn-icon" id="btnClear" title="清空日志">🗑</button>
+                <button class="btn-icon" id="btnClear" title="清空日志">
+                    <svg class="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -99,6 +103,6 @@
         </div>
     </div>
 
-    <script src="./app.js?v=4"></script>
+    <script src="./app.js?v=11"></script>
 </body>
 </html>
