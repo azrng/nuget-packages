@@ -19,9 +19,4 @@ public static class DevLogDashboardConsts
     /// 默认最大日志数量
     /// </summary>
     public const int DefaultMaxLogCount = 10000;
-
-    /// <summary>
-    /// 默认日志保留时间（小时）
-    /// </summary>
-    public const int DefaultRetentionHours = 24;
 }

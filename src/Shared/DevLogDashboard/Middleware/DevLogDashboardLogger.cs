@@ -9,13 +9,12 @@ namespace Azrng.DevLogDashboard.Middleware;
 /// <summary>
 /// DevLogDashboard 日志记录器
 /// </summary>
-public class DevLogDashboardLogger : ILogger, IDisposable
+public class DevLogDashboardLogger : ILogger
 {
     private readonly string _category;
     private readonly ILogStore _logStore;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor? _httpContextAccessor;
-    private readonly IDisposable? _scope;
 
     public DevLogDashboardLogger(
         string category,
@@ -29,11 +28,6 @@ public class DevLogDashboardLogger : ILogger, IDisposable
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public IDisposable? BeginScope<TState>(TState state)
-    {
-        return _scope;
-    }
-
     public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel)
     {
         if (_options.OnlyLogErrors && logLevel < Microsoft.Extensions.Logging.LogLevel.Warning)
@@ -42,6 +36,11 @@ public class DevLogDashboardLogger : ILogger, IDisposable
         }
 
         return logLevel >= ConvertLogLevel(_options.MinLogLevel);
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return null;
     }
 
     public void Log<TState>(
@@ -109,11 +108,6 @@ public class DevLogDashboardLogger : ILogger, IDisposable
         }
 
         _logStore.Add(logEntry);
-    }
-
-    public void Dispose()
-    {
-        _scope?.Dispose();
     }
 
     private static LogLevel ConvertLogLevel(Microsoft.Extensions.Logging.LogLevel logLevel)

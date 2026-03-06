@@ -13,14 +13,9 @@ public class LogQuery
     public string? Keyword { get; set; }
 
     /// <summary>
-    /// 日志级别筛选
+    /// 日志级别筛选（最小级别，将筛选出该级别及更高级别的日志）
     /// </summary>
     public LogLevel? MinLevel { get; set; }
-
-    /// <summary>
-    /// 日志级别筛选（精确匹配）
-    /// </summary>
-    public LogLevel? Level { get; set; }
 
     /// <summary>
     /// 开始时间
