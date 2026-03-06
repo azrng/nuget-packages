@@ -189,12 +189,8 @@ public class InMemoryLogStore : ILogStore
             queryable = queryable.Where(x => x.Timestamp <= query.EndTime.Value);
         }
 
-        // 日志级别过滤
-        if (query.Level.HasValue)
-        {
-            queryable = queryable.Where(x => x.Level == query.Level.Value);
-        }
-        else if (query.MinLevel.HasValue)
+        // 日志级别过滤（使用 MinLevel，过滤出该级别及更高级别的日志）
+        if (query.MinLevel.HasValue)
         {
             queryable = queryable.Where(x => x.Level >= query.MinLevel.Value);
         }

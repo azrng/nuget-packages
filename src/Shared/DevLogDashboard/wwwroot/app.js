@@ -191,7 +191,13 @@ function renderPropertyRows(log) {
 
     let html = '';
     for (const key of propertyOrder) {
-        const value = props[key];
+        let value = props[key];
+
+        // 将 level 数字转换为字符串
+        if (key === 'level' && typeof value === 'number') {
+            value = ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'][value] || 'Unknown';
+        }
+
         const exists = value !== null && value !== undefined && value !== '';
         const displayValue = value === null || value === undefined ? '' : String(value);
 
@@ -377,15 +383,20 @@ function showTraceModal(requestId, logs) {
             </div>
         </div>
         <div class="log-list">
-            ${logs.map(log => `
+            ${logs.map(log => {
+                const levelStr = typeof log.level === 'number'
+                    ? ['trace', 'debug', 'information', 'warning', 'error', 'critical'][log.level] || 'unknown'
+                    : String(log.level).toLowerCase();
+                return `
                 <div class="log-item ${getLogClass(log.level)}">
                     <div class="log-header">
                         <span class="log-time">${formatTimestamp(log.timestamp)}</span>
-                        <span class="log-level-dot ${log.level.toLowerCase()}" title="${log.level}"></span>
+                        <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                         <span class="log-message">${escapeHtml(log.message)}</span>
                     </div>
                 </div>
-            `).join('')}
+                `;
+            }).join('')}
         </div>
     `;
 
