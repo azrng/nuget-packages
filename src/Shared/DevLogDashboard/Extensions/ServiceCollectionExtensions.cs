@@ -14,6 +14,8 @@ namespace Azrng.DevLogDashboard.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string DefaultEndpointPath = "/dev-logs";
+
     /// <summary>
     /// 添加 DevLogDashboard 服务
     /// </summary>
@@ -23,18 +25,16 @@ public static class ServiceCollectionExtensions
     {
         var options = new DevLogDashboardOptions();
         configureOptions?.Invoke(options);
+        NormalizeOptions(options);
 
-        // 注册选项
         services.AddSingleton(options);
 
         // 注册日志存储
         services.AddSingleton<ILogStore>(sp =>
             new InMemoryLogStore(options.MaxLogCount));
 
-        // 注册 HTTP 上下文访问器
         services.AddHttpContextAccessor();
 
-        // 注册日志提供程序
         services.AddSingleton<ILoggerProvider>(sp =>
         {
             var logStore = sp.GetRequiredService<ILogStore>();
@@ -54,7 +54,6 @@ public static class ServiceCollectionExtensions
         var options = app.ApplicationServices.GetRequiredService<DevLogDashboardOptions>();
         var logStore = app.ApplicationServices.GetRequiredService<ILogStore>();
 
-        // 使用请求日志中间件（需要在最前面）
         app.Use(async (context, next) =>
         {
             if (ShouldSkipRequest(context, options))
@@ -71,17 +70,16 @@ public static class ServiceCollectionExtensions
             {
                 await next();
                 stopwatch.Stop();
-                LogRequest(context, logStore, options, requestId, startTime, stopwatch.ElapsedMilliseconds);
+                TryLogRequest(context, logStore, options, requestId, startTime, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                LogException(context, logStore, options, requestId, ex, startTime, stopwatch.ElapsedMilliseconds);
+                TryLogException(context, logStore, options, requestId, ex, startTime, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         });
 
-        // 使用 Map 方式注册仪表板，完全自包含，不需要 UseRouting 和 UseEndpoints
         app.Map(options.EndpointPath, branch => branch.UseMiddleware<DevLogDashboardMiddleware>());
 
         return app;
@@ -89,25 +87,60 @@ public static class ServiceCollectionExtensions
 
     private static bool ShouldSkipRequest(HttpContext context, DevLogDashboardOptions options)
     {
-        // 检查是否跳过仪表板路径（组件本身的请求不应该被记录）
-        if (context.Request.Path.StartsWithSegments(options.EndpointPath))
-        {
-            return true; // 跳过仪表板自身的日志
-        }
+        var endpointPath = NormalizePath(options.EndpointPath, DefaultEndpointPath)!;
 
-        // 检查路径
-        if (options.IgnoredPaths.Any(p => context.Request.Path.StartsWithSegments(p)))
+        if (context.Request.Path.StartsWithSegments(endpointPath))
         {
             return true;
         }
 
-        // 检查方法
-        if (options.IgnoredMethods.Contains(context.Request.Method.ToUpperInvariant()))
+        foreach (var rawPath in options.IgnoredPaths ?? Array.Empty<string>())
+        {
+            var ignoredPath = NormalizePath(rawPath, null);
+            if (ignoredPath == null)
+            {
+                continue;
+            }
+
+            if (context.Request.Path.StartsWithSegments(ignoredPath))
+            {
+                return true;
+            }
+        }
+
+        if ((options.IgnoredMethods ?? Array.Empty<string>())
+            .Contains(context.Request.Method.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase))
         {
             return true;
         }
 
         return false;
+    }
+
+    private static void TryLogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+        string requestId, DateTime startTime, long elapsedMs)
+    {
+        try
+        {
+            LogRequest(context, logStore, options, requestId, startTime, elapsedMs);
+        }
+        catch
+        {
+            // Dashboard logging must never break normal request flow.
+        }
+    }
+
+    private static void TryLogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+        string requestId, Exception ex, DateTime startTime, long elapsedMs)
+    {
+        try
+        {
+            LogException(context, logStore, options, requestId, ex, startTime, elapsedMs);
+        }
+        catch
+        {
+            // Dashboard logging must never mask original business exceptions.
+        }
     }
 
     private static void LogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
@@ -176,5 +209,80 @@ public static class ServiceCollectionExtensions
         logEntry.Properties["EventType"] = "Exception";
 
         logStore.Add(logEntry);
+    }
+
+    private static void NormalizeOptions(DevLogDashboardOptions options)
+    {
+        options.EndpointPath = NormalizePath(options.EndpointPath, DefaultEndpointPath)!;
+
+        var ignoredPaths = (options.IgnoredPaths ?? Array.Empty<string>())
+            .Select(path => NormalizePath(path, null))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (!ignoredPaths.Contains(options.EndpointPath, StringComparer.OrdinalIgnoreCase))
+        {
+            ignoredPaths.Add(options.EndpointPath);
+        }
+
+        options.IgnoredPaths = ignoredPaths;
+
+        options.IgnoredMethods = (options.IgnoredMethods ?? Array.Empty<string>())
+            .Where(method => !string.IsNullOrWhiteSpace(method))
+            .Select(method => method.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (options.IgnoredMethods.Count == 0)
+        {
+            options.IgnoredMethods.Add("OPTIONS");
+        }
+
+        if (options.MaxLogCount <= 0)
+        {
+            options.MaxLogCount = 10000;
+        }
+    }
+
+    private static string? NormalizePath(string? rawPath, string? fallback)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath))
+        {
+            return fallback;
+        }
+
+        var path = rawPath.Trim();
+
+        if (Uri.TryCreate(path, UriKind.Absolute, out var uri))
+        {
+            path = uri.AbsolutePath;
+        }
+
+        var queryOrFragmentIndex = path.IndexOfAny(new[] { '?', '#' });
+        if (queryOrFragmentIndex >= 0)
+        {
+            path = path[..queryOrFragmentIndex];
+        }
+
+        path = path.Replace('\\', '/');
+
+        while (path.Contains("//", StringComparison.Ordinal))
+        {
+            path = path.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        if (!path.StartsWith('/'))
+        {
+            path = "/" + path.TrimStart('/');
+        }
+
+        if (path.Length > 1)
+        {
+            path = path.TrimEnd('/');
+        }
+
+        return string.IsNullOrWhiteSpace(path) ? fallback : path;
     }
 }

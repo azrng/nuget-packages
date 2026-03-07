@@ -40,7 +40,7 @@ public class DevLogDashboardLogger : ILogger
 
     IDisposable ILogger.BeginScope<TState>(TState state)
     {
-        return null!;
+        return NullScope.Instance;
     }
 
     public void Log<TState>(
@@ -55,59 +55,64 @@ public class DevLogDashboardLogger : ILogger
             return;
         }
 
-        var message = formatter(state, exception);
-        if (string.IsNullOrEmpty(message))
+        try
         {
-            return;
-        }
-
-        // 获取当前 HTTP 上下文
-        var httpContext = _httpContextAccessor?.HttpContext;
-        var requestId = httpContext?.TraceIdentifier;
-        var connectionId = httpContext?.Connection.Id;
-        var requestPath = httpContext?.Request.Path;
-        var requestMethod = httpContext?.Request.Method;
-        var responseStatusCode = httpContext?.Response.StatusCode;
-
-        var logEntry = new LogEntry
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            RequestId = requestId,
-            ConnectionId = connectionId,
-            Level = ConvertLogLevel(logLevel),
-            Message = message,
-            Timestamp = DateTime.Now,
-            Source = _category,
-            EventId = eventId.Id,
-            RequestPath = requestPath?.ToString(),
-            RequestMethod = requestMethod,
-            ResponseStatusCode = responseStatusCode,
-            Exception = exception?.ToString(),
-            StackTrace = exception?.StackTrace,
-            MachineName = Environment.MachineName,
-            Application = _options.ApplicationName,
-            AppVersion = _options.ApplicationVersion,
-            SdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString(),
-            Environment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production",
-            ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
-            ThreadId = Environment.CurrentManagedThreadId,
-            ThreadName = Thread.CurrentThread.Name,
-            Logger = _category
-        };
-
-        // 提取结构化数据
-        if (state is IEnumerable<KeyValuePair<string, object?>> structuredData)
-        {
-            foreach (var kvp in structuredData)
+            var message = formatter(state, exception);
+            if (string.IsNullOrEmpty(message))
             {
-                if (kvp.Key != "{OriginalFormat}" && !logEntry.Properties.ContainsKey(kvp.Key))
+                return;
+            }
+
+            var httpContext = _httpContextAccessor?.HttpContext;
+            var requestId = httpContext?.TraceIdentifier;
+            var connectionId = httpContext?.Connection.Id;
+            var requestPath = httpContext?.Request.Path;
+            var requestMethod = httpContext?.Request.Method;
+            var responseStatusCode = httpContext?.Response.StatusCode;
+
+            var logEntry = new LogEntry
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                RequestId = requestId,
+                ConnectionId = connectionId,
+                Level = ConvertLogLevel(logLevel),
+                Message = message,
+                Timestamp = DateTime.Now,
+                Source = _category,
+                EventId = eventId.Id,
+                RequestPath = requestPath?.ToString(),
+                RequestMethod = requestMethod,
+                ResponseStatusCode = responseStatusCode,
+                Exception = exception?.ToString(),
+                StackTrace = exception?.StackTrace,
+                MachineName = Environment.MachineName,
+                Application = _options.ApplicationName,
+                AppVersion = _options.ApplicationVersion,
+                SdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString(),
+                Environment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production",
+                ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                ThreadId = Environment.CurrentManagedThreadId,
+                ThreadName = Thread.CurrentThread.Name,
+                Logger = _category
+            };
+
+            if (state is IEnumerable<KeyValuePair<string, object?>> structuredData)
+            {
+                foreach (var kvp in structuredData)
                 {
-                    logEntry.Properties[kvp.Key] = kvp.Value;
+                    if (kvp.Key != "{OriginalFormat}" && !logEntry.Properties.ContainsKey(kvp.Key))
+                    {
+                        logEntry.Properties[kvp.Key] = kvp.Value;
+                    }
                 }
             }
-        }
 
-        _logStore.Add(logEntry);
+            _logStore.Add(logEntry);
+        }
+        catch
+        {
+            // Provider logging failure must never impact application flow.
+        }
     }
 
     private static LogLevel ConvertLogLevel(LogLevel logLevel)
@@ -122,5 +127,14 @@ public class DevLogDashboardLogger : ILogger
             LogLevel.Critical => LogLevel.Critical,
             _ => LogLevel.Information
         };
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+
+        public void Dispose()
+        {
+        }
     }
 }

@@ -238,6 +238,10 @@ builder.Services.AddDevLogDashboard(options =>
 
 ## 版本历史
 
+### 1.0.0-preview.2
+
+- 修复记录日志重复问题
+
 ### 1.0.0-preview.1
 
 - 初始版本发布
