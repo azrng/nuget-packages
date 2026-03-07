@@ -54,17 +54,6 @@ public static class ServiceCollectionExtensions
         var options = app.ApplicationServices.GetRequiredService<DevLogDashboardOptions>();
         var logStore = app.ApplicationServices.GetRequiredService<ILogStore>();
 
-        // 添加自定义日志提供程序
-        var loggerFactory = app.ApplicationServices.GetService<ILoggerFactory>();
-        if (loggerFactory != null)
-        {
-            var loggerProvider = app.ApplicationServices.GetService<ILoggerProvider>();
-            if (loggerProvider is DevLogDashboardLoggerProvider provider)
-            {
-                loggerFactory.AddProvider(provider);
-            }
-        }
-
         // 使用请求日志中间件（需要在最前面）
         app.Use(async (context, next) =>
         {

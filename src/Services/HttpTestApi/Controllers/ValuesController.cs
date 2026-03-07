@@ -21,16 +21,12 @@ public class ValuesController : ControllerBase
     {
         _logger.LogInformation("获取所有值");
 
-        var values = new[]
+        for (var i = 0; i < 30; i++)
         {
-            new { Id = 1, Name = "Value 1", Description = "第一个值" },
-            new { Id = 2, Name = "Value 2", Description = "第二个值" },
-            new { Id = 3, Name = "Value 3", Description = "第三个值" }
-        };
+            _logger.LogInformation($"返回 第{i} 个值");
+        }
 
-        _logger.LogInformation("返回 {Count} 个值", values.Length);
-
-        return Ok(values);
+        return Ok(0);
     }
 
     /// <summary>
@@ -68,12 +64,7 @@ public class ValuesController : ControllerBase
             return BadRequest("名称不能为空");
         }
 
-        var newValue = new
-        {
-            Id = new Random().Next(1000, 9999),
-            request.Name,
-            request.Description
-        };
+        var newValue = new { Id = new Random().Next(1000, 9999), request.Name, request.Description };
 
         _logger.LogInformation("创建成功，新 ID={Id}", newValue.Id);
 
@@ -121,12 +112,16 @@ public class ValuesController : ControllerBase
     public IActionResult StructuredLogTest()
     {
         var userData = new
-        {
-            UserId = 12345,
-            Username = "testuser",
-            Email = "test@example.com",
-            Roles = new[] { "Admin", "User" }
-        };
+                       {
+                           UserId = 12345,
+                           Username = "testuser",
+                           Email = "test@example.com",
+                           Roles = new[]
+                                   {
+                                       "Admin",
+                                       "User"
+                                   }
+                       };
 
         _logger.LogInformation("用户数据：{@User}", userData);
         _logger.LogInformation("订单详情：{OrderId} - {Amount} - {Currency}",
@@ -139,5 +134,6 @@ public class ValuesController : ControllerBase
 public class CreateValueRequest
 {
     public string Name { get; set; } = string.Empty;
+
     public string? Description { get; set; }
 }
