@@ -11,6 +11,7 @@
 - 自动记录请求/响应审计日志
 - 便捷的依赖注入批量注册
 - 提供常用的中间件和扩展方法
+- 简化 CORS 配置，支持不同使用场景（开发/生产/SignalR）
 
 ### 1.2 技术栈
 
@@ -39,6 +40,7 @@ Azrng.AspNetCore.Core/
 ├── Extension/                            # 扩展方法
 │   ├── HttpContextExtensions.cs         # HttpContext 扩展
 │   ├── IApplicationBuilderExtensions.cs # IApplicationBuilder 扩展
+│   ├── ServiceCollectionExtensions.cs   # IServiceCollection 扩展（包含 CORS 配置）
 │   ├── PreConfigureExtensions.cs        # 预配置扩展
 │   └── CustomContractResolver.cs        # JSON 序列化契约解析器
 │
@@ -120,7 +122,7 @@ Azrng.AspNetCore.Core/
 │  │  - 可限制响应体大小                                              │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │  ┌────────────────────┬───────────────────────┬──────────────────────┐  │
-│  │ RequestIdMiddleware│ ShowAllServices      │   AnyCors           │  │
+│  │ RequestIdMiddleware│ ShowAllServices      │   CORS 配置         │  │
 │  │ (请求 ID 传递)     │ (服务列表显示)        │   (跨域处理)        │  │
 │  └────────────────────┴───────────────────────┴──────────────────────┘  │
 └────────────────────────────────────┬────────────────────────────────────┘
@@ -271,6 +273,72 @@ public class CustomLoggerService : ILoggerService
 // 注册
 services.AddSingleton<ILoggerService, CustomLoggerService>();
 ```
+
+#### 3.2.5 CORS 配置 (跨域资源共享)
+
+**功能**: 提供简单易用的 CORS 策略配置，支持不同使用场景。
+
+**三种配置方法**:
+
+| 方法 | 适用场景 | 复杂度 | 安全性 |
+|------|----------|--------|--------|
+| `AddAnyCors()` | 开发环境 | ⭐ 简单 | ⚠️ 仅开发 |
+| `AddCorsByOrigins()` | 生产环境 | ⭐⭐ 中等 | ✅ 安全 |
+| `AddCorsPolicy()` | 高级定制 | ⭐⭐⭐ 灵活 | ✅ 完全可控 |
+
+**使用示例**:
+
+```csharp
+// 开发环境 - 允许任何来源
+builder.Services.AddAnyCors();
+app.UseCorsPolicy();
+
+// 生产环境 - 指定允许的来源
+builder.Services.AddCorsByOrigins(
+    new[] { "https://example.com", "https://api.example.com" },
+    allowCredentials: true
+);
+app.UseCorsPolicy();
+
+// SignalR 环境 - 需要允许凭证
+builder.Services.AddCorsByOrigins(
+    new[] { "https://example.com" },
+    allowCredentials: true  // SignalR 必需
+);
+app.UseCorsPolicy();
+
+// 高级配置 - 完全自定义
+builder.Services.AddCorsPolicy("CustomPolicy", builder => builder
+    .WithOrigins("https://example.com")
+    .WithMethods("GET", "POST", "PUT", "DELETE")
+    .WithHeaders("Content-Type", "Authorization")
+    .AllowCredentials()
+    .WithExposedHeaders("X-Total-Count")
+    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+app.UseCorsPolicy("CustomPolicy");
+```
+
+**中间件方法**:
+
+```csharp
+// 使用默认策略名称 "DefaultCors"
+app.UseCorsPolicy();
+
+// 使用指定的策略名称
+app.UseCorsPolicy("CustomPolicy");
+```
+
+**设计原则**:
+1. **简单优先**: 常用场景一行代码搞定
+2. **安全第一**: 生产环境强制明确指定来源
+3. **灵活扩展**: 保留高级配置选项满足特殊需求
+4. **向后兼容**: 保留原有的 `AddAnyCors()` 方法
+
+**安全建议**:
+- ⚠️ `AddAnyCors()` 仅适用于开发环境
+- ✅ 生产环境必须使用 `AddCorsByOrigins()` 明确指定来源
+- ✅ SignalR 环境必须设置 `allowCredentials: true`
+- ✅ 启用 `allowCredentials` 时不能使用 `AllowAnyOrigin()`
 
 ---
 
@@ -514,7 +582,7 @@ app.UseGlobalException();
 app.UseRequestIdMiddleware();
 
 // 3. 跨域
-app.UseAnyCors();
+app.UseCorsPolicy();
 
 // 4. 审计日志
 app.UseAutoAuditLog();
@@ -547,7 +615,7 @@ app.Run();
 ### 9.2 执行顺序说明
 
 ```
-请求 → GlobalException → RequestId → CORS → AuditLog → Routing →
+请求 → GlobalException → RequestId → CORS Policy → AuditLog → Routing →
                                                          │
                                                          ▼
                                            Controller (过滤器执行)
@@ -568,6 +636,7 @@ app.Run();
 
 | 版本 | 主要变更 |
 |------|----------|
+| 1.3.0 | **CORS 配置重构**：简化为 3 个方法（`AddAnyCors`、`AddCorsByOrigins`、`AddCorsPolicy`）；移除复杂的配置类；新增 `UseCorsPolicy` 中间件方法；改进易用性和安全性 |
 | 1.2.1 | 更新异常中间件 |
 | 1.2.0 | 支持 .NET 10；新增 `AuditLogOptions`；支持配置记录的 HTTP 方法；支持最大响应体大小限制；优化 `CustomResultPackFilter` 不包装 `ProblemDetails` |
 | 1.1.0 | 移除 `Microsoft.AspNetCore.Mvc.NewtonsoftJson` 依赖；使用 `System.Text.Json` 替换 |
@@ -600,7 +669,15 @@ builder.Services.AddDefaultControllers(options =>
     options.EnabledModelVerify = true;
 });
 
+// CORS 配置（开发环境）
 builder.Services.AddAnyCors();
+
+// 生产环境应使用:
+// builder.Services.AddCorsByOrigins(
+//     new[] { "https://example.com" },
+//     allowCredentials: true
+// );
+
 builder.Services.AddShowAllServices("/allservices");
 builder.Services.AddMvcResultPackFilter("/swagger", "/health");
 
@@ -620,7 +697,7 @@ var app = builder.Build();
 // 配置中间件管道
 app.UseGlobalException();
 app.UseRequestIdMiddleware();
-app.UseAnyCors();
+app.UseCorsPolicy();  // 使用 CORS 中间件
 app.UseAutoAuditLog();
 app.UseRouting();
 app.UseStaticFiles();
@@ -675,7 +752,11 @@ public class UsersController : ControllerBase
 
 ### 12.1 安全建议
 
-1. **CORS 配置**: `AddAnyCors()` 仅适用于开发环境，生产环境应配置具体的允许来源
+1. **CORS 配置**:
+   - ⚠️ `AddAnyCors()` 仅适用于开发环境，允许任何来源访问
+   - ✅ 生产环境必须使用 `AddCorsByOrigins()` 明确指定允许的来源
+   - ✅ SignalR 环境必须设置 `allowCredentials: true` 以支持认证
+   - ✅ 启用 `allowCredentials` 时不能使用 `AllowAnyOrigin()`
 2. **审计日志**: 避免记录敏感信息（密码、Token 等），可在 `ILoggerService` 实现中脱敏
 3. **异常信息**: 生产环境应避免返回详细异常堆栈，防止信息泄露
 

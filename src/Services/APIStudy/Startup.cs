@@ -23,10 +23,7 @@ public class Startup
                     options.JsonSerializerOptions.Converters.Add(new LongToStringConverter());
                 });
 
-        services.AddCorsPolicy(configure: options =>
-                {
-                    options.AllowAny();
-                })
+        services.AddAnyCors()
                 .AddDefaultSwaggerGen();
 
         // services.ConfigureNewtonsoftJson();
@@ -62,7 +59,7 @@ public class Startup
         app.UseGlobalException();
 
         //使用跨域
-        app.UseAnyCors();
+        app.UseCorsPolicy();
 
         app.UseAuthorization();
 

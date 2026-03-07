@@ -50,90 +50,59 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 添加 CORS 策略（统一配置方法）
+    /// 添加允许任何来源的 CORS 策略（快捷方法）
     /// </summary>
     /// <param name="services">服务集合</param>
     /// <param name="policyName">策略名称，默认为 "DefaultCors"</param>
-    /// <param name="configure">CORS 配置</param>
     /// <returns>服务集合</returns>
     /// <remarks>
-    /// 使用示例：
-    /// <code>
-    /// // 开发环境：允许任何来源
-    /// services.AddCorsPolicy(configure: c => c.AllowAny());
-    ///
-    /// // 生产环境：指定来源
-    /// services.AddCorsPolicy(configure: c => c
-    ///     .WithOrigins("https://example.com")
-    ///     .WithCredentials());
-    ///
-    /// // SignalR 环境
-    /// services.AddCorsPolicy(configure: c => c
-    ///     .WithOrigins("https://example.com")
-    ///     .ForSignalR());
-    /// </code>
+    /// ⚠️ 警告: 此方法允许任何来源的请求，仅适用于开发环境。
+    /// 生产环境应使用配置的 CORS 策略，限制允许的来源、方法和头部。
     /// </remarks>
-    public static IServiceCollection AddCorsPolicy(this IServiceCollection services,
-                                                   string policyName = "DefaultCors",
-                                                   Action<CorsPolicyConfig>? configure = null)
+    public static IServiceCollection AddAnyCors(this IServiceCollection services,
+                                                string policyName = "DefaultCors")
     {
-        var config = new CorsPolicyConfig();
-        configure?.Invoke(config);
-
         services.AddCors(options =>
         {
             options.AddPolicy(policyName, builder =>
             {
-                // 根据配置构建策略
-                if (config.AllowAnyOrigin)
-                {
-                    builder.AllowAnyOrigin();
-                }
-                else if (config.AllowedOrigins != null && config.AllowedOrigins.Length > 0)
-                {
-                    builder.WithOrigins(config.AllowedOrigins);
-                }
-                else
-                {
-                    throw new InvalidOperationException("必须指定允许的来源或使用 AllowAnyOrigin()");
-                }
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
+        });
 
-                // 配置方法
-                if (config.AllowedMethods != null && config.AllowedMethods.Length > 0)
-                {
-                    builder.WithMethods(config.AllowedMethods);
-                }
-                else
-                {
-                    builder.AllowAnyMethod();
-                }
+        return services;
+    }
 
-                // 配置头部
-                if (config.AllowedHeaders != null && config.AllowedHeaders.Length > 0)
-                {
-                    builder.WithHeaders(config.AllowedHeaders);
-                }
-                else
-                {
-                    builder.AllowAnyHeader();
-                }
+    /// <summary>
+    /// 添加指定来源的 CORS 策略
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="allowedOrigins">允许的来源列表</param>
+    /// <param name="policyName">策略名称，默认为 "DefaultCors"</param>
+    /// <param name="allowCredentials">是否允许携带凭证，默认为 false</param>
+    /// <returns>服务集合</returns>
+    /// <remarks>
+    /// 适用于生产环境，明确指定允许的来源。
+    /// 当 allowCredentials 为 true 时，适用于 SignalR 或需要认证的场景。
+    /// </remarks>
+    public static IServiceCollection AddCorsByOrigins(this IServiceCollection services,
+                                                      string[] allowedOrigins,
+                                                      string policyName = "DefaultCors",
+                                                      bool allowCredentials = false)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy(policyName, builder =>
+            {
+                builder.WithOrigins(allowedOrigins)
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
 
-                // 配置凭证
-                if (config.AllowCredentials)
+                if (allowCredentials)
                 {
                     builder.AllowCredentials();
-                }
-
-                // 配置暴露的响应头
-                if (config.ExposedHeaders != null && config.ExposedHeaders.Length > 0)
-                {
-                    builder.WithExposedHeaders(config.ExposedHeaders);
-                }
-
-                // 配置预检请求缓存
-                if (config.PreflightMaxAge.HasValue)
-                {
-                    builder.SetPreflightMaxAge(config.PreflightMaxAge.Value);
                 }
             });
         });
@@ -142,19 +111,35 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 添加允许任何来源的 CORS 策略（快捷方法）
+    /// 添加自定义 CORS 策略（高级配置）
     /// </summary>
     /// <param name="services">服务集合</param>
-    /// <param name="policyName">策略名称，默认为 "AnyCors"</param>
+    /// <param name="policyName">策略名称</param>
+    /// <param name="configurePolicy">策略配置</param>
     /// <returns>服务集合</returns>
     /// <remarks>
-    /// ⚠️ 警告: 此方法允许任何来源的请求，仅适用于开发环境。
-    /// 生产环境应使用配置的 CORS 策略，限制允许的来源、方法和头部。
+    /// 使用示例：
+    /// <code>
+    /// // SignalR 环境
+    /// services.AddCorsPolicy("SignalRCors", builder => builder
+    ///     .WithOrigins("https://example.com")
+    ///     .AllowAnyMethod()
+    ///     .AllowAnyHeader()
+    ///     .AllowCredentials()
+    ///     .WithExposedHeaders("*")
+    ///     .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+    /// </code>
     /// </remarks>
-    public static IServiceCollection AddAnyCors(this IServiceCollection services,
-                                                string policyName = "AnyCors")
+    public static IServiceCollection AddCorsPolicy(this IServiceCollection services,
+                                                   string policyName,
+                                                   Action<CorsPolicyBuilder> configurePolicy)
     {
-        return services.AddCorsPolicy(policyName, config => config.AllowAny());
+        services.AddCors(options =>
+        {
+            options.AddPolicy(policyName, configurePolicy);
+        });
+
+        return services;
     }
 
     /// <summary>

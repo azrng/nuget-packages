@@ -355,95 +355,88 @@ app.UseShowAllServicesMiddleware();
 
 #### Cors跨域
 
-处理跨域问题，提供灵活的 CORS 策略配置。
+处理跨域问题，提供简单易用的 CORS 策略配置。
 
 ##### 基础使用（开发环境）
 
 允许任何来源的请求，仅适用于开发环境：
 
 ```csharp
-// 在 ConfigureServices 中注册 CORS 服务
+// 注册 CORS 服务
 builder.Services.AddAnyCors();
 
-// 在 Configure 中启用 CORS 中间件
-app.UseCorsPolicy("AnyCors");
-// 或者使用兼容旧版本的方法
-app.UseAnyCors();
+// 启用 CORS 中间件
+app.UseCorsPolicy();
 ```
 
 ##### 生产环境配置
 
-在生产环境中，应该明确指定允许的来源：
+在生产环境中，明确指定允许的来源：
 
 ```csharp
-// 指定允许的来源
-builder.Services.AddCorsPolicy(configure: c => c
-    .WithOrigins("https://example.com", "https://api.example.com")
-    .WithCredentials()
-    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+// 注册 CORS 服务
+builder.Services.AddCorsByOrigins(
+    new[] { "https://example.com", "https://api.example.com" },
+    allowCredentials: true
+);
 
-// 启用 CORS 中间件（使用默认策略名称 "DefaultCors"）
+// 启用 CORS 中间件
 app.UseCorsPolicy();
 ```
 
 ##### SignalR 环境
 
-SignalR 需要特殊的 CORS 配置，因为需要支持认证：
+SignalR 需要允许凭证以支持认证：
 
 ```csharp
-// 配置适用于 SignalR 的 CORS 策略
-builder.Services.AddCorsPolicy("SignalRCors", configure: c => c
-    .WithOrigins("https://example.com")
-    .ForSignalR()); // 自动配置 SignalR 所需的设置
+// 注册 CORS 服务
+builder.Services.AddCorsByOrigins(
+    new[] { "https://example.com" },
+    allowCredentials: true  // SignalR 必须启用此选项
+);
 
-// 启用 CORS
-app.UseCorsPolicy("SignalRCors");
+// 启用 CORS 中间件
+app.UseCorsPolicy();
 ```
 
 ##### 高级配置
 
-完全自定义的 CORS 配置：
+需要更细粒度控制时，使用 `AddCorsPolicy`：
 
 ```csharp
-builder.Services.AddCorsPolicy("CustomPolicy", configure: c => c
-    .WithOrigins("https://example.com", "https://api.example.com")
+// 自定义配置
+builder.Services.AddCorsPolicy("CustomPolicy", builder => builder
+    .WithOrigins("https://example.com")
     .WithMethods("GET", "POST", "PUT", "DELETE")
-    .WithHeaders("Content-Type", "Authorization", "X-Custom-Header")
-    .WithCredentials()
-    .WithExposedHeaders("X-Total-Count", "X-Page-Number")
-    .SetPreflightMaxAge(TimeSpan.FromHours(2)));
+    .WithHeaders("Content-Type", "Authorization")
+    .AllowCredentials()
+    .WithExposedHeaders("X-Total-Count")
+    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+
+// 启用 CORS 中间件
+app.UseCorsPolicy("CustomPolicy");
 ```
 
-##### 可用的配置方法
+##### 方法说明
+
+| 方法 | 适用场景 | 参数 |
+|------|---------|------|
+| `AddAnyCors()` | 开发环境 | `policyName`（可选） |
+| `AddCorsByOrigins()` | 生产环境 | `allowedOrigins`, `policyName`, `allowCredentials` |
+| `AddCorsPolicy()` | 高级配置 | `policyName`, `configurePolicy` |
+
+##### 中间件
 
 | 方法 | 说明 |
 |------|------|
-| `AllowAny()` | 允许任何来源、方法和头部（仅开发环境） |
-| `WithOrigins(...)` | 设置允许的来源 |
-| `WithMethods(...)` | 设置允许的 HTTP 方法 |
-| `WithHeaders(...)` | 设置允许的请求头 |
-| `WithCredentials()` | 允许携带凭证（Cookies、认证头等） |
-| `WithExposedHeaders(...)` | 设置允许客户端读取的响应头 |
-| `SetPreflightMaxAge(...)` | 设置预检请求缓存时间 |
-| `ForSignalR()` | 配置为适用于 SignalR 的策略 |
-
-##### 中间件使用
-
-| 方法 | 说明 |
-|------|------|
-| `UseCorsPolicy(policyName)` | 使用指定策略名称的 CORS 中间件 |
-| `UseAnyCors()` | 快捷方法，使用 "AnyCors" 策略（兼容旧版本） |
+| `UseCorsPolicy(policyName)` | 启用 CORS 中间件，默认使用 "DefaultCors" 策略 |
 
 ##### 重要提示
 
 ⚠️ **安全警告**：
-- `AllowAny()` 仅适用于开发环境，生产环境必须使用 `WithOrigins()` 明确指定允许的来源
-- 当启用 `WithCredentials()` 时，不能使用 `AllowAnyOrigin()`，必须明确指定来源
-- SignalR 环境必须使用 `ForSignalR()` 或手动配置 `WithCredentials()`
-
-📝 **性能优化**：
-- 建议设置 `SetPreflightMaxAge()` 以减少预检请求频率，提升性能
-- 生产环境建议设置 1-2 小时的缓存时间
+- `AddAnyCors()` 仅适用于开发环境，生产环境必须使用 `AddCorsByOrigins()`
+- 当 `allowCredentials` 为 `true` 时，不能使用 `AllowAnyOrigin()`
+- SignalR 环境必须设置 `allowCredentials: true`
 
 #### 启用body重复读
 
@@ -658,13 +651,12 @@ ForbiddenException
 ### 版本更新记录
 
 * 1.3.0
-  * 重构 CORS 配置，提供统一的配置方法 `AddCorsPolicy`
-  * 新增 `CorsPolicyConfig` 配置类，支持链式调用
-  * 支持 SignalR 场景的 CORS 配置（`ForSignalR()` 方法）
-  * 新增 `UseCorsPolicy` 中间件方法，支持自定义策略名称
-  * `AddAnyCors` 方法现在基于新的配置类实现
-  * `UseAnyCors` 方法标记为过时，建议使用 `UseCorsPolicy`
-  * 改进 CORS 配置的灵活性和安全性
+  * 简化 CORS 配置，移除复杂的配置类
+  * 提供 `AddAnyCors()` - 开发环境快速配置
+  * 提供 `AddCorsByOrigins()` - 生产环境安全配置
+  * 提供 `AddCorsPolicy()` - 高级自定义配置
+  * 新增 `UseCorsPolicy()` 中间件方法
+  * 改进 CORS 配置的易用性和安全性
 * 1.2.1
   * 更新异常中间件
 * 1.2.0
