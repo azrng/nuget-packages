@@ -50,32 +50,111 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 添加允许任何来源的 CORS 策略
+    /// 添加 CORS 策略（统一配置方法）
     /// </summary>
     /// <param name="services">服务集合</param>
-    /// <param name="corsOptionsHandler">自定义策略</param>
+    /// <param name="policyName">策略名称，默认为 "DefaultCors"</param>
+    /// <param name="configure">CORS 配置</param>
+    /// <returns>服务集合</returns>
+    /// <remarks>
+    /// 使用示例：
+    /// <code>
+    /// // 开发环境：允许任何来源
+    /// services.AddCorsPolicy(configure: c => c.AllowAny());
+    ///
+    /// // 生产环境：指定来源
+    /// services.AddCorsPolicy(configure: c => c
+    ///     .WithOrigins("https://example.com")
+    ///     .WithCredentials());
+    ///
+    /// // SignalR 环境
+    /// services.AddCorsPolicy(configure: c => c
+    ///     .WithOrigins("https://example.com")
+    ///     .ForSignalR());
+    /// </code>
+    /// </remarks>
+    public static IServiceCollection AddCorsPolicy(this IServiceCollection services,
+                                                   string policyName = "DefaultCors",
+                                                   Action<CorsPolicyConfig>? configure = null)
+    {
+        var config = new CorsPolicyConfig();
+        configure?.Invoke(config);
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(policyName, builder =>
+            {
+                // 根据配置构建策略
+                if (config.AllowAnyOrigin)
+                {
+                    builder.AllowAnyOrigin();
+                }
+                else if (config.AllowedOrigins != null && config.AllowedOrigins.Length > 0)
+                {
+                    builder.WithOrigins(config.AllowedOrigins);
+                }
+                else
+                {
+                    throw new InvalidOperationException("必须指定允许的来源或使用 AllowAnyOrigin()");
+                }
+
+                // 配置方法
+                if (config.AllowedMethods != null && config.AllowedMethods.Length > 0)
+                {
+                    builder.WithMethods(config.AllowedMethods);
+                }
+                else
+                {
+                    builder.AllowAnyMethod();
+                }
+
+                // 配置头部
+                if (config.AllowedHeaders != null && config.AllowedHeaders.Length > 0)
+                {
+                    builder.WithHeaders(config.AllowedHeaders);
+                }
+                else
+                {
+                    builder.AllowAnyHeader();
+                }
+
+                // 配置凭证
+                if (config.AllowCredentials)
+                {
+                    builder.AllowCredentials();
+                }
+
+                // 配置暴露的响应头
+                if (config.ExposedHeaders != null && config.ExposedHeaders.Length > 0)
+                {
+                    builder.WithExposedHeaders(config.ExposedHeaders);
+                }
+
+                // 配置预检请求缓存
+                if (config.PreflightMaxAge.HasValue)
+                {
+                    builder.SetPreflightMaxAge(config.PreflightMaxAge.Value);
+                }
+            });
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// 添加允许任何来源的 CORS 策略（快捷方法）
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="policyName">策略名称，默认为 "AnyCors"</param>
     /// <returns>服务集合</returns>
     /// <remarks>
     /// ⚠️ 警告: 此方法允许任何来源的请求，仅适用于开发环境。
     /// 生产环境应使用配置的 CORS 策略，限制允许的来源、方法和头部。
     /// </remarks>
     public static IServiceCollection AddAnyCors(this IServiceCollection services,
-                                                Action<CorsOptions>? corsOptionsHandler = default)
+                                                string policyName = "AnyCors")
     {
-        //配置跨域
-        services.AddCors(options =>
-        {
-            options.AddPolicy("any", builder =>
-            {
-                builder.AllowAnyOrigin() //允许任何来源的主机访问
-                       .AllowAnyMethod() //允许任何请求方式
-                       .AllowAnyHeader(); //允许任何头部
-            });
-
-            // 添加自定义配置
-            corsOptionsHandler?.Invoke(options);
-        });
-        return services;
+        return services.AddCorsPolicy(policyName, config => config.AllowAny());
     }
 
     /// <summary>

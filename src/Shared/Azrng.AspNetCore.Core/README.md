@@ -355,15 +355,95 @@ app.UseShowAllServicesMiddleware();
 
 #### Cors跨域
 
-处理跨域的问题，使用该配置可以允许任何请求
+处理跨域问题，提供灵活的 CORS 策略配置。
+
+##### 基础使用（开发环境）
+
+允许任何来源的请求，仅适用于开发环境：
 
 ```csharp
-service.AddAnyCors();
+// 在 ConfigureServices 中注册 CORS 服务
+builder.Services.AddAnyCors();
 
-
-
+// 在 Configure 中启用 CORS 中间件
+app.UseCorsPolicy("AnyCors");
+// 或者使用兼容旧版本的方法
 app.UseAnyCors();
 ```
+
+##### 生产环境配置
+
+在生产环境中，应该明确指定允许的来源：
+
+```csharp
+// 指定允许的来源
+builder.Services.AddCorsPolicy(configure: c => c
+    .WithOrigins("https://example.com", "https://api.example.com")
+    .WithCredentials()
+    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+
+// 启用 CORS 中间件（使用默认策略名称 "DefaultCors"）
+app.UseCorsPolicy();
+```
+
+##### SignalR 环境
+
+SignalR 需要特殊的 CORS 配置，因为需要支持认证：
+
+```csharp
+// 配置适用于 SignalR 的 CORS 策略
+builder.Services.AddCorsPolicy("SignalRCors", configure: c => c
+    .WithOrigins("https://example.com")
+    .ForSignalR()); // 自动配置 SignalR 所需的设置
+
+// 启用 CORS
+app.UseCorsPolicy("SignalRCors");
+```
+
+##### 高级配置
+
+完全自定义的 CORS 配置：
+
+```csharp
+builder.Services.AddCorsPolicy("CustomPolicy", configure: c => c
+    .WithOrigins("https://example.com", "https://api.example.com")
+    .WithMethods("GET", "POST", "PUT", "DELETE")
+    .WithHeaders("Content-Type", "Authorization", "X-Custom-Header")
+    .WithCredentials()
+    .WithExposedHeaders("X-Total-Count", "X-Page-Number")
+    .SetPreflightMaxAge(TimeSpan.FromHours(2)));
+```
+
+##### 可用的配置方法
+
+| 方法 | 说明 |
+|------|------|
+| `AllowAny()` | 允许任何来源、方法和头部（仅开发环境） |
+| `WithOrigins(...)` | 设置允许的来源 |
+| `WithMethods(...)` | 设置允许的 HTTP 方法 |
+| `WithHeaders(...)` | 设置允许的请求头 |
+| `WithCredentials()` | 允许携带凭证（Cookies、认证头等） |
+| `WithExposedHeaders(...)` | 设置允许客户端读取的响应头 |
+| `SetPreflightMaxAge(...)` | 设置预检请求缓存时间 |
+| `ForSignalR()` | 配置为适用于 SignalR 的策略 |
+
+##### 中间件使用
+
+| 方法 | 说明 |
+|------|------|
+| `UseCorsPolicy(policyName)` | 使用指定策略名称的 CORS 中间件 |
+| `UseAnyCors()` | 快捷方法，使用 "AnyCors" 策略（兼容旧版本） |
+
+##### 重要提示
+
+⚠️ **安全警告**：
+- `AllowAny()` 仅适用于开发环境，生产环境必须使用 `WithOrigins()` 明确指定允许的来源
+- 当启用 `WithCredentials()` 时，不能使用 `AllowAnyOrigin()`，必须明确指定来源
+- SignalR 环境必须使用 `ForSignalR()` 或手动配置 `WithCredentials()`
+
+📝 **性能优化**：
+- 建议设置 `SetPreflightMaxAge()` 以减少预检请求频率，提升性能
+- 生产环境建议设置 1-2 小时的缓存时间
 
 #### 启用body重复读
 
@@ -577,6 +657,14 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.3.0
+  * 重构 CORS 配置，提供统一的配置方法 `AddCorsPolicy`
+  * 新增 `CorsPolicyConfig` 配置类，支持链式调用
+  * 支持 SignalR 场景的 CORS 配置（`ForSignalR()` 方法）
+  * 新增 `UseCorsPolicy` 中间件方法，支持自定义策略名称
+  * `AddAnyCors` 方法现在基于新的配置类实现
+  * `UseAnyCors` 方法标记为过时，建议使用 `UseCorsPolicy`
+  * 改进 CORS 配置的灵活性和安全性
 * 1.2.1
   * 更新异常中间件
 * 1.2.0
