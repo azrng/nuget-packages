@@ -1,99 +1,196 @@
-using Azrng.DevLogDashboard.Models;
+﻿using Azrng.DevLogDashboard.Models;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace Azrng.DevLogDashboard.Storage;
 
 /// <summary>
-/// 内存日志存储实现
+/// In-memory log storage with bounded queue and lightweight indexes.
 /// </summary>
 public class InMemoryLogStore : ILogStore
 {
-    private readonly ConcurrentBag<LogEntry> _logs = new();
+    private readonly Queue<LogEntry> _logs = new();
+    private readonly Dictionary<string, LogEntry> _logsById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<LogEntry>> _logsByRequestId = new(StringComparer.Ordinal);
+    private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
     private readonly int _maxLogCount;
-    private readonly object _lockObj = new();
 
     public InMemoryLogStore(int maxLogCount = 10000)
     {
-        _maxLogCount = maxLogCount;
+        _maxLogCount = maxLogCount > 0 ? maxLogCount : 10000;
     }
 
-    public int Count => _logs.Count;
-
-    public void Add(LogEntry? entry)
+    public int Count
     {
-        if (entry == null) return;
-
-        _logs.Add(entry);
-
-        // 超出最大数量时，清理旧日志
-        if (_logs.Count > _maxLogCount)
+        get
         {
-            Cleanup();
+            _lock.EnterReadLock();
+            try
+            {
+                return _logs.Count;
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
+    }
+
+    public void Add(LogEntry entry)
+    {
+        if (entry is null)
+        {
+            return;
+        }
+
+        _lock.EnterWriteLock();
+        try
+        {
+            _logs.Enqueue(entry);
+
+            if (!string.IsNullOrEmpty(entry.Id))
+            {
+                _logsById[entry.Id] = entry;
+            }
+
+            if (!string.IsNullOrEmpty(entry.RequestId))
+            {
+                if (!_logsByRequestId.TryGetValue(entry.RequestId, out var requestLogs))
+                {
+                    requestLogs = new List<LogEntry>();
+                    _logsByRequestId[entry.RequestId] = requestLogs;
+                }
+
+                requestLogs.Add(entry);
+            }
+
+            TrimExcessLogs();
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
         }
     }
 
     public ValueTask AddAsync(LogEntry entry, CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return ValueTask.FromCanceled(cancellationToken);
+        }
+
         Add(entry);
         return ValueTask.CompletedTask;
     }
 
     public Task<LogEntry?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        var log = _logs.FirstOrDefault(x => x.Id == id);
-        return Task.FromResult(log);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<LogEntry?>(cancellationToken);
+        }
+
+        if (string.IsNullOrEmpty(id))
+        {
+            return Task.FromResult<LogEntry?>(null);
+        }
+
+        _lock.EnterReadLock();
+        try
+        {
+            _logsById.TryGetValue(id, out var log);
+            return Task.FromResult(log);
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
     }
 
     public Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
     {
-        var logs = _logs
-            .Where(x => x.RequestId == requestId)
-            .OrderBy(x => x.Timestamp)
-            .ToList();
-        return Task.FromResult(logs);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<List<LogEntry>>(cancellationToken);
+        }
+
+        if (string.IsNullOrEmpty(requestId))
+        {
+            return Task.FromResult(new List<LogEntry>());
+        }
+
+        _lock.EnterReadLock();
+        try
+        {
+            if (!_logsByRequestId.TryGetValue(requestId, out var logs))
+            {
+                return Task.FromResult(new List<LogEntry>());
+            }
+
+            var ordered = logs
+                .OrderBy(x => x.Timestamp)
+                .ToList();
+
+            return Task.FromResult(ordered);
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
     }
 
-    public async Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
+    public Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
     {
-        var filtered = ApplyFilters(query);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<PageResult<LogEntry>>(cancellationToken);
+        }
 
-        // 排序
-        filtered = query.OrderByTimeAscending
-            ? filtered.OrderBy(x => x.Timestamp).ToList()
-            : filtered.OrderByDescending(x => x.Timestamp).ToList();
+        var pageIndex = query.PageIndex <= 0 ? 1 : query.PageIndex;
+        var pageSize = query.PageSize <= 0 ? 50 : query.PageSize;
+        var skip = (pageIndex - 1) * pageSize;
+
+        var filtered = ApplyFilters(Snapshot(), query).ToList();
+
+        filtered.Sort((a, b) => query.OrderByTimeAscending
+            ? a.Timestamp.CompareTo(b.Timestamp)
+            : b.Timestamp.CompareTo(a.Timestamp));
 
         var total = filtered.Count;
-
-        // 分页
         var items = filtered
-            .Skip(query.Skip)
-            .Take(query.PageSize)
+            .Skip(skip)
+            .Take(pageSize)
             .ToList();
 
-        return PageResult<LogEntry>.Create(items, total, query.PageIndex, query.PageSize);
+        return Task.FromResult(PageResult<LogEntry>.Create(items, total, pageIndex, pageSize));
     }
 
-    public async Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default)
+    public Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime,
+        CancellationToken cancellationToken = default)
     {
-        var queryable = _logs.AsQueryable();
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<List<TraceLogSummary>>(cancellationToken);
+        }
+
+        var logs = Snapshot();
+
+        var query = logs.Where(x => !string.IsNullOrEmpty(x.RequestId));
 
         if (startTime.HasValue)
         {
-            queryable = queryable.Where(x => x.Timestamp >= startTime.Value);
+            query = query.Where(x => x.Timestamp >= startTime.Value);
         }
 
         if (endTime.HasValue)
         {
-            queryable = queryable.Where(x => x.Timestamp <= endTime.Value);
+            query = query.Where(x => x.Timestamp <= endTime.Value);
         }
 
-        var summaries = queryable
-            .Where(x => !string.IsNullOrEmpty(x.RequestId))
+        var summaries = query
             .GroupBy(x => x.RequestId!)
             .Select(g => new TraceLogSummary
             {
-                RequestId = g.Key!,
+                RequestId = g.Key,
                 LogCount = g.Count(),
                 FirstTimestamp = g.Min(x => x.Timestamp),
                 LastTimestamp = g.Max(x => x.Timestamp),
@@ -106,178 +203,238 @@ public class InMemoryLogStore : ILogStore
             .Take(1000)
             .ToList();
 
-        return await Task.FromResult(summaries);
+        return Task.FromResult(summaries);
     }
 
     public void Clear()
     {
-        lock (_lockObj)
+        _lock.EnterWriteLock();
+        try
         {
-            var temp = _logs.ToArray();
             _logs.Clear();
+            _logsById.Clear();
+            _logsByRequestId.Clear();
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
         }
     }
 
     public int GetCountByTimeRange(DateTime? startTime, DateTime? endTime)
     {
-        var queryable = _logs.AsQueryable();
+        var logs = Snapshot();
+        var count = 0;
 
-        if (startTime.HasValue)
+        foreach (var log in logs)
         {
-            queryable = queryable.Where(x => x.Timestamp >= startTime.Value);
+            if (startTime.HasValue && log.Timestamp < startTime.Value)
+            {
+                continue;
+            }
+
+            if (endTime.HasValue && log.Timestamp > endTime.Value)
+            {
+                continue;
+            }
+
+            count++;
         }
 
-        if (endTime.HasValue)
-        {
-            queryable = queryable.Where(x => x.Timestamp <= endTime.Value);
-        }
-
-        return queryable.Count();
+        return count;
     }
 
     public Dictionary<LogLevel, int> GetLogLevelStatistics(DateTime? startTime, DateTime? endTime)
     {
-        var queryable = _logs.AsQueryable();
+        var logs = Snapshot();
+        var stats = new Dictionary<LogLevel, int>();
 
-        if (startTime.HasValue)
+        foreach (var log in logs)
         {
-            queryable = queryable.Where(x => x.Timestamp >= startTime.Value);
+            if (startTime.HasValue && log.Timestamp < startTime.Value)
+            {
+                continue;
+            }
+
+            if (endTime.HasValue && log.Timestamp > endTime.Value)
+            {
+                continue;
+            }
+
+            if (!stats.TryAdd(log.Level, 1))
+            {
+                stats[log.Level]++;
+            }
         }
 
-        if (endTime.HasValue)
-        {
-            queryable = queryable.Where(x => x.Timestamp <= endTime.Value);
-        }
-
-        return queryable
-            .GroupBy(x => x.Level)
-            .ToDictionary(g => g.Key, g => g.Count());
+        return stats;
     }
 
     public List<LogEntry> GetRecentErrors(int count, DateTime? startTime, DateTime? endTime)
     {
-        var queryable = _logs.AsQueryable();
-
-        if (startTime.HasValue)
+        if (count <= 0)
         {
-            queryable = queryable.Where(x => x.Timestamp >= startTime.Value);
+            return new List<LogEntry>();
         }
 
-        if (endTime.HasValue)
-        {
-            queryable = queryable.Where(x => x.Timestamp <= endTime.Value);
-        }
+        var logs = Snapshot();
 
-        return queryable
+        return logs
             .Where(x => x.Level >= LogLevel.Error)
+            .Where(x => !startTime.HasValue || x.Timestamp >= startTime.Value)
+            .Where(x => !endTime.HasValue || x.Timestamp <= endTime.Value)
             .OrderByDescending(x => x.Timestamp)
             .Take(count)
             .ToList();
     }
 
-    private List<LogEntry> ApplyFilters(LogQuery query)
+    public List<HourlyLogCount> GetHourlyCounts(DateTime startTime, int hours = 24)
     {
-        var queryable = _logs.AsQueryable();
+        if (hours <= 0)
+        {
+            return new List<HourlyLogCount>();
+        }
 
-        // 时间范围过滤
+        var buckets = new HourlyLogCount[hours];
+
+        for (var hour = 0; hour < hours; hour++)
+        {
+            buckets[hour] = new HourlyLogCount
+            {
+                Hour = startTime.AddHours(hour).ToString("HH:00")
+            };
+        }
+
+        var endTime = startTime.AddHours(hours);
+        var logs = Snapshot();
+
+        foreach (var log in logs)
+        {
+            if (log.Timestamp < startTime || log.Timestamp >= endTime)
+            {
+                continue;
+            }
+
+            var offsetHours = (int)(log.Timestamp - startTime).TotalHours;
+            if ((uint)offsetHours >= (uint)hours)
+            {
+                continue;
+            }
+
+            var bucket = buckets[offsetHours];
+            bucket.Count++;
+
+            if (log.Level >= LogLevel.Error)
+            {
+                bucket.ErrorCount++;
+            }
+
+            if (log.Level == LogLevel.Warning)
+            {
+                bucket.WarningCount++;
+            }
+        }
+
+        return buckets.ToList();
+    }
+
+    private IEnumerable<LogEntry> ApplyFilters(IEnumerable<LogEntry> logs, LogQuery query)
+    {
+        var filtered = logs;
+
         if (query.StartTime.HasValue)
         {
-            queryable = queryable.Where(x => x.Timestamp >= query.StartTime.Value);
+            filtered = filtered.Where(x => x.Timestamp >= query.StartTime.Value);
         }
 
         if (query.EndTime.HasValue)
         {
-            queryable = queryable.Where(x => x.Timestamp <= query.EndTime.Value);
+            filtered = filtered.Where(x => x.Timestamp <= query.EndTime.Value);
         }
 
-        // 日志级别过滤（使用 MinLevel，过滤出该级别及更高级别的日志）
         if (query.MinLevel.HasValue)
         {
-            queryable = queryable.Where(x => x.Level >= query.MinLevel.Value);
+            filtered = filtered.Where(x => x.Level >= query.MinLevel.Value);
         }
 
-        // RequestId 过滤
         if (!string.IsNullOrEmpty(query.RequestId))
         {
-            queryable = queryable.Where(x => x.RequestId == query.RequestId);
+            filtered = filtered.Where(x => x.RequestId == query.RequestId);
         }
 
-        // 来源过滤
         if (!string.IsNullOrEmpty(query.Source))
         {
-            queryable = queryable.Where(x => x.Source == query.Source);
+            filtered = filtered.Where(x => x.Source == query.Source);
         }
 
-        // 应用名称过滤
         if (!string.IsNullOrEmpty(query.Application))
         {
-            queryable = queryable.Where(x => x.Application == query.Application);
+            filtered = filtered.Where(x => x.Application == query.Application);
         }
 
-        // 关键词搜索（支持表达式语法）
         if (!string.IsNullOrEmpty(query.Keyword))
         {
-            queryable = ApplyKeywordFilter(queryable, query.Keyword);
+            filtered = ApplyKeywordFilter(filtered, query.Keyword);
         }
 
-        return queryable.ToList();
+        return filtered;
     }
 
-    private IQueryable<LogEntry> ApplyKeywordFilter(IQueryable<LogEntry> queryable, string keyword)
+    private IEnumerable<LogEntry> ApplyKeywordFilter(IEnumerable<LogEntry> logs, string keyword)
     {
-        // 支持表达式语法：message="xxx" and level="ERROR"
-        // 简单实现：支持 and/or 组合
+        var filtered = logs;
 
         keyword = keyword.Trim();
 
-        // 检查是否包含 and/or
         var andParts = keyword.Split(new[] { " and ", " AND " }, StringSplitOptions.None);
 
         var conditions = new List<string>();
         foreach (var part in andParts)
         {
             var orParts = part.Split(new[] { " or ", " OR " }, StringSplitOptions.None);
-            // 简单处理：只支持 and 连接多个条件，or 暂不支持复杂组合
             conditions.AddRange(orParts);
         }
 
         foreach (var condition in conditions)
         {
             var cond = condition.Trim();
-            if (string.IsNullOrEmpty(cond)) continue;
+            if (string.IsNullOrEmpty(cond))
+            {
+                continue;
+            }
 
-            // 精准匹配：field="value"
-            if (cond.Contains("=") && !cond.Contains(" like "))
+            if (cond.Contains('=') && !cond.Contains(" like ", StringComparison.OrdinalIgnoreCase))
             {
                 var parts = cond.Split('=', 2);
                 if (parts.Length == 2)
                 {
-                    var field = parts[0].Trim().ToLower();
+                    var field = parts[0].Trim().ToLowerInvariant();
                     var value = parts[1].Trim().Trim('"', '\'');
 
-                    queryable = queryable.Where(x => MatchField(x, field, value, true));
+                    filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: true));
                 }
             }
-            // 模糊匹配：field like "value"
-            else if (cond.Contains(" like "))
+            else if (cond.Contains(" like ", StringComparison.OrdinalIgnoreCase))
             {
-                var parts = cond.Split(new[] { " like " }, StringSplitOptions.None);
-                if (parts.Length == 2)
+                const string likeToken = " like ";
+                var likeIndex = cond.IndexOf(likeToken, StringComparison.OrdinalIgnoreCase);
+                if (likeIndex > 0)
                 {
-                    var field = parts[0].Trim().ToLower();
-                    var value = parts[1].Trim().Trim('"', '\'');
+                    var field = cond[..likeIndex].Trim().ToLowerInvariant();
+                    var value = cond[(likeIndex + likeToken.Length)..].Trim().Trim('"', '\'');
 
-                    queryable = queryable.Where(x => MatchField(x, field, value, false));
+                    filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: false));
                 }
             }
-            // 简单关键词搜索（默认搜索 message）
             else
             {
-                queryable = queryable.Where(x => x.Message != null && x.Message.Contains(cond));
+                filtered = filtered.Where(x =>
+                    !string.IsNullOrEmpty(x.Message) &&
+                    x.Message.Contains(cond));
             }
         }
 
-        return queryable;
+        return filtered;
     }
 
     private bool MatchField(LogEntry log, string field, string value, bool exactMatch)
@@ -289,19 +446,14 @@ public class InMemoryLogStore : ILogStore
             return false;
         }
 
-        if (exactMatch)
-        {
-            return fieldValue.Equals(value, StringComparison.OrdinalIgnoreCase);
-        }
-        else
-        {
-            return fieldValue.Contains(value, StringComparison.OrdinalIgnoreCase);
-        }
+        return exactMatch
+            ? fieldValue.Equals(value, StringComparison.OrdinalIgnoreCase)
+            : fieldValue.Contains(value, StringComparison.OrdinalIgnoreCase);
     }
 
-    private string? GetFieldValue(LogEntry log, string field)
+    private static string? GetFieldValue(LogEntry log, string field)
     {
-        return field.ToLower() switch
+        return field switch
         {
             "message" => log.Message,
             "source" => log.Source,
@@ -321,23 +473,43 @@ public class InMemoryLogStore : ILogStore
         };
     }
 
-    private void Cleanup()
+    private void TrimExcessLogs()
     {
-        // 简单的清理策略：删除最旧的 10% 日志
-        var toRemove = _maxLogCount / 10;
-        if (toRemove == 0) toRemove = 1;
-
-        lock (_lockObj)
+        while (_logs.Count > _maxLogCount)
         {
-            var oldestLogs = _logs
-                .OrderBy(x => x.Timestamp)
-                .Take(toRemove)
-                .ToList();
+            var removed = _logs.Dequeue();
 
-            foreach (var log in oldestLogs)
+            if (!string.IsNullOrEmpty(removed.Id)
+                && _logsById.TryGetValue(removed.Id, out var indexed)
+                && ReferenceEquals(indexed, removed))
             {
-                _logs.TryTake(out _);
+                _logsById.Remove(removed.Id);
+            }
+
+            if (!string.IsNullOrEmpty(removed.RequestId)
+                && _logsByRequestId.TryGetValue(removed.RequestId, out var requestLogs))
+            {
+                requestLogs.Remove(removed);
+                if (requestLogs.Count == 0)
+                {
+                    _logsByRequestId.Remove(removed.RequestId);
+                }
             }
         }
     }
+
+    private LogEntry[] Snapshot()
+    {
+        _lock.EnterReadLock();
+        try
+        {
+            return _logs.ToArray();
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+    }
 }
+
+

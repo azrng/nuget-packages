@@ -1,4 +1,4 @@
-using Azrng.DevLogDashboard.Middleware;
+﻿using Azrng.DevLogDashboard.Middleware;
 using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
@@ -10,14 +10,17 @@ using Microsoft.Extensions.Logging;
 namespace Azrng.DevLogDashboard.Extensions;
 
 /// <summary>
-/// ServiceCollection 扩展方法
+/// ServiceCollection extensions
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     private const string DefaultEndpointPath = "/dev-logs";
+    private static readonly string RuntimeMachineName = Environment.MachineName;
+    private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
+    private static readonly int RuntimeProcessId = Environment.ProcessId;
 
     /// <summary>
-    /// 添加 DevLogDashboard 服务
+    /// Add DevLogDashboard services.
     /// </summary>
     public static IServiceCollection AddDevLogDashboard(
         this IServiceCollection services,
@@ -29,7 +32,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
 
-        // 注册日志存储
         services.AddSingleton<ILogStore>(sp =>
             new InMemoryLogStore(options.MaxLogCount));
 
@@ -47,7 +49,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 使用 DevLogDashboard 中间件
+    /// Use DevLogDashboard middleware.
     /// </summary>
     public static IApplicationBuilder UseDevLogDashboard(this IApplicationBuilder app)
     {
@@ -63,19 +65,18 @@ public static class ServiceCollectionExtensions
             }
 
             var requestId = context.TraceIdentifier;
-            var startTime = DateTime.Now;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             try
             {
                 await next();
                 stopwatch.Stop();
-                TryLogRequest(context, logStore, options, requestId, startTime, stopwatch.ElapsedMilliseconds);
+                TryLogRequest(context, logStore, options, requestId, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                TryLogException(context, logStore, options, requestId, ex, startTime, stopwatch.ElapsedMilliseconds);
+                TryLogException(context, logStore, options, requestId, ex, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         });
@@ -109,7 +110,7 @@ public static class ServiceCollectionExtensions
         }
 
         if ((options.IgnoredMethods ?? Array.Empty<string>())
-            .Contains(context.Request.Method.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase))
+            .Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -118,11 +119,11 @@ public static class ServiceCollectionExtensions
     }
 
     private static void TryLogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
-        string requestId, DateTime startTime, long elapsedMs)
+        string requestId, long elapsedMs)
     {
         try
         {
-            LogRequest(context, logStore, options, requestId, startTime, elapsedMs);
+            LogRequest(context, logStore, options, requestId, elapsedMs);
         }
         catch
         {
@@ -131,11 +132,11 @@ public static class ServiceCollectionExtensions
     }
 
     private static void TryLogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
-        string requestId, Exception ex, DateTime startTime, long elapsedMs)
+        string requestId, Exception ex, long elapsedMs)
     {
         try
         {
-            LogException(context, logStore, options, requestId, ex, startTime, elapsedMs);
+            LogException(context, logStore, options, requestId, ex, elapsedMs);
         }
         catch
         {
@@ -144,7 +145,7 @@ public static class ServiceCollectionExtensions
     }
 
     private static void LogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
-        string requestId, DateTime startTime, long elapsedMs)
+        string requestId, long elapsedMs)
     {
         var level = context.Response.StatusCode >= 500 ? LogLevel.Error :
                     context.Response.StatusCode >= 400 ? LogLevel.Warning : LogLevel.Information;
@@ -156,7 +157,6 @@ public static class ServiceCollectionExtensions
 
         var logEntry = new LogEntry
         {
-            Id = Guid.NewGuid().ToString("N"),
             RequestId = requestId,
             ConnectionId = context.Connection.Id,
             Level = level,
@@ -167,11 +167,11 @@ public static class ServiceCollectionExtensions
             ResponseStatusCode = context.Response.StatusCode,
             ElapsedMilliseconds = elapsedMs,
             Source = "DevLogDashboard.RequestLogging",
-            MachineName = Environment.MachineName,
+            MachineName = RuntimeMachineName,
             Application = options.ApplicationName,
             AppVersion = options.ApplicationVersion,
-            Environment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production",
-            ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
+            Environment = RuntimeEnvironment,
+            ProcessId = RuntimeProcessId,
             ThreadId = Environment.CurrentManagedThreadId,
         };
 
@@ -182,11 +182,10 @@ public static class ServiceCollectionExtensions
     }
 
     private static void LogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
-        string requestId, Exception ex, DateTime startTime, long elapsedMs)
+        string requestId, Exception ex, long elapsedMs)
     {
         var logEntry = new LogEntry
         {
-            Id = Guid.NewGuid().ToString("N"),
             RequestId = requestId,
             ConnectionId = context.Connection.Id,
             Level = LogLevel.Error,
@@ -198,11 +197,11 @@ public static class ServiceCollectionExtensions
             Source = "DevLogDashboard.RequestLogging",
             Exception = ex.ToString(),
             StackTrace = ex.StackTrace,
-            MachineName = Environment.MachineName,
+            MachineName = RuntimeMachineName,
             Application = options.ApplicationName,
             AppVersion = options.ApplicationVersion,
-            Environment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production",
-            ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
+            Environment = RuntimeEnvironment,
+            ProcessId = RuntimeProcessId,
             ThreadId = Environment.CurrentManagedThreadId,
         };
 

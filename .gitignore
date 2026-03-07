@@ -343,4 +343,5 @@ healthchecksdb
 # 忽略xml文件
 *.xml
 .claude
-/NUL
+NUL
+.dotnet-cli

@@ -1,4 +1,4 @@
-using Azrng.DevLogDashboard.Models;
+﻿using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +11,11 @@ namespace Azrng.DevLogDashboard.Middleware;
 /// </summary>
 public class DevLogDashboardLogger : ILogger
 {
+    private static readonly string RuntimeMachineName = Environment.MachineName;
+    private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
+    private static readonly int RuntimeProcessId = Environment.ProcessId;
+    private static readonly string? RuntimeSdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString();
+
     private readonly string _category;
     private readonly ILogStore _logStore;
     private readonly DevLogDashboardOptions _options;
@@ -72,7 +77,6 @@ public class DevLogDashboardLogger : ILogger
 
             var logEntry = new LogEntry
             {
-                Id = Guid.NewGuid().ToString("N"),
                 RequestId = requestId,
                 ConnectionId = connectionId,
                 Level = ConvertLogLevel(logLevel),
@@ -85,12 +89,12 @@ public class DevLogDashboardLogger : ILogger
                 ResponseStatusCode = responseStatusCode,
                 Exception = exception?.ToString(),
                 StackTrace = exception?.StackTrace,
-                MachineName = Environment.MachineName,
+                MachineName = RuntimeMachineName,
                 Application = _options.ApplicationName,
                 AppVersion = _options.ApplicationVersion,
-                SdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString(),
-                Environment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production",
-                ProcessId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                SdkVersion = RuntimeSdkVersion,
+                Environment = RuntimeEnvironment,
+                ProcessId = RuntimeProcessId,
                 ThreadId = Environment.CurrentManagedThreadId,
                 ThreadName = Thread.CurrentThread.Name,
                 Logger = _category
