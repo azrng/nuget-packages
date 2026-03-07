@@ -241,6 +241,7 @@ builder.Services.AddDevLogDashboard(options =>
 ### 1.0.0-preview.2
 
 - 修复记录日志重复问题
+- 修复 Traces 标签页下点击刷新、搜索、清空按钮时调用错误 API 的问题
 
 ### 1.0.0-preview.1
 

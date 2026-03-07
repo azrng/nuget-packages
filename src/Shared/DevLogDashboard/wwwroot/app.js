@@ -51,7 +51,13 @@ function initEventListeners() {
     });
 
     // 清空
-    document.getElementById('btnClear').addEventListener('click', clearLogs);
+    document.getElementById('btnClear').addEventListener('click', () => {
+        if (currentTab === 'logs') {
+            clearLogs();
+        } else {
+            clearTraces();
+        }
+    });
 
     // 筛选条件变化
     document.getElementById('ddlLevel').addEventListener('change', () => {
@@ -107,7 +113,11 @@ function switchTab(tabName) {
 function performSearch() {
     currentFilters.keyword = document.getElementById('searchInput').value.trim();
     currentPage = 1;
-    loadLogs();
+    if (currentTab === 'logs') {
+        loadLogs();
+    } else {
+        loadTraces();
+    }
 }
 
 // 加载日志列表
@@ -413,6 +423,19 @@ async function clearLogs() {
     } catch (error) {
         console.error('清空日志失败:', error);
         alert('清空日志失败');
+    }
+}
+
+// 清空追踪
+async function clearTraces() {
+    if (!confirm('确定要清空所有追踪记录吗？')) return;
+
+    try {
+        await fetch(`${API_BASE}/traces/clear`, { method: 'POST' });
+        loadTraces();
+    } catch (error) {
+        console.error('清空追踪失败:', error);
+        alert('清空追踪失败');
     }
 }
 
