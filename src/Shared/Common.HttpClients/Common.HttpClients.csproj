@@ -10,6 +10,10 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>HTTP Clients</Title>
+        <PackageTags>http;client;rest;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+        <Description>HTTP 客户端工具类，支持依赖注入</Description>
     </PropertyGroup>
 
     <ItemGroup>

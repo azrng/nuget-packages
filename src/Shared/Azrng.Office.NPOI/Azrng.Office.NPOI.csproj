@@ -16,6 +16,9 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <Title>Office NPOI Extensions</Title>
+        <PackageTags>office;excel;word;npoi;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

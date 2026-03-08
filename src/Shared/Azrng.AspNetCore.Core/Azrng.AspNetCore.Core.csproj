@@ -15,6 +15,9 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591;IL2026;IL3050;CA1416</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>ASP.NET Core Extensions</Title>
+        <PackageTags>aspnetcore;extensions;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

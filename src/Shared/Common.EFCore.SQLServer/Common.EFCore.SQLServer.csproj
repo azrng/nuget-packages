@@ -16,6 +16,9 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>EFCore SQLServer Provider</Title>
+        <PackageTags>efcore;sqlserver;database;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">

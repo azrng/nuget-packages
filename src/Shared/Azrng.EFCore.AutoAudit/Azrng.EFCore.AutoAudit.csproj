@@ -13,6 +13,9 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>EFCore Auto Audit</Title>
+        <PackageTags>efcore;audit;logging;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

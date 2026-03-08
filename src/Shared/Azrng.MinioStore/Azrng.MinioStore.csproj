@@ -11,6 +11,9 @@
         <PackageId>Common.MinioStore</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>MinIO Storage Provider</Title>
+        <PackageTags>storage;s3;minio</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
@@ -32,5 +35,5 @@
     <ItemGroup>
       <PackageReference Include="Minio" Version="6.0.2" />
     </ItemGroup>
-    
+
 </Project>

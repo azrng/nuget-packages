@@ -22,6 +22,9 @@
         <TrimMode>link</TrimMode>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <Title>Console DI Extensions</Title>
+        <PackageTags>dependencyinjection;console;hosting;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

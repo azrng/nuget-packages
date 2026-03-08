@@ -15,6 +15,9 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>JWT Bearer Authentication</Title>
+        <PackageTags>authentication;jwt;bearer;aspnetcore;security;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

@@ -14,6 +14,8 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>RabbitMQ Event Bus</Title>
+        <PackageTags>eventbus;rabbitmq;messaging;dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

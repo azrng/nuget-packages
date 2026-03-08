@@ -17,6 +17,9 @@
 		<PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
 		<NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+		<Title>EFCore SQLite Provider</Title>
+		<PackageTags>efcore;sqlite;database;dotnet</PackageTags>
+		<RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">

@@ -12,6 +12,9 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>Setting Configuration</Title>
+        <PackageTags>configuration;aspnetcore;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

@@ -13,6 +13,9 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>MaxCompute Client</Title>
+        <PackageTags>maxcompute;alibaba;bigdata;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

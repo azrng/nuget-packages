@@ -6,10 +6,13 @@
         <Version>0.0.3</Version>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
+        <Title>Cache Core Interface</Title>
         <Description>缓存的基础接口定义</Description>
         <DocumentationFile>Azrng.Cache.Core.xml</DocumentationFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
+        <PackageTags>cache;core;interface</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>

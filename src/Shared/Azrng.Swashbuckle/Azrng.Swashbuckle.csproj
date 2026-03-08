@@ -15,6 +15,9 @@
         <DocumentationFile>Azrng.Swashbuckle.xml</DocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>Swagger Extensions</Title>
+        <PackageTags>swagger;openapi;aspnetcore;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net6.0' or '$(TargetFramework)' == 'net7.0'">

@@ -16,6 +16,8 @@
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>PostgreSQL Distributed Lock</Title>
+        <PackageTags>distributed;lock;postgresql;dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

@@ -22,6 +22,8 @@
         <!--        <PublishTrimmed Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">true</PublishTrimmed>-->
         <!--        <TrimMode Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">link</TrimMode>-->
         <!--        <EnableTrimAnalyzer Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">true</EnableTrimAnalyzer>-->
+        <Title>Common Core Library</Title>
+        <PackageTags>core;common;extensions;dotnet</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

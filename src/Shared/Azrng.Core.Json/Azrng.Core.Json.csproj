@@ -15,6 +15,9 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">true</IsAotCompatible>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>JSON Serialization</Title>
+        <PackageTags>json;serialization;systemtextjson;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">

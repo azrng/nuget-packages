@@ -14,6 +14,9 @@
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>S3 Storage Provider</Title>
+        <PackageTags>storage;s3;aws</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
@@ -51,5 +54,5 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0"/>
     </ItemGroup>
-    
+
 </Project>
