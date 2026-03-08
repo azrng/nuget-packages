@@ -8,41 +8,80 @@
 
 ## 🔴 高优先级扩展（立即添加）
 
-### 1. **导入功能（Import）** ⭐⭐⭐⭐⭐
+### 1. **导入功能（Import）** ⭐⭐⭐⭐⭐ ✅ **已完成**
 **当前状态**: 库只支持导出，不支持导入
+**实现日期**: 2026-03-08
 
-**建议添加的方法**:
+**已实现的方法**:
 ```csharp
 public static class ExcelImporter
 {
     /// <summary>
     /// 从 Excel 文件导入数据到 List
     /// </summary>
-    public static List<T> ImportFromFile<T>(string filePath, int sheetIndex = 0, bool hasHeader = true);
+    public static List<T> ImportFromFile<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, int startRow = 0); ✅
 
     /// <summary>
     /// 从 Stream 导入数据
     /// </summary>
-    public static List<T> ImportFromStream<T>(Stream stream, int sheetIndex = 0, bool hasHeader = true);
+    public static List<T> ImportFromStream<T>(Stream stream, int sheetIndex = 0, bool hasHeader = true, int startRow = 0); ✅
 
     /// <summary>
     /// 从字节数组导入数据
     /// </summary>
-    public static List<T> ImportFromBytes<T>(byte[] data, int sheetIndex = 0, bool hasHeader = true);
+    public static List<T> ImportFromBytes<T>(byte[] data, int sheetIndex = 0, bool hasHeader = true, int startRow = 0); ✅
 
     /// <summary>
     /// 异步导入文件
     /// </summary>
-    public static Task<List<T>> ImportFromFileAsync<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, CancellationToken cancellationToken = default);
+    public static Task<List<T>> ImportFromFileAsync<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, int startRow = 0, CancellationToken cancellationToken = default); ✅
+
+    // ✅ 额外添加：导入结果类（包含错误信息）
+    public class ExcelImportResult<T>
+    {
+        public List<T> Data { get; set; }
+        public List<ImportError> Errors { get; set; }
+        public bool HasErrors => Errors.Any();
+        public int SuccessCount => Data.Count;
+        public int ErrorCount => Errors.Count;
+    }
+
+    // ✅ 额外添加：导入错误信息类
+    public class ImportError
+    {
+        public int RowNumber { get; set; }
+        public string? ColumnName { get; set; }
+        public string ErrorMessage { get; set; }
+        public string? OriginalValue { get; set; }
+    }
 }
 ```
 
-**特性支持**:
-- 自动类型转换（字符串 → DateTime, decimal, int 等）
-- 数据验证
-- 错误行收集和报告
-- 大文件流式读取
-- 支持自定义列名映射
+**已实现的特性**:
+- ✅ 自动类型转换（字符串 → DateTime, decimal, int, long, double, float, bool, Guid 等）
+- ✅ 表头自动映射（支持中文列名）
+- ✅ 支持可空类型（Nullable<T>）
+- ✅ 反射缓存（性能优化）
+- ✅ 自动跳过空行
+- ✅ 路径和参数验证
+- ✅ 异步支持
+- ✅ 错误处理和日志
+
+**使用示例**:
+```csharp
+// 简单导入
+var employees = ExcelImporter.ImportFromFile<Employee>("employees.xlsx");
+
+// 指定工作表索引
+var data = ExcelImporter.ImportFromFile<MyData>("data.xlsx", sheetIndex: 1);
+
+// 从字节数组导入
+var bytes = File.ReadAllBytes("data.xlsx");
+var items = ExcelImporter.ImportFromBytes<MyData>(bytes);
+
+// 异步导入大文件
+var largeData = await ExcelImporter.ImportFromFileAsync<LargeData>("bigfile.xlsx");
+```
 
 **实现位置**: `ExcelImporter.cs` (新建)
 
@@ -345,52 +384,101 @@ public static class SheetExtension
 
 ---
 
-### 9. **CellExtensions 扩展** ⭐⭐⭐
-**建议添加**:
+### 9. **CellExtensions 扩展** ⭐⭐⭐ ✅ **已完成**
+**实现日期**: 2026-03-08
+
+**已实现的方法**:
 ```csharp
 public static class CellExtensions
 {
     /// <summary>
     /// 设置单元格值（支持多种类型）
     /// </summary>
-    public static ICell SetValue<T>(this ICell cell, T value);
+    public static ICell SetValue<T>(this ICell cell, T value); ✅
 
     /// <summary>
     /// 设置超链接
     /// </summary>
-    public static ICell SetHyperlink(this ICell cell, string url, HyperlinkType type = HyperlinkType.Url);
+    public static ICell SetHyperlink(this ICell cell, string url, HyperlinkType type = HyperlinkType.Url); ✅
 
     /// <summary>
     /// 设置单元格注释
     /// </summary>
-    public static ICell SetComment(this ICell cell, string comment, string author = null);
+    public static ICell SetComment(this ICell cell, string comment, string author = "System"); ✅
 
     /// <summary>
     /// 设置为日期格式
     /// </summary>
-    public static ICell SetDateFormat(this ICell cell, string format = "yyyy-MM-dd");
+    public static ICell SetDateFormat(this ICell cell, string format = "yyyy-MM-dd"); ✅
 
     /// <summary>
     /// 设置为货币格式
     /// </summary>
-    public static ICell SetCurrencyFormat(this ICell cell, string currencySymbol = "¥");
+    public static ICell SetCurrencyFormat(this ICell cell, string currencySymbol = "¥"); ✅
 
     /// <summary>
     /// 设置为百分比格式
     /// </summary>
-    public static ICell SetPercentFormat(this ICell cell, int decimals = 2);
+    public static ICell SetPercentFormat(this ICell cell, int decimals = 2); ✅
 
     /// <summary>
     /// 克隆单元格
     /// </summary>
-    public static ICell Clone(this ICell sourceCell, ICell targetCell, bool copyStyle = true);
+    public static ICell Clone(this ICell sourceCell, ICell targetCell, bool copyStyle = true); ✅
 
     /// <summary>
     /// 检查单元格是否在合并区域内
     /// </summary>
-    public static bool IsMerged(this ICell cell);
+    public static bool IsMerged(this ICell cell); ✅
+
+    /// <summary>
+    /// 获取合并区域的范围
+    /// </summary>
+    public static CellRangeAddress? GetMergedRegion(this ICell cell); ✅ (额外添加)
+
+    /// <summary>
+    /// 设置单元格背景色
+    /// </summary>
+    public static ICell SetBackgroundColor(this ICell cell, short colorIndex); ✅ (额外添加)
+
+    /// <summary>
+    /// 设置单元格字体颜色
+    /// </summary>
+    public static ICell SetFontColor(this ICell cell, short colorIndex); ✅ (额外添加)
+
+    /// <summary>
+    /// 设置单元格为粗体
+    /// </summary>
+    public static ICell SetBold(this ICell cell, bool isBold = true); ✅ (额外添加)
+
+    /// <summary>
+    /// 设置单元格字体大小
+    /// </summary>
+    public static ICell SetFontSize(this ICell cell, short fontSize); ✅ (额外添加)
 }
 ```
+
+**使用示例**:
+```csharp
+// 设置超链接
+cell.SetHyperlink("https://example.com");
+
+// 设置注释
+cell.SetComment("这是一个重要数据");
+
+// 设置货币格式
+cell.SetCurrencyFormat("¥");
+
+// 设置背景色
+cell.SetBackgroundColor(IndexedColors.LightYellow.Index);
+
+// 设置粗体
+cell.SetBold(true);
+```
+
+---
+
+## 🟢 低优先级扩展（长期规划）
 
 ---
 
@@ -425,22 +513,6 @@ public static class ImageExtensions
 
 ---
 
-### 11. **宏和 VBA 支持** ⭐
-**建议添加**:
-```csharp
-public static class MacroExtensions
-{
-    /// <summary>
-    /// 读取宏代码
-    /// </summary>
-    public static string GetMacroCode(this IWorkbook workbook, string macroName);
-
-    /// <summary>
-    /// 检查是否包含宏
-    /// </summary>
-    public static bool HasMacros(this IWorkbook workbook);
-}
-```
 
 ---
 
@@ -468,27 +540,6 @@ public static class EncryptionExtensions
 
 ---
 
-### 13. **性能优化扩展** ⭐⭐⭐
-**建议添加**:
-```csharp
-public static class PerformanceExtensions
-{
-    /// <summary>
-    /// 禁用屏幕更新（提高批量操作性能）
-    /// </summary>
-    public static IDisposable DisableScreenUpdate(this IWorkbook workbook);
-
-    /// <summary>
-    /// 禁用自动计算（提高大量数据写入性能）
-    /// </summary>
-    public static IDisposable DisableAutoCalculation(this IWorkbook workbook);
-
-    /// <summary>
-    /// 批量操作（使用事务）
-    /// </summary>
-    public static IDisposable BeginBatch(this IWorkbook workbook);
-}
-```
 
 ---
 
