@@ -22,7 +22,7 @@ namespace Azrng.Office.NPOI.Model
                            };
 
                 //动态样式优先
-                if (dynamicStylePair.TryGetValue(item.PropertyInfo.Name, out var style))
+                if (item.PropertyInfo?.Name != null && dynamicStylePair.TryGetValue(item.PropertyInfo.Name, out var style))
                     cell.CellStyle = style;
                 else
                     cell.CellStyle = item.ColumnStyle;

@@ -1,6 +1,7 @@
 ﻿using Azrng.Core.Extension;
 using Azrng.Office.NPOI.Attributes.Styles;
 using Azrng.Office.NPOI.Styles;
+using Azrng.Office.NPOI;
 using System.Reflection;
 
 namespace Azrng.Office.NPOI.Attributes
@@ -125,7 +126,7 @@ namespace Azrng.Office.NPOI.Attributes
                 if (PropertyInfo.PropertyType == typeof(DateTime) || PropertyInfo.PropertyType == typeof(DateTime?))
                 {
                     var format = StringFormat.IsNullOrWhiteSpace() ? ExportConfig.DefaultDateFormat : StringFormat;
-                    cellValue = ((DateTime)objectValue).ToString(format);
+                    cellValue = ((DateTime)objectValue).ToString(format, ExcelCulture.InvariantCulture);
                 }
                 else
                 {

@@ -21,7 +21,6 @@ public static class WorkbookExtension
     /// </summary>
     /// <param name="workBook"></param>
     /// <param name="sheetExportBookConfig">工作簿配置</param>
-    /// <param name="sheetAction">工作簿 行索引</param>
     public static void CreateSheet(this IWorkbook workBook, BaseSheetExportConfig sheetExportBookConfig)
     {
         var sheet = sheetExportBookConfig.SheetName.IsNullOrWhiteSpace()
@@ -29,22 +28,36 @@ public static class WorkbookExtension
             : workBook.CreateSheet(sheetExportBookConfig.SheetName);
         if (sheetExportBookConfig.DefaultRowHeight > 0)
         {
-            sheet.DefaultRowHeight = (short)(sheetExportBookConfig.DefaultRowHeight * 20);
+            sheet.DefaultRowHeight = (short)(sheetExportBookConfig.DefaultRowHeight * ExcelConstants.RowHeightMultiplier);
         }
 
         if (sheetExportBookConfig.DefaultColumnWidth > 0)
         {
-            sheet.DefaultColumnWidth = (short)(sheetExportBookConfig.DefaultColumnWidth * 20);
+            sheet.DefaultColumnWidth = (short)(sheetExportBookConfig.DefaultColumnWidth * ExcelConstants.RowHeightMultiplier);
         }
     }
 
     public static ISheet? GetSheetOrNull(this IWorkbook workBook, int index)
     {
+        if (workBook == null)
+            throw new ArgumentNullException(nameof(workBook));
+
+        if (index < 0)
+            return null;
+
         try
         {
+            // 检查索引是否在有效范围内
+            if (index >= workBook.NumberOfSheets)
+                return null;
+
             return workBook.GetSheetAt(index);
         }
-        catch (Exception)
+        catch (ArgumentOutOfRangeException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
         {
             return null;
         }
@@ -74,9 +87,9 @@ public static class WorkbookExtension
             }
 
             //如果设置了行高
-            if (row.RowHeight > 0 && excelRow.Height < row.RowHeight * 20)
+            if (row.RowHeight > 0 && excelRow.Height < row.RowHeight * ExcelConstants.RowHeightMultiplier)
             {
-                excelRow.Height = (short)(row.RowHeight * 20);
+                excelRow.Height = (short)(row.RowHeight * ExcelConstants.RowHeightMultiplier);
             }
         }
 

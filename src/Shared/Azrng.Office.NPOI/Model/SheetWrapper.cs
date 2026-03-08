@@ -6,11 +6,15 @@ using Azrng.Office.NPOI.Extensions;
 using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace Azrng.Office.NPOI.Model
 {
     public class SheetWrapper
     {
+        // 反射缓存，提高性能
+        private static readonly ConcurrentDictionary<Type, List<ColumnProperty>> ColumnPropertyCache = new();
+
         public SheetWrapper(ISheet sheet)
         {
             Sheet = sheet;
@@ -71,7 +75,7 @@ namespace Azrng.Office.NPOI.Model
 
             // 设置行高
             if (rowHeight > 0)
-                row.Height = (short)(rowHeight * 20);
+                row.Height = (short)(rowHeight * ExcelConstants.RowHeightMultiplier);
 
             // 创建标题单元格
             var cell = row.CreateCell(startIndex);
@@ -142,7 +146,7 @@ namespace Azrng.Office.NPOI.Model
 
             // 设置行高
             if (rowHeight > 0)
-                row.Height = (short)(rowHeight * 20);
+                row.Height = (short)(rowHeight * ExcelConstants.RowHeightMultiplier);
 
             // 创建单元格
             var cell = row.CreateCell(startIndex);
@@ -260,12 +264,15 @@ namespace Azrng.Office.NPOI.Model
             var actualStartRowIndex = startRowIndex ?? Math.Max(0, NextY + 1);
             var currentRowIndex = actualStartRowIndex;
 
+            // 预创建列配置（避免在每次迭代中重复创建）
+            var columns = CreateColumnWrappers(columnProperties);
+
             // 创建标题和表头
             if (sheetTitle != null)
             {
                 var titleCells = CreateTitleCells(columnProperties, sheetTitle);
                 var titleRow = new ExportRowWrapper(titleCells, currentRowIndex++, sheetTitle.RowHeight);
-                var titleWrapper = new ExportSheetWrapper(CreateColumnWrappers(columnProperties), new List<ExportRowWrapper> { titleRow });
+                var titleWrapper = new ExportSheetWrapper(columns, new List<ExportRowWrapper> { titleRow });
                 Sheet.Workbook.FillSheet(Sheet, titleWrapper);
             }
 
@@ -273,22 +280,22 @@ namespace Azrng.Office.NPOI.Model
             var headerRowHeight = columnProperties.Max(t => t.HeaderRowHeight);
             var headerCells = CreateHeaderCells(columnProperties);
             var headerRow = new ExportRowWrapper(headerCells, currentRowIndex++, headerRowHeight);
-            var headerWrapper = new ExportSheetWrapper(CreateColumnWrappers(columnProperties), new List<ExportRowWrapper> { headerRow });
+            var headerWrapper = new ExportSheetWrapper(columns, new List<ExportRowWrapper> { headerRow });
             Sheet.Workbook.FillSheet(Sheet, headerWrapper);
 
-            // 批量处理数据行
+            // 批量处理数据行（优化：减少中间集合创建）
             var totalRows = rows.Count;
             for (int i = 0; i < totalRows; i += batchSize)
             {
-                var batchRows = rows.Skip(i).Take(batchSize).ToList();
-                var exportRows = new List<ExportRowWrapper>();
+                var batchEnd = Math.Min(i + batchSize, totalRows);
+                var exportRows = new List<ExportRowWrapper>(batchEnd - i);
 
-                foreach (var row in batchRows)
+                for (int j = i; j < batchEnd; j++)
                 {
-                    exportRows.Add(new ExportRowWrapper(row, currentRowIndex++, columnProperties));
+                    exportRows.Add(new ExportRowWrapper(rows[j], currentRowIndex++, columnProperties));
                 }
 
-                var batchWrapper = new ExportSheetWrapper(CreateColumnWrappers(columnProperties), exportRows);
+                var batchWrapper = new ExportSheetWrapper(columns, exportRows);
                 Sheet.Workbook.FillSheet(Sheet, batchWrapper);
 
                 // 处理合并单元格（仅对当前批次）
@@ -462,32 +469,32 @@ namespace Azrng.Office.NPOI.Model
         }
 
         /// <summary>
-        /// 创建列属性
+        /// 创建列属性（带缓存）
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
         private static List<ColumnProperty> CreateColumnProperties(Type type)
         {
-            //查询没有被忽略的字段，并且获取该字段的特性信息
-            var columnProperties = type.GetProperties()
-                                       .Where(x => x.GetCustomAttribute(typeof(IgnoreColumnAttribute)) is null)
-                                       .Select((m, i) => new ColumnProperty(m, i))
-                                       .ToList();
-
-            // for (var i = 0; i < columnProperties.Count; i++)
-            //     columnProperties[i].ColumnIndex = i;
-
-            //设置主键列
-            var mergeColumns = columnProperties.Where(x => x.MergedRowByPrimaryKey).ToList();
-
-            //如果标注了特性MergeRowAttribute(MergedRowByPrimaryKey为true),但是列里面没有主键列，那么就将标注该特性的列设置为主键列
-            if (mergeColumns.Any() && columnProperties.All(x => !x.IsPrimaryColumn))
+            return ColumnPropertyCache.GetOrAdd(type, t =>
             {
-                foreach (var item in mergeColumns)
-                    item.IsPrimaryColumn = true;
-            }
+                //查询没有被忽略的字段，并且获取该字段的特性信息
+                var columnProperties = t.GetProperties()
+                                           .Where(x => x.GetCustomAttribute(typeof(IgnoreColumnAttribute)) is null)
+                                           .Select((m, i) => new ColumnProperty(m, i))
+                                           .ToList();
 
-            return columnProperties;
+                //设置主键列
+                var mergeColumns = columnProperties.Where(x => x.MergedRowByPrimaryKey).ToList();
+
+                //如果标注了特性MergeRowAttribute(MergedRowByPrimaryKey为true),但是列里面没有主键列，那么就将标注该特性的列设置为主键列
+                if (mergeColumns.Any() && columnProperties.All(x => !x.IsPrimaryColumn))
+                {
+                    foreach (var item in mergeColumns)
+                        item.IsPrimaryColumn = true;
+                }
+
+                return columnProperties;
+            });
         }
     }
 }
