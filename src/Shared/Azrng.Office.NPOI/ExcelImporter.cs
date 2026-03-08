@@ -1,5 +1,6 @@
 using Azrng.Core.Extension;
 using Azrng.Office.NPOI.Attributes;
+using Azrng.Office.NPOI.Extensions;
 using Azrng.Office.NPOI.Model;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
@@ -28,14 +29,14 @@ public static class ExcelImporter
     public static List<T> ImportFromFile<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, int startRow = 0)
     {
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
+            throw new ArgumentException("文件路径不能为空", nameof(filePath));
 
         if (!File.Exists(filePath))
-            throw new FileNotFoundException($"Excel file not found: {filePath}");
+            throw new FileNotFoundException($"找不到 Excel 文件：{filePath}");
 
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
         if (extension != ".xls" && extension != ".xlsx")
-            throw new ArgumentException("File must be .xls or .xlsx format", nameof(filePath));
+            throw new ArgumentException("文件必须是 .xls 或 .xlsx 格式", nameof(filePath));
 
         try
         {
@@ -44,7 +45,7 @@ public static class ExcelImporter
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to import Excel file: {filePath}", ex);
+            throw new InvalidOperationException($"导入 Excel 文件失败：{filePath}", ex);
         }
     }
 
@@ -70,7 +71,7 @@ public static class ExcelImporter
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Failed to create workbook from stream", ex);
+            throw new InvalidOperationException("从流创建工作簿失败", ex);
         }
 
         try
@@ -95,7 +96,7 @@ public static class ExcelImporter
     public static List<T> ImportFromBytes<T>(byte[] data, int sheetIndex = 0, bool hasHeader = true, int startRow = 0)
     {
         if (data == null || data.Length == 0)
-            throw new ArgumentException("Data cannot be null or empty", nameof(data));
+            throw new ArgumentException("数据不能为空", nameof(data));
 
         using var stream = new MemoryStream(data);
         return ImportFromStream<T>(stream, sheetIndex, hasHeader, startRow);
@@ -111,7 +112,8 @@ public static class ExcelImporter
     /// <param name="startRow">起始行索引，默认为 0</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>导入的数据列表</returns>
-    public static async Task<List<T>> ImportFromFileAsync<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, int startRow = 0, CancellationToken cancellationToken = default)
+    public static async Task<List<T>> ImportFromFileAsync<T>(string filePath, int sheetIndex = 0, bool hasHeader = true, int startRow = 0,
+                                                             CancellationToken cancellationToken = default)
     {
         return await Task.Run(() => ImportFromFile<T>(filePath, sheetIndex, hasHeader, startRow), cancellationToken);
     }
@@ -122,10 +124,11 @@ public static class ExcelImporter
     private static List<T> ImportFromWorkbook<T>(IWorkbook workbook, int sheetIndex, bool hasHeader, int startRow)
     {
         if (workbook.NumberOfSheets == 0)
-            throw new InvalidOperationException("Workbook contains no sheets");
+            throw new InvalidOperationException("工作簿不包含任何工作表");
 
         if (sheetIndex < 0 || sheetIndex >= workbook.NumberOfSheets)
-            throw new ArgumentOutOfRangeException(nameof(sheetIndex), $"Sheet index {sheetIndex} is out of range (0-{workbook.NumberOfSheets - 1})");
+            throw new ArgumentOutOfRangeException(nameof(sheetIndex),
+                $"工作表索引 {sheetIndex} 超出范围 (0-{workbook.NumberOfSheets - 1})");
 
         var sheet = workbook.GetSheetAt(sheetIndex);
         var result = new List<T>();
@@ -216,7 +219,8 @@ public static class ExcelImporter
                 {
                     // 根据列名匹配
                     colIndex = headerMappings.FirstOrDefault(kvp =>
-                        kvp.Value.Equals(property.Name, StringComparison.OrdinalIgnoreCase)).Key;
+                                                 kvp.Value.Equals(property.Name, StringComparison.OrdinalIgnoreCase))
+                                             .Key;
 
                     if (colIndex == 0 && !headerMappings.ContainsValue(property.Name))
                     {
@@ -301,6 +305,7 @@ public static class ExcelImporter
             {
                 if (bool.TryParse(value, out var boolResult))
                     return boolResult;
+
                 // 也支持 1/0
                 if (int.TryParse(value, out var intVal))
                     return intVal == 1;
