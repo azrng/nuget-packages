@@ -36,17 +36,17 @@ public static class ExcelHelper
             throw new ArgumentNullException(nameof(workbook));
 
         if (string.IsNullOrWhiteSpace(sheetName))
-            throw new ArgumentException("Sheet name cannot be null or empty", nameof(sheetName));
+            throw new ArgumentException("工作表名称不能为空", nameof(sheetName));
 
         if (sheetName.Length > ExcelConstants.MaxSheetNameLength)
-            throw new ArgumentException($"Sheet name cannot exceed {ExcelConstants.MaxSheetNameLength} characters", nameof(sheetName));
+            throw new ArgumentException($"工作表名称不能超过 {ExcelConstants.MaxSheetNameLength} 个字符", nameof(sheetName));
 
         if (sheetName.IndexOfAny(ExcelConstants.InvalidSheetNameChars) >= 0)
-            throw new ArgumentException("Sheet name contains invalid characters", nameof(sheetName));
+            throw new ArgumentException("工作表名称包含非法字符", nameof(sheetName));
 
         // 验证工作表名称不以单引号开头或结尾
         if (sheetName.StartsWith("'") || sheetName.EndsWith("'"))
-            throw new ArgumentException("Sheet name cannot start or end with a single quote", nameof(sheetName));
+            throw new ArgumentException("工作表名称不能以单引号开头或结尾", nameof(sheetName));
 
         return new SheetWrapper(workbook.Workbook.CreateSheet(sheetName));
     }
