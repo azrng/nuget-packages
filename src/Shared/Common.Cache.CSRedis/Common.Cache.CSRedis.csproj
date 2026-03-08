@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <Authors>Azrng</Authors>
     <Company>Azrng</Company>
-    <Description>1.使用     
+    <Description>1.使用
        services.AddRedisCacheService(() =&gt; new RedisConfig
             {
                 ConnectionString = "xxxx:6379,password=xxxx,defaultDatabase=0",
@@ -13,7 +13,12 @@
 2.注入IRedisCache</Description>
     <Copyright>版权归Azrng所有</Copyright>
     <Version>1.0.2</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CSRedisCore" Version="3.6.6" />

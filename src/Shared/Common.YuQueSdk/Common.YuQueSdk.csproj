@@ -13,8 +13,13 @@
         <ApplicationIcon>yuque.ico</ApplicationIcon>
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <NoWarn>1701;1702;1591</NoWarn>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 
     <ItemGroup>
         <Content Include="yuque.ico"/>

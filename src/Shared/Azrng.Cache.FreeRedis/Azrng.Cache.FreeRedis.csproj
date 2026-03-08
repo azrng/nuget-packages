@@ -2,6 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <Title>FreeRedis Cache Provider</Title>
+    <Description>FreeRedis缓存提供者，支持依赖注入</Description>
+    <PackageTags>cache;redis;freeRedis;dotnet</PackageTags>
+    <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
