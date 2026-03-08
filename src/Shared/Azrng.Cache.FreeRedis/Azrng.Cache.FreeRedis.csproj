@@ -6,7 +6,12 @@
     <Description>FreeRedis缓存提供者，支持依赖注入</Description>
     <PackageTags>cache;redis;freeRedis;dotnet</PackageTags>
     <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FreeRedis" Version="1.2.15" />
