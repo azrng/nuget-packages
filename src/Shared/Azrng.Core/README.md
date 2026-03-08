@@ -1,8 +1,12 @@
 ﻿# Azrng.Core
 
-一个公共的帮助类库，包含一些常用通用的方法。
+> 💎 **高效、可靠的.NET核心工具库** - 为您的应用提供通用扩展方法和帮助类
 
-> 下面的文档还没补充完整，待完善
+[![NuGet](https://img.shields.io/nuget/v/Azrng.Core)](https://www.nuget.org/packages/Azrng.Core/)
+[![License](https://img.shields.io/github/license/azrng/nuget-packages)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-%3E%3D%206.0-purple.svg)](https://docs.microsoft.com/en-us/dotnet/core/)
+
+> 📋 **说明**：本文档持续更新中，部分功能示例待补充完整
 
 ## 扩展类
 
