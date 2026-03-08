@@ -1,12 +1,25 @@
 # Azrng.ConsoleApp.DependencyInjection
 
-控制台依赖注入扩展
+> 🚀 **现代化的控制台应用开发框架** - 简化依赖注入配置，专注业务逻辑
 
-* 支持读取appsettings.json配置文件
-* 默认使用 Microsoft.Extensions.Logging（Console + Debug + 本地文件）日志输出
+[![NuGet](https://img.shields.io/nuget/v/Azrng.ConsoleApp.DependencyInjection)](https://www.nuget.org/packages/Azrng.ConsoleApp.DependencyInjection/)
+[![License](https://img.shields.io/github/license/azrng/nuget-packages)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-%3E%3D%206.0-purple.svg)](https://docs.microsoft.com/en-us/dotnet/core/)
+
+## 📋 项目简介
+
+控制台依赖注入扩展，为 .NET 控制台应用提供现代化的依赖注入和配置管理能力。
+
+### ✨ 核心特性
+
+- ⚙️ **支持读取 appsettings.json 配置文件**
+- 📝 **默认使用 Microsoft.Extensions.Logging（Console + Debug + 本地文件）日志输出**
+- 🎯 **简化的依赖注入配置**
+- 🔧 **灵活的服务注册方式**
+- 🌍 **支持环境配置（appsettings.{Environment}.json）**
+- ✅ **启用容器校验，确保依赖关系正确**
 
 ## 构建方法
-
 
 ### 方式1: 简单方式，不需要依赖注入
 
