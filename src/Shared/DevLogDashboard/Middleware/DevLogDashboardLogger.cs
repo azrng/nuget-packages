@@ -3,6 +3,8 @@ using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Azrng.DevLogDashboard.Middleware;
 
@@ -15,6 +17,10 @@ public class DevLogDashboardLogger : ILogger
     private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
     private static readonly int RuntimeProcessId = Environment.ProcessId;
     private static readonly string? RuntimeSdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString();
+    private static readonly JsonSerializerOptions PropertyValueSerializerOptions = new()
+    {
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
 
     private readonly string _category;
     private readonly ILogStore _logStore;
@@ -106,7 +112,7 @@ public class DevLogDashboardLogger : ILogger
                 {
                     if (kvp.Key != "{OriginalFormat}" && !logEntry.Properties.ContainsKey(kvp.Key))
                     {
-                        logEntry.Properties[kvp.Key] = kvp.Value;
+                        logEntry.Properties[kvp.Key] = NormalizePropertyValue(kvp.Value);
                     }
                 }
             }
@@ -131,6 +137,39 @@ public class DevLogDashboardLogger : ILogger
             LogLevel.Critical => LogLevel.Critical,
             _ => LogLevel.Information
         };
+    }
+
+    private static object? NormalizePropertyValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double
+            or decimal or DateTime or DateTimeOffset or Guid)
+        {
+            return value;
+        }
+
+        if (value is Enum enumValue)
+        {
+            return enumValue.ToString();
+        }
+
+        if (value is JsonElement jsonElement)
+        {
+            return jsonElement;
+        }
+
+        try
+        {
+            return JsonSerializer.SerializeToElement(value, PropertyValueSerializerOptions);
+        }
+        catch
+        {
+            return value.ToString();
+        }
     }
 
     private sealed class NullScope : IDisposable
