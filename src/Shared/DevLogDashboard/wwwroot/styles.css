@@ -375,29 +375,6 @@ body {
     font-family: 'Consolas', 'Monaco', monospace;
 }
 
-.log-level-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 4px;
-}
-
-.log-level-dot.trace,
-.log-level-dot.debug,
-.log-level-dot.info {
-    background: var(--success-color);
-}
-
-.log-level-dot.warn {
-    background: var(--warning-color);
-}
-
-.log-level-dot.error,
-.log-level-dot.fatal {
-    background: var(--danger-color);
-}
-
 .log-level {
     padding: 2px 8px;
     border-radius: 3px;
@@ -405,6 +382,9 @@ body {
     font-weight: 500;
     white-space: nowrap;
     color: white;
+    min-width: 85px;
+    text-align: center;
+    display: inline-block;
 }
 
 .log-level.trace,

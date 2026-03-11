@@ -242,7 +242,6 @@ function renderLogList(result) {
             <div class="log-header">
                 <span class="log-time">${formatTimestamp(log.timestamp)}</span>
                 <span class="log-level ${levelStr}">${levelDisplay}</span>
-                <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                 <span class="log-message">${escapeHtml(log.message)}</span>
             </div>
             <div class="log-detail" id="detail-${log.id}" onclick="event.stopPropagation();">
@@ -504,7 +503,6 @@ function showTraceModal(requestId, logs) {
                     <div class="log-header">
                         <span class="log-time">${formatTimestamp(log.timestamp)}</span>
                         <span class="log-level ${levelStr}">${levelDisplay}</span>
-                        <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                         <span class="log-message">${escapeHtml(log.message)}</span>
                     </div>
                 </div>

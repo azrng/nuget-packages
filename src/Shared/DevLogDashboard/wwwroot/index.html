@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#409EFF">
     <title>DevLogDashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=5">
+    <link rel="stylesheet" href="./styles.css?v=7">
 </head>
 <body>
     <div id="app">
@@ -53,19 +53,19 @@
             </label>
             <select id="ddlLevel" class="select">
                 <option value="">All Levels</option>
-                <option value="TRACE">TRACE</option>
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARN">WARN</option>
-                <option value="ERROR">ERROR</option>
-                <option value="FATAL">FATAL</option>
+                <option value="Trace">Trace</option>
+                <option value="Debug">Debug</option>
+                <option value="Information">Information</option>
+                <option value="Warning">Warning</option>
+                <option value="Error">Error</option>
+                <option value="Critical">Critical</option>
             </select>
             <div class="date-range">
                 <div class="date-quick-select">
+                    <button class="btn-quick-date" data-minutes="1">最近 1 分钟</button>
                     <button class="btn-quick-date" data-minutes="30">最近 30 分钟</button>
-                    <button class="btn-quick-date" data-minutes="60">最近 1 小时</button>
-                    <button class="btn-quick-date" data-hours="24">最近 24 小时</button>
-                    <button class="btn-quick-date" data-days="7">最近 7 天</button>
+                    <button class="btn-quick-date" data-hours="1">最近 1 小时</button>
+                    <button class="btn-quick-date" data-hours="12">最近 12 小时</button>
                 </div>
                 <input type="datetime-local" id="txtStartTime" class="date-input">
                 <span class="date-separator">~</span>
@@ -122,6 +122,6 @@
         </div>
     </div>
 
-    <script src="./app.js?v=16"></script>
+    <script src="./app.js?v=20"></script>
 </body>
 </html>
