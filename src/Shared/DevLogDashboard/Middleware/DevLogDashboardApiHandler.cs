@@ -59,6 +59,12 @@ internal class DevLogDashboardApiHandler
             return;
         }
 
+        if (path.Equals("/api/serverTime", StringComparison.OrdinalIgnoreCase) && method == "GET")
+        {
+            await HandleServerTimeAsync(context);
+            return;
+        }
+
         if (method == "GET" && path.StartsWith("/api/traces/", StringComparison.OrdinalIgnoreCase))
         {
             await HandleTraceDetailAsync(context);
@@ -159,6 +165,12 @@ internal class DevLogDashboardApiHandler
 
         var logs = await _logStore.GetByRequestIdAsync(requestId);
         await context.Response.WriteAsJsonAsync(logs, JsonOptions);
+    }
+
+    private async Task HandleServerTimeAsync(HttpContext context)
+    {
+        var serverTime = DateTime.Now;
+        await context.Response.WriteAsJsonAsync(new { serverTime = serverTime.ToString("o") }, JsonOptions);
     }
 
     private async Task HandleClearLogsAsync(HttpContext context)

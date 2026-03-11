@@ -22,8 +22,9 @@ let isLoading = false;
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
-    initDateTimeRange();
+    initDateTimeRange(); // 先使用客户端时间初始化
     loadLogs();
+    fetchServerTime(); // 获取服务器时间并更新
 });
 
 // 初始化事件监听
@@ -129,6 +130,24 @@ function initDateTimeRange() {
 
     document.getElementById('txtStartTime').value = formatDateTimeLocal(oneHourAgo);
     document.getElementById('txtEndTime').value = formatDateTimeLocal(now);
+}
+
+// 获取服务器时间并更新日期范围
+async function fetchServerTime() {
+    try {
+        const response = await fetch(`${API_BASE}/serverTime`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const serverTime = new Date(data.serverTime);
+        const oneHourAgo = new Date(serverTime.getTime() - ONE_HOUR_MS);
+
+        document.getElementById('txtStartTime').value = formatDateTimeLocal(oneHourAgo);
+        document.getElementById('txtEndTime').value = formatDateTimeLocal(serverTime);
+    } catch (error) {
+        // 获取失败时使用客户端时间，不报错
+        console.warn('获取服务器时间失败，使用客户端时间');
+    }
 }
 
 // 切换标签
