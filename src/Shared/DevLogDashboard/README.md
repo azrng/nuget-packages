@@ -238,6 +238,14 @@ builder.Services.AddDevLogDashboard(options =>
 
 ## 版本历史
 
+### 1.0.0-preview.3
+
+- **修复跳过自身请求逻辑**
+  - 改进路径匹配逻辑，支持 `PathBase` 场景
+  - 在日志记录器中添加请求过滤，避免记录仪表板自身的 API 请求
+  - 支持按 HTTP 方法和路径进行双重过滤
+  - 路径匹配改为不区分大小写
+
 ### 1.0.0-preview.2
 
 - 修复记录日志重复问题
