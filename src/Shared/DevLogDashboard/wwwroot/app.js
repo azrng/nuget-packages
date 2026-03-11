@@ -1,10 +1,11 @@
 // DevLogDashboard 前端应用
 
-const API_BASE = 'api'; // 相对于当前页面的 API 路径
+const API_BASE = 'api';
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const DEFAULT_PAGE_SIZE = 50;
 
 // 状态
 let currentPage = 1;
-const pageSize = 50;
 let currentTab = 'logs';
 let currentFilters = {
     keyword: '',
@@ -16,6 +17,7 @@ let currentFilters = {
     endTime: null,
     orderByTimeAscending: false
 };
+let isLoading = false;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,6 +45,7 @@ function initEventListeners() {
 
     // 刷新
     document.getElementById('btnRefresh').addEventListener('click', () => {
+        if (isLoading) return;
         if (currentTab === 'logs') {
             loadLogs();
         } else {
@@ -56,6 +59,20 @@ function initEventListeners() {
             clearLogs();
         } else {
             clearTraces();
+        }
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+R 或 Cmd+R 刷新
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            if (currentTab === 'logs') loadLogs();
+            else loadTraces();
+        }
+        // Esc 关闭弹窗
+        if (e.key === 'Escape') {
+            closeLogDetail();
         }
     });
 
@@ -79,12 +96,36 @@ function initEventListeners() {
         if (currentTab === 'logs') loadLogs();
         else loadTraces();
     });
+
+    // 快捷日期选择
+    document.querySelectorAll('.btn-quick-date').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const now = new Date();
+            let startTime;
+
+            if (btn.dataset.minutes) {
+                startTime = new Date(now.getTime() - parseInt(btn.dataset.minutes) * 60 * 1000);
+            } else if (btn.dataset.hours) {
+                startTime = new Date(now.getTime() - parseInt(btn.dataset.hours) * 60 * 60 * 1000);
+            } else if (btn.dataset.days) {
+                startTime = new Date(now.getTime() - parseInt(btn.dataset.days) * 24 * 60 * 60 * 1000);
+            }
+
+            document.getElementById('txtStartTime').value = formatDateTimeLocal(startTime);
+            document.getElementById('txtEndTime').value = formatDateTimeLocal(now);
+            currentFilters.startTime = startTime.toISOString();
+            currentFilters.endTime = now.toISOString();
+            currentPage = 1;
+            if (currentTab === 'logs') loadLogs();
+            else loadTraces();
+        });
+    });
 }
 
 // 初始化日期范围（默认最近 1 小时）
 function initDateTimeRange() {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - ONE_HOUR_MS);
 
     document.getElementById('txtStartTime').value = formatDateTimeLocal(oneHourAgo);
     document.getElementById('txtEndTime').value = formatDateTimeLocal(now);
@@ -122,13 +163,18 @@ function performSearch() {
 
 // 加载日志列表
 async function loadLogs() {
+    if (isLoading) return;
+
+    isLoading = true;
+    setRefreshButtonLoading(true);
+
     const listEl = document.getElementById('logList');
     listEl.innerHTML = '<div class="empty-state"><p>加载中...</p></div>';
 
     try {
         const params = new URLSearchParams({
             pageIndex: currentPage.toString(),
-            pageSize: pageSize.toString(),
+            pageSize: DEFAULT_PAGE_SIZE.toString(),
             orderByTimeAscending: currentFilters.orderByTimeAscending.toString()
         });
 
@@ -146,6 +192,9 @@ async function loadLogs() {
     } catch (error) {
         console.error('加载日志失败:', error);
         listEl.innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+    } finally {
+        isLoading = false;
+        setRefreshButtonLoading(false);
     }
 }
 
@@ -154,14 +203,7 @@ function renderLogList(result) {
     const listEl = document.getElementById('logList');
 
     if (!result.items || result.items.length === 0) {
-        listEl.innerHTML = `
-            <div class="empty-state">
-                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-width="2"/>
-                </svg>
-                <p>没有相关日志</p>
-            </div>
-        `;
+        listEl.innerHTML = renderEmptyState('没有相关日志', 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z');
         return;
     }
 
@@ -287,11 +329,47 @@ function renderPagination(result) {
         return;
     }
 
+    const pages = getPageNumbers(currentPage, result.totalPages);
+
     paginationEl.innerHTML = `
         <button ${!result.hasPrevious ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">上一页</button>
-        <span class="page-info">${result.pageIndex} / ${result.totalPages} (共 ${result.total} 条)</span>
+        ${pages.map(p => {
+            if (p === '...') {
+                return '<span class="page-ellipsis">...</span>';
+            }
+            return `<button class="page-number ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        }).join('')}
         <button ${!result.hasNext ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">下一页</button>
+        <span class="page-info">共 ${result.total} 条</span>
     `;
+}
+
+// 生成分页页码列表
+function getPageNumbers(current, total) {
+    const delta = 2; // 当前页前后显示的页码数
+    const range = [];
+
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+        range.push(i);
+    }
+
+    const result = [];
+
+    if (current - delta > 2) {
+        result.push(1, '...');
+    } else {
+        result.push(1);
+    }
+
+    range.forEach(p => result.push(p));
+
+    if (current + delta < total - 1) {
+        result.push('...', total);
+    } else {
+        result.push(total);
+    }
+
+    return result.filter((v, i, a) => a.indexOf(v) === i); // 去重
 }
 
 // 翻页
@@ -325,14 +403,7 @@ function renderTraceList(traces) {
     const listEl = document.getElementById('traceList');
 
     if (!traces || traces.length === 0) {
-        listEl.innerHTML = `
-            <div class="empty-state">
-                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/>
-                </svg>
-                <p>没有追踪记录</p>
-            </div>
-        `;
+        listEl.innerHTML = renderEmptyState('没有追踪记录', 'M13 10V3L4 14h7v7l9-11h-7z');
         return;
     }
 
@@ -383,6 +454,9 @@ async function viewTraceDetail(requestId) {
 function showTraceModal(requestId, logs) {
     const modal = document.getElementById('logDetailModal');
     const bodyEl = document.getElementById('logDetailBody');
+    const titleEl = document.getElementById('modalTitle');
+
+    titleEl.textContent = `追踪详情 - ${requestId}`;
 
     bodyEl.innerHTML = `
         <div class="info-card">
@@ -452,17 +526,41 @@ async function clearTraces() {
 // 关闭日志详情弹窗
 function closeLogDetail() {
     document.getElementById('logDetailModal').classList.remove('active');
+    // 重置标题
+    document.getElementById('modalTitle').textContent = '日志详情';
 }
 
-// 点击弹窗外部关闭
-document.addEventListener('click', (e) => {
-    const modal = document.getElementById('logDetailModal');
-    if (e.target === modal.querySelector('.modal-overlay')) {
-        closeLogDetail();
-    }
+// 初始化完成后添加弹窗事件监听
+document.addEventListener('DOMContentLoaded', () => {
+    // 点击弹窗外部关闭
+    document.getElementById('logDetailModal').querySelector('.modal-overlay').addEventListener('click', closeLogDetail);
 });
 
 // 工具函数
+
+// 渲染空状态
+function renderEmptyState(message, svgPath) {
+    return `
+        <div class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="${svgPath}"/>
+            </svg>
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+}
+
+// 设置刷新按钮加载状态
+function setRefreshButtonLoading(loading) {
+    const btn = document.getElementById('btnRefresh');
+    if (loading) {
+        btn.classList.add('loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
 
 function getLogClass(level) {
     if (!level) return '';

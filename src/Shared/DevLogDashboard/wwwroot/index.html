@@ -3,22 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#409EFF">
     <title>DevLogDashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=3">
+    <link rel="stylesheet" href="./styles.css?v=5">
 </head>
 <body>
     <div id="app">
         <!-- 顶部导航 -->
         <header class="header">
             <div class="header-left">
-                <nav class="tabs">
-                    <a href="#" class="tab active" data-tab="logs">Logs</a>
-                    <a href="#" class="tab" data-tab="traces">Traces</a>
+                <nav class="tabs" role="tablist">
+                    <a href="#" class="tab active" data-tab="logs" role="tab" aria-selected="true" aria-controls="panelLogs">Logs</a>
+                    <a href="#" class="tab" data-tab="traces" role="tab" aria-selected="false" aria-controls="panelTraces">Traces</a>
                 </nav>
             </div>
             <div class="header-right">
-                <button class="btn-icon" id="btnRefresh" title="刷新">⟳</button>
-                <button class="btn-icon" id="btnClear" title="清空日志">
+                <button class="btn-icon" id="btnRefresh" title="刷新" aria-label="刷新日志">
+                    <svg class="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                </button>
+                <button class="btn-icon" id="btnClear" title="清空日志" aria-label="清空日志">
                     <svg class="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                     </svg>
@@ -30,8 +36,13 @@
         <div class="search-bar">
             <div class="search-input-wrapper">
                 <input type="text" id="searchInput" class="search-input"
-                       placeholder="例：精准查询：message=&quot;message&quot;, 模糊查询：message like &quot;message&quot;, 使用 and 或者 or 组合表达式">
-                <button class="btn-search" id="btnSearch">🔍</button>
+                       placeholder="搜索：message=&quot;xxx&quot; 或 message like &quot;xxx&quot;">
+                <button class="btn-search" id="btnSearch" aria-label="搜索">
+                    <svg class="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -50,17 +61,28 @@
                 <option value="FATAL">FATAL</option>
             </select>
             <div class="date-range">
+                <div class="date-quick-select">
+                    <button class="btn-quick-date" data-minutes="30">最近 30 分钟</button>
+                    <button class="btn-quick-date" data-minutes="60">最近 1 小时</button>
+                    <button class="btn-quick-date" data-hours="24">最近 24 小时</button>
+                    <button class="btn-quick-date" data-days="7">最近 7 天</button>
+                </div>
                 <input type="datetime-local" id="txtStartTime" class="date-input">
                 <span class="date-separator">~</span>
                 <input type="datetime-local" id="txtEndTime" class="date-input">
-                <button class="btn-date" id="btnDateRange">🔍</button>
+                <button class="btn-date" id="btnDateRange" aria-label="按日期范围搜索">
+                    <svg class="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </button>
             </div>
         </div>
 
         <!-- 主内容区 -->
-        <main class="main-content">
+        <main class="main-content" role="main">
             <!-- Logs 面板 -->
-            <div id="panelLogs" class="panel active">
+            <div id="panelLogs" class="panel active" role="tabpanel">
                 <div id="logList" class="log-list">
                     <div class="empty-state">
                         <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -73,7 +95,7 @@
             </div>
 
             <!-- Traces 面板 -->
-            <div id="panelTraces" class="panel">
+            <div id="panelTraces" class="panel" role="tabpanel">
                 <div id="traceList" class="trace-list">
                     <div class="empty-state">
                         <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -87,12 +109,12 @@
     </div>
 
     <!-- 日志详情弹窗 -->
-    <div id="logDetailModal" class="modal">
+    <div id="logDetailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h3>日志详情</h3>
-                <button class="btn-close" onclick="closeLogDetail()">&times;</button>
+                <h3 id="modalTitle">日志详情</h3>
+                <button class="btn-close" onclick="closeLogDetail()" aria-label="关闭">&times;</button>
             </div>
             <div class="modal-body" id="logDetailBody">
                 <!-- 详情内容动态填充 -->
@@ -100,6 +122,6 @@
         </div>
     </div>
 
-    <script src="./app.js?v=14"></script>
+    <script src="./app.js?v=15"></script>
 </body>
 </html>

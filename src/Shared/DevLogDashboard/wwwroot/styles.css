@@ -18,6 +18,7 @@
     --error-bg: #FEF0F0;
     --warn-bg: #FDF6EC;
     --info-bg: #F0F9EB;
+    --z-modal: 1000;
 }
 
 body {
@@ -86,16 +87,47 @@ body {
     background: var(--card-bg);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
 }
 
+.btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-refresh,
+.icon-search,
+.icon-trash {
+    width: 16px;
+    height: 16px;
+}
+
 .btn-icon:hover {
     background: var(--bg-color);
     border-color: var(--primary-color);
+}
+
+.btn-icon:hover svg {
+    stroke: var(--primary-color);
+}
+
+.btn-icon.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 搜索按钮图标 */
+.btn-search svg {
+    width: 16px;
+    height: 16px;
 }
 
 .icon-trash {
@@ -186,6 +218,30 @@ body {
     margin-left: auto;
 }
 
+.date-quick-select {
+    display: flex;
+    gap: 4px;
+    margin-right: 8px;
+}
+
+.btn-quick-date {
+    padding: 4px 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-quick-date:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
 .date-input {
     padding: 6px 8px;
     border: 1px solid var(--border-color);
@@ -209,11 +265,23 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-date svg {
+    width: 16px;
+    height: 16px;
 }
 
 .btn-date:hover {
     background: var(--bg-color);
+}
+
+.btn-date:hover svg {
+    stroke: var(--primary-color);
 }
 
 /* 主内容区 */
@@ -479,6 +547,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 16px;
+    flex-wrap: wrap;
 }
 
 .pagination button {
@@ -489,6 +558,7 @@ body {
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s;
+    min-width: 36px;
 }
 
 .pagination button:hover:not(:disabled) {
@@ -501,9 +571,21 @@ body {
     cursor: not-allowed;
 }
 
+.pagination button.page-number.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.pagination .page-ellipsis {
+    color: var(--text-secondary);
+    padding: 0 4px;
+}
+
 .pagination .page-info {
     font-size: 13px;
     color: var(--text-secondary);
+    margin-left: 8px;
 }
 
 /* 弹窗 */
@@ -514,7 +596,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 1000;
+    z-index: var(--z-modal);
 }
 
 .modal.active {
@@ -641,6 +723,18 @@ body {
 
     .date-range {
         margin-left: 0;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .date-quick-select {
+        margin-right: 0;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+    }
+
+    .date-range input {
+        width: 100%;
     }
 
     .log-header {
