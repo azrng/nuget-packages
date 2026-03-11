@@ -66,6 +66,11 @@ public class DevLogDashboardLogger : ILogger
             return;
         }
 
+        if (ShouldSkipCurrentRequest())
+        {
+            return;
+        }
+
         try
         {
             var message = formatter(state, exception);
@@ -170,6 +175,47 @@ public class DevLogDashboardLogger : ILogger
         {
             return value.ToString();
         }
+    }
+
+    private bool ShouldSkipCurrentRequest()
+    {
+        var context = _httpContextAccessor?.HttpContext;
+        if (context == null)
+        {
+            return false;
+        }
+
+        if ((_options.IgnoredMethods ?? Array.Empty<string>())
+            .Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var ignoredPaths = _options.IgnoredPaths ?? Array.Empty<string>();
+        if (ignoredPaths.Count == 0)
+        {
+            return false;
+        }
+
+        var path = context.Request.Path;
+        var fullPath = context.Request.PathBase.Add(path);
+
+        foreach (var rawPath in ignoredPaths)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+            {
+                continue;
+            }
+
+            var ignoredPath = new PathString(rawPath);
+            if (path.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase)
+                || fullPath.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private sealed class NullScope : IDisposable

@@ -90,7 +90,11 @@ public static class ServiceCollectionExtensions
     {
         var endpointPath = NormalizePath(options.EndpointPath, DefaultEndpointPath)!;
 
-        if (context.Request.Path.StartsWithSegments(endpointPath))
+        var requestPath = context.Request.Path;
+        var fullPath = context.Request.PathBase.Add(requestPath);
+
+        if (requestPath.StartsWithSegments(endpointPath, StringComparison.OrdinalIgnoreCase)
+            || fullPath.StartsWithSegments(endpointPath, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -103,7 +107,8 @@ public static class ServiceCollectionExtensions
                 continue;
             }
 
-            if (context.Request.Path.StartsWithSegments(ignoredPath))
+            if (requestPath.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase)
+                || fullPath.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
