@@ -330,6 +330,32 @@ body {
     background: var(--danger-color);
 }
 
+.log-level {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: white;
+}
+
+.log-level.trace,
+.log-level.debug,
+.log-level.information {
+    background: var(--success-color);
+}
+
+.log-level.warn,
+.log-level.warning {
+    background: var(--warning-color);
+}
+
+.log-level.error,
+.log-level.fatal,
+.log-level.critical {
+    background: var(--danger-color);
+}
+
 .log-message {
     flex: 1;
     font-size: 13px;

@@ -171,10 +171,16 @@ function renderLogList(result) {
             ? ['trace', 'debug', 'information', 'warning', 'error', 'critical'][log.level] || 'unknown'
             : String(log.level).toLowerCase();
 
+        // 用于显示的 Level 文本（首字母大写）
+        const levelDisplay = typeof log.level === 'number'
+            ? ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'][log.level] || 'Unknown'
+            : String(log.level);
+
         return `
         <div class="log-item ${getLogClass(log.level)}" data-log-id="${log.id}" onclick="toggleLogDetail('${log.id}')">
             <div class="log-header">
                 <span class="log-time">${formatTimestamp(log.timestamp)}</span>
+                <span class="log-level ${levelStr}">${levelDisplay}</span>
                 <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                 <span class="log-message">${escapeHtml(log.message)}</span>
             </div>
@@ -397,10 +403,14 @@ function showTraceModal(requestId, logs) {
                 const levelStr = typeof log.level === 'number'
                     ? ['trace', 'debug', 'information', 'warning', 'error', 'critical'][log.level] || 'unknown'
                     : String(log.level).toLowerCase();
+                const levelDisplay = typeof log.level === 'number'
+                    ? ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'][log.level] || 'Unknown'
+                    : String(log.level);
                 return `
                 <div class="log-item ${getLogClass(log.level)}">
                     <div class="log-header">
                         <span class="log-time">${formatTimestamp(log.timestamp)}</span>
+                        <span class="log-level ${levelStr}">${levelDisplay}</span>
                         <span class="log-level-dot ${levelStr}" title="${log.level}"></span>
                         <span class="log-message">${escapeHtml(log.message)}</span>
                     </div>

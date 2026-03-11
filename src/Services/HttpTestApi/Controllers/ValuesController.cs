@@ -129,6 +129,22 @@ public class ValuesController : ControllerBase
 
         return Ok(new { message = "结构化日志已记录" });
     }
+
+    /// <summary>
+    /// 输出所有类型的日志
+    /// </summary>
+    [HttpGet("all-log-levels")]
+    public IActionResult AllLogLevels()
+    {
+        _logger.LogTrace("这是 Trace 级别的日志");
+        _logger.LogDebug("这是 Debug 级别的日志");
+        _logger.LogInformation("这是 Information 级别的日志");
+        _logger.LogWarning("这是 Warning 级别的日志");
+        _logger.LogError("这是 Error 级别的日志");
+        _logger.LogCritical("这是 Critical 级别的日志");
+
+        return Ok(new { message = "已输出所有类型的日志", timestamp = DateTime.Now });
+    }
 }
 
 public class CreateValueRequest
