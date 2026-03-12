@@ -13,10 +13,29 @@ public class PgSqlLogStore : ILogStore
     private readonly string _connectionString;
     private readonly ILogger<PgSqlLogStore> _logger;
 
-    public PgSqlLogStore(string connectionString, ILogger<PgSqlLogStore> logger)
+    public PgSqlLogStore(IConfiguration configuration, ILogger<PgSqlLogStore> logger)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        var connectionString = configuration.GetConnectionString("PostgresConnection");
+        _connectionString = string.IsNullOrEmpty(connectionString)
+            ? "Host=localhost;Port=5432;Username=postgres;Password=123456;Database=dev_log"
+            : connectionString;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger.LogInformation("PgSqlLogStore 构造完成，连接字符串: {ConnectionString}", MaskConnectionString(_connectionString));
+    }
+
+    private static string MaskConnectionString(string connectionString)
+    {
+        if (string.IsNullOrEmpty(connectionString)) return "(empty)";
+        // 简单地隐藏密码部分
+        var parts = connectionString.Split(';');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (parts[i].Trim().StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
+            {
+                parts[i] = "Password=***";
+            }
+        }
+        return string.Join(";", parts);
     }
 
     public async ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
@@ -279,11 +298,18 @@ public class PgSqlLogStore : ILogStore
     {
         try
         {
+            _logger.LogInformation("开始初始化 PostgreSQL 数据库...");
+            _logger.LogInformation("正在创建数据库连接...");
+
             await using var conn = new NpgsqlConnection(_connectionString);
+
+            _logger.LogInformation("正在打开数据库连接...");
             await conn.OpenAsync(cancellationToken);
+            _logger.LogInformation("数据库连接成功");
+
+            _logger.LogInformation("正在创建表和索引...");
 
             const string sql = @"
-                CREATE TABLE IF NOT EXISTS dev_logs (
                     id VARCHAR(50) PRIMARY KEY,
                     request_id VARCHAR(50),
                     connection_id VARCHAR(100),
@@ -319,12 +345,16 @@ public class PgSqlLogStore : ILogStore
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_properties_gin ON dev_logs USING gin(properties);";
 
             await using var cmd = new NpgsqlCommand(sql, conn);
+            _logger.LogInformation("正在执行 SQL 命令创建表结构...");
             await cmd.ExecuteNonQueryAsync(cancellationToken);
+            _logger.LogInformation("表结构创建成功");
 
             // 获取当前日志总数
+            _logger.LogInformation("正在查询日志总数...");
             const string countSql = "SELECT COUNT(*) FROM dev_logs";
             await using var countCmd = new NpgsqlCommand(countSql, conn);
             var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(cancellationToken));
+            _logger.LogInformation("当前日志总数：{Count}", totalCount);
 
             _logger.LogInformation("PostgreSQL 日志表初始化成功，当前日志数：{Count}", totalCount);
         }

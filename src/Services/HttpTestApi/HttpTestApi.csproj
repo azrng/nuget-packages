@@ -8,12 +8,13 @@
 
     <ItemGroup>
         <PackageReference Include="Azrng.Core" Version="1.15.6" />
+        <PackageReference Include="Common.HttpClients" Version="2.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
         <PackageReference Include="Npgsql" Version="8.0.3" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Shared\Common.HttpClients\Common.HttpClients.csproj"/>
+<!--        <ProjectReference Include="..\..\Shared\Common.HttpClients\Common.HttpClients.csproj"/>-->
         <ProjectReference Include="..\..\Shared\DevLogDashboard\DevLogDashboard.csproj" />
     </ItemGroup>
 </Project>

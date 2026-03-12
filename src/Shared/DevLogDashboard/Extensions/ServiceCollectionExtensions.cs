@@ -50,6 +50,36 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Add DevLogDashboard services with custom log store factory.
+    /// </summary>
+    public static IServiceCollection AddDevLogDashboard(
+        this IServiceCollection services,
+        Func<IServiceProvider, ILogStore> logStoreFactory,
+        Action<DevLogDashboardOptions>? configureOptions = null)
+    {
+        var options = new DevLogDashboardOptions();
+        configureOptions?.Invoke(options);
+        NormalizeOptions(options);
+
+        services.AddSingleton(options);
+
+        // 使用工厂函数注册 LogStore
+        services.AddSingleton<ILogStore>(logStoreFactory);
+
+        services.AddHttpContextAccessor();
+
+        services.AddSingleton<ILoggerProvider>(sp =>
+        {
+            var logStore = sp.GetRequiredService<ILogStore>();
+            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Add DevLogDashboard services.
     /// </summary>
     public static IServiceCollection AddDevLogDashboard(

@@ -1,5 +1,4 @@
 using Azrng.DevLogDashboard.Extensions;
-using Azrng.DevLogDashboard.Storage;
 using Common.HttpClients;
 using HttpTestApi.Storage;
 
@@ -12,23 +11,21 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// 添加 DevLogDashboard 服务（使用 PostgreSQL 存储）
-var pgConnectionString = builder.Configuration.GetConnectionString("PostgresConnection")
-    ?? "Host=localhost;Port=5432;Username=postgres;Password=123456;Database=dev_log";
-
-builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
-{
-    options.EndpointPath = "/dev-logs";
-    options.ApplicationName = "SampleWebApi";
-    options.ApplicationVersion = "1.0.0";
-});
-
+// 添加 DevLogDashboard 服务（默认使用内存存储）
 // builder.Services.AddDevLogDashboard(options =>
 // {
 //     options.EndpointPath = "/dev-logs";
 //     options.ApplicationName = "SampleWebApi";
 //     options.ApplicationVersion = "1.0.0";
 // });
+
+// 如需使用 PostgreSQL 存储，请先确保数据库可访问，然后取消下面代码的注释：
+builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
+{
+    options.EndpointPath = "/dev-logs";
+    options.ApplicationName = "SampleWebApi";
+    options.ApplicationVersion = "1.0.0";
+});
 
 
 builder.Services.AddHttpClientService(options =>
@@ -42,12 +39,6 @@ builder.Services.AddHttpClientService(options =>
 
 var app = builder.Build();
 
-// 初始化 LogStore（用于数据库存储的初始化）
-using (var scope = app.Services.CreateScope())
-{
-    var logStore = scope.ServiceProvider.GetRequiredService<ILogStore>();
-    await logStore.InitializeAsync();
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
