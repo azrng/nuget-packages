@@ -1,4 +1,4 @@
-﻿using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Azrng.DevLogDashboard.Storage;
@@ -11,8 +11,10 @@ public class InMemoryLogStore : ILogStore
     private readonly Queue<LogEntry> _logs = new();
     private readonly Dictionary<string, LogEntry> _logsById = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<LogEntry>> _logsByRequestId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TraceInfo> _traceIndex = new(StringComparer.Ordinal);
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
     private readonly int _maxLogCount;
+    private const int MaxPageSize = 500; // 限制单次查询最大返回数量
 
     public InMemoryLogStore(int maxLogCount = 10000)
     {
@@ -47,6 +49,7 @@ public class InMemoryLogStore : ILogStore
                 _logsById[entry.Id] = entry;
             }
 
+            // 增量更新 Trace 索引
             if (!string.IsNullOrEmpty(entry.RequestId))
             {
                 if (!_logsByRequestId.TryGetValue(entry.RequestId, out var requestLogs))
@@ -56,6 +59,43 @@ public class InMemoryLogStore : ILogStore
                 }
 
                 requestLogs.Add(entry);
+
+                // 增量更新 Trace 汇总信息
+                if (!_traceIndex.TryGetValue(entry.RequestId, out var traceInfo))
+                {
+                    traceInfo = new TraceInfo
+                    {
+                        RequestId = entry.RequestId
+                    };
+                    _traceIndex[entry.RequestId] = traceInfo;
+                }
+
+                traceInfo.LogCount++;
+                if (entry.Timestamp < traceInfo.FirstTimestamp)
+                {
+                    traceInfo.FirstTimestamp = entry.Timestamp;
+                }
+                if (entry.Timestamp > traceInfo.LastTimestamp)
+                {
+                    traceInfo.LastTimestamp = entry.Timestamp;
+                }
+                if (string.IsNullOrEmpty(traceInfo.RequestPath) && !string.IsNullOrEmpty(entry.RequestPath))
+                {
+                    traceInfo.RequestPath = entry.RequestPath;
+                }
+                if (string.IsNullOrEmpty(traceInfo.RequestMethod) && !string.IsNullOrEmpty(entry.RequestMethod))
+                {
+                    traceInfo.RequestMethod = entry.RequestMethod;
+                }
+                // 更新状态码（使用最新的，覆盖之前的）
+                if (entry.ResponseStatusCode.HasValue)
+                {
+                    traceInfo.ResponseStatusCode = entry.ResponseStatusCode.Value;
+                }
+                if (entry.Level >= LogLevel.Error)
+                {
+                    traceInfo.HasError = true;
+                }
             }
 
             TrimExcessLogs();
@@ -88,11 +128,8 @@ public class InMemoryLogStore : ILogStore
                 return Task.FromResult(new List<LogEntry>());
             }
 
-            var ordered = logs
-                .OrderBy(x => x.Timestamp)
-                .ToList();
-
-            return Task.FromResult(ordered);
+            // 已在 Add 时按时间顺序添加，直接返回副本
+            return Task.FromResult(logs.ToList());
         }
         finally
         {
@@ -108,22 +145,64 @@ public class InMemoryLogStore : ILogStore
         }
 
         var pageIndex = query.PageIndex <= 0 ? 1 : query.PageIndex;
-        var pageSize = query.PageSize <= 0 ? 50 : query.PageSize;
+        var pageSize = Math.Min(query.PageSize <= 0 ? 50 : query.PageSize, MaxPageSize);
         var skip = (pageIndex - 1) * pageSize;
 
-        var filtered = ApplyFilters(Snapshot(), query).ToList();
+        _lock.EnterReadLock();
+        try
+        {
+            // 优化：如果只需要按时间倒序且无其他过滤条件，直接从队列尾部扫描
+            bool canFastPath = query.OrderByTimeAscending == false &&
+                              string.IsNullOrEmpty(query.Id) &&
+                              string.IsNullOrEmpty(query.Keyword) &&
+                              string.IsNullOrEmpty(query.RequestId) &&
+                              string.IsNullOrEmpty(query.Source) &&
+                              string.IsNullOrEmpty(query.Application) &&
+                              !query.MinLevel.HasValue &&
+                              !query.StartTime.HasValue &&
+                              !query.EndTime.HasValue;
 
-        filtered.Sort((a, b) => query.OrderByTimeAscending
-            ? a.Timestamp.CompareTo(b.Timestamp)
-            : b.Timestamp.CompareTo(a.Timestamp));
+            List<LogEntry> filtered;
 
-        var total = filtered.Count;
-        var items = filtered
-            .Skip(skip)
-            .Take(pageSize)
-            .ToList();
+            if (canFastPath)
+            {
+                // 快速路径：从队列尾部倒序扫描，早停
+                filtered = new List<LogEntry>();
+                var array = _logs.ToArray();
+                int targetCount = skip + pageSize;
 
-        return Task.FromResult(PageResult<LogEntry>.Create(items, total, pageIndex, pageSize));
+                // 从最新开始扫描（队列尾部）
+                for (int i = array.Length - 1; i >= 0 && filtered.Count < targetCount; i--)
+                {
+                    filtered.Add(array[i]);
+                }
+
+                // 反转回正确顺序（最新的在前）
+                filtered.Reverse();
+            }
+            else
+            {
+                // 正常路径：需要过滤
+                filtered = ApplyFilters(_logs, query).ToList();
+
+                // 排序
+                filtered.Sort((a, b) => query.OrderByTimeAscending
+                    ? a.Timestamp.CompareTo(b.Timestamp)
+                    : b.Timestamp.CompareTo(a.Timestamp));
+            }
+
+            var total = filtered.Count;
+            var items = filtered
+                .Skip(skip)
+                .Take(pageSize)
+                .ToList();
+
+            return Task.FromResult(PageResult<LogEntry>.Create(items, total, pageIndex, pageSize));
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
     }
 
     public Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime,
@@ -134,38 +213,44 @@ public class InMemoryLogStore : ILogStore
             return Task.FromCanceled<List<TraceLogSummary>>(cancellationToken);
         }
 
-        var logs = Snapshot();
-
-        var query = logs.Where(x => !string.IsNullOrEmpty(x.RequestId));
-
-        if (startTime.HasValue)
+        _lock.EnterReadLock();
+        try
         {
-            query = query.Where(x => x.Timestamp >= startTime.Value);
-        }
+            var query = _traceIndex.Values.AsEnumerable();
 
-        if (endTime.HasValue)
-        {
-            query = query.Where(x => x.Timestamp <= endTime.Value);
-        }
-
-        var summaries = query
-            .GroupBy(x => x.RequestId!)
-            .Select(g => new TraceLogSummary
+            // 时间范围过滤
+            if (startTime.HasValue)
             {
-                RequestId = g.Key,
-                LogCount = g.Count(),
-                FirstTimestamp = g.Min(x => x.Timestamp),
-                LastTimestamp = g.Max(x => x.Timestamp),
-                RequestPath = g.Select(x => x.RequestPath).FirstOrDefault(x => !string.IsNullOrEmpty(x)),
-                RequestMethod = g.Select(x => x.RequestMethod).FirstOrDefault(x => !string.IsNullOrEmpty(x)),
-                ResponseStatusCode = g.Select(x => x.ResponseStatusCode).FirstOrDefault(x => x.HasValue),
-                HasError = g.Any(x => x.Level >= LogLevel.Error)
-            })
-            .OrderByDescending(x => x.LastTimestamp)
-            .Take(1000)
-            .ToList();
+                query = query.Where(x => x.LastTimestamp >= startTime.Value);
+            }
 
-        return Task.FromResult(summaries);
+            if (endTime.HasValue)
+            {
+                query = query.Where(x => x.FirstTimestamp <= endTime.Value);
+            }
+
+            var summaries = query
+                .Select(x => new TraceLogSummary
+                {
+                    RequestId = x.RequestId,
+                    LogCount = x.LogCount,
+                    FirstTimestamp = x.FirstTimestamp,
+                    LastTimestamp = x.LastTimestamp,
+                    RequestPath = x.RequestPath,
+                    RequestMethod = x.RequestMethod,
+                    ResponseStatusCode = x.ResponseStatusCode,
+                    HasError = x.HasError
+                })
+                .OrderByDescending(x => x.LastTimestamp)
+                .Take(1000)
+                .ToList();
+
+            return Task.FromResult(summaries);
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
     }
 
     private IEnumerable<LogEntry> ApplyFilters(IEnumerable<LogEntry> logs, LogQuery query)
@@ -244,7 +329,7 @@ public class InMemoryLogStore : ILogStore
                 if (parts.Length == 2)
                 {
                     var field = parts[0].Trim().ToLowerInvariant();
-                    var value = parts[1].Trim().Trim('"', '\'');
+                    var value = parts[1].Trim().Trim('\"', '\'');
 
                     filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: true));
                 }
@@ -256,7 +341,7 @@ public class InMemoryLogStore : ILogStore
                 if (likeIndex > 0)
                 {
                     var field = cond[..likeIndex].Trim().ToLowerInvariant();
-                    var value = cond[(likeIndex + likeToken.Length)..].Trim().Trim('"', '\'');
+                    var value = cond[(likeIndex + likeToken.Length)..].Trim().Trim('\"', '\'');
 
                     filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: false));
                 }
@@ -328,23 +413,24 @@ public class InMemoryLogStore : ILogStore
                 if (requestLogs.Count == 0)
                 {
                     _logsByRequestId.Remove(removed.RequestId);
+                    _traceIndex.Remove(removed.RequestId);
                 }
             }
         }
     }
 
-    private LogEntry[] Snapshot()
+    /// <summary>
+    /// Trace 汇总信息的增量索引
+    /// </summary>
+    private class TraceInfo
     {
-        _lock.EnterReadLock();
-        try
-        {
-            return _logs.ToArray();
-        }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
+        public string RequestId { get; set; } = string.Empty;
+        public int LogCount { get; set; }
+        public DateTime FirstTimestamp { get; set; } = DateTime.MaxValue;
+        public DateTime LastTimestamp { get; set; } = DateTime.MinValue;
+        public string? RequestPath { get; set; }
+        public string? RequestMethod { get; set; }
+        public int? ResponseStatusCode { get; set; }
+        public bool HasError { get; set; }
     }
 }
-
-

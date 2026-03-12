@@ -216,7 +216,7 @@ async function loadLogs() {
     }
 }
 
-// 渲染日志列表
+// 渲染日志列表（使用文档片段优化性能）
 function renderLogList(result) {
     const listEl = document.getElementById('logList');
 
@@ -225,7 +225,10 @@ function renderLogList(result) {
         return;
     }
 
-    listEl.innerHTML = result.items.map(log => {
+    // 使用文档片段减少重排
+    const fragment = document.createDocumentFragment();
+
+    result.items.forEach(log => {
         // 将 level 转换为字符串（处理数字枚举和字符串两种情况）
         const levelStr = typeof log.level === 'number'
             ? ['trace', 'debug', 'information', 'warning', 'error', 'critical'][log.level] || 'unknown'
@@ -236,8 +239,12 @@ function renderLogList(result) {
             ? ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'][log.level] || 'Unknown'
             : String(log.level);
 
-        return `
-        <div class="log-item ${getLogClass(log.level)}" data-log-id="${log.id}" onclick="toggleLogDetail('${log.id}')">
+        const logItem = document.createElement('div');
+        logItem.className = `log-item ${getLogClass(log.level)}`;
+        logItem.dataset.logId = log.id;
+        logItem.onclick = () => toggleLogDetail(log.id);
+
+        logItem.innerHTML = `
             <div class="log-header">
                 <span class="log-time">${formatTimestamp(log.timestamp)}</span>
                 <span class="log-level ${levelStr}">${levelDisplay}</span>
@@ -249,9 +256,14 @@ function renderLogList(result) {
                 </table>
                 ${log.exception ? `<div class="stack-trace">${escapeHtml(log.exception)}</div>` : ''}
             </div>
-        </div>
         `;
-    }).join('');
+
+        fragment.appendChild(logItem);
+    });
+
+    // 清空并一次性添加所有元素
+    listEl.innerHTML = '';
+    listEl.appendChild(fragment);
 }
 
 // 渲染属性行
@@ -282,7 +294,7 @@ function renderPropertyRows(log) {
                     <span class="prop-status ${exists ? 'exists' : 'missing'}"
                           ${exists ? `onclick="quickSearch('${escapeJs(key)}', '${escapeJs(displayValue)}'); event.stopPropagation();"` : ''}
                           title="${exists ? '点击搜索相同值' : ''}">${exists ? '✓' : '✗'}</span>
-                    ${key}
+                    ${escapeHtml(key)}
                 </th>
                 <td colspan="2">${escapeHtml(displayValue)}</td>
             </tr>
@@ -297,7 +309,7 @@ function renderPropertyRows(log) {
                     <tr>
                         <th>
                             <span class="prop-status exists">✓</span>
-                            ${key}
+                            ${escapeHtml(key)}
                         </th>
                         <td>${escapeHtml(String(value))}</td>
                     </tr>
@@ -439,19 +451,29 @@ function renderTraceList(traces) {
             </thead>
             <tbody>
                 ${traces.map(trace => `
-                    <tr onclick="viewTraceDetail('${trace.requestId}')">
-                        <td><code>${trace.requestId}</code></td>
+                    <tr onclick="viewTraceDetail('${escapeJs(trace.requestId)}')" class="${trace.hasError ? 'trace-row-has-error' : ''}">
+                        <td><code>${escapeHtml(trace.requestId)}</code></td>
                         <td>${trace.logCount}</td>
                         <td>${formatTimestamp(trace.firstTimestamp)}</td>
                         <td>${formatTimestamp(trace.lastTimestamp)}</td>
                         <td>${trace.duration.toFixed(0)}ms</td>
-                        <td>${trace.requestMethod || ''} ${trace.requestPath || ''}</td>
-                        <td class="${trace.hasError ? 'trace-has-error' : ''}">${trace.responseStatusCode || '-'}</td>
+                        <td>${escapeHtml(trace.requestMethod || '')} ${escapeHtml(trace.requestPath || '')}</td>
+                        <td class="${getStatusCodeClass(trace.responseStatusCode)}">${trace.responseStatusCode || '-'}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `;
+}
+
+// 根据状态码获取 CSS 类
+function getStatusCodeClass(statusCode) {
+    if (!statusCode) return '';
+    if (statusCode >= 200 && statusCode < 300) return 'status-success';
+    if (statusCode >= 300 && statusCode < 400) return 'status-redirect';
+    if (statusCode >= 400 && statusCode < 500) return 'status-client-error';
+    if (statusCode >= 500) return 'status-server-error';
+    return '';
 }
 
 // 查看追踪详情
@@ -481,7 +503,7 @@ function showTraceModal(requestId, logs) {
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">RequestId:</span>
-                    <span class="info-value">${requestId}</span>
+                    <span class="info-value"><code>${escapeHtml(requestId)}</code></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">日志数:</span>

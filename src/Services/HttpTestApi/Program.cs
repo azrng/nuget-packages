@@ -12,20 +12,20 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // 添加 DevLogDashboard 服务（默认使用内存存储）
-// builder.Services.AddDevLogDashboard(options =>
-// {
-//     options.EndpointPath = "/dev-logs";
-//     options.ApplicationName = "SampleWebApi";
-//     options.ApplicationVersion = "1.0.0";
-// });
-
-// 如需使用 PostgreSQL 存储，请先确保数据库可访问，然后取消下面代码的注释：
-builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
+builder.Services.AddDevLogDashboard(options =>
 {
     options.EndpointPath = "/dev-logs";
     options.ApplicationName = "SampleWebApi";
     options.ApplicationVersion = "1.0.0";
 });
+
+// 如需使用 PostgreSQL 存储，请先确保数据库可访问，然后取消下面代码的注释：
+// builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
+// {
+//     options.EndpointPath = "/dev-logs";
+//     options.ApplicationName = "SampleWebApi";
+//     options.ApplicationVersion = "1.0.0";
+// });
 
 
 builder.Services.AddHttpClientService(options =>

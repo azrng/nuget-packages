@@ -239,7 +239,11 @@ public class PgSqlLogStore : ILogStore
         // 获取总数
         var countSql = $"SELECT COUNT(*) FROM ({sql}) AS subq";
         await using var countCmd = new NpgsqlCommand(countSql, conn);
-        countCmd.Parameters.AddRange(parameters.ToArray());
+        // 克隆参数以避免重复添加问题
+        foreach (var param in parameters)
+        {
+            countCmd.Parameters.Add(new NpgsqlParameter(param.ParameterName, param.Value));
+        }
         var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(cancellationToken));
 
         // 添加排序和分页
@@ -259,7 +263,11 @@ public class PgSqlLogStore : ILogStore
 
         // 查询数据
         await using var dataCmd = new NpgsqlCommand(sql.ToString(), conn);
-        dataCmd.Parameters.AddRange(parameters.ToArray());
+        // 克隆参数以避免重复添加问题
+        foreach (var param in parameters)
+        {
+            dataCmd.Parameters.Add(new NpgsqlParameter(param.ParameterName, param.Value));
+        }
 
         await using var reader = await dataCmd.ExecuteReaderAsync(cancellationToken);
         var items = new List<LogEntry>();

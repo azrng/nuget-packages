@@ -114,11 +114,19 @@ public class DevLogDashboardLogger : ILogger
 
             if (state is IEnumerable<KeyValuePair<string, object?>> structuredData)
             {
-                foreach (var kvp in structuredData)
+                if (_options.SkipStructuredProperties)
                 {
-                    if (kvp.Key != "{OriginalFormat}" && !logEntry.Properties.ContainsKey(kvp.Key))
+                    // 跳过结构化属性，只保存简单的键值对计数
+                    logEntry.Properties["_skippedProps"] = structuredData.Count().ToString();
+                }
+                else
+                {
+                    foreach (var kvp in structuredData)
                     {
-                        logEntry.Properties[kvp.Key] = NormalizePropertyValue(kvp.Value);
+                        if (kvp.Key != "{OriginalFormat}" && !logEntry.Properties.ContainsKey(kvp.Key))
+                        {
+                            logEntry.Properties[kvp.Key] = NormalizePropertyValue(kvp.Value, _options.MaxPropertySerializationLength);
+                        }
                     }
                 }
             }
@@ -139,14 +147,20 @@ public class DevLogDashboardLogger : ILogger
         }
     }
 
-    private static object? NormalizePropertyValue(object? value)
+    private static object? NormalizePropertyValue(object? value, int maxLength)
     {
         if (value is null)
         {
             return null;
         }
 
-        if (value is string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double
+        // 快速路径：简单类型直接返回
+        if (value is string strValue)
+        {
+            return strValue.Length > maxLength ? strValue.Substring(0, maxLength) + "..." : strValue;
+        }
+
+        if (value is bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double
             or decimal or DateTime or DateTimeOffset or Guid)
         {
             return value;
@@ -162,13 +176,30 @@ public class DevLogDashboardLogger : ILogger
             return jsonElement;
         }
 
+        // 尝试序列化复杂对象
         try
         {
-            return JsonSerializer.SerializeToElement(value, PropertyValueSerializerOptions);
+            var serialized = JsonSerializer.SerializeToElement(value, PropertyValueSerializerOptions);
+            var jsonStr = serialized.ToString();
+
+            // 如果序列化结果超过最大长度，截断
+            if (jsonStr.Length > maxLength)
+            {
+                return jsonStr.Substring(0, maxLength) + "...";
+            }
+
+            return serialized;
         }
         catch
         {
-            return value.ToString();
+            // 序列化失败，返回 ToString() 并限制长度
+            var toStringValue = value.ToString();
+            if (string.IsNullOrEmpty(toStringValue))
+            {
+                return value.GetType().Name;
+            }
+
+            return toStringValue.Length > maxLength ? toStringValue.Substring(0, maxLength) + "..." : toStringValue;
         }
     }
 

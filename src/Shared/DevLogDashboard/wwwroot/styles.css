@@ -516,8 +516,33 @@ body {
     cursor: pointer;
 }
 
-.trace-has-error {
-    color: var(--danger-color);
+.trace-row-has-error {
+    background-color: #fef2f2;
+}
+
+.trace-row-has-error:hover {
+    background-color: #fee2e2;
+}
+
+/* 状态码颜色 */
+.status-success {
+    color: var(--success-color, #10b981);
+    font-weight: 500;
+}
+
+.status-redirect {
+    color: var(--warning-color, #f59e0b);
+    font-weight: 500;
+}
+
+.status-client-error {
+    color: var(--danger-color, #ef4444);
+    font-weight: 500;
+}
+
+.status-server-error {
+    color: var(--danger-color, #dc2626);
+    font-weight: 500;
 }
 
 /* 分页 */

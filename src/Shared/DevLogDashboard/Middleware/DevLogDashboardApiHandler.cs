@@ -60,14 +60,33 @@ internal class DevLogDashboardApiHandler
         }
 
         context.Response.StatusCode = 404;
-        await context.Response.WriteAsJsonAsync(new { error = "API endpoint not found" }, JsonOptions);
+        await context.Response.WriteAsJsonAsync(new { error = "未找到 API 端点" }, JsonOptions);
     }
 
     private async Task HandleLogsQueryAsync(HttpContext context)
     {
+        const int maxPageSize = 500;
+        const int maxKeywordLength = 500;
+
+        var pageSize = ParseInt(context.Request.Query["pageSize"], 50);
+        if (pageSize > maxPageSize)
+        {
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new { error = $"每页大小不能超过 {maxPageSize}" }, JsonOptions);
+            return;
+        }
+
+        var keyword = context.Request.Query["keyword"].ToString();
+        if (!string.IsNullOrEmpty(keyword) && keyword.Length > maxKeywordLength)
+        {
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new { error = $"关键字长度不能超过 {maxKeywordLength} 个字符" }, JsonOptions);
+            return;
+        }
+
         var query = new LogQuery
         {
-            Keyword = context.Request.Query["keyword"],
+            Keyword = keyword,
             MinLevel = ParseLogLevel(context.Request.Query["level"]),
             RequestId = context.Request.Query["requestId"],
             Source = context.Request.Query["source"],
@@ -76,7 +95,7 @@ internal class DevLogDashboardApiHandler
             EndTime = ParseDateTime(context.Request.Query["endTime"]),
             OrderByTimeAscending = ParseBool(context.Request.Query["orderByTimeAscending"], false),
             PageIndex = ParseInt(context.Request.Query["pageIndex"], 1),
-            PageSize = ParseInt(context.Request.Query["pageSize"], 50)
+            PageSize = pageSize
         };
 
         var result = await _logStore.QueryAsync(query);
@@ -92,7 +111,7 @@ internal class DevLogDashboardApiHandler
         if (string.IsNullOrEmpty(id))
         {
             context.Response.StatusCode = 400;
-            await context.Response.WriteAsJsonAsync(new { error = "Log ID is required" }, JsonOptions);
+            await context.Response.WriteAsJsonAsync(new { error = "日志 ID 是必需的" }, JsonOptions);
             return;
         }
 
@@ -110,7 +129,7 @@ internal class DevLogDashboardApiHandler
         if (log == null)
         {
             context.Response.StatusCode = 404;
-            await context.Response.WriteAsJsonAsync(new { error = "Log not found" }, JsonOptions);
+            await context.Response.WriteAsJsonAsync(new { error = "未找到日志" }, JsonOptions);
             return;
         }
 
@@ -135,7 +154,7 @@ internal class DevLogDashboardApiHandler
         if (string.IsNullOrEmpty(requestId))
         {
             context.Response.StatusCode = 400;
-            await context.Response.WriteAsJsonAsync(new { error = "Request ID is required" }, JsonOptions);
+            await context.Response.WriteAsJsonAsync(new { error = "请求 ID 是必需的" }, JsonOptions);
             return;
         }
 

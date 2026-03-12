@@ -241,6 +241,13 @@ public static class ServiceCollectionExtensions
     private static void LogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
         string requestId, Exception ex, long elapsedMs)
     {
+        // 如果响应状态码显示成功但实际发生了异常，使用 500 作为状态码
+        var actualStatusCode = context.Response.StatusCode;
+        if (actualStatusCode < 400)
+        {
+            actualStatusCode = 500;
+        }
+
         var logEntry = new LogEntry
         {
             RequestId = requestId,
@@ -260,9 +267,11 @@ public static class ServiceCollectionExtensions
             Environment = RuntimeEnvironment,
             ProcessId = RuntimeProcessId,
             ThreadId = Environment.CurrentManagedThreadId,
+            ResponseStatusCode = actualStatusCode,
         };
 
         logEntry.Properties["EventType"] = "Exception";
+        logEntry.Properties["StatusCode"] = actualStatusCode;
 
         // 使用同步方式，因为这是在非异步上下文中
         _ = logStore.AddAsync(logEntry).AsTask();

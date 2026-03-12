@@ -57,4 +57,15 @@ public class DevLogDashboardOptions
     /// 应用版本（可选）
     /// </summary>
     public string? ApplicationVersion { get; set; }
+
+    /// <summary>
+    /// 结构化属性最大序列化长度（默认：2048 字符）
+    /// </summary>
+    public int MaxPropertySerializationLength { get; set; } = 2048;
+
+    /// <summary>
+    /// 是否完全跳过结构化属性的序列化（默认：false）
+    /// 设为 true 可显著提升性能，但会丢失结构化属性数据
+    /// </summary>
+    public bool SkipStructuredProperties { get; set; } = false;
 }
