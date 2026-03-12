@@ -35,11 +35,16 @@ public class InMemoryLogStore : ILogStore
         }
     }
 
-    public void Add(LogEntry entry)
+    public ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return ValueTask.FromCanceled(cancellationToken);
+        }
+
         if (entry is null)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         _lock.EnterWriteLock();
@@ -69,41 +74,8 @@ public class InMemoryLogStore : ILogStore
         {
             _lock.ExitWriteLock();
         }
-    }
 
-    public ValueTask AddAsync(LogEntry entry, CancellationToken cancellationToken = default)
-    {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return ValueTask.FromCanceled(cancellationToken);
-        }
-
-        Add(entry);
         return ValueTask.CompletedTask;
-    }
-
-    public Task<LogEntry?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
-    {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return Task.FromCanceled<LogEntry?>(cancellationToken);
-        }
-
-        if (string.IsNullOrEmpty(id))
-        {
-            return Task.FromResult<LogEntry?>(null);
-        }
-
-        _lock.EnterReadLock();
-        try
-        {
-            _logsById.TryGetValue(id, out var log);
-            return Task.FromResult(log);
-        }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
     }
 
     public Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
@@ -221,126 +193,14 @@ public class InMemoryLogStore : ILogStore
         }
     }
 
-    public int GetCountByTimeRange(DateTime? startTime, DateTime? endTime)
-    {
-        var logs = Snapshot();
-        var count = 0;
-
-        foreach (var log in logs)
-        {
-            if (startTime.HasValue && log.Timestamp < startTime.Value)
-            {
-                continue;
-            }
-
-            if (endTime.HasValue && log.Timestamp > endTime.Value)
-            {
-                continue;
-            }
-
-            count++;
-        }
-
-        return count;
-    }
-
-    public Dictionary<LogLevel, int> GetLogLevelStatistics(DateTime? startTime, DateTime? endTime)
-    {
-        var logs = Snapshot();
-        var stats = new Dictionary<LogLevel, int>();
-
-        foreach (var log in logs)
-        {
-            if (startTime.HasValue && log.Timestamp < startTime.Value)
-            {
-                continue;
-            }
-
-            if (endTime.HasValue && log.Timestamp > endTime.Value)
-            {
-                continue;
-            }
-
-            if (!stats.TryAdd(log.Level, 1))
-            {
-                stats[log.Level]++;
-            }
-        }
-
-        return stats;
-    }
-
-    public List<LogEntry> GetRecentErrors(int count, DateTime? startTime, DateTime? endTime)
-    {
-        if (count <= 0)
-        {
-            return new List<LogEntry>();
-        }
-
-        var logs = Snapshot();
-
-        return logs
-            .Where(x => x.Level >= LogLevel.Error)
-            .Where(x => !startTime.HasValue || x.Timestamp >= startTime.Value)
-            .Where(x => !endTime.HasValue || x.Timestamp <= endTime.Value)
-            .OrderByDescending(x => x.Timestamp)
-            .Take(count)
-            .ToList();
-    }
-
-    public List<HourlyLogCount> GetHourlyCounts(DateTime startTime, int hours = 24)
-    {
-        if (hours <= 0)
-        {
-            return new List<HourlyLogCount>();
-        }
-
-        var buckets = new HourlyLogCount[hours];
-
-        for (var hour = 0; hour < hours; hour++)
-        {
-            buckets[hour] = new HourlyLogCount
-            {
-                Hour = startTime.AddHours(hour).ToString("HH:00")
-            };
-        }
-
-        var endTime = startTime.AddHours(hours);
-        var logs = Snapshot();
-
-        foreach (var log in logs)
-        {
-            if (log.Timestamp < startTime || log.Timestamp >= endTime)
-            {
-                continue;
-            }
-
-            var offsetHours = (int)(log.Timestamp - startTime).TotalHours;
-            if ((uint)offsetHours >= (uint)hours)
-            {
-                continue;
-            }
-
-            var bucket = buckets[offsetHours];
-            bucket.Count++;
-
-            if (log.Level >= LogLevel.Error)
-            {
-                bucket.ErrorCount++;
-            }
-
-            if (log.Level == LogLevel.Warning)
-            {
-                bucket.WarningCount++;
-            }
-        }
-
-        return buckets.ToList();
-    }
-
     private IEnumerable<LogEntry> ApplyFilters(IEnumerable<LogEntry> logs, LogQuery query)
     {
         var filtered = logs;
+
+        if (!string.IsNullOrEmpty(query.Id))
+        {
+            filtered = filtered.Where(x => x.Id == query.Id);
+        }
 
         if (query.StartTime.HasValue)
         {

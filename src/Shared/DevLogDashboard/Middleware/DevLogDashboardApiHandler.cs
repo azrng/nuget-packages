@@ -29,12 +29,6 @@ internal class DevLogDashboardApiHandler
         var path = context.Request.Path.Value ?? string.Empty;
         var method = context.Request.Method.ToUpperInvariant();
 
-        if (path.Equals("/api/dashboard", StringComparison.OrdinalIgnoreCase) && method == "GET")
-        {
-            await HandleDashboardAsync(context);
-            return;
-        }
-
         if (path.Equals("/api/logs", StringComparison.OrdinalIgnoreCase) && method == "GET")
         {
             await HandleLogsQueryAsync(context);
@@ -75,28 +69,6 @@ internal class DevLogDashboardApiHandler
         await context.Response.WriteAsJsonAsync(new { error = "API endpoint not found" }, JsonOptions);
     }
 
-    private async Task HandleDashboardAsync(HttpContext context)
-    {
-        var now = DateTime.Now;
-        var startOfDay = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0);
-
-        var stats = _logStore.GetLogLevelStatistics(null, null);
-
-        var dashboard = new DashboardModel
-        {
-            TotalLogs = _logStore.Count,
-            LevelStatistics = stats.ToDictionary(k => k.Key.ToString(), v => v.Value),
-            ErrorLogs = stats.GetValueOrDefault(LogLevel.Error, 0) +
-                        stats.GetValueOrDefault(LogLevel.Critical, 0),
-            WarningLogs = stats.GetValueOrDefault(LogLevel.Warning, 0),
-            InformationLogs = stats.GetValueOrDefault(LogLevel.Information, 0),
-            RecentErrors = _logStore.GetRecentErrors(10, null, null),
-            HourlyCounts = GetHourlyCounts(startOfDay)
-        };
-
-        await context.Response.WriteAsJsonAsync(dashboard, JsonOptions);
-    }
-
     private async Task HandleLogsQueryAsync(HttpContext context)
     {
         var query = new LogQuery
@@ -130,7 +102,17 @@ internal class DevLogDashboardApiHandler
             return;
         }
 
-        var log = await _logStore.GetByIdAsync(id);
+        // 使用 QueryAsync 查询单条日志
+        var query = new LogQuery
+        {
+            Id = id,
+            PageIndex = 1,
+            PageSize = 1
+        };
+
+        var result = await _logStore.QueryAsync(query);
+        var log = result.Items.FirstOrDefault();
+
         if (log == null)
         {
             context.Response.StatusCode = 404;
@@ -177,34 +159,6 @@ internal class DevLogDashboardApiHandler
     {
         _logStore.Clear();
         await context.Response.WriteAsJsonAsync(new { success = true }, JsonOptions);
-    }
-
-    private List<HourlyLogCount> GetHourlyCounts(DateTime startTime)
-    {
-        if (_logStore is InMemoryLogStore inMemoryLogStore)
-        {
-            return inMemoryLogStore.GetHourlyCounts(startTime);
-        }
-
-        var hourlyCounts = new List<HourlyLogCount>(24);
-
-        for (var hour = 0; hour < 24; hour++)
-        {
-            var hourStart = startTime.AddHours(hour);
-            var hourEnd = hourStart.AddHours(1);
-
-            var stats = _logStore.GetLogLevelStatistics(hourStart, hourEnd);
-
-            hourlyCounts.Add(new HourlyLogCount
-            {
-                Hour = hourStart.ToString("HH:00"),
-                Count = stats.Values.Sum(),
-                ErrorCount = stats.GetValueOrDefault(LogLevel.Error, 0) + stats.GetValueOrDefault(LogLevel.Critical, 0),
-                WarningCount = stats.GetValueOrDefault(LogLevel.Warning, 0)
-            });
-        }
-
-        return hourlyCounts;
     }
 
     private static LogLevel? ParseLogLevel(string? level)

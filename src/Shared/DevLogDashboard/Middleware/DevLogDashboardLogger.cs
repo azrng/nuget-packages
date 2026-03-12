@@ -17,10 +17,11 @@ public class DevLogDashboardLogger : ILogger
     private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
     private static readonly int RuntimeProcessId = Environment.ProcessId;
     private static readonly string? RuntimeSdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString();
+
     private static readonly JsonSerializerOptions PropertyValueSerializerOptions = new()
-    {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles
-    };
+                                                                                   {
+                                                                                       ReferenceHandler = ReferenceHandler.IgnoreCycles
+                                                                                   };
 
     private readonly string _category;
     private readonly ILogStore _logStore;
@@ -46,7 +47,7 @@ public class DevLogDashboardLogger : ILogger
             return false;
         }
 
-        return logLevel >= ConvertLogLevel(_options.MinLogLevel);
+        return logLevel >= _options.MinLogLevel;
     }
 
     IDisposable ILogger.BeginScope<TState>(TState state)
@@ -87,29 +88,29 @@ public class DevLogDashboardLogger : ILogger
             var responseStatusCode = httpContext?.Response.StatusCode;
 
             var logEntry = new LogEntry
-            {
-                RequestId = requestId,
-                ConnectionId = connectionId,
-                Level = ConvertLogLevel(logLevel),
-                Message = message,
-                Timestamp = DateTime.Now,
-                Source = _category,
-                EventId = eventId.Id,
-                RequestPath = requestPath?.ToString(),
-                RequestMethod = requestMethod,
-                ResponseStatusCode = responseStatusCode,
-                Exception = exception?.ToString(),
-                StackTrace = exception?.StackTrace,
-                MachineName = RuntimeMachineName,
-                Application = _options.ApplicationName,
-                AppVersion = _options.ApplicationVersion,
-                SdkVersion = RuntimeSdkVersion,
-                Environment = RuntimeEnvironment,
-                ProcessId = RuntimeProcessId,
-                ThreadId = Environment.CurrentManagedThreadId,
-                ThreadName = Thread.CurrentThread.Name,
-                Logger = _category
-            };
+                           {
+                               RequestId = requestId,
+                               ConnectionId = connectionId,
+                               Level = logLevel,
+                               Message = message,
+                               Timestamp = DateTime.Now,
+                               Source = _category,
+                               EventId = eventId.Id,
+                               RequestPath = requestPath?.ToString(),
+                               RequestMethod = requestMethod,
+                               ResponseStatusCode = responseStatusCode,
+                               Exception = exception?.ToString(),
+                               StackTrace = exception?.StackTrace,
+                               MachineName = RuntimeMachineName,
+                               Application = _options.ApplicationName,
+                               AppVersion = _options.ApplicationVersion,
+                               SdkVersion = RuntimeSdkVersion,
+                               Environment = RuntimeEnvironment,
+                               ProcessId = RuntimeProcessId,
+                               ThreadId = Environment.CurrentManagedThreadId,
+                               ThreadName = Thread.CurrentThread.Name,
+                               Logger = _category
+                           };
 
             if (state is IEnumerable<KeyValuePair<string, object?>> structuredData)
             {
@@ -122,26 +123,13 @@ public class DevLogDashboardLogger : ILogger
                 }
             }
 
-            _logStore.Add(logEntry);
+            // 使用同步方式，因为这是在非异步上下文中
+            _logStore.AddAsync(logEntry).GetAwaiter().GetResult();
         }
         catch
         {
             // Provider logging failure must never impact application flow.
         }
-    }
-
-    private static LogLevel ConvertLogLevel(LogLevel logLevel)
-    {
-        return logLevel switch
-        {
-            LogLevel.Trace => LogLevel.Trace,
-            LogLevel.Debug => LogLevel.Debug,
-            LogLevel.Information => LogLevel.Information,
-            LogLevel.Warning => LogLevel.Warning,
-            LogLevel.Error => LogLevel.Error,
-            LogLevel.Critical => LogLevel.Critical,
-            _ => LogLevel.Information
-        };
     }
 
     private static object? NormalizePropertyValue(object? value)
@@ -208,8 +196,8 @@ public class DevLogDashboardLogger : ILogger
             }
 
             var ignoredPath = new PathString(rawPath);
-            if (path.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase)
-                || fullPath.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase))
+            if (path.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase) ||
+                fullPath.StartsWithSegments(ignoredPath, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -222,8 +210,6 @@ public class DevLogDashboardLogger : ILogger
     {
         public static readonly NullScope Instance = new();
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

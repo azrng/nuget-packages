@@ -20,6 +20,36 @@ public static class ServiceCollectionExtensions
     private static readonly int RuntimeProcessId = Environment.ProcessId;
 
     /// <summary>
+    /// Add DevLogDashboard services with custom log store type.
+    /// </summary>
+    public static IServiceCollection AddDevLogDashboard<TLogStore>(
+        this IServiceCollection services,
+        Action<DevLogDashboardOptions>? configureOptions = null)
+        where TLogStore : class, ILogStore
+    {
+        var options = new DevLogDashboardOptions();
+        configureOptions?.Invoke(options);
+        NormalizeOptions(options);
+
+        services.AddSingleton(options);
+
+        // 注册自定义 LogStore
+        services.AddSingleton<ILogStore, TLogStore>();
+
+        services.AddHttpContextAccessor();
+
+        services.AddSingleton<ILoggerProvider>(sp =>
+        {
+            var logStore = sp.GetRequiredService<ILogStore>();
+            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Add DevLogDashboard services.
     /// </summary>
     public static IServiceCollection AddDevLogDashboard(
@@ -183,7 +213,8 @@ public static class ServiceCollectionExtensions
         logEntry.Properties["EventType"] = "RequestEnd";
         logEntry.Properties["StatusCode"] = context.Response.StatusCode;
 
-        logStore.Add(logEntry);
+        // 使用同步方式，因为这是在非异步上下文中
+        _ = logStore.AddAsync(logEntry).AsTask();
     }
 
     private static void LogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
@@ -212,7 +243,8 @@ public static class ServiceCollectionExtensions
 
         logEntry.Properties["EventType"] = "Exception";
 
-        logStore.Add(logEntry);
+        // 使用同步方式，因为这是在非异步上下文中
+        _ = logStore.AddAsync(logEntry).AsTask();
     }
 
     private static void NormalizeOptions(DevLogDashboardOptions options)

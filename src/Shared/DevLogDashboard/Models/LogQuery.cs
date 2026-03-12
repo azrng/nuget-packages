@@ -8,6 +8,11 @@ namespace Azrng.DevLogDashboard.Models;
 public class LogQuery
 {
     /// <summary>
+    /// 日志 ID 筛选
+    /// </summary>
+    public string? Id { get; set; }
+
+    /// <summary>
     /// 搜索关键词（支持表达式语法）
     /// </summary>
     public string? Keyword { get; set; }
