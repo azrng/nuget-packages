@@ -4,8 +4,8 @@
 
 ## 特点
 
-- **零配置**: 无需数据库等外部存储，开箱即用
-- **内存存储**: 高效轻量，自动管理
+- **零配置**: 默认使用内存存储，无需数据库等外部依赖，开箱即用
+- **可扩展存储**: 支持通过实现 `ILogStore` 接口自定义存储方案（如 PostgreSQL、Redis、文件等）
 - **实时查看**: 开发调试阶段快速查看日志
 - **请求追踪**: 通过 RequestId 查看完整请求链路
 - **结构化日志**: 支持记录和查看结构化数据
@@ -28,11 +28,11 @@ using Azrng.DevLogDashboard.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 添加 DevLogDashboard 服务
+// 添加 DevLogDashboard 服务（默认使用内存存储）
 builder.Services.AddDevLogDashboard(options =>
 {
     options.EndpointPath = "/dev-logs";      // 仪表板访问路径
-    options.MaxLogCount = 10000;             // 最大存储日志数
+    options.MaxLogCount = 10000;             // 最大存储日志数（仅内存存储）
     options.ApplicationName = "MyApi";       // 应用名称
     options.ApplicationVersion = "1.0.0";    // 应用版本
 });
@@ -102,13 +102,12 @@ public class ValuesController : ControllerBase
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `EndpointPath` | string | `/dev-logs` | 仪表板访问路径 |
-| `MaxLogCount` | int | 10000 | 最大存储日志条数 |
+| `MaxLogCount` | int | 10000 | 最大存储日志条数（仅内存存储） |
 | `OnlyLogErrors` | bool | false | 是否只记录错误日志 |
 | `MinLogLevel` | LogLevel | Trace | 最低日志级别 |
 | `ApplicationName` | string | - | 应用名称 |
 | `ApplicationVersion` | string | - | 应用版本 |
 | `IgnoredPaths` | ICollection<string> | [/health, /healthz, /ready, /metrics, /dev-logs, /favicon.ico] | 忽略的路径 |
-| `IgnoredMethods` | ICollection<string> | [OPTIONS] | 忽略的 HTTP 方法 |
 
 ### 授权配置
 
@@ -144,6 +143,255 @@ builder.Services.AddDevLogDashboard(options =>
     options.IgnoredPaths.Add("/health");
     options.IgnoredPaths.Add("/metrics");
 });
+```
+
+### 添加访问授权
+
+```csharp
+builder.Services.AddDevLogDashboard(options =>
+{
+    // 只允许本地访问
+    options.AuthorizationFilter = async context =>
+    {
+        var remoteIp = context.Connection.RemoteIpAddress;
+        return remoteIp != null &&
+               (System.Net.IPAddress.IsLoopback(remoteIp) ||
+                remoteIp.Equals(System.Net.IPAddress.Parse("::1")));
+    };
+});
+```
+
+## 自定义存储实现
+
+DevLogDashboard 支持通过实现 `ILogStore` 接口来扩展存储方案。
+
+### ILogStore 接口
+
+```csharp
+public interface ILogStore
+{
+    /// <summary>
+    /// 初始化存储（例如创建数据库表、索引等）
+    /// </summary>
+    Task InitializeAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 异步添加日志
+    /// </summary>
+    ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 查询日志（支持分页、过滤、排序）
+    /// </summary>
+    Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 根据 RequestId 获取日志列表（用于请求追踪）
+    /// </summary>
+    Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取追踪汇总列表（用于请求分析）
+    /// </summary>
+    Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default);
+}
+```
+
+### 方式一：使用泛型重载（支持依赖注入）
+
+如果你的 `ILogStore` 实现的构造函数支持依赖注入：
+
+```csharp
+// 自定义实现
+public class PgSqlLogStore : ILogStore
+{
+    public PgSqlLogStore(IConfiguration configuration, ILogger<PgSqlLogStore> logger)
+    {
+        // 从 DI 获取依赖
+    }
+
+    // 实现所有 ILogStore 方法...
+}
+
+// 注册使用
+builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
+{
+    options.EndpointPath = "/dev-logs";
+    options.ApplicationName = "MyApi";
+    options.ApplicationVersion = "1.0.0";
+});
+```
+
+### 方式二：使用工厂函数（复杂场景）
+
+如果需要手动构造 `ILogStore` 实例：
+
+```csharp
+builder.Services.AddDevLogDashboard(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
+    var connectionString = config.GetConnectionString("LogConnection")
+        ?? "Host=localhost;Port=5432;Username=postgres;Password=123456;Database=logs";
+
+    var logger = loggerFactory.CreateLogger<MyDatabaseLogStore>();
+    return new MyDatabaseLogStore(connectionString, logger);
+}, options =>
+{
+    options.EndpointPath = "/dev-logs";
+    options.ApplicationName = "MyApi";
+});
+```
+
+### PostgreSQL 存储示例
+
+以下是一个完整的 PostgreSQL 存储实现示例：
+
+```csharp
+using Azrng.DevLogDashboard.Storage;
+using Azrng.DevLogDashboard.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
+using System.Text.Json;
+
+public class PgSqlLogStore : ILogStore
+{
+    private readonly string _connectionString;
+    private readonly ILogger<PgSqlLogStore> _logger;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private volatile bool _initialized;
+
+    public PgSqlLogStore(IConfiguration configuration, ILogger<PgSqlLogStore> logger)
+    {
+        var connectionString = configuration.GetConnectionString("PostgresConnection");
+        _connectionString = string.IsNullOrEmpty(connectionString)
+            ? "Host=localhost;Port=5432;Username=postgres;Password=123456;Database=dev_log"
+            : connectionString;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken);
+
+            const string sql = @"
+                CREATE TABLE IF NOT EXISTS dev_logs (
+                    id VARCHAR(50) PRIMARY KEY,
+                    request_id VARCHAR(50),
+                    timestamp TIMESTAMP NOT NULL,
+                    level VARCHAR(20) NOT NULL,
+                    message TEXT,
+                    request_path VARCHAR(500),
+                    request_method VARCHAR(10),
+                    response_status_code INTEGER,
+                    elapsed_milliseconds BIGINT,
+                    source VARCHAR(200),
+                    exception TEXT,
+                    stack_trace TEXT,
+                    machine_name VARCHAR(200),
+                    application VARCHAR(200),
+                    app_version VARCHAR(50),
+                    environment VARCHAR(50),
+                    process_id INTEGER,
+                    thread_id INTEGER,
+                    logger VARCHAR(200),
+                    action_id VARCHAR(100),
+                    action_name VARCHAR(200),
+                    properties JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_timestamp ON dev_logs(timestamp DESC);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_request_id ON dev_logs(request_id);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_level ON dev_logs(level);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_application ON dev_logs(application);
+
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_properties_gin ON dev_logs USING gin(properties);";
+
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            _logger.LogInformation("PostgreSQL 日志表初始化成功");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化数据库失败：{Message}", ex.Message);
+            throw;
+        }
+    }
+
+    public async ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
+    {
+        if (entry == null) return;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken);
+
+        const string sql = @"
+            INSERT INTO dev_logs (
+                id, request_id, timestamp, level, message,
+                request_path, request_method, response_status_code, elapsed_milliseconds,
+                source, exception, stack_trace, machine_name, application, app_version,
+                environment, process_id, thread_id, logger, action_id, action_name, properties
+            ) VALUES (
+                @Id, @RequestId, @Timestamp, @Level, @Message,
+                @RequestPath, @RequestMethod, @ResponseStatusCode, @ElapsedMilliseconds,
+                @Source, @Exception, @StackTrace, @MachineName, @Application, @AppVersion,
+                @Environment, @ProcessId, @ThreadId, @Logger, @ActionId, @ActionName,
+                @Properties::jsonb
+            )";
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        // 添加参数...
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    // 实现其他方法...
+}
+```
+
+使用 PostgreSQL 存储：
+
+```csharp
+builder.Services.AddDevLogDashboard<PgSqlLogStore>(options =>
+{
+    options.EndpointPath = "/dev-logs";
+    options.ApplicationName = "MyApi";
+    options.ApplicationVersion = "1.0.0";
+});
+
+var app = builder.Build();
+
+// 初始化存储（如果需要）
+using (var scope = app.Services.CreateScope())
+{
+    var logStore = scope.ServiceProvider.GetRequiredService<ILogStore>();
+    try
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await logStore.InitializeAsync(cts.Token);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"LogStore 初始化失败: {ex.Message}");
+        // 继续启动，不影响应用运行
+    }
+}
+```
+
+配置连接字符串（appsettings.json）：
+
+```json
+{
+  "ConnectionStrings": {
+    "PostgresConnection": "Host=localhost;Port=5432;Username=postgres;Password=your_password;Database=dev_log"
+  }
+}
 ```
 
 ## 搜索语法
@@ -213,30 +461,40 @@ builder.Services.AddDevLogDashboard(options =>
 - **核心组件**:
   - `DevLogDashboardMiddleware` - 仪表板中间件
   - `DevLogDashboardLogger` - 自定义日志记录器
-  - `InMemoryLogStore` - 内存日志存储
+  - `ILogStore` - 存储接口（抽象层）
+  - `InMemoryLogStore` - 默认内存日志存储实现
 - **前端**: 原生 JavaScript（无框架依赖）
-- **存储方式**: 内存 (ConcurrentBag)，线程安全
+- **默认存储方式**: 内存 (Queue)，线程安全
 
 ## API 端点
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/dev-logs-api/dashboard` | GET | 获取仪表板首页统计数据 |
-| `/dev-logs-api/logs` | GET | 查询日志列表（分页） |
+| `/dev-logs-api/logs` | GET | 查询日志列表（分页、过滤、排序） |
 | `/dev-logs-api/logs/{id}` | GET | 获取单条日志详情 |
 | `/dev-logs-api/traces` | GET | 获取请求追踪汇总列表 |
 | `/dev-logs-api/traces/{requestId}` | GET | 获取特定 RequestId 的所有日志 |
-| `/dev-logs-api/clear` | POST | 清空所有日志 |
 
 ## 注意事项
 
 1. **仅用于开发环境**: 本产品设计用于开发调试，生产环境请使用专业的日志系统（如 ELK、Seq 等）
-2. **内存限制**: 默认最大存储 10000 条日志，超出后自动清理最旧的 10% 日志
-3. **线程安全**: 使用 ConcurrentBag 和 lock 保证多线程并发安全
+2. **内存限制**: 使用 `InMemoryLogStore` 时，默认最大存储 10000 条日志，超出后自动清理最旧的日志
+3. **线程安全**: `InMemoryLogStore` 使用 ReaderWriterLockSlim 保证多线程并发安全
 4. **授权安全**: 建议配置授权过滤器保护敏感信息
-5. **自动清理**: 超出最大日志数量时自动清理旧日志，无需手动维护
+5. **自动清理**: 使用 `InMemoryLogStore` 时，超出最大日志数量会自动清理旧日志，无需手动维护
+6. **自定义存储**: 使用自定义存储实现时，请确保 `InitializeAsync` 方法幂等性，避免重复初始化
 
 ## 版本历史
+
+### 1.0.0-preview.5
+
+- **存储可扩展性**
+  - 新增 `ILogStore` 接口，支持自定义存储实现
+  - 添加 `InitializeAsync` 方法支持存储初始化（如数据库表创建）
+  - 提供泛型重载 `AddDevLogDashboard<TLogStore>()` 支持依赖注入
+  - 提供工厂函数重载支持复杂构造场景
+  - 简化接口，移除 `Count` 和 `Clear` 方法
+  - 移除 `IgnoredMethods` 配置选项
 
 ### 1.0.0-preview.4
 
