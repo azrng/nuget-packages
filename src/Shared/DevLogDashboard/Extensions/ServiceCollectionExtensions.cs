@@ -1,10 +1,12 @@
-﻿using Azrng.DevLogDashboard.Middleware;
+﻿using Azrng.DevLogDashboard.Background;
+using Azrng.DevLogDashboard.Middleware;
 using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Azrng.DevLogDashboard.Extensions;
@@ -38,11 +40,57 @@ public static class ServiceCollectionExtensions
 
         services.AddHttpContextAccessor();
 
+        // 注册后台队列服务
+        var backgroundOptions = new BackgroundLogWriterOptions();
+        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
+        services.AddSingleton(backgroundOptions);
+        services.AddHostedService<BackgroundLogWriter>();
+
         services.AddSingleton<ILoggerProvider>(sp =>
         {
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
+            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add DevLogDashboard services with custom log store type and background queue options.
+    /// </summary>
+    public static IServiceCollection AddDevLogDashboard<TLogStore>(
+        this IServiceCollection services,
+        Action<DevLogDashboardOptions>? configureOptions = null,
+        Action<BackgroundLogWriterOptions>? configureBackgroundOptions = null)
+        where TLogStore : class, ILogStore
+    {
+        var options = new DevLogDashboardOptions();
+        configureOptions?.Invoke(options);
+        NormalizeOptions(options);
+
+        services.AddSingleton(options);
+
+        // 注册自定义 LogStore
+        services.AddSingleton<ILogStore, TLogStore>();
+
+        // 注册后台队列服务
+        var backgroundOptions = new BackgroundLogWriterOptions();
+        configureBackgroundOptions?.Invoke(backgroundOptions);
+
+        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
+        services.AddSingleton(backgroundOptions);
+        services.AddHostedService<BackgroundLogWriter>();
+
+        services.AddHttpContextAccessor();
+
+        services.AddSingleton<ILoggerProvider>(sp =>
+        {
+            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
         });
 
         return services;
@@ -65,13 +113,20 @@ public static class ServiceCollectionExtensions
         // 使用工厂函数注册 LogStore
         services.AddSingleton<ILogStore>(logStoreFactory);
 
+        // 注册后台队列服务
+        var backgroundOptions = new BackgroundLogWriterOptions();
+        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
+        services.AddSingleton(backgroundOptions);
+        services.AddHostedService<BackgroundLogWriter>();
+
         services.AddHttpContextAccessor();
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
+            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
         });
 
         return services;
@@ -93,13 +148,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILogStore>(sp =>
             new InMemoryLogStore(options.MaxLogCount));
 
+        // 注册后台队列服务
+        var backgroundOptions = new BackgroundLogWriterOptions();
+        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
+        services.AddSingleton(backgroundOptions);
+        services.AddHostedService<BackgroundLogWriter>();
+
         services.AddHttpContextAccessor();
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
+            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
         });
 
         return services;
@@ -111,7 +173,7 @@ public static class ServiceCollectionExtensions
     public static IApplicationBuilder UseDevLogDashboard(this IApplicationBuilder app)
     {
         var options = app.ApplicationServices.GetRequiredService<DevLogDashboardOptions>();
-        var logStore = app.ApplicationServices.GetRequiredService<ILogStore>();
+        var logQueue = app.ApplicationServices.GetRequiredService<IBackgroundLogQueue>();
 
         app.Use(async (context, next) =>
         {
@@ -128,12 +190,12 @@ public static class ServiceCollectionExtensions
             {
                 await next();
                 stopwatch.Stop();
-                TryLogRequest(context, logStore, options, requestId, stopwatch.ElapsedMilliseconds);
+                TryLogRequest(context, logQueue, options, requestId, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                TryLogException(context, logStore, options, requestId, ex, stopwatch.ElapsedMilliseconds);
+                TryLogException(context, logQueue, options, requestId, ex, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         });
@@ -174,12 +236,12 @@ public static class ServiceCollectionExtensions
         return false;
     }
 
-    private static void TryLogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+    private static void TryLogRequest(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
         string requestId, long elapsedMs)
     {
         try
         {
-            LogRequest(context, logStore, options, requestId, elapsedMs);
+            LogRequest(context, logQueue, options, requestId, elapsedMs);
         }
         catch
         {
@@ -187,12 +249,12 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static void TryLogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+    private static void TryLogException(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
         string requestId, Exception ex, long elapsedMs)
     {
         try
         {
-            LogException(context, logStore, options, requestId, ex, elapsedMs);
+            LogException(context, logQueue, options, requestId, ex, elapsedMs);
         }
         catch
         {
@@ -200,7 +262,7 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static void LogRequest(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+    private static void LogRequest(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
         string requestId, long elapsedMs)
     {
         var level = context.Response.StatusCode >= 500 ? LogLevel.Error :
@@ -234,11 +296,11 @@ public static class ServiceCollectionExtensions
         logEntry.Properties["EventType"] = "RequestEnd";
         logEntry.Properties["StatusCode"] = context.Response.StatusCode;
 
-        // 使用同步方式，因为这是在非异步上下文中
-        _ = logStore.AddAsync(logEntry).AsTask();
+        // 异步写入队列
+        _ = logQueue.QueueLogEntryAsync(logEntry);
     }
 
-    private static void LogException(HttpContext context, ILogStore logStore, DevLogDashboardOptions options,
+    private static void LogException(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
         string requestId, Exception ex, long elapsedMs)
     {
         // 如果响应状态码显示成功但实际发生了异常，使用 500 作为状态码
@@ -273,8 +335,8 @@ public static class ServiceCollectionExtensions
         logEntry.Properties["EventType"] = "Exception";
         logEntry.Properties["StatusCode"] = actualStatusCode;
 
-        // 使用同步方式，因为这是在非异步上下文中
-        _ = logStore.AddAsync(logEntry).AsTask();
+        // 异步写入队列
+        _ = logQueue.QueueLogEntryAsync(logEntry);
     }
 
     private static void NormalizeOptions(DevLogDashboardOptions options)

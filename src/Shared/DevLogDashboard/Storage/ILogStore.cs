@@ -13,9 +13,9 @@ public interface ILogStore
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 异步添加日志
+    /// 批量异步添加日志
     /// </summary>
-    ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default);
+    ValueTask AddBatchAsync(IEnumerable<LogEntry> entries, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 查询日志（支持分页、过滤、排序）

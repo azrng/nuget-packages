@@ -8,7 +8,7 @@ namespace HttpTestApi.Storage;
 /// <summary>
 /// 基于 PostgreSQL 的日志存储实现
 /// </summary>
-public class PgSqlLogStore : ILogStore
+public class PgSqlLogStore : LogStoreBase
 {
     private readonly string _connectionString;
     private readonly ILogger<PgSqlLogStore> _logger;
@@ -39,7 +39,7 @@ public class PgSqlLogStore : ILogStore
         return string.Join(";", parts);
     }
 
-    public async ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
+    public override async ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
     {
         if (entry == null)
         {
@@ -166,7 +166,102 @@ public class PgSqlLogStore : ILogStore
         }
     }
 
-    public async Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
+    public override async ValueTask AddBatchAsync(IEnumerable<LogEntry> entries, CancellationToken cancellationToken = default)
+    {
+        if (entries == null)
+        {
+            return;
+        }
+
+        var entryList = entries.ToList();
+        if (entryList.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await EnsureInitializedAsync(cancellationToken))
+            {
+                return;
+            }
+
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken);
+
+            // 使用 NpgsqlBinaryImporter 进行批量导入，性能更好
+            await using var importer = await conn.BeginBinaryImportAsync(
+                "COPY dev_logs (" +
+                "id, request_id, connection_id, timestamp, level, message, " +
+                "request_path, request_method, response_status_code, elapsed_milliseconds, " +
+                "source, exception, stack_trace, machine_name, application, app_version, " +
+                "environment, process_id, thread_id, logger, action_id, action_name, " +
+                "properties) FROM STDIN WITH (FORMAT BINARY)",
+                cancellationToken);
+
+            foreach (var entry in entryList)
+            {
+                if (entry == null) continue;
+
+                importer.StartRow();
+
+                importer.Write(entry.Id ?? Guid.NewGuid().ToString(), "text");
+                importer.Write(entry.RequestId ?? (object)DBNull.Value, "text");
+                importer.Write(entry.ConnectionId ?? (object)DBNull.Value, "text");
+                importer.Write(entry.Timestamp, "timestamp");
+                importer.Write(entry.Level.ToString(), "text");
+                importer.Write(entry.Message ?? string.Empty, "text");
+                importer.Write(entry.RequestPath ?? (object)DBNull.Value, "text");
+                importer.Write(entry.RequestMethod ?? (object)DBNull.Value, "text");
+                importer.Write(entry.ResponseStatusCode ?? (object)DBNull.Value, "integer");
+                importer.Write(entry.ElapsedMilliseconds ?? (object)DBNull.Value, "bigint");
+                importer.Write(entry.Source ?? (object)DBNull.Value, "text");
+                importer.Write(entry.Exception ?? (object)DBNull.Value, "text");
+                importer.Write(entry.StackTrace ?? (object)DBNull.Value, "text");
+                importer.Write(entry.MachineName ?? (object)DBNull.Value, "text");
+                importer.Write(entry.Application ?? (object)DBNull.Value, "text");
+                importer.Write(entry.AppVersion ?? (object)DBNull.Value, "text");
+                importer.Write(entry.Environment ?? (object)DBNull.Value, "text");
+                importer.Write(entry.ProcessId ?? (object)DBNull.Value, "integer");
+                importer.Write(entry.ThreadId ?? (object)DBNull.Value, "integer");
+                importer.Write(entry.Logger ?? (object)DBNull.Value, "text");
+                importer.Write(entry.ActionId ?? (object)DBNull.Value, "text");
+                importer.Write(entry.ActionName ?? (object)DBNull.Value, "text");
+
+                var propertiesJson = entry.Properties.Count > 0 ? JsonSerializer.Serialize(entry.Properties) : null;
+                importer.Write(propertiesJson ?? (object)DBNull.Value, "jsonb");
+            }
+
+            await importer.CompleteAsync(cancellationToken);
+            _logger.LogDebug("批量写入 {Count} 条日志成功", entryList.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量添加日志失败：{Message}", ex.Message);
+
+            // 如果批量导入失败，回退到逐条插入
+            await FallbackToSingleInsertsAsync(entryList, cancellationToken);
+        }
+    }
+
+    private async ValueTask FallbackToSingleInsertsAsync(List<LogEntry> entries, CancellationToken cancellationToken)
+    {
+        _logger.LogWarning("批量导入失败，回退到逐条插入模式");
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                await AddAsync(entry, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "回退模式插入单条日志失败");
+            }
+        }
+    }
+
+    public override async Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
     {
         if (!await EnsureInitializedAsync(cancellationToken))
         {
@@ -280,7 +375,7 @@ public class PgSqlLogStore : ILogStore
         return PageResult<LogEntry>.Create(items, totalCount, query.PageIndex, query.PageSize);
     }
 
-    public async Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
+    public override async Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
     {
         if (!await EnsureInitializedAsync(cancellationToken))
         {
@@ -309,7 +404,7 @@ public class PgSqlLogStore : ILogStore
         return items;
     }
 
-    public async Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default)
+    public override async Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default)
     {
         if (!await EnsureInitializedAsync(cancellationToken))
         {
@@ -383,7 +478,7 @@ public class PgSqlLogStore : ILogStore
         return summaries;
     }
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    public override async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         try
         {

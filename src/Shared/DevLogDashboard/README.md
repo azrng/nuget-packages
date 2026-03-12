@@ -6,10 +6,12 @@
 
 - **零配置**: 默认使用内存存储，无需数据库等外部依赖，开箱即用
 - **可扩展存储**: 支持通过实现 `ILogStore` 接口自定义存储方案（如 PostgreSQL、Redis、文件等）
+- **后台批量写入**: 默认使用后台队列批量写入日志，不阻塞业务线程，性能更优
 - **实时查看**: 开发调试阶段快速查看日志
 - **请求追踪**: 通过 RequestId 查看完整请求链路
 - **结构化日志**: 支持记录和查看结构化数据
 - **HTTP 上下文捕获**: 自动记录 RequestId、ConnectionId、RequestPath、RequestMethod、ResponseStatusCode 等请求信息
+- **时间倒序显示**: 日志默认按时间倒序显示，最新的日志在前
 
 ## 快速开始
 
@@ -108,6 +110,8 @@ public class ValuesController : ControllerBase
 | `ApplicationName` | string | - | 应用名称 |
 | `ApplicationVersion` | string | - | 应用版本 |
 | `IgnoredPaths` | ICollection<string> | [/health, /healthz, /ready, /metrics, /dev-logs, /favicon.ico] | 忽略的路径 |
+| `BatchSize` | int | 100 | 批量写入大小（仅内存存储） |
+| `FlushInterval` | TimeSpan | 5 秒 | 批量写入间隔时间（仅内存存储） |
 
 ### 授权配置
 
@@ -428,7 +432,7 @@ using (var scope = app.Services.CreateScope())
 
 - 实时查看日志列表
 - 按级别筛选（支持级别范围筛选，选择某个级别后显示该级别及更高级别的日志）
-- 按时间排序
+- 时间倒序显示（最新的在前）
 - 按日期范围筛选
 - 展开查看详情和堆栈跟踪
 - 查看完整的 HTTP 请求上下文信息
@@ -455,38 +459,26 @@ using (var scope = app.Services.CreateScope())
 
 **级别筛选逻辑**: 选择某个级别后，将显示该级别及更高级别的所有日志。例如选择 `Warning`，将显示 `Warning`、`Error`、`Critical` 级别的日志。
 
-## 技术架构
-
-- **目标框架**: .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
-- **核心组件**:
-  - `DevLogDashboardMiddleware` - 仪表板中间件
-  - `DevLogDashboardLogger` - 自定义日志记录器
-  - `ILogStore` - 存储接口（抽象层）
-  - `InMemoryLogStore` - 默认内存日志存储实现
-- **前端**: 原生 JavaScript（无框架依赖）
-- **默认存储方式**: 内存 (Queue)，线程安全
-
-## API 端点
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/dev-logs-api/logs` | GET | 查询日志列表（分页、过滤、排序） |
-| `/dev-logs-api/logs/{id}` | GET | 获取单条日志详情 |
-| `/dev-logs-api/traces` | GET | 获取请求追踪汇总列表 |
-| `/dev-logs-api/traces/{requestId}` | GET | 获取特定 RequestId 的所有日志 |
-
 ## 注意事项
 
 1. **仅用于开发环境**: 本产品设计用于开发调试，生产环境请使用专业的日志系统（如 ELK、Seq 等）
 2. **内存限制**: 使用 `InMemoryLogStore` 时，默认最大存储 10000 条日志，超出后自动清理最旧的日志
-3. **线程安全**: `InMemoryLogStore` 使用 ReaderWriterLockSlim 保证多线程并发安全
-4. **授权安全**: 建议配置授权过滤器保护敏感信息
-5. **自动清理**: 使用 `InMemoryLogStore` 时，超出最大日志数量会自动清理旧日志，无需手动维护
+3. **后台批量写入**: 日志默认通过后台队列批量写入，不阻塞业务线程，日志写入可能有轻微延迟
+4. **线程安全**: `InMemoryLogStore` 使用 ReaderWriterLockSlim 保证多线程并发安全
+5. **授权安全**: 建议配置授权过滤器保护敏感信息
 6. **自定义存储**: 使用自定义存储实现时，请确保 `InitializeAsync` 方法幂等性，避免重复初始化
+7. **时间倒序**: 日志列表默认按时间倒序显示（最新的在前）
 
 ## 版本历史
 
 ### 1.0.0-preview.5
+
+- **后台批量写入**
+  - 新增后台日志队列，日志自动批量写入，不阻塞业务线程
+  - 添加 `BatchSize` 和 `FlushInterval` 配置选项
+  - 移除 `UseBackgroundQueue` 选项，默认开启批量写入
+  - 简化 `ILogStore` 接口，统一为异步批量写入
+  - 修复日志排序问题，默认时间倒序显示
 
 - **存储可扩展性**
   - 新增 `ILogStore` 接口，支持自定义存储实现

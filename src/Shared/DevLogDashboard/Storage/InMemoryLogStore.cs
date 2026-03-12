@@ -6,7 +6,7 @@ namespace Azrng.DevLogDashboard.Storage;
 /// <summary>
 /// In-memory log storage with bounded queue and lightweight indexes.
 /// </summary>
-public class InMemoryLogStore : ILogStore
+public class InMemoryLogStore : LogStoreBase
 {
     private readonly Queue<LogEntry> _logs = new();
     private readonly Dictionary<string, LogEntry> _logsById = new(StringComparer.Ordinal);
@@ -21,20 +21,19 @@ public class InMemoryLogStore : ILogStore
         _maxLogCount = maxLogCount > 0 ? maxLogCount : 10000;
     }
 
-    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    public override Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        // 内存存储无需初始化
         return Task.CompletedTask;
     }
 
-    public ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
+    public override ValueTask AddBatchAsync(IEnumerable<LogEntry> entries, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
         {
             return ValueTask.FromCanceled(cancellationToken);
         }
 
-        if (entry is null)
+        if (entries == null)
         {
             return ValueTask.CompletedTask;
         }
@@ -42,63 +41,68 @@ public class InMemoryLogStore : ILogStore
         _lock.EnterWriteLock();
         try
         {
-            _logs.Enqueue(entry);
-
-            if (!string.IsNullOrEmpty(entry.Id))
+            foreach (var entry in entries)
             {
-                _logsById[entry.Id] = entry;
-            }
+                if (entry == null) continue;
 
-            // 增量更新 Trace 索引
-            if (!string.IsNullOrEmpty(entry.RequestId))
-            {
-                if (!_logsByRequestId.TryGetValue(entry.RequestId, out var requestLogs))
+                _logs.Enqueue(entry);
+
+                if (!string.IsNullOrEmpty(entry.Id))
                 {
-                    requestLogs = new List<LogEntry>();
-                    _logsByRequestId[entry.RequestId] = requestLogs;
+                    _logsById[entry.Id] = entry;
                 }
 
-                requestLogs.Add(entry);
-
-                // 增量更新 Trace 汇总信息
-                if (!_traceIndex.TryGetValue(entry.RequestId, out var traceInfo))
+                // 增量更新 Trace 索引
+                if (!string.IsNullOrEmpty(entry.RequestId))
                 {
-                    traceInfo = new TraceInfo
+                    if (!_logsByRequestId.TryGetValue(entry.RequestId, out var requestLogs))
                     {
-                        RequestId = entry.RequestId
-                    };
-                    _traceIndex[entry.RequestId] = traceInfo;
+                        requestLogs = new List<LogEntry>();
+                        _logsByRequestId[entry.RequestId] = requestLogs;
+                    }
+
+                    requestLogs.Add(entry);
+
+                    // 增量更新 Trace 汇总信息
+                    if (!_traceIndex.TryGetValue(entry.RequestId, out var traceInfo))
+                    {
+                        traceInfo = new TraceInfo
+                        {
+                            RequestId = entry.RequestId
+                        };
+                        _traceIndex[entry.RequestId] = traceInfo;
+                    }
+
+                    traceInfo.LogCount++;
+                    if (entry.Timestamp < traceInfo.FirstTimestamp)
+                    {
+                        traceInfo.FirstTimestamp = entry.Timestamp;
+                    }
+                    if (entry.Timestamp > traceInfo.LastTimestamp)
+                    {
+                        traceInfo.LastTimestamp = entry.Timestamp;
+                    }
+                    if (string.IsNullOrEmpty(traceInfo.RequestPath) && !string.IsNullOrEmpty(entry.RequestPath))
+                    {
+                        traceInfo.RequestPath = entry.RequestPath;
+                    }
+                    if (string.IsNullOrEmpty(traceInfo.RequestMethod) && !string.IsNullOrEmpty(entry.RequestMethod))
+                    {
+                        traceInfo.RequestMethod = entry.RequestMethod;
+                    }
+                    // 更新状态码（使用最新的，覆盖之前的）
+                    if (entry.ResponseStatusCode.HasValue)
+                    {
+                        traceInfo.ResponseStatusCode = entry.ResponseStatusCode.Value;
+                    }
+                    if (entry.Level >= LogLevel.Error)
+                    {
+                        traceInfo.HasError = true;
+                    }
                 }
 
-                traceInfo.LogCount++;
-                if (entry.Timestamp < traceInfo.FirstTimestamp)
-                {
-                    traceInfo.FirstTimestamp = entry.Timestamp;
-                }
-                if (entry.Timestamp > traceInfo.LastTimestamp)
-                {
-                    traceInfo.LastTimestamp = entry.Timestamp;
-                }
-                if (string.IsNullOrEmpty(traceInfo.RequestPath) && !string.IsNullOrEmpty(entry.RequestPath))
-                {
-                    traceInfo.RequestPath = entry.RequestPath;
-                }
-                if (string.IsNullOrEmpty(traceInfo.RequestMethod) && !string.IsNullOrEmpty(entry.RequestMethod))
-                {
-                    traceInfo.RequestMethod = entry.RequestMethod;
-                }
-                // 更新状态码（使用最新的，覆盖之前的）
-                if (entry.ResponseStatusCode.HasValue)
-                {
-                    traceInfo.ResponseStatusCode = entry.ResponseStatusCode.Value;
-                }
-                if (entry.Level >= LogLevel.Error)
-                {
-                    traceInfo.HasError = true;
-                }
+                TrimExcessLogs();
             }
-
-            TrimExcessLogs();
         }
         finally
         {
@@ -108,7 +112,7 @@ public class InMemoryLogStore : ILogStore
         return ValueTask.CompletedTask;
     }
 
-    public Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
+    public override Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
         {
@@ -137,7 +141,7 @@ public class InMemoryLogStore : ILogStore
         }
     }
 
-    public Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
+    public override Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
         {
@@ -171,14 +175,13 @@ public class InMemoryLogStore : ILogStore
                 var array = _logs.ToArray();
                 int targetCount = skip + pageSize;
 
-                // 从最新开始扫描（队列尾部）
+                // 从最新开始扫描（队列尾部），得到的就是倒序结果（最新的在前）
                 for (int i = array.Length - 1; i >= 0 && filtered.Count < targetCount; i--)
                 {
                     filtered.Add(array[i]);
                 }
 
-                // 反转回正确顺序（最新的在前）
-                filtered.Reverse();
+                // 已经是倒序了，不需要再反转
             }
             else
             {
@@ -205,7 +208,7 @@ public class InMemoryLogStore : ILogStore
         }
     }
 
-    public Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime,
+    public override Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime,
         CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)

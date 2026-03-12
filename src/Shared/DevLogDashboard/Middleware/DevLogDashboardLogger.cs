@@ -1,4 +1,5 @@
-﻿using Azrng.DevLogDashboard.Models;
+﻿using Azrng.DevLogDashboard.Background;
+using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
@@ -27,17 +28,20 @@ public class DevLogDashboardLogger : ILogger
     private readonly Func<ILogStore> _logStoreFactory;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor? _httpContextAccessor;
+    private readonly IBackgroundLogQueue _logQueue;
 
     public DevLogDashboardLogger(
         string category,
         Func<ILogStore> logStoreFactory,
         DevLogDashboardOptions options,
-        IHttpContextAccessor? httpContextAccessor = null)
+        IHttpContextAccessor? httpContextAccessor = null,
+        IBackgroundLogQueue? logQueue = null)
     {
         _category = category;
         _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options;
         _httpContextAccessor = httpContextAccessor;
+        _logQueue = logQueue ?? throw new ArgumentNullException(nameof(logQueue), "后台队列必须启用");
     }
 
     public bool IsEnabled(LogLevel logLevel)
@@ -131,15 +135,8 @@ public class DevLogDashboardLogger : ILogger
                 }
             }
 
-            // Resolve store lazily to avoid circular dependencies during host startup.
-            var logStore = _logStoreFactory();
-            if (logStore == null)
-            {
-                return;
-            }
-
-            // Fire-and-forget to avoid blocking the request/host startup on storage latency.
-            _ = logStore.AddAsync(logEntry);
+            // 异步写入队列，不阻塞业务逻辑
+            _ = _logQueue.QueueLogEntryAsync(logEntry);
         }
         catch
         {

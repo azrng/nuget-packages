@@ -14,8 +14,7 @@ let currentFilters = {
     source: '',
     application: '',
     startTime: null,
-    endTime: null,
-    orderByTimeAscending: false
+    endTime: null
 };
 let isLoading = false;
 
@@ -72,11 +71,6 @@ function initEventListeners() {
     document.getElementById('ddlLevel').addEventListener('change', () => {
         currentFilters.level = document.getElementById('ddlLevel').value;
         currentPage = 1;
-        if (currentTab === 'logs') loadLogs();
-    });
-
-    document.getElementById('chkOrderByTime').addEventListener('change', () => {
-        currentFilters.orderByTimeAscending = document.getElementById('chkOrderByTime').checked;
         if (currentTab === 'logs') loadLogs();
     });
 
@@ -193,7 +187,7 @@ async function loadLogs() {
         const params = new URLSearchParams({
             pageIndex: currentPage.toString(),
             pageSize: DEFAULT_PAGE_SIZE.toString(),
-            orderByTimeAscending: currentFilters.orderByTimeAscending.toString()
+            orderByTimeAscending: 'false' // 默认时间倒序
         });
 
         if (currentFilters.keyword) params.append('keyword', currentFilters.keyword);

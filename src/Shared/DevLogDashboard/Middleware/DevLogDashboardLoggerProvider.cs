@@ -1,3 +1,4 @@
+using Azrng.DevLogDashboard.Background;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
@@ -15,19 +16,25 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
     private readonly Func<ILogStore> _logStoreFactory;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IBackgroundLogQueue _logQueue;
     private readonly ConcurrentDictionary<string, DevLogDashboardLogger> _loggers = new();
 
-    public DevLogDashboardLoggerProvider(Func<ILogStore> logStoreFactory, DevLogDashboardOptions options, IHttpContextAccessor httpContextAccessor)
+    public DevLogDashboardLoggerProvider(
+        Func<ILogStore> logStoreFactory,
+        DevLogDashboardOptions options,
+        IHttpContextAccessor httpContextAccessor,
+        IBackgroundLogQueue logQueue)
     {
         _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
-        _options = options;
-        _httpContextAccessor = httpContextAccessor;
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _logQueue = logQueue ?? throw new ArgumentNullException(nameof(logQueue));
     }
 
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName, name =>
-            new DevLogDashboardLogger(name, _logStoreFactory, _options, _httpContextAccessor));
+            new DevLogDashboardLogger(name, _logStoreFactory, _options, _httpContextAccessor, _logQueue));
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
