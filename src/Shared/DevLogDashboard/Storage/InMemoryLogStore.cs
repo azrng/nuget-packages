@@ -19,20 +19,10 @@ public class InMemoryLogStore : ILogStore
         _maxLogCount = maxLogCount > 0 ? maxLogCount : 10000;
     }
 
-    public int Count
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        get
-        {
-            _lock.EnterReadLock();
-            try
-            {
-                return _logs.Count;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
-        }
+        // 内存存储无需初始化
+        return Task.CompletedTask;
     }
 
     public ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
@@ -176,21 +166,6 @@ public class InMemoryLogStore : ILogStore
             .ToList();
 
         return Task.FromResult(summaries);
-    }
-
-    public void Clear()
-    {
-        _lock.EnterWriteLock();
-        try
-        {
-            _logs.Clear();
-            _logsById.Clear();
-            _logsByRequestId.Clear();
-        }
-        finally
-        {
-            _lock.ExitWriteLock();
-        }
     }
 
     private IEnumerable<LogEntry> ApplyFilters(IEnumerable<LogEntry> logs, LogQuery query)

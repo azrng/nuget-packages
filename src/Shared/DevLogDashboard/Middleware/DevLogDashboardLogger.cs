@@ -173,12 +173,6 @@ public class DevLogDashboardLogger : ILogger
             return false;
         }
 
-        if ((_options.IgnoredMethods ?? Array.Empty<string>())
-            .Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
         var ignoredPaths = _options.IgnoredPaths ?? Array.Empty<string>();
         if (ignoredPaths.Count == 0)
         {

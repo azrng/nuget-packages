@@ -49,14 +49,6 @@ public class DevLogDashboardOptions
                                                             }.ToList();
 
     /// <summary>
-    /// 忽略的 HTTP 方法
-    /// </summary>
-    public ICollection<string> IgnoredMethods { get; set; } = new[]
-                                                              {
-                                                                  "OPTIONS"
-                                                              }.ToList();
-
-    /// <summary>
     /// 应用名称（可选）
     /// </summary>
     public string? ApplicationName { get; set; }

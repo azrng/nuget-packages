@@ -35,12 +35,6 @@ internal class DevLogDashboardApiHandler
             return;
         }
 
-        if (path.Equals("/api/clear", StringComparison.OrdinalIgnoreCase) && method == "POST")
-        {
-            await HandleClearLogsAsync(context);
-            return;
-        }
-
         if (method == "GET" && path.StartsWith("/api/logs/", StringComparison.OrdinalIgnoreCase))
         {
             await HandleLogDetailAsync(context);
@@ -153,12 +147,6 @@ internal class DevLogDashboardApiHandler
     {
         var serverTime = DateTime.Now;
         await context.Response.WriteAsJsonAsync(new { serverTime = serverTime.ToString("o") }, JsonOptions);
-    }
-
-    private async Task HandleClearLogsAsync(HttpContext context)
-    {
-        _logStore.Clear();
-        await context.Response.WriteAsJsonAsync(new { success = true }, JsonOptions);
     }
 
     private static LogLevel? ParseLogLevel(string? level)

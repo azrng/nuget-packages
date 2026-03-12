@@ -54,15 +54,6 @@ function initEventListeners() {
         }
     });
 
-    // 清空
-    document.getElementById('btnClear').addEventListener('click', () => {
-        if (currentTab === 'logs') {
-            clearLogs();
-        } else {
-            clearTraces();
-        }
-    });
-
     // 键盘快捷键
     document.addEventListener('keydown', (e) => {
         // Ctrl+R 或 Cmd+R 刷新
@@ -520,32 +511,6 @@ function showTraceModal(requestId, logs) {
     `;
 
     modal.classList.add('active');
-}
-
-// 清空日志
-async function clearLogs() {
-    if (!confirm('确定要清空所有日志吗？')) return;
-
-    try {
-        await fetch(`${API_BASE}/clear`, { method: 'POST' });
-        loadLogs();
-    } catch (error) {
-        console.error('清空日志失败:', error);
-        alert('清空日志失败');
-    }
-}
-
-// 清空追踪
-async function clearTraces() {
-    if (!confirm('确定要清空所有追踪记录吗？')) return;
-
-    try {
-        await fetch(`${API_BASE}/traces/clear`, { method: 'POST' });
-        loadTraces();
-    } catch (error) {
-        console.error('清空追踪失败:', error);
-        alert('清空追踪失败');
-    }
 }
 
 // 关闭日志详情弹窗

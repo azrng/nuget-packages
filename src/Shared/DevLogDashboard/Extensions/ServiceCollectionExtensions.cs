@@ -144,12 +144,6 @@ public static class ServiceCollectionExtensions
             }
         }
 
-        if ((options.IgnoredMethods ?? Array.Empty<string>())
-            .Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
         return false;
     }
 
@@ -264,17 +258,6 @@ public static class ServiceCollectionExtensions
         }
 
         options.IgnoredPaths = ignoredPaths;
-
-        options.IgnoredMethods = (options.IgnoredMethods ?? Array.Empty<string>())
-            .Where(method => !string.IsNullOrWhiteSpace(method))
-            .Select(method => method.Trim().ToUpperInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (options.IgnoredMethods.Count == 0)
-        {
-            options.IgnoredMethods.Add("OPTIONS");
-        }
 
         if (options.MaxLogCount <= 0)
         {

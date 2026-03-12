@@ -1,5 +1,4 @@
 using Azrng.DevLogDashboard.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Azrng.DevLogDashboard.Storage;
 
@@ -9,9 +8,14 @@ namespace Azrng.DevLogDashboard.Storage;
 public interface ILogStore
 {
     /// <summary>
+    /// 初始化存储（例如创建数据库表、索引等）
+    /// </summary>
+    Task InitializeAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 异步添加日志
     /// </summary>
-    ValueTask AddAsync(LogEntry entry, CancellationToken cancellationToken = default);
+    ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 查询日志（支持分页、过滤、排序）
@@ -27,14 +31,4 @@ public interface ILogStore
     /// 获取追踪汇总列表（用于请求分析）
     /// </summary>
     Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 清空所有日志
-    /// </summary>
-    void Clear();
-
-    /// <summary>
-    /// 日志总数
-    /// </summary>
-    int Count { get; }
 }

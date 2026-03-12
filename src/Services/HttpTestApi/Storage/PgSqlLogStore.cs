@@ -1,0 +1,409 @@
+using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Storage;
+using Npgsql;
+using System.Text.Json;
+
+namespace HttpTestApi.Storage;
+
+/// <summary>
+/// 基于 PostgreSQL 的日志存储实现
+/// </summary>
+public class PgSqlLogStore : ILogStore
+{
+    private readonly string _connectionString;
+    private readonly ILogger<PgSqlLogStore> _logger;
+
+    public PgSqlLogStore(string connectionString, ILogger<PgSqlLogStore> logger)
+    {
+        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    public async ValueTask AddAsync(LogEntry? entry, CancellationToken cancellationToken = default)
+    {
+        if (entry == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken);
+
+            const string sql = @"
+                INSERT INTO dev_logs (
+                    id, request_id, connection_id, timestamp, level, message,
+                    request_path, request_method, response_status_code, elapsed_milliseconds,
+                    source, exception, stack_trace, machine_name, application, app_version,
+                    environment, process_id, thread_id, logger, action_id, action_name,
+                    properties
+                ) VALUES (
+                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @Message,
+                    @RequestPath, @RequestMethod, @ResponseStatusCode, @ElapsedMilliseconds,
+                    @Source, @Exception, @StackTrace, @MachineName, @Application, @AppVersion,
+                    @Environment, @ProcessId, @ThreadId, @Logger, @ActionId, @ActionName,
+                    @Properties::jsonb
+                )";
+
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", entry.Id ?? Guid.NewGuid().ToString());
+            cmd.Parameters.AddWithValue("@RequestId", entry.RequestId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ConnectionId", entry.ConnectionId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Timestamp", entry.Timestamp);
+            cmd.Parameters.AddWithValue("@Level", entry.Level.ToString());
+            cmd.Parameters.AddWithValue("@Message", entry.Message ?? string.Empty);
+            cmd.Parameters.AddWithValue("@RequestPath", entry.RequestPath ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@RequestMethod", entry.RequestMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ResponseStatusCode", entry.ResponseStatusCode ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ElapsedMilliseconds", entry.ElapsedMilliseconds ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Source", entry.Source ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Exception", entry.Exception ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@StackTrace", entry.StackTrace ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@MachineName", entry.MachineName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Application", entry.Application ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@AppVersion", entry.AppVersion ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Environment", entry.Environment ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ProcessId", entry.ProcessId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ThreadId", entry.ThreadId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Logger", entry.Logger ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ActionId", entry.ActionId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ActionName", entry.ActionName ?? (object)DBNull.Value);
+
+            var propertiesJson = entry.Properties.Count > 0 ? JsonSerializer.Serialize(entry.Properties) : null;
+            cmd.Parameters.AddWithValue("@Properties", propertiesJson ?? (object)DBNull.Value);
+
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加日志失败：{Message}", ex.Message);
+        }
+    }
+
+    public async Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken);
+
+        var sql = new System.Text.StringBuilder();
+        sql.AppendLine("SELECT * FROM dev_logs WHERE 1=1");
+
+        var conditions = new List<string>();
+        var parameters = new List<NpgsqlParameter>();
+
+        if (!string.IsNullOrEmpty(query.Id))
+        {
+            conditions.Add("id = @Id");
+            parameters.Add(new NpgsqlParameter("@Id", query.Id));
+        }
+
+        if (!string.IsNullOrEmpty(query.Keyword))
+        {
+            conditions.Add("(message ILIKE @Keyword OR request_path ILIKE @Keyword)");
+            parameters.Add(new NpgsqlParameter("@Keyword", $"%{query.Keyword}%"));
+        }
+
+        if (query.MinLevel.HasValue)
+        {
+            conditions.Add("level >= @MinLevel");
+            parameters.Add(new NpgsqlParameter("@MinLevel", query.MinLevel.Value.ToString()));
+        }
+
+        if (query.StartTime.HasValue)
+        {
+            conditions.Add("timestamp >= @StartTime");
+            parameters.Add(new NpgsqlParameter("@StartTime", query.StartTime.Value));
+        }
+
+        if (query.EndTime.HasValue)
+        {
+            conditions.Add("timestamp <= @EndTime");
+            parameters.Add(new NpgsqlParameter("@EndTime", query.EndTime.Value));
+        }
+
+        if (!string.IsNullOrEmpty(query.RequestId))
+        {
+            conditions.Add("request_id = @RequestId");
+            parameters.Add(new NpgsqlParameter("@RequestId", query.RequestId));
+        }
+
+        if (!string.IsNullOrEmpty(query.Source))
+        {
+            conditions.Add("source = @Source");
+            parameters.Add(new NpgsqlParameter("@Source", query.Source));
+        }
+
+        if (!string.IsNullOrEmpty(query.Application))
+        {
+            conditions.Add("application = @Application");
+            parameters.Add(new NpgsqlParameter("@Application", query.Application));
+        }
+
+        if (conditions.Count > 0)
+        {
+            sql.AppendLine("AND ");
+            sql.AppendLine(string.Join(" AND ", conditions));
+        }
+
+        // 获取总数
+        var countSql = $"SELECT COUNT(*) FROM ({sql}) AS subq";
+        await using var countCmd = new NpgsqlCommand(countSql, conn);
+        countCmd.Parameters.AddRange(parameters.ToArray());
+        var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(cancellationToken));
+
+        // 添加排序和分页
+        sql.AppendLine("ORDER BY timestamp");
+        if (query.OrderByTimeAscending)
+        {
+            sql.AppendLine("ASC");
+        }
+        else
+        {
+            sql.AppendLine("DESC");
+        }
+
+        sql.AppendLine("LIMIT @PageSize OFFSET @Skip");
+        parameters.Add(new NpgsqlParameter("@PageSize", Math.Min(query.PageSize, 1000))); // 限制最大 1000
+        parameters.Add(new NpgsqlParameter("@Skip", query.Skip));
+
+        // 查询数据
+        await using var dataCmd = new NpgsqlCommand(sql.ToString(), conn);
+        dataCmd.Parameters.AddRange(parameters.ToArray());
+
+        await using var reader = await dataCmd.ExecuteReaderAsync(cancellationToken);
+        var items = new List<LogEntry>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            items.Add(MapToLogEntry(reader));
+        }
+
+        return PageResult<LogEntry>.Create(items, totalCount, query.PageIndex, query.PageSize);
+    }
+
+    public async Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken);
+
+        const string sql = @"
+            SELECT * FROM dev_logs
+            WHERE request_id = @RequestId
+            ORDER BY timestamp ASC";
+
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@RequestId", requestId);
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        var items = new List<LogEntry>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            items.Add(MapToLogEntry(reader));
+        }
+
+        return items;
+    }
+
+    public async Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken);
+
+        var sql = new System.Text.StringBuilder();
+        sql.AppendLine(@"
+            SELECT
+                request_id,
+                COUNT(*) as log_count,
+                MIN(timestamp) as first_timestamp,
+                MAX(timestamp) as last_timestamp,
+                MAX(request_path) as request_path,
+                MAX(request_method) as request_method,
+                MAX(response_status_code) as response_status_code,
+                BOOL_OR(level IN ('Error', 'Critical')) as has_error
+            FROM dev_logs
+            WHERE request_id IS NOT NULL");
+
+        var conditions = new List<string>();
+        var parameters = new List<NpgsqlParameter>();
+
+        if (startTime.HasValue)
+        {
+            conditions.Add("timestamp >= @StartTime");
+            parameters.Add(new NpgsqlParameter("@StartTime", startTime.Value));
+        }
+
+        if (endTime.HasValue)
+        {
+            conditions.Add("timestamp <= @EndTime");
+            parameters.Add(new NpgsqlParameter("@EndTime", endTime.Value));
+        }
+
+        if (conditions.Count > 0)
+        {
+            sql.AppendLine("AND ");
+            sql.AppendLine(string.Join(" AND ", conditions));
+        }
+
+        sql.AppendLine(@"
+            GROUP BY request_id
+            ORDER BY last_timestamp DESC
+            LIMIT 1000");
+
+        await using var cmd = new NpgsqlCommand(sql.ToString(), conn);
+        cmd.Parameters.AddRange(parameters.ToArray());
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        var summaries = new List<TraceLogSummary>();
+
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            summaries.Add(new TraceLogSummary
+            {
+                RequestId = reader.GetString(0),
+                LogCount = reader.GetInt32(1),
+                FirstTimestamp = reader.GetDateTime(2),
+                LastTimestamp = reader.GetDateTime(3),
+                RequestPath = reader.IsDBNull(4) ? null : reader.GetString(4),
+                RequestMethod = reader.IsDBNull(5) ? null : reader.GetString(5),
+                ResponseStatusCode = reader.IsDBNull(6) ? null : (int?)(reader.GetInt32(6)),
+                HasError = reader.GetBoolean(7)
+            });
+        }
+
+        return summaries;
+    }
+
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken);
+
+            const string sql = @"
+                CREATE TABLE IF NOT EXISTS dev_logs (
+                    id VARCHAR(50) PRIMARY KEY,
+                    request_id VARCHAR(50),
+                    connection_id VARCHAR(100),
+                    timestamp TIMESTAMP NOT NULL,
+                    level VARCHAR(20) NOT NULL,
+                    message TEXT,
+                    request_path VARCHAR(500),
+                    request_method VARCHAR(10),
+                    response_status_code INTEGER,
+                    elapsed_milliseconds BIGINT,
+                    source VARCHAR(200),
+                    exception TEXT,
+                    stack_trace TEXT,
+                    machine_name VARCHAR(200),
+                    application VARCHAR(200),
+                    app_version VARCHAR(50),
+                    environment VARCHAR(50),
+                    process_id INTEGER,
+                    thread_id INTEGER,
+                    logger VARCHAR(200),
+                    action_id VARCHAR(100),
+                    action_name VARCHAR(200),
+                    properties JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_timestamp ON dev_logs(timestamp DESC);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_request_id ON dev_logs(request_id);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_level ON dev_logs(level);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_application ON dev_logs(application);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_source ON dev_logs(source);
+
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_properties_gin ON dev_logs USING gin(properties);";
+
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            // 获取当前日志总数
+            const string countSql = "SELECT COUNT(*) FROM dev_logs";
+            await using var countCmd = new NpgsqlCommand(countSql, conn);
+            var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(cancellationToken));
+
+            _logger.LogInformation("PostgreSQL 日志表初始化成功，当前日志数：{Count}", totalCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化数据库失败：{Message}", ex.Message);
+            throw;
+        }
+    }
+
+    private static LogEntry MapToLogEntry(NpgsqlDataReader reader)
+    {
+        var entry = new LogEntry
+        {
+            Id = GetNonNullString(reader, "id"),
+            RequestId = GetNullableString(reader, "request_id"),
+            ConnectionId = GetNullableString(reader, "connection_id"),
+            Timestamp = GetNonNullDateTime(reader, "timestamp"),
+            Level = Enum.Parse<LogLevel>(GetNonNullString(reader, "level")),
+            Message = GetNullableString(reader, "message") ?? string.Empty,
+            RequestPath = GetNullableString(reader, "request_path"),
+            RequestMethod = GetNullableString(reader, "request_method"),
+            ResponseStatusCode = GetNullableInt(reader, "response_status_code"),
+            ElapsedMilliseconds = GetNullableLong(reader, "elapsed_milliseconds"),
+            Source = GetNullableString(reader, "source"),
+            Exception = GetNullableString(reader, "exception"),
+            StackTrace = GetNullableString(reader, "stack_trace"),
+            MachineName = GetNullableString(reader, "machine_name"),
+            Application = GetNullableString(reader, "application"),
+            AppVersion = GetNullableString(reader, "app_version"),
+            Environment = GetNullableString(reader, "environment"),
+            ProcessId = GetNullableInt(reader, "process_id"),
+            ThreadId = GetNullableInt(reader, "thread_id"),
+            Logger = GetNullableString(reader, "logger"),
+            ActionId = GetNullableString(reader, "action_id"),
+            ActionName = GetNullableString(reader, "action_name")
+        };
+
+        // 解析 JSONB properties
+        var propOrdinal = reader.GetOrdinal("properties");
+        if (!reader.IsDBNull(propOrdinal))
+        {
+            using var jsonDoc = JsonDocument.Parse(reader.GetString(propOrdinal));
+            foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+            {
+                entry.Properties[prop.Name] = prop.Value.ToString();
+            }
+        }
+
+        return entry;
+    }
+
+    private static string GetNonNullString(NpgsqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.GetString(ordinal);
+    }
+
+    private static DateTime GetNonNullDateTime(NpgsqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.GetDateTime(ordinal);
+    }
+
+    private static string? GetNullableString(NpgsqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+    }
+
+    private static int? GetNullableInt(NpgsqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? null : (int?)reader.GetInt32(ordinal);
+    }
+
+    private static long? GetNullableLong(NpgsqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? null : (long?)reader.GetInt64(ordinal);
+    }
+}
