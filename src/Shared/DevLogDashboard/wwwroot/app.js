@@ -171,7 +171,15 @@ function switchTab(tabName) {
 
 // 执行搜索
 function performSearch() {
-    currentFilters.keyword = document.getElementById('searchInput').value.trim();
+    let keyword = document.getElementById('searchInput').value.trim();
+
+    // 如果输入不为空且不包含搜索语法（字段= 或 字段 like），则自动包装为 message like 格式
+    // 匹配模式：字段名=值 或 字段 like 值（不区分大小写）
+    if (keyword && !/^\s*\w+\s*(=|like\s+)/i.test(keyword)) {
+        keyword = `message like '${keyword}'`;
+    }
+
+    currentFilters.keyword = keyword;
     currentPage = 1;
     if (currentTab === 'logs') {
         loadLogs();
