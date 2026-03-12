@@ -40,10 +40,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
-            var logStore = sp.GetRequiredService<ILogStore>();
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
         });
 
         return services;
@@ -70,10 +69,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
-            var logStore = sp.GetRequiredService<ILogStore>();
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
         });
 
         return services;
@@ -99,10 +97,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
-            var logStore = sp.GetRequiredService<ILogStore>();
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            return new DevLogDashboardLoggerProvider(logStore, opts, httpContextAccessor);
+            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor);
         });
 
         return services;

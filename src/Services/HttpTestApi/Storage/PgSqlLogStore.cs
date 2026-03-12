@@ -12,6 +12,8 @@ public class PgSqlLogStore : ILogStore
 {
     private readonly string _connectionString;
     private readonly ILogger<PgSqlLogStore> _logger;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private volatile bool _initialized;
 
     public PgSqlLogStore(IConfiguration configuration, ILogger<PgSqlLogStore> logger)
     {
@@ -20,7 +22,6 @@ public class PgSqlLogStore : ILogStore
             ? "Host=localhost;Port=5432;Username=postgres;Password=123456;Database=dev_log"
             : connectionString;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _logger.LogInformation("PgSqlLogStore 构造完成，连接字符串: {ConnectionString}", MaskConnectionString(_connectionString));
     }
 
     private static string MaskConnectionString(string connectionString)
@@ -47,6 +48,11 @@ public class PgSqlLogStore : ILogStore
 
         try
         {
+            if (!await EnsureInitializedAsync(cancellationToken))
+            {
+                return;
+            }
+
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync(cancellationToken);
 
@@ -94,6 +100,66 @@ public class PgSqlLogStore : ILogStore
 
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
+        catch (PostgresException ex) when (ex.SqlState == "42P01")
+        {
+            // Table missing; attempt init once more and retry.
+            if (await EnsureInitializedAsync(cancellationToken))
+            {
+                try
+                {
+                    await using var conn = new NpgsqlConnection(_connectionString);
+                    await conn.OpenAsync(cancellationToken);
+
+                    const string sql = @"
+                INSERT INTO dev_logs (
+                    id, request_id, connection_id, timestamp, level, message,
+                    request_path, request_method, response_status_code, elapsed_milliseconds,
+                    source, exception, stack_trace, machine_name, application, app_version,
+                    environment, process_id, thread_id, logger, action_id, action_name,
+                    properties
+                ) VALUES (
+                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @Message,
+                    @RequestPath, @RequestMethod, @ResponseStatusCode, @ElapsedMilliseconds,
+                    @Source, @Exception, @StackTrace, @MachineName, @Application, @AppVersion,
+                    @Environment, @ProcessId, @ThreadId, @Logger, @ActionId, @ActionName,
+                    @Properties::jsonb
+                )";
+
+                    await using var cmd = new NpgsqlCommand(sql, conn);
+                    cmd.Parameters.AddWithValue("@Id", entry.Id ?? Guid.NewGuid().ToString());
+                    cmd.Parameters.AddWithValue("@RequestId", entry.RequestId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ConnectionId", entry.ConnectionId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Timestamp", entry.Timestamp);
+                    cmd.Parameters.AddWithValue("@Level", entry.Level.ToString());
+                    cmd.Parameters.AddWithValue("@Message", entry.Message ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@RequestPath", entry.RequestPath ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@RequestMethod", entry.RequestMethod ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ResponseStatusCode", entry.ResponseStatusCode ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ElapsedMilliseconds", entry.ElapsedMilliseconds ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Source", entry.Source ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Exception", entry.Exception ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StackTrace", entry.StackTrace ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@MachineName", entry.MachineName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Application", entry.Application ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AppVersion", entry.AppVersion ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Environment", entry.Environment ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ProcessId", entry.ProcessId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ThreadId", entry.ThreadId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Logger", entry.Logger ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ActionId", entry.ActionId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ActionName", entry.ActionName ?? (object)DBNull.Value);
+
+                    var propertiesJson = entry.Properties.Count > 0 ? JsonSerializer.Serialize(entry.Properties) : null;
+                    cmd.Parameters.AddWithValue("@Properties", propertiesJson ?? (object)DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, "添加日志失败(重试)：{Message}", retryEx.Message);
+                }
+            }
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "添加日志失败：{Message}", ex.Message);
@@ -102,6 +168,11 @@ public class PgSqlLogStore : ILogStore
 
     public async Task<PageResult<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
     {
+        if (!await EnsureInitializedAsync(cancellationToken))
+        {
+            return PageResult<LogEntry>.Create(new List<LogEntry>(), 0, query.PageIndex, query.PageSize);
+        }
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(cancellationToken);
 
@@ -203,6 +274,11 @@ public class PgSqlLogStore : ILogStore
 
     public async Task<List<LogEntry>> GetByRequestIdAsync(string requestId, CancellationToken cancellationToken = default)
     {
+        if (!await EnsureInitializedAsync(cancellationToken))
+        {
+            return new List<LogEntry>();
+        }
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(cancellationToken);
 
@@ -227,6 +303,11 @@ public class PgSqlLogStore : ILogStore
 
     public async Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime, CancellationToken cancellationToken = default)
     {
+        if (!await EnsureInitializedAsync(cancellationToken))
+        {
+            return new List<TraceLogSummary>();
+        }
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(cancellationToken);
 
@@ -310,6 +391,7 @@ public class PgSqlLogStore : ILogStore
             _logger.LogInformation("正在创建表和索引...");
 
             const string sql = @"
+                CREATE TABLE IF NOT EXISTS dev_logs (
                     id VARCHAR(50) PRIMARY KEY,
                     request_id VARCHAR(50),
                     connection_id VARCHAR(100),
@@ -362,6 +444,36 @@ public class PgSqlLogStore : ILogStore
         {
             _logger.LogError(ex, "初始化数据库失败：{Message}", ex.Message);
             throw;
+        }
+    }
+
+    private async Task<bool> EnsureInitializedAsync(CancellationToken cancellationToken)
+    {
+        if (_initialized)
+        {
+            return true;
+        }
+
+        await _initLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_initialized)
+            {
+                return true;
+            }
+
+            await InitializeAsync(cancellationToken);
+            _initialized = true;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PostgreSQL 日志表初始化失败：{Message}", ex.Message);
+            return false;
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 

@@ -24,18 +24,18 @@ public class DevLogDashboardLogger : ILogger
                                                                                    };
 
     private readonly string _category;
-    private readonly ILogStore _logStore;
+    private readonly Func<ILogStore> _logStoreFactory;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor? _httpContextAccessor;
 
     public DevLogDashboardLogger(
         string category,
-        ILogStore logStore,
+        Func<ILogStore> logStoreFactory,
         DevLogDashboardOptions options,
         IHttpContextAccessor? httpContextAccessor = null)
     {
         _category = category;
-        _logStore = logStore;
+        _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options;
         _httpContextAccessor = httpContextAccessor;
     }
@@ -123,8 +123,15 @@ public class DevLogDashboardLogger : ILogger
                 }
             }
 
-            // 使用同步方式，因为这是在非异步上下文中
-            _logStore.AddAsync(logEntry).GetAwaiter().GetResult();
+            // Resolve store lazily to avoid circular dependencies during host startup.
+            var logStore = _logStoreFactory();
+            if (logStore == null)
+            {
+                return;
+            }
+
+            // Fire-and-forget to avoid blocking the request/host startup on storage latency.
+            _ = logStore.AddAsync(logEntry);
         }
         catch
         {

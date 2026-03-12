@@ -12,14 +12,14 @@ namespace Azrng.DevLogDashboard.Middleware;
 [ProviderAlias("DevLogDashboard")]
 public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
-    private readonly ILogStore _logStore;
+    private readonly Func<ILogStore> _logStoreFactory;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ConcurrentDictionary<string, DevLogDashboardLogger> _loggers = new();
 
-    public DevLogDashboardLoggerProvider(ILogStore logStore, DevLogDashboardOptions options, IHttpContextAccessor httpContextAccessor)
+    public DevLogDashboardLoggerProvider(Func<ILogStore> logStoreFactory, DevLogDashboardOptions options, IHttpContextAccessor httpContextAccessor)
     {
-        _logStore = logStore;
+        _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options;
         _httpContextAccessor = httpContextAccessor;
     }
@@ -27,7 +27,7 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName, name =>
-            new DevLogDashboardLogger(name, _logStore, _options, _httpContextAccessor));
+            new DevLogDashboardLogger(name, _logStoreFactory, _options, _httpContextAccessor));
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
