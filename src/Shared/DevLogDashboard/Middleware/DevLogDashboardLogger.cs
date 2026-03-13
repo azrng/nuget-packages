@@ -15,7 +15,7 @@ namespace Azrng.DevLogDashboard.Middleware;
 public class DevLogDashboardLogger : ILogger
 {
     private static readonly string RuntimeMachineName = Environment.MachineName;
-    private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
+    private static readonly string DefaultEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
     private static readonly int RuntimeProcessId = Environment.ProcessId;
     private static readonly string? RuntimeSdkVersion = typeof(DevLogDashboardLogger).Assembly.GetName().Version?.ToString();
 
@@ -29,19 +29,23 @@ public class DevLogDashboardLogger : ILogger
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor? _httpContextAccessor;
     private readonly IBackgroundLogQueue _logQueue;
+    private readonly string? _environmentName;
+    private IExternalScopeProvider? _scopeProvider;
 
     public DevLogDashboardLogger(
         string category,
         Func<ILogStore> logStoreFactory,
         DevLogDashboardOptions options,
         IHttpContextAccessor? httpContextAccessor = null,
-        IBackgroundLogQueue? logQueue = null)
+        IBackgroundLogQueue? logQueue = null,
+        string? environmentName = null)
     {
         _category = category;
         _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options;
         _httpContextAccessor = httpContextAccessor;
         _logQueue = logQueue ?? throw new ArgumentNullException(nameof(logQueue), "后台队列必须启用");
+        _environmentName = environmentName;
     }
 
     public bool IsEnabled(LogLevel logLevel)
@@ -109,7 +113,7 @@ public class DevLogDashboardLogger : ILogger
                                Application = _options.ApplicationName,
                                AppVersion = _options.ApplicationVersion,
                                SdkVersion = RuntimeSdkVersion,
-                               Environment = RuntimeEnvironment,
+                               Environment = _environmentName ?? DefaultEnvironment,
                                ProcessId = RuntimeProcessId,
                                ThreadId = Environment.CurrentManagedThreadId,
                                ThreadName = Thread.CurrentThread.Name,
@@ -135,6 +139,23 @@ public class DevLogDashboardLogger : ILogger
                 }
             }
 
+            if (_scopeProvider != null)
+            {
+                var scopes = new List<string>();
+                _scopeProvider.ForEachScope((scope, state) =>
+                {
+                    if (scope != null)
+                    {
+                        state.Add(scope.ToString() ?? string.Empty);
+                    }
+                }, scopes);
+
+                if (scopes.Count > 0)
+                {
+                    logEntry.Properties["_scopes"] = scopes;
+                }
+            }
+
             // 异步写入队列，不阻塞业务逻辑
             _ = _logQueue.QueueLogEntryAsync(logEntry);
         }
@@ -142,6 +163,11 @@ public class DevLogDashboardLogger : ILogger
         {
             // Provider logging failure must never impact application flow.
         }
+    }
+
+    public void SetScopeProvider(IExternalScopeProvider? scopeProvider)
+    {
+        _scopeProvider = scopeProvider;
     }
 
     private static object? NormalizePropertyValue(object? value, int maxLength)

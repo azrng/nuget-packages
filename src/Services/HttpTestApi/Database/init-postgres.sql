@@ -12,11 +12,12 @@ CREATE TABLE IF NOT EXISTS dev_logs (
     connection_id VARCHAR(100),
     timestamp TIMESTAMP NOT NULL,
     level VARCHAR(20) NOT NULL,
+    level_int SMALLINT NOT NULL,
     message TEXT,
     request_path VARCHAR(500),
     request_method VARCHAR(10),
     response_status_code INTEGER,
-    elapsed_milliseconds BIGINT,
+    elapsed_milliseconds DOUBLE PRECISION,
     source VARCHAR(200),
     exception TEXT,
     stack_trace TEXT,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS dev_logs (
 CREATE INDEX IF NOT EXISTS idx_dev_logs_timestamp ON dev_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_dev_logs_request_id ON dev_logs(request_id);
 CREATE INDEX IF NOT EXISTS idx_dev_logs_level ON dev_logs(level);
+CREATE INDEX IF NOT EXISTS idx_dev_logs_level_int ON dev_logs(level_int);
 CREATE INDEX IF NOT EXISTS idx_dev_logs_application ON dev_logs(application);
 CREATE INDEX IF NOT EXISTS idx_dev_logs_source ON dev_logs(source);
 

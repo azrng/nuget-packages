@@ -73,11 +73,12 @@ psql -U postgres -d devlogs -f Database/init-postgres.sql
 | connection_id | VARCHAR(100) | 连接标识 |
 | timestamp | TIMESTAMP | 日志时间戳 |
 | level | VARCHAR(20) | 日志级别 |
+| level_int | SMALLINT | 日志级别数值 |
 | message | TEXT | 日志消息 |
 | request_path | VARCHAR(500) | 请求路径 |
 | request_method | VARCHAR(10) | 请求方法 |
 | response_status_code | INTEGER | 响应状态码 |
-| elapsed_milliseconds | BIGINT | 请求耗时（毫秒） |
+| elapsed_milliseconds | DOUBLE PRECISION | 请求耗时（毫秒） |
 | source | VARCHAR(200) | 日志来源 |
 | exception | TEXT | 异常信息 |
 | stack_trace | TEXT | 堆栈跟踪 |
@@ -98,6 +99,7 @@ psql -U postgres -d devlogs -f Database/init-postgres.sql
 - `idx_dev_logs_timestamp` - 时间戳索引（降序）
 - `idx_dev_logs_request_id` - 请求 ID 索引
 - `idx_dev_logs_level` - 日志级别索引
+- `idx_dev_logs_level_int` - 日志级别数值索引
 - `idx_dev_logs_application` - 应用名称索引
 - `idx_dev_logs_source` - 来源索引
 - `idx_dev_logs_properties_gin` - JSONB GIN 索引

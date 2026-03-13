@@ -17,28 +17,48 @@ public class DevLogDashboardLoggerProvider : ILoggerProvider, ISupportExternalSc
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IBackgroundLogQueue _logQueue;
+    private readonly string? _environmentName;
+    private IExternalScopeProvider? _scopeProvider;
     private readonly ConcurrentDictionary<string, DevLogDashboardLogger> _loggers = new();
 
     public DevLogDashboardLoggerProvider(
         Func<ILogStore> logStoreFactory,
         DevLogDashboardOptions options,
         IHttpContextAccessor httpContextAccessor,
-        IBackgroundLogQueue logQueue)
+        IBackgroundLogQueue logQueue,
+        string? environmentName = null)
     {
         _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _logQueue = logQueue ?? throw new ArgumentNullException(nameof(logQueue));
+        _environmentName = environmentName;
     }
 
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName, name =>
-            new DevLogDashboardLogger(name, _logStoreFactory, _options, _httpContextAccessor, _logQueue));
+        {
+            var logger = new DevLogDashboardLogger(
+                name,
+                _logStoreFactory,
+                _options,
+                _httpContextAccessor,
+                _logQueue,
+                _environmentName);
+            logger.SetScopeProvider(_scopeProvider);
+            return logger;
+        });
     }
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
-    { }
+    {
+        _scopeProvider = scopeProvider;
+        foreach (var logger in _loggers.Values)
+        {
+            logger.SetScopeProvider(scopeProvider);
+        }
+    }
 
     public void Dispose()
     {

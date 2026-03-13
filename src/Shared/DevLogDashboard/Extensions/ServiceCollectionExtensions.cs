@@ -18,7 +18,6 @@ public static class ServiceCollectionExtensions
 {
     private const string DefaultEndpointPath = "/dev-logs";
     private static readonly string RuntimeMachineName = Environment.MachineName;
-    private static readonly string RuntimeEnvironment = System.Diagnostics.Debugger.IsAttached ? "Development" : "Production";
     private static readonly int RuntimeProcessId = Environment.ProcessId;
 
     /// <summary>
@@ -51,7 +50,13 @@ public static class ServiceCollectionExtensions
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
+            var hostEnvironment = sp.GetService<IHostEnvironment>();
+            return new DevLogDashboardLoggerProvider(
+                () => sp.GetRequiredService<ILogStore>(),
+                opts,
+                httpContextAccessor,
+                logQueue,
+                hostEnvironment?.EnvironmentName);
         });
 
         return services;
@@ -90,7 +95,13 @@ public static class ServiceCollectionExtensions
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
+            var hostEnvironment = sp.GetService<IHostEnvironment>();
+            return new DevLogDashboardLoggerProvider(
+                () => sp.GetRequiredService<ILogStore>(),
+                opts,
+                httpContextAccessor,
+                logQueue,
+                hostEnvironment?.EnvironmentName);
         });
 
         return services;
@@ -126,7 +137,13 @@ public static class ServiceCollectionExtensions
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
+            var hostEnvironment = sp.GetService<IHostEnvironment>();
+            return new DevLogDashboardLoggerProvider(
+                () => sp.GetRequiredService<ILogStore>(),
+                opts,
+                httpContextAccessor,
+                logQueue,
+                hostEnvironment?.EnvironmentName);
         });
 
         return services;
@@ -161,7 +178,13 @@ public static class ServiceCollectionExtensions
             var opts = sp.GetRequiredService<DevLogDashboardOptions>();
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            return new DevLogDashboardLoggerProvider(() => sp.GetRequiredService<ILogStore>(), opts, httpContextAccessor, logQueue);
+            var hostEnvironment = sp.GetService<IHostEnvironment>();
+            return new DevLogDashboardLoggerProvider(
+                () => sp.GetRequiredService<ILogStore>(),
+                opts,
+                httpContextAccessor,
+                logQueue,
+                hostEnvironment?.EnvironmentName);
         });
 
         return services;
@@ -174,6 +197,8 @@ public static class ServiceCollectionExtensions
     {
         var options = app.ApplicationServices.GetRequiredService<DevLogDashboardOptions>();
         var logQueue = app.ApplicationServices.GetRequiredService<IBackgroundLogQueue>();
+        var hostEnvironment = app.ApplicationServices.GetService<IHostEnvironment>();
+        var environmentName = hostEnvironment?.EnvironmentName ?? (System.Diagnostics.Debugger.IsAttached ? "Development" : "Production");
 
         app.Use(async (context, next) =>
         {
@@ -190,12 +215,12 @@ public static class ServiceCollectionExtensions
             {
                 await next();
                 stopwatch.Stop();
-                TryLogRequest(context, logQueue, options, requestId, stopwatch.ElapsedMilliseconds);
+                TryLogRequest(context, logQueue, options, requestId, stopwatch.ElapsedMilliseconds, environmentName);
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                TryLogException(context, logQueue, options, requestId, ex, stopwatch.ElapsedMilliseconds);
+                TryLogException(context, logQueue, options, requestId, ex, stopwatch.ElapsedMilliseconds, environmentName);
                 throw;
             }
         });
@@ -237,11 +262,11 @@ public static class ServiceCollectionExtensions
     }
 
     private static void TryLogRequest(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
-        string requestId, long elapsedMs)
+        string requestId, long elapsedMs, string environmentName)
     {
         try
         {
-            LogRequest(context, logQueue, options, requestId, elapsedMs);
+            LogRequest(context, logQueue, options, requestId, elapsedMs, environmentName);
         }
         catch
         {
@@ -250,11 +275,11 @@ public static class ServiceCollectionExtensions
     }
 
     private static void TryLogException(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
-        string requestId, Exception ex, long elapsedMs)
+        string requestId, Exception ex, long elapsedMs, string environmentName)
     {
         try
         {
-            LogException(context, logQueue, options, requestId, ex, elapsedMs);
+            LogException(context, logQueue, options, requestId, ex, elapsedMs, environmentName);
         }
         catch
         {
@@ -263,7 +288,7 @@ public static class ServiceCollectionExtensions
     }
 
     private static void LogRequest(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
-        string requestId, long elapsedMs)
+        string requestId, long elapsedMs, string environmentName)
     {
         var level = context.Response.StatusCode >= 500 ? LogLevel.Error :
                     context.Response.StatusCode >= 400 ? LogLevel.Warning : LogLevel.Information;
@@ -288,7 +313,7 @@ public static class ServiceCollectionExtensions
             MachineName = RuntimeMachineName,
             Application = options.ApplicationName,
             AppVersion = options.ApplicationVersion,
-            Environment = RuntimeEnvironment,
+            Environment = environmentName,
             ProcessId = RuntimeProcessId,
             ThreadId = Environment.CurrentManagedThreadId,
         };
@@ -301,7 +326,7 @@ public static class ServiceCollectionExtensions
     }
 
     private static void LogException(HttpContext context, IBackgroundLogQueue logQueue, DevLogDashboardOptions options,
-        string requestId, Exception ex, long elapsedMs)
+        string requestId, Exception ex, long elapsedMs, string environmentName)
     {
         // 如果响应状态码显示成功但实际发生了异常，使用 500 作为状态码
         var actualStatusCode = context.Response.StatusCode;
@@ -326,7 +351,7 @@ public static class ServiceCollectionExtensions
             MachineName = RuntimeMachineName,
             Application = options.ApplicationName,
             AppVersion = options.ApplicationVersion,
-            Environment = RuntimeEnvironment,
+            Environment = environmentName,
             ProcessId = RuntimeProcessId,
             ThreadId = Environment.CurrentManagedThreadId,
             ResponseStatusCode = actualStatusCode,

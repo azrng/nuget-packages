@@ -418,6 +418,58 @@ public class InMemoryLogStore : LogStoreBase
                     _logsByRequestId.Remove(removed.RequestId);
                     _traceIndex.Remove(removed.RequestId);
                 }
+                else if (_traceIndex.TryGetValue(removed.RequestId, out var traceInfo))
+                {
+                    RecomputeTraceInfo(traceInfo, requestLogs);
+                }
+            }
+        }
+    }
+
+    private static void RecomputeTraceInfo(TraceInfo traceInfo, List<LogEntry> requestLogs)
+    {
+        traceInfo.LogCount = requestLogs.Count;
+        traceInfo.FirstTimestamp = DateTime.MaxValue;
+        traceInfo.LastTimestamp = DateTime.MinValue;
+        traceInfo.RequestPath = null;
+        traceInfo.RequestMethod = null;
+        traceInfo.ResponseStatusCode = null;
+        traceInfo.HasError = false;
+
+        foreach (var log in requestLogs)
+        {
+            if (log == null)
+            {
+                continue;
+            }
+
+            if (log.Timestamp < traceInfo.FirstTimestamp)
+            {
+                traceInfo.FirstTimestamp = log.Timestamp;
+            }
+
+            if (log.Timestamp > traceInfo.LastTimestamp)
+            {
+                traceInfo.LastTimestamp = log.Timestamp;
+                if (log.ResponseStatusCode.HasValue)
+                {
+                    traceInfo.ResponseStatusCode = log.ResponseStatusCode.Value;
+                }
+            }
+
+            if (string.IsNullOrEmpty(traceInfo.RequestPath) && !string.IsNullOrEmpty(log.RequestPath))
+            {
+                traceInfo.RequestPath = log.RequestPath;
+            }
+
+            if (string.IsNullOrEmpty(traceInfo.RequestMethod) && !string.IsNullOrEmpty(log.RequestMethod))
+            {
+                traceInfo.RequestMethod = log.RequestMethod;
+            }
+
+            if (log.Level >= LogLevel.Error)
+            {
+                traceInfo.HasError = true;
             }
         }
     }

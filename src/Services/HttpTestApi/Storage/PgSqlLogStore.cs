@@ -58,13 +58,13 @@ public class PgSqlLogStore : LogStoreBase
 
             const string sql = @"
                 INSERT INTO dev_logs (
-                    id, request_id, connection_id, timestamp, level, message,
+                    id, request_id, connection_id, timestamp, level, level_int, message,
                     request_path, request_method, response_status_code, elapsed_milliseconds,
                     source, exception, stack_trace, machine_name, application, app_version,
                     environment, process_id, thread_id, logger, action_id, action_name,
                     properties
                 ) VALUES (
-                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @Message,
+                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @LevelInt, @Message,
                     @RequestPath, @RequestMethod, @ResponseStatusCode, @ElapsedMilliseconds,
                     @Source, @Exception, @StackTrace, @MachineName, @Application, @AppVersion,
                     @Environment, @ProcessId, @ThreadId, @Logger, @ActionId, @ActionName,
@@ -77,6 +77,7 @@ public class PgSqlLogStore : LogStoreBase
             cmd.Parameters.AddWithValue("@ConnectionId", entry.ConnectionId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Timestamp", entry.Timestamp);
             cmd.Parameters.AddWithValue("@Level", entry.Level.ToString());
+            cmd.Parameters.AddWithValue("@LevelInt", (short)entry.Level);
             cmd.Parameters.AddWithValue("@Message", entry.Message ?? string.Empty);
             cmd.Parameters.AddWithValue("@RequestPath", entry.RequestPath ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@RequestMethod", entry.RequestMethod ?? (object)DBNull.Value);
@@ -112,13 +113,13 @@ public class PgSqlLogStore : LogStoreBase
 
                     const string sql = @"
                 INSERT INTO dev_logs (
-                    id, request_id, connection_id, timestamp, level, message,
+                    id, request_id, connection_id, timestamp, level, level_int, message,
                     request_path, request_method, response_status_code, elapsed_milliseconds,
                     source, exception, stack_trace, machine_name, application, app_version,
                     environment, process_id, thread_id, logger, action_id, action_name,
                     properties
                 ) VALUES (
-                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @Message,
+                    @Id, @RequestId, @ConnectionId, @Timestamp, @Level, @LevelInt, @Message,
                     @RequestPath, @RequestMethod, @ResponseStatusCode, @ElapsedMilliseconds,
                     @Source, @Exception, @StackTrace, @MachineName, @Application, @AppVersion,
                     @Environment, @ProcessId, @ThreadId, @Logger, @ActionId, @ActionName,
@@ -131,6 +132,7 @@ public class PgSqlLogStore : LogStoreBase
                     cmd.Parameters.AddWithValue("@ConnectionId", entry.ConnectionId ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@Timestamp", entry.Timestamp);
                     cmd.Parameters.AddWithValue("@Level", entry.Level.ToString());
+                    cmd.Parameters.AddWithValue("@LevelInt", (short)entry.Level);
                     cmd.Parameters.AddWithValue("@Message", entry.Message ?? string.Empty);
                     cmd.Parameters.AddWithValue("@RequestPath", entry.RequestPath ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@RequestMethod", entry.RequestMethod ?? (object)DBNull.Value);
@@ -192,7 +194,7 @@ public class PgSqlLogStore : LogStoreBase
             // 使用 NpgsqlBinaryImporter 进行批量导入，性能更好
             await using var importer = await conn.BeginBinaryImportAsync(
                 "COPY dev_logs (" +
-                "id, request_id, connection_id, timestamp, level, message, " +
+                "id, request_id, connection_id, timestamp, level, level_int, message, " +
                 "request_path, request_method, response_status_code, elapsed_milliseconds, " +
                 "source, exception, stack_trace, machine_name, application, app_version, " +
                 "environment, process_id, thread_id, logger, action_id, action_name, " +
@@ -210,11 +212,12 @@ public class PgSqlLogStore : LogStoreBase
                 importer.Write(entry.ConnectionId ?? (object)DBNull.Value, "text");
                 importer.Write(entry.Timestamp, "timestamp");
                 importer.Write(entry.Level.ToString(), "text");
+                importer.Write((short)entry.Level, "smallint");
                 importer.Write(entry.Message ?? string.Empty, "text");
                 importer.Write(entry.RequestPath ?? (object)DBNull.Value, "text");
                 importer.Write(entry.RequestMethod ?? (object)DBNull.Value, "text");
                 importer.Write(entry.ResponseStatusCode ?? (object)DBNull.Value, "integer");
-                importer.Write(entry.ElapsedMilliseconds ?? (object)DBNull.Value, "bigint");
+                importer.Write(entry.ElapsedMilliseconds ?? (object)DBNull.Value, "double precision");
                 importer.Write(entry.Source ?? (object)DBNull.Value, "text");
                 importer.Write(entry.Exception ?? (object)DBNull.Value, "text");
                 importer.Write(entry.StackTrace ?? (object)DBNull.Value, "text");
@@ -291,8 +294,8 @@ public class PgSqlLogStore : LogStoreBase
 
         if (query.MinLevel.HasValue)
         {
-            conditions.Add("level >= @MinLevel");
-            parameters.Add(new NpgsqlParameter("@MinLevel", query.MinLevel.Value.ToString()));
+            conditions.Add("level_int >= @MinLevel");
+            parameters.Add(new NpgsqlParameter("@MinLevel", (short)query.MinLevel.Value));
         }
 
         if (query.StartTime.HasValue)
@@ -424,7 +427,7 @@ public class PgSqlLogStore : LogStoreBase
                 MAX(request_path) as request_path,
                 MAX(request_method) as request_method,
                 MAX(response_status_code) as response_status_code,
-                BOOL_OR(level IN ('Error', 'Critical')) as has_error
+                BOOL_OR(level_int >= @ErrorLevel) as has_error
             FROM dev_logs
             WHERE request_id IS NOT NULL");
 
@@ -455,6 +458,7 @@ public class PgSqlLogStore : LogStoreBase
             LIMIT 1000");
 
         await using var cmd = new NpgsqlCommand(sql.ToString(), conn);
+        parameters.Add(new NpgsqlParameter("@ErrorLevel", (short)LogLevel.Error));
         cmd.Parameters.AddRange(parameters.ToArray());
 
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
@@ -500,11 +504,12 @@ public class PgSqlLogStore : LogStoreBase
                     connection_id VARCHAR(100),
                     timestamp TIMESTAMP NOT NULL,
                     level VARCHAR(20) NOT NULL,
+                    level_int SMALLINT NOT NULL,
                     message TEXT,
                     request_path VARCHAR(500),
                     request_method VARCHAR(10),
                     response_status_code INTEGER,
-                    elapsed_milliseconds BIGINT,
+                    elapsed_milliseconds DOUBLE PRECISION,
                     source VARCHAR(200),
                     exception TEXT,
                     stack_trace TEXT,
@@ -524,10 +529,27 @@ public class PgSqlLogStore : LogStoreBase
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_timestamp ON dev_logs(timestamp DESC);
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_request_id ON dev_logs(request_id);
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_level ON dev_logs(level);
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_level_int ON dev_logs(level_int);
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_application ON dev_logs(application);
                 CREATE INDEX IF NOT EXISTS idx_dev_logs_source ON dev_logs(source);
 
-                CREATE INDEX IF NOT EXISTS idx_dev_logs_properties_gin ON dev_logs USING gin(properties);";
+                CREATE INDEX IF NOT EXISTS idx_dev_logs_properties_gin ON dev_logs USING gin(properties);
+
+                ALTER TABLE dev_logs ADD COLUMN IF NOT EXISTS level_int SMALLINT;
+                ALTER TABLE dev_logs ALTER COLUMN elapsed_milliseconds TYPE DOUBLE PRECISION USING elapsed_milliseconds::double precision;
+                UPDATE dev_logs
+                SET level_int = CASE level
+                    WHEN 'Trace' THEN 0
+                    WHEN 'Debug' THEN 1
+                    WHEN 'Information' THEN 2
+                    WHEN 'Warning' THEN 3
+                    WHEN 'Error' THEN 4
+                    WHEN 'Critical' THEN 5
+                    ELSE 0
+                END
+                WHERE level_int IS NULL;
+                ALTER TABLE dev_logs ALTER COLUMN level_int SET DEFAULT 0;
+                ALTER TABLE dev_logs ALTER COLUMN level_int SET NOT NULL;";
 
             await using var cmd = new NpgsqlCommand(sql, conn);
             _logger.LogInformation("正在执行 SQL 命令创建表结构...");
@@ -593,7 +615,7 @@ public class PgSqlLogStore : LogStoreBase
             RequestPath = GetNullableString(reader, "request_path"),
             RequestMethod = GetNullableString(reader, "request_method"),
             ResponseStatusCode = GetNullableInt(reader, "response_status_code"),
-            ElapsedMilliseconds = GetNullableLong(reader, "elapsed_milliseconds"),
+            ElapsedMilliseconds = GetNullableDouble(reader, "elapsed_milliseconds"),
             Source = GetNullableString(reader, "source"),
             Exception = GetNullableString(reader, "exception"),
             StackTrace = GetNullableString(reader, "stack_trace"),
@@ -646,9 +668,9 @@ public class PgSqlLogStore : LogStoreBase
         return reader.IsDBNull(ordinal) ? null : (int?)reader.GetInt32(ordinal);
     }
 
-    private static long? GetNullableLong(NpgsqlDataReader reader, string columnName)
+    private static double? GetNullableDouble(NpgsqlDataReader reader, string columnName)
     {
         var ordinal = reader.GetOrdinal(columnName);
-        return reader.IsDBNull(ordinal) ? null : (long?)reader.GetInt64(ordinal);
+        return reader.IsDBNull(ordinal) ? null : (double?)reader.GetDouble(ordinal);
     }
 }

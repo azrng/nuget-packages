@@ -1,47 +1,50 @@
-using Azrng.DevLogDashboard.Models;
+﻿using Azrng.DevLogDashboard.Models;
 using System.Threading.Channels;
 
 namespace Azrng.DevLogDashboard.Background;
 
 /// <summary>
-/// 后台日志队列，用于异步处理日志写入
+/// 鍚庡彴鏃ュ織闃熷垪锛岀敤浜庡紓姝ュ鐞嗘棩蹇楀啓鍏?
 /// </summary>
 public interface IBackgroundLogQueue
 {
     /// <summary>
-    /// 将日志条目加入队列
+    /// 灏嗘棩蹇楁潯鐩姞鍏ラ槦鍒?
     /// </summary>
     ValueTask QueueLogEntryAsync(LogEntry entry);
 
     /// <summary>
-    /// 尝试从队列中读取日志条目（带超时和取消支持）
+    /// 灏濊瘯浠庨槦鍒椾腑璇诲彇鏃ュ織鏉＄洰锛堝甫瓒呮椂鍜屽彇娑堟敮鎸侊級
     /// </summary>
     ValueTask<LogEntry?> DequeueAsync(CancellationToken cancellationToken, TimeSpan timeout);
 
     /// <summary>
-    /// 批量从队列中读取日志条目（带取消支持）
+    /// 鎵归噺浠庨槦鍒椾腑璇诲彇鏃ュ織鏉＄洰锛堝甫鍙栨秷鏀寔锛?
     /// </summary>
     ValueTask<List<LogEntry>> DequeueBatchAsync(int maxCount, CancellationToken cancellationToken);
 
     /// <summary>
-    /// 获取队列中待处理的日志数量
+    /// 鑾峰彇闃熷垪涓緟澶勭悊鐨勬棩蹇楁暟閲?
     /// </summary>
     int GetQueuedCount();
 }
 
 /// <summary>
-/// 基于 System.Threading.Channels 的高性能后台日志队列实现
+/// 鍩轰簬 System.Threading.Channels 鐨勯珮鎬ц兘鍚庡彴鏃ュ織闃熷垪瀹炵幇
 /// </summary>
 public class BackgroundLogQueue : IBackgroundLogQueue
 {
     private readonly Channel<LogEntry> _queue;
+    private readonly int _capacity;
+    private long _droppedCount;
 
     public BackgroundLogQueue(int capacity = 10000)
     {
-        // 创建有界队列，防止内存无限增长
-        var options = new BoundedChannelOptions(capacity)
+        _capacity = capacity > 0 ? capacity : 10000;
+        // 鍒涘缓鏈夌晫闃熷垪锛岄槻姝㈠唴瀛樻棤闄愬闀?
+        var options = new BoundedChannelOptions(_capacity)
         {
-            FullMode = BoundedChannelFullMode.Wait
+            FullMode = BoundedChannelFullMode.DropOldest
         };
         _queue = Channel.CreateBounded<LogEntry>(options);
     }
@@ -53,7 +56,18 @@ public class BackgroundLogQueue : IBackgroundLogQueue
             return ValueTask.CompletedTask;
         }
 
-        return _queue.Writer.WriteAsync(entry);
+        if (_queue.Reader.Count >= _capacity)
+        {
+            Interlocked.Increment(ref _droppedCount);
+        }
+
+        if (_queue.Writer.TryWrite(entry))
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        Interlocked.Increment(ref _droppedCount);
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask<LogEntry?> DequeueAsync(CancellationToken cancellationToken, TimeSpan timeout)
@@ -77,11 +91,11 @@ public class BackgroundLogQueue : IBackgroundLogQueue
 
         try
         {
-            // 尝试读取第一条（会等待）
+            // 灏濊瘯璇诲彇绗竴鏉★紙浼氱瓑寰咃級
             var first = await _queue.Reader.ReadAsync(cancellationToken);
             batch.Add(first);
 
-            // 尝试读取更多（非等待模式）
+            // 灏濊瘯璇诲彇鏇村锛堥潪绛夊緟妯″紡锛?
             while (batch.Count < maxCount)
             {
                 if (_queue.Reader.TryRead(out var entry))
@@ -96,7 +110,7 @@ public class BackgroundLogQueue : IBackgroundLogQueue
         }
         catch (OperationCanceledException)
         {
-            // 取消操作，返回已读取的批次
+            // 鍙栨秷鎿嶄綔锛岃繑鍥炲凡璇诲彇鐨勬壒娆?
         }
 
         return batch;
@@ -106,4 +120,13 @@ public class BackgroundLogQueue : IBackgroundLogQueue
     {
         return _queue.Reader.Count;
     }
+
+    /// <summary>
+    /// 鑾峰彇琚涪寮冪殑鏃ュ織鏁伴噺锛堜粎鐢ㄤ簬璇婃柇锛?    /// </summary>
+    public long GetDroppedCount()
+    {
+        return Interlocked.Read(ref _droppedCount);
+    }
 }
+
+

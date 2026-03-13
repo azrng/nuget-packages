@@ -70,7 +70,7 @@ public class BackgroundLogWriter : BackgroundService
         finally
         {
             // 确保在关闭前处理剩余的日志
-            await FlushRemainingLogsAsync(stoppingToken);
+            await FlushRemainingLogsAsync(CancellationToken.None);
             _logger.LogInformation("后台日志写入服务已停止");
         }
     }
@@ -89,7 +89,10 @@ public class BackgroundLogWriter : BackgroundService
 
             while (_queue.GetQueuedCount() > 0 && !cancellationToken.IsCancellationRequested)
             {
-                var batch = await _queue.DequeueBatchAsync(_options.BatchSize, cancellationToken);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromMilliseconds(250));
+
+                var batch = await _queue.DequeueBatchAsync(_options.BatchSize, cts.Token);
                 if (batch.Count == 0)
                 {
                     break;
