@@ -15,7 +15,7 @@ builder.Services.AddSettingConfig(options =>
 {
     options.DbConnectionString = conn;
     options.DbSchema = "sample";
-    options.RoutePrefix = "configDashboard";
+    options.RoutePrefix = "config";
     options.ApiRoutePrefix = "/api/configDashboard";
     options.Authorization = new[]
     {
