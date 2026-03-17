@@ -121,6 +121,9 @@ namespace Azrng.SettingConfig
             response.StatusCode = 200;
             response.ContentType = "text/html;charset=utf-8";
 
+            // 添加安全头
+            AddSecurityHeaders(response);
+
             // 获取或者设置用于检索setting-ui页面的stream函数
             var bytes = await _manifestResourceService.GetManifestResource();
             // Inject arguments before writing to response
@@ -131,6 +134,46 @@ namespace Azrng.SettingConfig
             }
 
             await response.WriteAsync(htmlBuilder.ToString(), Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// 添加安全头和缓存策略
+        /// </summary>
+        /// <param name="response"></param>
+        private void AddSecurityHeaders(HttpResponse response)
+        {
+            // Content-Security-Policy - 防止 XSS 攻击
+            response.Headers["Content-Security-Policy"] =
+                "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "img-src 'self' data:; " +
+                "font-src 'self'; " +
+                "connect-src 'self'; " +
+                "frame-ancestors 'self';";
+
+            // X-Content-Type-Options - 防止 MIME 类型嗅探
+            response.Headers["X-Content-Type-Options"] = "nosniff";
+
+            // X-Frame-Options - 防止点击劫持
+            response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+
+            // X-XSS-Protection - 启用 XSS 保护
+            response.Headers["X-XSS-Protection"] = "1; mode=block";
+
+            // Referrer-Policy - 控制引用信息泄露
+            response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+            // Permissions-Policy - 限制浏览器特性
+            response.Headers["Permissions-Policy"] =
+                "geolocation=(), " +
+                "microphone=(), " +
+                "camera=()";
+
+            // 缓存策略 - HTML 不缓存
+            response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            response.Headers["Pragma"] = "no-cache";
+            response.Headers["Expires"] = "0";
         }
 
         private IDictionary<string, string> GetIndexArguments()

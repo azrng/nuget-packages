@@ -1,430 +1,662 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
     <title>%(PageTitle)%</title>
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+    <link href="css/config-dashboard.css" rel="stylesheet">
 </head>
-
 <body>
     <div class="card">
         <div class="card-body">
-            %(PageDescription)%
+            <h2>%(PageDescription)%</h2>
         </div>
     </div>
-    <table id="configTable" data-search="true">
-    </table>
 
-    <!-- 编辑配置详情的模态弹出窗内容 -->
-    <div class="modal" id="editConfigDialog" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog" style="margin-left: 30%;">
-            <div class="modal-content" style="width:800px">
-                <div class="modal-header">
-                    <h4 class="modal-title">详情</h4>
-                </div>
-                <div class="modal-body">
+    <!-- 搜索框 -->
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜索配置名或配置Key..." />
+    </div>
+
+    <!-- 配置表格 -->
+    <div class="table-container">
+        <table id="configTable">
+            <thead>
+                <tr>
+                    <th>配置Key</th>
+                    <th>配置名</th>
+                    <th>配置值</th>
+                    <th>配置说明</th>
+                    <th>配置版本</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="configTableBody">
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页控件 -->
+    <ul class="pagination" id="pagination"></ul>
+
+    <!-- 编辑配置详情的模态框 -->
+    <div class="modal" id="editConfigDialog">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑配置</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editConfigForm">
+                    <input type="hidden" id="configId">
+
                     <div class="form-group">
-                        <label>配置名</label>
-                        <input type="hidden" id="configId">
+                        <label class="form-label">配置名</label>
                         <input type="text" class="form-control" disabled id="name">
                     </div>
+
                     <div class="form-group">
-                        <label>配置编码</label>
+                        <label class="form-label">配置编码</label>
                         <input type="text" class="form-control" disabled id="key">
                     </div>
-                    <div>
-                        <label>配置值</label>
-                        <textarea type="text" class="form-control" id="configValue" rows="10"></textarea>
-                    </div>
+
                     <div class="form-group">
-                        <label>配置说明</label>
-                        <textarea type="text" class="form-control" id="configDescription" rows="3"></textarea>
+                        <label class="form-label">配置值 <span class="text-muted">*</span></label>
+                        <textarea class="form-control" id="configValue" rows="10" required></textarea>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-success" onclick="saveSetting()">保存</button>
-                </div>
+
+                    <div class="form-group">
+                        <label class="form-label">配置说明 <span class="text-muted">*</span></label>
+                        <textarea class="form-control" id="configDescription" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                <button type="button" class="btn btn-success" onclick="saveConfig()">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- 版本列表的模态弹出窗内容 -->
-    <div class="modal" id="vesionList" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content" style="width:1500px">
-                <div class="modal-header">
-                    <h4 class="modal-title">版本列表</h4>
-                </div>
-                <div class="modal-body">
-                    <table id="historyTable" data-search="true">
+    <!-- 版本列表的模态框 -->
+    <div class="modal" id="versionListDialog">
+        <div class="modal-dialog large">
+            <div class="modal-header">
+                <h3 class="modal-title">配置历史版本</h3>
+                <button class="modal-close" onclick="closeVersionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table id="versionTable">
+                        <thead>
+                            <tr>
+                                <th>配置Key</th>
+                                <th>配置值</th>
+                                <th>配置版本</th>
+                                <th>修改时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="versionTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <div class="spinner"></div>
+                                    <p>加载中...</p>
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeVesionListDialog()">关闭</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeVersionModal()">关闭</button>
             </div>
         </div>
     </div>
 
-    <script src="js/jquery.min.js"></script>
-    <script src="js/bootstrap.bundle.min.js"></script>
-    <script src="js/bootstrap-table.min.js"></script>
-    <!-- 引入中文语言包 -->
-    <script src="js/bootstrap-table-zh-CN.min.js"></script>
-    <script src="layer.js"></script>
-<!--    <script src="https://cdn.bootcdn.net/ajax/libs/layer/3.5.1/layer.js"></script>-->
+    <!-- 消息提示容器 -->
+    <div id="toastContainer"></div>
+
+    <!-- 确认对话框容器 -->
+    <div id="confirmContainer"></div>
+
     <script>
-        var baseUrl = "%(BaseUrl)%";// "http://localhost:5112";
-        BindConfigPageList();
+        // ==================== 配置和状态管理 ====================
+        const baseUrl = "%(BaseUrl)%";
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalRecords = 0;
+        let searchKeyword = '';
+        let debounceTimer = null;
 
-        // 编辑配置信息的弹出框 点击以后调用详情接口展示配置信息
-        function ShowConfigDetailsInfo(configId) {
-            if (configId === undefined || configId === 0) {
-                layer.msg("配置标识无效", { icon: 2 });
-                return false;
-            }
-            var $modal = $('#editConfigDialog');
-            $.get(baseUrl + "/systemSetting/" + configId + "/details", function (res) {
-                if (!res.isSuccess) {
-                    layer.msg(res.message, { icon: 2 });
-                    return;
-                }
-
-                $modal.modal('show');//调用弹出
-                $("#name").val(res.data.name);
-                $("#key").val(res.data.key);
-                $("#configValue").val(res.data.value);
-                $("#configDescription").val(res.data.description);
-                $("#configId").val(res.data.id);
-            })
-            $modal.modal('show');//调用弹出
+        // ==================== 工具函数 ====================
+        /**
+         * HTML 转义，防止 XSS 攻击
+         */
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        // 显示版本列表的弹框层
-        function ShowVersionList(key) {
-            if (key == undefined || key == '') {
-                layer.msg("配置标识无效", { icon: 2 });
-                return false;
+        /**
+         * 截断文本并添加标题属性
+         */
+        function truncateText(text, maxLength = 100) {
+            const escaped = escapeHtml(text);
+            if (escaped.length <= maxLength) {
+                return escaped;
             }
-            var $modal = $('#vesionList');
-
-            $('#historyTable').bootstrapTable('destroy');
-            BindVersionTable(key);
-            $modal.modal('show');//调用弹出
+            return `<span title="${escaped}">${escaped.substring(0, maxLength)}...</span>`;
         }
-        // 设置版本列表的弹框位置 show方法调用后立即触发 参考：https://blog.csdn.net/wanlin77/article/details/86243419
-        $('#vesionList').on('show.bs.modal', function () {
-            var $this = $(this);
-            var $modal_dialog = $this.find('.modal-dialog');
-            $this.css('display', 'block');
-            //$modal_dialog.css({ 'margin-top': Math.max(0, ($(window).height() - $modal_dialog.height()) / 2) });
-            $modal_dialog.css({ 'margin-left': '10%' });
-        });
 
-        //保存配置信息
-        function saveSetting() {
-            var configId = $("#configId").val();
-            var configValue = $("#configValue").val();
-            var configDescription = $("#configDescription").val();
-            if (configId == undefined || configId == 0) {
-                layer.msg("标识无效", { icon: 2 });
-                return;
-            }
-            if (configValue == undefined || configValue == 0) {
-                layer.msg("配置值不能为空", { icon: 2 });
-                return;
-            }
-            if (configDescription == undefined || configDescription == 0) {
-                layer.msg("配置说明不能为空", { icon: 2 });
-                return;
-            }
-            var param = { configId: configId, Value: configValue, Description: configDescription };
-            $.ajax({
-                type: "put",
-                dataType: 'json',
-                contentType: "application/json",
-                url: baseUrl + "/systemSetting/details",
-                data: JSON.stringify(param),
-                success: function (res) {
-                    if (!res.isSuccess) {
-                        layer.msg(res.message, { icon: 2 });
-                        return;
-                    }
-                    var $modal = $('#editConfigDialog');
-                    $modal.modal('hide');
-                    $("#configTable").bootstrapTable('refresh');
-                }
+        /**
+         * 显示消息提示
+         */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div>${escapeHtml(message)}</div>
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(toast);
+
+            // 3秒后自动移除
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        /**
+         * 显示确认对话框
+         */
+        function showConfirm(message, onConfirm) {
+            const container = document.getElementById('confirmContainer');
+            const dialog = document.createElement('div');
+            dialog.className = 'confirm-dialog';
+            dialog.innerHTML = `
+                <p>${escapeHtml(message)}</p>
+                <div class="confirm-dialog-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.confirm-dialog').remove()">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmBtn">确认</button>
+                </div>
+            `;
+            container.appendChild(dialog);
+
+            dialog.querySelector('#confirmBtn').addEventListener('click', () => {
+                dialog.remove();
+                onConfirm();
             });
         }
 
-        // 绑定配置列表
-        function BindConfigPageList() {
-            var queryUrl = baseUrl + '/systemSetting/page';
-            $('#configTable').bootstrapTable({
-                url: queryUrl,                      //请求后台的URL（*）
-                method: 'GET',                      //请求方式（*）
-                striped: true,                      //是否显示行间隔色
-                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
-                pagination: true,                   //是否显示分页（*）
-                sortable: true,                     //是否启用排序
-                sortOrder: "asc",                   //排序方式
-                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
-                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
-                pageSize: 10,                     //每页的记录行数（*）
-                pageList: [10, 25, 50, 100],        //可供选择的每页的行数（*）
-                search: false,                      //是否显示表格搜索
-                strictSearch: true,
-                showColumns: true,                  //是否显示所有的列（选择显示的列）
-                showRefresh: true,                  //是否显示刷新按钮
-                minimumCountColumns: 2,             //最少允许的列数
-                clickToSelect: true,                //是否启用点击选中行
-                //height: 500,                      //行高，如果没有设置height属性，表格自动根据记录条数觉得表格高度
-                uniqueId: "ID",                     //每一行的唯一标识，一般为主键列
-                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
-                cardView: false,                    //是否显示详细视图
-                detailView: false,                  //是否显示父子表
-                //得到查询的参数 这里的queryParams参数就是提交到服务器端的参数了
-                queryParams: function (params) {
-                    //这里的键的名字和控制器的变量名必须一致，这边改动，控制器也需要改成一样的
-                    var temp = {
-                        pageSize: params.limit,                         //页面大小
-                        pageIndex: (params.offset / params.limit) + 1,   //页码
-                        // sort: params.sort,      //排序列名
-                        // sortOrder: params.order //排位命令（desc，asc）
-                        keyword: params.search,
-                    };
-                    return temp;
-                },
-                columns: [{
-                    field: 'key',
-                    title: '配置Key',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'name',
-                    title: '配置名',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'value',
-                    title: '配置值',
-                    valign: 'middle',
-                    cellStyle: formatTableUnit,
-                    formatter: paramsMatter,
-                }, {
-                    field: 'description',
-                    title: '配置说明',
-                    valign: 'middle',
-                    cellStyle: formatTableUnit,
-                    formatter: paramsMatter,
-                }, {
-                    field: 'version',
-                    title: '配置版本',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'id',
-                    title: '操作',
-                    width: 200,
-                    align: 'center',
-                    valign: 'middle',
-                    formatter: actionFormatter
-                },],
-                onLoadSuccess: function () {
-                    console.log("数据加载成功！");
-                },
-                onLoadError: function () {
-                    console.log("数据加载失败！");
-                },
-                onDblClickRow: function (row, $element) {
-                    var id = row.ID;
-                },
-            });
-        }
-
-        // 绑定配置历史列表
-        function BindVersionTable(key) {
-            const versionListUrl = baseUrl + "/systemSetting/history/list/" + key;
-            $('#historyTable').bootstrapTable({
-                url: versionListUrl,                      //请求后台的URL（*）
-                method: 'GET',                      //请求方式（*）
-                striped: true,                      //是否显示行间隔色
-                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
-                pagination: false,                   //是否显示分页（*）
-                sortable: false,                     //是否启用排序
-                sortOrder: "asc",                   //排序方式
-                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
-                showColumns: true,                  //是否显示所有的列（选择显示的列）
-                minimumCountColumns: 2,             //最少允许的列数
-                clickToSelect: true,                //是否启用点击选中行
-                //得到查询的参数 这里的queryParams参数就是提交到服务器端的参数了
-                queryParams: function (params) {
-                    //这里的键的名字和控制器的变量名必须一致，这边改动，控制器也需要改成一样的
-                    var temp = {};
-                    return temp;
-                },
-                columns: [{
-                    field: 'key',
-                    title: '配置Key',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'value',
-                    title: '配置值',
-                    valign: 'middle',
-                    cellStyle: formatTableUnit,
-                    formatter: paramsMatter,
-                }, {
-                    field: 'version',
-                    title: '配置版本',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'updateTimeStr',
-                    title: '修改时间',
-                    align: 'center',
-                    valign: 'middle',
-                    width: 150
-                }, {
-                    field: 'hisoryId',
-                    title: '操作',
-                    width: 120,
-                    align: 'center',
-                    valign: 'middle',
-                    formatter: versionListActionFormatter
-                },],
-                onLoadSuccess: function () {
-                },
-                onLoadError: function () {
-                    //showTips("数据加载失败！");
-                },
-                onDblClickRow: function (row, $element) {
-                    var id = row.ID;
-                    //EditViewById(id, 'view');
-                },
-            });
-        }
-
-        //配置列表操作栏的格式化
-        function actionFormatter(value, row, index) {
-            // 对指定版本配置信息的编辑  对多个版本的启用
-            var id = value;
-            var result = "<button type=\"button\"  class='btn btn-outline-primary btn-sm' onclick=\"ShowConfigDetailsInfo('" + id + "')\" >编辑</button>&nbsp;";
-            result += "<button type=\"button\"  class='btn btn-outline-info btn-sm' onclick=\"ShowVersionList('" + row.key + "')\" >历史</button>&nbsp;";
-            result += "<button type=\"button\"  class='btn btn-outline-danger' onclick=\"deleteConfig('" + id + "')\" >删除</button>";
-
-            return result;
-        }
-
-        // 配置历史列表接口的操作栏
-        function versionListActionFormatter(value, row, index) {
-            // 对指定版本配置信息的编辑  对多个版本的启用
-            var result = "";
-            //result+= "<button type=\"button\"  class='btn btn-outline-primary btn-sm' onclick=\"ShowConfigVersionInfo('" + value + "')\" >编辑</button>&nbsp;";
-            result += "<button type=\"button\"  class='btn btn-outline-primary btn-sm' onclick=\"restoreConfig(" + value + ")\" >还原</button>&nbsp;";
-            result += "<button type=\"button\"  class='btn btn-outline-primary btn-sm' onclick=\"copy('" + row.value + "')\" >复制</button>&nbsp;";
-            return result;
-        }
-        // 还原配置信息
-        function restoreConfig(historyId) {
-            if (historyId == undefined || historyId == 0) {
-                layer.msg("配置key无效", { icon: 2 });
-                return;
-            }
-
-            var param = {};
-            $.ajax({
-                type: "put",
-                dataType: 'json',
-                contentType: "application/json",
-                url: baseUrl + "/systemSetting/restore/" + historyId,
-                data: JSON.stringify(param),
-                success: function (res) {
-                    if (!res.isSuccess) {
-                        layer.msg(res.message, { icon: 2 });
-                        return;
-                    }
-                    $("#configTable").bootstrapTable('refresh');
-                    closeVesionListDialog();
-                }
-            });
-        }
-
-        // 关闭版本列表弹框
-        function closeVesionListDialog() {
-            var $modal = $('#vesionList');
-            $modal.modal('hide');
-        }
-
-        // 格式表格单位样式
-        function formatTableUnit(value, row, index) {
-            return {
-                css: {
-                    "white-space": 'nowrap',
-                    "text-overflow": 'ellipsis',
-                    "overflow": 'hidden',
-                    "max-width": "100px",
-                    "cursor": "pointer",
-                }
-            }
-        }
-        // 设置悬浮显示内容以及字段截取
-        function paramsMatter(value, row, index, field) {
-            var span = document.createElement('span');
-            span.setAttribute('title', value);
-            span.innerHTML = value.substring(0, 100);
-            return span.outerHTML;
-        }
-
-        // 删除配置方法
-        function deleteConfig(configId) {
-            if (configId == undefined || configId == 0) {
-                layer.msg("配置标识无效", { icon: 2 });
-                return;
-            }
-            layer.confirm('确认要删除？', {
-                btn: ['确认', '取消'] //按钮
-            }, function () {
-                $.ajax({
-                    type: "DELETE",
-                    url: baseUrl + "/SystemSetting/" + configId,
-                    success: function (res) {
-                        if (!res.isSuccess) {
-                            layer.msg(res.message, { icon: 2 });
-                            return;
-                        }
-                        layer.msg('删除成功', { icon: 1 });
-                        $("#configTable").bootstrapTable('refresh');
+        /**
+         * API 请求封装
+         */
+        async function apiRequest(url, options = {}) {
+            try {
+                const response = await fetch(baseUrl + url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
                     }
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API request failed:', error);
+                showToast('请求失败: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // ==================== 配置列表管理 ====================
+        /**
+         * 加载配置列表
+         */
+        async function loadConfigList() {
+            const tbody = document.getElementById('configTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const params = new URLSearchParams({
+                    pageIndex: currentPage,
+                    pageSize: pageSize,
+                    keyword: searchKeyword
+                });
+
+                const data = await apiRequest(`/page?${params}`);
+
+                if (data && data.rows) {
+                    totalRecords = data.total;
+                    renderConfigTable(data.rows);
+                    renderPagination();
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">暂无数据</td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">加载失败，请刷新页面重试</td>
+                    </tr>
+                `;
+            }
+        }
+
+        /**
+         * 渲染配置表格
+         */
+        function renderConfigTable(rows) {
+            const tbody = document.getElementById('configTableBody');
+
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">暂无数据</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.key)}</td>
+                    <td>${escapeHtml(row.name)}</td>
+                    <td class="text-truncate" title="${escapeHtml(row.value)}">${truncateText(row.value)}</td>
+                    <td class="text-truncate" title="${escapeHtml(row.description)}">${truncateText(row.description)}</td>
+                    <td>${escapeHtml(String(row.version))}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="showEditModal(${row.id})">编辑</button>
+                        <button type="button" class="btn btn-sm btn-info" onclick="showVersionModal('${escapeHtml(row.key)}')">历史</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteConfig(${row.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /**
+         * 渲染分页控件
+         */
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            const totalPages = Math.ceil(totalRecords / pageSize);
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // 上一页
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="${currentPage > 1 ? `goToPage(${currentPage - 1})` : 'return false'}">上一页</a>
+                </li>
+            `;
+
+            // 页码
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+                        </li>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+
+            // 下一页
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="${currentPage < totalPages ? `goToPage(${currentPage + 1})` : 'return false'}">下一页</a>
+                </li>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        /**
+         * 跳转到指定页
+         */
+        function goToPage(page) {
+            if (page < 1 || page > Math.ceil(totalRecords / pageSize)) return;
+            currentPage = page;
+            loadConfigList();
+        }
+
+        // ==================== 编辑配置 ====================
+        /**
+         * 显示编辑模态框
+         */
+        async function showEditModal(configId) {
+            if (!configId || configId <= 0) {
+                showToast('配置标识无效', 'error');
+                return;
+            }
+
+            try {
+                const data = await apiRequest(`/${configId}/details`);
+
+                if (data && data.isSuccess && data.data) {
+                    const config = data.data;
+                    document.getElementById('configId').value = config.id;
+                    document.getElementById('name').value = config.name;
+                    document.getElementById('key').value = config.key;
+                    document.getElementById('configValue').value = config.value;
+                    document.getElementById('configDescription').value = config.description;
+
+                    openModal('editConfigDialog');
+                } else {
+                    showToast(data?.message || '获取配置详情失败', 'error');
+                }
+            } catch (error) {
+                showToast('获取配置详情失败', 'error');
+            }
+        }
+
+        /**
+         * 保存配置
+         */
+        async function saveConfig() {
+            const configId = document.getElementById('configId').value;
+            const configValue = document.getElementById('configValue').value.trim();
+            const configDescription = document.getElementById('configDescription').value.trim();
+
+            // 验证
+            if (!configId || configId <= 0) {
+                showToast('配置标识无效', 'error');
+                return;
+            }
+
+            if (!configValue) {
+                showToast('配置值不能为空', 'error');
+                return;
+            }
+
+            if (!configDescription) {
+                showToast('配置说明不能为空', 'error');
+                return;
+            }
+
+            try {
+                const data = await apiRequest('/details', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        configId: parseInt(configId),
+                        value: configValue,
+                        description: configDescription
+                    })
+                });
+
+                if (data && data.isSuccess) {
+                    showToast('保存成功');
+                    closeModal('editConfigDialog');
+                    loadConfigList();
+                } else {
+                    showToast(data?.message || '保存失败', 'error');
+                }
+            } catch (error) {
+                showToast('保存失败', 'error');
+            }
+        }
+
+        function closeEditModal() {
+            closeModal('editConfigDialog');
+        }
+
+        // ==================== 版本历史 ====================
+        /**
+         * 显示版本历史模态框
+         */
+        async function showVersionModal(key) {
+            if (!key) {
+                showToast('配置标识无效', 'error');
+                return;
+            }
+
+            openModal('versionListDialog');
+            const tbody = document.getElementById('versionTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const data = await apiRequest(`/history/list/${encodeURIComponent(key)}`);
+
+                if (data && Array.isArray(data)) {
+                    renderVersionTable(data);
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">暂无历史版本</td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">加载失败</td>
+                    </tr>
+                `;
+            }
+        }
+
+        /**
+         * 渲染版本表格
+         */
+        function renderVersionTable(versions) {
+            const tbody = document.getElementById('versionTableBody');
+
+            if (!versions || versions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">暂无历史版本</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = versions.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.key)}</td>
+                    <td class="text-truncate" title="${escapeHtml(row.value)}">${truncateText(row.value)}</td>
+                    <td>${escapeHtml(String(row.version))}</td>
+                    <td>${escapeHtml(row.updateTimeStr || '')}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="restoreConfig(${row.hisoryId})">还原</button>
+                        <button type="button" class="btn btn-sm btn-info" onclick="copyValue('${escapeHtml(row.value).replace(/'/g, "\\'")}')">复制</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /**
+         * 还原配置
+         */
+        async function restoreConfig(historyId) {
+            if (!historyId || historyId <= 0) {
+                showToast('配置标识无效', 'error');
+                return;
+            }
+
+            showConfirm('确认要还原到此版本吗？', async () => {
+                try {
+                    const data = await apiRequest(`/restore/${historyId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({})
+                    });
+
+                    if (data && data.isSuccess) {
+                        showToast('还原成功');
+                        closeModal('versionListDialog');
+                        loadConfigList();
+                    } else {
+                        showToast(data?.message || '还原失败', 'error');
+                    }
+                } catch (error) {
+                    showToast('还原失败', 'error');
+                }
             });
         }
-        function copy(text) {
-            console.log(text);
-            const input = document.createElement('input') // 创建input对象
-            document.body.appendChild(input) // 添加临时实例
-            input.setAttribute('value', text); // 设置复制内容
-            input.select() // 选择实例内容
-            if (document.execCommand('copy')) {
-                document.execCommand('copy') // 执行复制
-                // 复制成功
-            } else {
-                // 暂不支持复制
-            }
-            document.body.removeChild(input) // 删除临时实例
+
+        function closeVersionModal() {
+            closeModal('versionListDialog');
         }
+
+        // ==================== 删除配置 ====================
+        /**
+         * 删除配置
+         */
+        async function deleteConfig(configId) {
+            if (!configId || configId <= 0) {
+                showToast('配置标识无效', 'error');
+                return;
+            }
+
+            showConfirm('确认要删除该配置吗？此操作不可恢复！', async () => {
+                try {
+                    const data = await apiRequest(`/${configId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (data && data.isSuccess) {
+                        showToast('删除成功');
+                        loadConfigList();
+                    } else {
+                        showToast(data?.message || '删除失败', 'error');
+                    }
+                } catch (error) {
+                    showToast('删除失败', 'error');
+                }
+            });
+        }
+
+        // ==================== 复制功能 ====================
+        /**
+         * 复制文本到剪贴板
+         */
+        async function copyValue(text) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    showToast('复制成功');
+                } else {
+                    // 降级方案
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('复制成功');
+                    } catch (err) {
+                        showToast('复制失败，请手动复制', 'error');
+                    }
+                    document.body.removeChild(textarea);
+                }
+            } catch (error) {
+                console.error('Copy failed:', error);
+                showToast('复制失败', 'error');
+            }
+        }
+
+        // ==================== 模态框管理 ====================
+        /**
+         * 打开模态框
+         */
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('show');
+                // 防止背景滚动
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        /**
+         * 关闭模态框
+         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+                // 恢复背景滚动
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 点击模态框外部关闭
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        // ESC 键关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.show').forEach(modal => {
+                    modal.classList.remove('show');
+                    document.body.style.overflow = '';
+                });
+            }
+        });
+
+        // ==================== 搜索功能 ====================
+        /**
+         * 搜索输入处理（带防抖）
+         */
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                searchKeyword = e.target.value.trim();
+                currentPage = 1;
+                loadConfigList();
+            }, 300);
+        });
+
+        // ==================== 初始化 ====================
+        // 页面加载时初始化
+        loadConfigList();
     </script>
 </body>
-
 </html>

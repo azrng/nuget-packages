@@ -8,26 +8,26 @@
         /// <summary>
         /// 配置key(唯一)
         /// </summary>
-        public string Key { get; set; }
+        public string Key { get; set; } = string.Empty;
 
         /// <summary>
         /// 配置名称
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// 配置的值
         /// </summary>
-        public string Value { get; set; }
+        public string Value { get; set; } = string.Empty;
 
         /// <summary>
         /// 配置说明
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// 版本
         /// </summary>
-        public string Version { get; set; }
+        public string Version { get; set; } = string.Empty;
     }
 }
