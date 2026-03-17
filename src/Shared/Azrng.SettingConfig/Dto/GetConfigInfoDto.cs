@@ -8,10 +8,10 @@ public class GetConfigInfoDto
     /// <summary>
     /// 配置key(唯一)
     /// </summary>
-    public string Key { get; set; }
+    public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// 配置名称
     /// </summary>
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

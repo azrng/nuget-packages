@@ -4,6 +4,25 @@ using System.Text;
 
 namespace Azrng.SettingConfig.BasicAuthorization;
 
+// 兼容性辅助类，用于处理不同 .NET 版本的 API 差异
+internal static class Pbkdf2Helper
+{
+#if NET8_0_OR_GREATER
+    public static byte[] GetBytes(string password, byte[] salt, int iterations, HashAlgorithmName hashAlgorithm, int outputSize)
+    {
+        return Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, hashAlgorithm, outputSize);
+    }
+#else
+    public static byte[] GetBytes(string password, byte[] salt, int iterations, HashAlgorithmName hashAlgorithm, int outputSize)
+    {
+#pragma warning disable SYSLIB0060 // 类型或成员已过时
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, hashAlgorithm);
+#pragma warning restore SYSLIB0060 // 类型或成员已过时
+        return pbkdf2.GetBytes(outputSize);
+    }
+#endif
+}
+
 /// <summary>
 /// Basic 认证授权用户
 /// </summary>
@@ -46,8 +65,7 @@ public class BasicAuthAuthorizationUser
             }
 
             // 使用 PBKDF2 生成哈希
-            using var pbkdf2 = new Rfc2898DeriveBytes(value, salt, Iterations, HashAlgorithmName.SHA256);
-            var hash = pbkdf2.GetBytes(HashSize);
+            var hash = Pbkdf2Helper.GetBytes(value, salt, Iterations, HashAlgorithmName.SHA256, HashSize);
 
             // 组合盐值和哈希值: [salt][hash]
             Password = new byte[SaltSize + HashSize];
@@ -91,8 +109,7 @@ public class BasicAuthAuthorizationUser
             Array.Copy(Password, SaltSize, storedHash, 0, HashSize);
 
             // 使用相同的盐值计算输入密码的哈希
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256);
-            var testHash = pbkdf2.GetBytes(HashSize);
+            var testHash = Pbkdf2Helper.GetBytes(password, salt, Iterations, HashAlgorithmName.SHA256, HashSize);
 
             // 使用恒定时间比较，防止时序攻击
             return CryptographicOperations.FixedTimeEquals(testHash, storedHash);

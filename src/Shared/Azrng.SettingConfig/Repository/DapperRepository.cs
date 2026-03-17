@@ -18,22 +18,23 @@ namespace Azrng.SettingConfig.Repository
             _dbConnection = dbConnection;
         }
 
-        public async Task<List<T>> QueryAsync<T>(string sql, object param = null)
+        public async Task<List<T>?> QueryAsync<T>(string sql, object? param = null)
         {
-            return (await _dbConnection.QueryAsync<T>(sql, param))?.ToList();
+            var result = await _dbConnection.QueryAsync<T>(sql, param);
+            return result?.ToList();
         }
 
-        public async Task<T> QueryFirstOrDefaultAsync<T>(string sql, object param = null)
+        public async Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object? param = null)
         {
             return await _dbConnection.QueryFirstOrDefaultAsync<T>(sql, param);
         }
 
-        public async Task<int> ExecuteAsync(string sql, object param = null)
+        public async Task<int> ExecuteAsync(string sql, object? param = null)
         {
             return await _dbConnection.ExecuteAsync(sql, param);
         }
 
-        public async Task<T> ExecuteScalarAsync<T>(string sql, object param = null)
+        public async Task<T?> ExecuteScalarAsync<T>(string sql, object? param = null)
         {
             return await _dbConnection.ExecuteScalarAsync<T>(sql, param);
         }

@@ -1,11 +1,10 @@
 ﻿using Azrng.SettingConfig.Dto;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Azrng.SettingConfig
 {
     public abstract class DashboardContext
     {
-        protected DashboardContext([NotNull] DashboardOptions options)
+        protected DashboardContext(DashboardOptions options)
         {
             Options = options ?? throw new ArgumentNullException(nameof(options));
         }

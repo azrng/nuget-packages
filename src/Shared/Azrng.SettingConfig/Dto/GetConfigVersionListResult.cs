@@ -16,17 +16,17 @@ public class GetConfigVersionListResult
     /// <summary>
     /// 配置key(唯一)
     /// </summary>
-    public string Key { get; set; }
+    public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// 配置的值
     /// </summary>
-    public string Value { get; set; }
+    public string Value { get; set; } = string.Empty;
 
     /// <summary>
     /// 配置版本
     /// </summary>
-    public string Version { get; set; }
+    public string Version { get; set; } = string.Empty;
 
     /// <summary>
     /// 创建时间

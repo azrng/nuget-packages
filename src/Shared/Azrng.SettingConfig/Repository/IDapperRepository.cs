@@ -12,7 +12,7 @@
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<List<T>> QueryAsync<T>(string sql, object param = null);
+        Task<List<T>?> QueryAsync<T>(string sql, object? param = null);
 
         /// <summary>
         /// 查询第一条
@@ -21,7 +21,7 @@
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<T> QueryFirstOrDefaultAsync<T>(string sql, object param = null);
+        Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object? param = null);
 
         /// <summary>
         /// 执行sql
@@ -29,7 +29,7 @@
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<int> ExecuteAsync(string sql, object param = null);
+        Task<int> ExecuteAsync(string sql, object? param = null);
 
         /// <summary>
         /// 返回首行首列
@@ -38,6 +38,6 @@
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<T> ExecuteScalarAsync<T>(string sql, object param = null);
+        Task<T?> ExecuteScalarAsync<T>(string sql, object? param = null);
     }
 }
