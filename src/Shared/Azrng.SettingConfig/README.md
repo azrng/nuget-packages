@@ -1,16 +1,4 @@
-﻿---
-title: SettingConfig
-lang: zh-CN
-date: 2024-04-11
-publish: true
-author: azrng
-order: 40
-category:
- - nuget
-tag:
- - 库
----
-## Azrng.SettingConfig
+﻿## Azrng.SettingConfig
 
 该项目是一个业务配置维护的[Nuget包](https://www.nuget.org/packages/SettingConfig#readme-body-tab)
 
@@ -78,7 +66,12 @@ var aa = await _configSettingService.GetConfigAsync<List<string>>("aaa");
 
 ## 版本更新记录
 
-* 1.3.0 (最新)
+* 1.3.1 (最新)
+  * 🆕 新增：支持完全离线使用，所有前端资源本地化
+  * ✅ 优化：下载并本地化 Bootstrap、jQuery、Bootstrap Table 等依赖资源
+  * ✅ 优化：添加 Bootstrap Icons 字体文件支持
+  * ✅ 优化：内网环境无需外部网络连接即可正常使用
+* 1.3.0
   * 🆕 新增：支持 .NET 9.0
   * ✅ 优化：启用可空引用类型支持
   * ✅ 优化：改进包版本管理，使用浮动版本号

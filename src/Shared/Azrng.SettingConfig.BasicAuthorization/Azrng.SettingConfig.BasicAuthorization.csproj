@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <VersionPrefix>1.2.0</VersionPrefix>
+        <VersionPrefix>1.2.1</VersionPrefix>
         <Description>SettingConfig的Basic认证扩展</Description>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>

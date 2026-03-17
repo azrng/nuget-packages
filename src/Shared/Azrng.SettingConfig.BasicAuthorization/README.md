@@ -104,7 +104,12 @@ options.Authorization = new[]
 
 ## 版本更新记录
 
-### 1.2.0 (最新)
+### 1.2.1 (最新)
+  * ✅ 优化：更新依赖 Azrng.SettingConfig 到 1.3.1
+  * ✅ 优化：完善可空引用类型注解
+  * ✅ 改进：代码质量和类型安全提升
+
+### 1.2.0
   * 🆕 新增：支持 .NET 9.0
   * ✅ 优化：完全启用可空引用类型支持
   * ✅ 重构：改进 `BasicAuthAuthorizationUser` 的空值处理
@@ -124,7 +129,7 @@ options.Authorization = new[]
 
 ## 依赖项
 
-- [Azrng.SettingConfig](https://www.nuget.org/packages/SettingConfig) >= 1.3.0
+- [Azrng.SettingConfig](https://www.nuget.org/packages/SettingConfig) >= 1.3.1
 
 ## 许可证
 
