@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using System.Data;
 using Azrng.Dapper;
+using Microsoft.Extensions.Options;
 
 namespace Azrng.SettingConfig;
 
@@ -11,6 +12,12 @@ namespace Azrng.SettingConfig;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// 当前配置的 API 路由前缀（用于特性路由）
+    /// 注意：特性类无法使用依赖注入，因此使用静态字段传递配置
+    /// </summary>
+    internal static string CurrentApiRoutePrefix = "/api/platform";
+
     /// <summary>
     /// 添加配置服务
     /// </summary>
@@ -28,18 +35,11 @@ public static class ServiceCollectionExtensions
         setupAction.Invoke(options);
         options.ParamVerify();
 
-        // 注册配置选项（使 ApiRoutePrefix 可被访问）
-        services.Configure<DashboardOptions>(config =>
-        {
-            config.RoutePrefix = options.RoutePrefix;
-            config.ApiRoutePrefix = options.ApiRoutePrefix;
-            config.DbConnectionString = options.DbConnectionString;
-            config.DbSchema = options.DbSchema;
-            config.PageTitle = options.PageTitle;
-            config.PageDescription = options.PageDescription;
-            config.ConfigCacheTime = options.ConfigCacheTime;
-            config.Authorization = options.Authorization;
-        });
+        // 保存路由前缀供特性使用
+        CurrentApiRoutePrefix = options.ApiRoutePrefix;
+
+        // 注册配置选项到 Options 模式（供中间件和服务使用）
+        services.Configure(Options.DefaultName, setupAction);
 
         // 注册数据库连接
         services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(options.DbConnectionString));

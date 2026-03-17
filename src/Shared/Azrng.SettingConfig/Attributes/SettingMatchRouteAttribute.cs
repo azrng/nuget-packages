@@ -4,21 +4,16 @@ namespace Azrng.SettingConfig.Attributes
 {
     /// <summary>
     /// 匹配路由设置
+    /// 使用 ServiceCollectionExtensions.CurrentApiRoutePrefix 动态配置路由前缀
     /// </summary>
     public class SettingMatchRouteAttribute : Attribute, IRouteTemplateProvider
     {
-        private readonly string _apiRoutePrefix;
-
-        public SettingMatchRouteAttribute()
-        {
-            // 默认值，如果未配置则使用此值
-            _apiRoutePrefix = "/api/platform";
-        }
-
         /// <summary>
-        /// 路由模板
+        /// 路由模板 - 直接使用 API 前缀，不包含控制器名称
+        /// 控制器方法的路由（如 [HttpGet("page")]）会直接附加此前缀
+        /// 例如：/api/configDashboard/page
         /// </summary>
-        public string Template => $"{_apiRoutePrefix}/[controller]";
+        public string Template => $"{ServiceCollectionExtensions.CurrentApiRoutePrefix.TrimEnd('/')}";
 
         /// <summary>
         /// 路由顺序
