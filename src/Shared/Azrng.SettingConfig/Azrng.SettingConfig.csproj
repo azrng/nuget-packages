@@ -57,11 +57,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Common.Dapper" Version="0.2.0" />
+        <PackageReference Include="Azrng.Core" Version="1.15.6"/>
+        <PackageReference Include="Common.Dapper" Version="0.2.0"/>
         <PackageReference Include="Newtonsoft.Json" Version="13.*"/>
     </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
-    </ItemGroup>
+
 
 </Project>

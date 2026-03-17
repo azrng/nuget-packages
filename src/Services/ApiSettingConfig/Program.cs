@@ -17,6 +17,7 @@ builder.Services.AddSettingConfig(options =>
     options.DbSchema = "sample";
     options.RoutePrefix = "config";
     options.ApiRoutePrefix = "/api/configDashboard";
+    options.PageTitle = "配置";
     options.Authorization = new[]
     {
         new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions

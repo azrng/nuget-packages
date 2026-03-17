@@ -40,7 +40,7 @@ public class DashboardOptions
     /// <summary>
     /// 获取或设置页面说明
     /// </summary>
-    public string PageDescription { get; set; } = "系统设置界面";
+    public string PageDescription { get; set; } = "系统配置页面";
 
     /// <summary>
     /// 获取或设置配置键缓存时间（分钟）
