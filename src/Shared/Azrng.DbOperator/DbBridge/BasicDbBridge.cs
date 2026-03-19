@@ -1,4 +1,5 @@
-﻿using Azrng.DbOperator.Dto;
+﻿using Azrng.Core.Model;
+using Azrng.DbOperator.Dto;
 
 namespace Azrng.DbOperator.DbBridge
 {

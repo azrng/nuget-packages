@@ -35,14 +35,19 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
     /// </summary>
     public abstract class SqlOperation
     {
-        private static int _parameterIndex = 0;
+        // 使用实例变量代替静态变量，确保线程安全
+        private int _instanceParameterIndex = 0;
 
         /// <summary>
-        /// 生成唯一参数名
+        /// 生成唯一参数名（线程安全）
         /// </summary>
         protected string GetParameterName(string fieldName)
         {
-            return $"@p_{fieldName}_{Interlocked.Increment(ref _parameterIndex)}";
+            // 使用实例变量 + Interlocked 确保线程安全
+            var index = Interlocked.Increment(ref _instanceParameterIndex);
+            // 添加时间戳和GUID部分确保全局唯一性
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+            return $"@p_{fieldName}_{uniqueId}_{index}";
         }
 
         /// <summary>

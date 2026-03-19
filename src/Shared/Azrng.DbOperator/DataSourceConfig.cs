@@ -1,3 +1,5 @@
+using Azrng.Core.Model;
+
 namespace Azrng.DbOperator
 {
     public class DataSourceConfig

@@ -1,4 +1,5 @@
 using Azrng.Core;
+using Azrng.Core.Model;
 using Azrng.DbOperator;
 using Xunit.Abstractions;
 

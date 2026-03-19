@@ -1,133 +1,189 @@
+using System.Collections;
 using Azrng.Database.DynamicSqlBuilder.Model;
-using Azrng.Database.DynamicSqlBuilder.SqlOperation;
 
 namespace Azrng.Database.DynamicSqlBuilder.Utils;
 
-public class TypeConvertHelper
+/// <summary>
+/// 类型转换助手（增强版 - 包含详细错误处理）
+/// </summary>
+public static class TypeConvertHelper
 {
-    public static object ConvertToTargetType(object value, Type targetType)
+    /// <summary>
+    /// 转换单个值到目标类型
+    /// </summary>
+    /// <param name="value">要转换的值</param>
+    /// <param name="targetType">目标类型</param>
+    /// <param name="throwOnError">是否在转换失败时抛出异常（默认true）</param>
+    /// <returns>转换后的值</returns>
+    /// <exception cref="ArgumentNullException">值为null时</exception>
+    /// <exception cref="InvalidOperationException">转换失败且throwOnError为true时</exception>
+    public static object ConvertToTargetType(object value, Type targetType, bool throwOnError = true)
     {
-        if (value is null)
-            throw new ArgumentNullException("参数不能为null", nameof(value));
-
-        // 处理可空类型
-        if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        // 处理null值
+        if (value == null || value == DBNull.Value)
         {
-            // 获取可空类型的实际类型
-            targetType = Nullable.GetUnderlyingType(targetType);
+            return GetDefaultVaule(targetType);
         }
 
-        if (targetType == typeof(int))
+        try
         {
-            return Convert.ToInt32(value);
-        }
-        else if (targetType == typeof(long))
-        {
-            return Convert.ToInt64(value);
-        }
-        else if (targetType == typeof(decimal))
-        {
-            return Convert.ToDecimal(value);
-        }
-        else if (targetType == typeof(double))
-        {
-            return Convert.ToDouble(value);
-        }
-        else if (targetType == typeof(float))
-        {
-            return Convert.ToSingle(value);
-        }
-        else if (targetType == typeof(string))
-        {
-            return value?.ToString() ?? string.Empty;
-        }
-        else if (targetType == typeof(DateTime))
-        {
-            return Convert.ToDateTime(value);
-        }
-        else if (targetType == typeof(bool))
-        {
-            return Convert.ToBoolean(value);
-        }
-        else if (targetType.IsEnum)
-        {
-            if (value is string stringValue)
-                return Enum.Parse(targetType, stringValue);
-            else
-                return Enum.ToObject(targetType, Convert.ToInt32(value));
-        }
-        else
-        {
-            // 默认使用 Convert.ChangeType 转换
-            try
+            // 如果类型已经匹配，直接返回
+            if (value.GetType() == targetType)
             {
-                return Convert.ChangeType(value, targetType);
-            }
-            catch
-            {
-                // 如果转换失败，返回原始值
                 return value;
             }
+
+            // 处理可空类型
+            Type underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            // 根据目标类型进行转换
+            object result = underlyingType switch
+            {
+                { } t when t == typeof(int) => Convert.ToInt32(value),
+                { } t when t == typeof(long) => Convert.ToInt64(value),
+                { } t when t == typeof(short) => Convert.ToInt16(value),
+                { } t when t == typeof(decimal) => Convert.ToDecimal(value),
+                { } t when t == typeof(double) => Convert.ToDouble(value),
+                { } t when t == typeof(float) => Convert.ToSingle(value),
+                { } t when t == typeof(string) => value?.ToString() ?? string.Empty,
+                { } t when t == typeof(DateTime) => Convert.ToDateTime(value),
+                { } t when t == typeof(bool) => Convert.ToBoolean(value),
+                { } t when t == typeof(byte) => Convert.ToByte(value),
+                { } t when t == typeof(sbyte) => Convert.ToSByte(value),
+                { } t when t == typeof(uint) => Convert.ToUInt32(value),
+                { } t when t == typeof(ulong) => Convert.ToUInt64(value),
+                { } t when t == typeof(ushort) => Convert.ToUInt16(value),
+                { } t when t.IsEnum => ConvertToEnum(value, t),
+                { } t when t == typeof(Guid) => ConvertToGuid(value, t),
+                _ => Convert.ChangeType(value, underlyingType)
+            };
+
+            return result;
+        }
+        catch (Exception ex) when (ex is FormatException || ex is InvalidCastException || ex is OverflowException)
+        {
+            if (throwOnError)
+            {
+                throw new InvalidOperationException(
+                    $"无法将值 '{value}' 从类型 {value.GetType()} 转换为 {targetType}",
+                    ex
+                );
+            }
+
+            // 转换失败时返回默认值
+            return GetDefaultVaule(targetType);
         }
     }
 
-    public static object ConvertToTargetType(IEnumerable<object> values, Type targetType)
+    /// <summary>
+    /// 转换值集合到目标类型集合
+    /// </summary>
+    /// <param name="values">值集合</param>
+    /// <param name="targetType">目标元素类型</param>
+    /// <param name="throwOnError">是否在转换失败时抛出异常（默认false）</param>
+    /// <returns>转换后的列表</returns>
+    public static object ConvertToTargetType(IEnumerable<object> values, Type targetType, bool throwOnError = false)
     {
-        if (targetType == typeof(int))
+        if (values == null)
+            throw new ArgumentNullException(nameof(values));
+
+        var resultList = new List<object>();
+
+        foreach (var value in values)
         {
-            return values.Select(Convert.ToInt32).ToList();
+            try
+            {
+                var convertedValue = ConvertToTargetType(value, targetType, throwOnError);
+                resultList.Add(convertedValue);
+            }
+            catch (Exception)
+            {
+                if (throwOnError)
+                    throw;
+                // 跳过无法转换的值
+            }
         }
-        else if (targetType == typeof(long))
+
+        // 根据目标类型返回强类型列表
+        var listType = typeof(List<>).MakeGenericType(targetType);
+        var strongTypedList = (IList)Activator.CreateInstance(listType);
+
+        foreach (var item in resultList)
         {
-            return values.Select(Convert.ToInt64).ToList();
+            strongTypedList.Add(item);
         }
-        else if (targetType == typeof(decimal))
+
+        return strongTypedList;
+    }
+
+    /// <summary>
+    /// 转换为枚举类型
+    /// </summary>
+    private static object ConvertToEnum(object value, Type enumType)
+    {
+        if (value is string stringValue)
         {
-            return values.Select(Convert.ToDecimal).ToList();
-        }
-        else if (targetType == typeof(double))
-        {
-            return values.Select(Convert.ToDouble).ToList();
-        }
-        else if (targetType == typeof(float))
-        {
-            return values.Select(Convert.ToSingle).ToList();
-        }
-        else if (targetType == typeof(string))
-        {
-            return values.Select(v => v?.ToString() ?? string.Empty).ToList();
-        }
-        else if (targetType == typeof(DateTime))
-        {
-            return values.Select(Convert.ToDateTime).ToList();
-        }
-        else if (targetType == typeof(bool))
-        {
-            return values.Select(Convert.ToBoolean).ToList();
+            return Enum.Parse(enumType, stringValue, ignoreCase: true);
         }
         else
         {
-            // 默认返回原始列表
-            return values.Select(v => v?.ToString() ?? string.Empty).ToList();
+            return Enum.ToObject(enumType, Convert.ToInt32(value));
         }
     }
 
+    /// <summary>
+    /// 转换为Guid类型
+    /// </summary>
+    private static object ConvertToGuid(object value, Type targetType)
+    {
+        return value switch
+        {
+            string str when Guid.TryParse(str, out var guid) => guid,
+            byte[] bytes => new Guid(bytes),
+            _ => throw new InvalidCastException($"无法将 {value.GetType()} 转换为 Guid")
+        };
+    }
+
+    /// <summary>
+    /// 获取类型的默认值
+    /// </summary>
+    /// <param name="type">类型</param>
+    /// <returns>默认值</returns>
+    public static object GetDefaultVaule(Type type)
+    {
+        // 处理可空类型
+        Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlyingType == typeof(string))
+            return string.Empty;
+
+        return underlyingType.IsValueType ? Activator.CreateInstance(underlyingType) : null;
+    }
+
+    /// <summary>
+    /// 转换操作符字符串为枚举
+    /// </summary>
+    /// <param name="operatorStr">操作符字符串</param>
+    /// <returns>操作符枚举</returns>
     public static MatchOperator ConvertToEnum(string operatorStr)
     {
-        return operatorStr switch
+        if (string.IsNullOrWhiteSpace(operatorStr))
+            return MatchOperator.Equal;
+
+        return operatorStr.Trim().ToUpperInvariant() switch
         {
-            SqlConstant.MatchOperatorIn => MatchOperator.In,
-            SqlConstant.MatchOperatorNotIn => MatchOperator.NotIn,
-            SqlConstant.MatchOperatorlike => MatchOperator.Like,
-            SqlConstant.MatchOperatorNotlike => MatchOperator.NotLike,
-            SqlConstant.MatchOperatorNotEqual => MatchOperator.NotEqual,
-            SqlConstant.MatchOperatorEqual => MatchOperator.Equal,
-            "And" or "AND" => MatchOperator.And,
+            "IN" => MatchOperator.In,
+            "NOT IN" or "NOTIN" => MatchOperator.NotIn,
+            "LIKE" => MatchOperator.Like,
+            "NOT LIKE" or "NOTLIKE" => MatchOperator.NotLike,
+            "<>" or "!=" => MatchOperator.NotEqual,
+            "=" or "==" => MatchOperator.Equal,
+            "AND" => MatchOperator.And,
             ">" => MatchOperator.GreaterThan,
             "<" => MatchOperator.LessThan,
-            SqlConstant.MatchOperatorGreaterThanEqual => MatchOperator.GreaterThanEqual,
-            SqlConstant.MatchOperatorLessThanEqual => MatchOperator.LessThanEqual,
-            SqlConstant.MatchOperatorBetween => MatchOperator.Between,
+            ">=" => MatchOperator.GreaterThanEqual,
+            "<=" => MatchOperator.LessThanEqual,
+            "BETWEEN" => MatchOperator.Between,
             _ => MatchOperator.Equal
         };
     }

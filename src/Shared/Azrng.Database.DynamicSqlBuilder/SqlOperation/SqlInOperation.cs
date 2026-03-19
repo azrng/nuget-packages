@@ -1,4 +1,5 @@
-﻿using Azrng.Database.DynamicSqlBuilder.Utils;
+﻿using Azrng.Database.DynamicSqlBuilder.Services;
+using Azrng.Database.DynamicSqlBuilder.Utils;
 using Dapper;
 
 namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
@@ -13,14 +14,19 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
             var paramName = GetParameterName(fieldName);
             var convertedValues = TypeConvertHelper.ConvertToTargetType(new List<object> { fieldValue }, valueType);
             parameters.Add(paramName, convertedValues);
-            return $"  {fieldName} = ANY({paramName})   ";
+
+            // 使用数据库方言服务生成正确的SQL
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<string> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} = ANY({paramName})   ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<object> fieldValues, DynamicParameters parameters,
@@ -32,21 +38,27 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
             var convertedValues = TypeConvertHelper.ConvertToTargetType(fieldValues, valueType);
 
             parameters.Add(paramName, convertedValues);
-            return $"  {fieldName} = ANY({paramName})   ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<int> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} = ANY({paramName})   ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<long> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} = ANY({paramName})   ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetInOperatorSql(fieldName, paramName, dialect);
         }
     }
 
@@ -60,28 +72,36 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
             var paramName = GetParameterName(fieldName);
             var convertedValues = TypeConvertHelper.ConvertToTargetType(new List<object> { fieldValue }, valueType);
             parameters.Add(paramName, convertedValues);
-            return $"  {fieldName} !=ANY({paramName})   ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetNotInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<string> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} !=ANY({paramName})  ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetNotInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<int> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} !=ANY({paramName})  ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetNotInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<long> fieldValues, DynamicParameters parameters)
         {
             var paramName = GetParameterName(fieldName);
             parameters.Add(paramName, fieldValues);
-            return $"  {fieldName} !=ANY({paramName})  ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetNotInOperatorSql(fieldName, paramName, dialect);
         }
 
         public override string GetSqlSentenceResult(string fieldName, IEnumerable<object> fieldValues, DynamicParameters parameters,
@@ -93,7 +113,9 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
             var convertedValues = TypeConvertHelper.ConvertToTargetType(fieldValues, valueType);
 
             parameters.Add(paramName, convertedValues);
-            return $"  {fieldName} !=ANY({paramName})  ";
+
+            var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+            return SqlDialectService.GetNotInOperatorSql(fieldName, paramName, dialect);
         }
     }
 }

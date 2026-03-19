@@ -125,22 +125,120 @@ namespace Azrng.Database.DynamicSqlBuilder.Validation
                 return false;
             }
 
-            // 检查格式（只允许字母、数字、下划线）
-            if (!FieldNamePattern.IsMatch(fieldName))
+            // 处理带引号的字段名
+            if (IsQuotedFieldName(fieldName, out string unquotedFieldName))
+            {
+                return IsValidUnquotedFieldName(unquotedFieldName);
+            }
+
+            // 处理表别名情况（如 u.Name 或 table.column）
+            if (fieldName.Contains('.'))
+            {
+                return IsValidTableAliasFieldName(fieldName);
+            }
+
+            // 检查普通字段名
+            return IsValidUnquotedFieldName(fieldName);
+        }
+
+        /// <summary>
+        /// 检查是否是带引号的字段名并返回去引号后的内容
+        /// </summary>
+        private static bool IsQuotedFieldName(string fieldName, out string unquotedFieldName)
+        {
+            unquotedFieldName = fieldName;
+
+            if (fieldName.Length >= 2)
+            {
+                // 双引号: "field name"
+                if (fieldName.StartsWith("\"") && fieldName.EndsWith("\""))
+                {
+                    unquotedFieldName = fieldName[1..^1];
+                    return true;
+                }
+
+                // 方括号: [field name] (SQL Server)
+                if (fieldName.StartsWith("[") && fieldName.EndsWith("]"))
+                {
+                    unquotedFieldName = fieldName[1..^1];
+                    return true;
+                }
+
+                // 反引号: `field name` (MySQL)
+                if (fieldName.StartsWith("`") && fieldName.EndsWith("`"))
+                {
+                    unquotedFieldName = fieldName[1..^1];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 验证去引号后的字段名
+        /// </summary>
+        private static bool IsValidUnquotedFieldName(string fieldName)
+        {
+            // 检查是否为空
+            if (string.IsNullOrWhiteSpace(fieldName))
             {
                 return false;
             }
 
-            // 检查是否是SQL关键字
-            if (SqlKeywords.Contains(fieldName))
+            // 检查长度
+            if (fieldName.Length > MaxFieldNameLength)
             {
                 return false;
             }
 
-            // 检查是否包含特殊字符组合（SQL注入尝试）
+            // 检查是否包含SQL注入模式（即使带引号也要检查）
             if (ContainsSuspiciousPatterns(fieldName))
             {
                 return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 验证表别名形式的字段名（如 u.Name 或 table.column）
+        /// </summary>
+        private static bool IsValidTableAliasFieldName(string fieldName)
+        {
+            var parts = fieldName.Split('.');
+
+            // 最多支持两级（表名.字段名）
+            if (parts.Length > 2)
+            {
+                return false;
+            }
+
+            // 验证每个部分
+            foreach (var part in parts)
+            {
+                // 如果部分是带引号的，提取引号内容验证
+                if (IsQuotedFieldName(part, out string unquotedPart))
+                {
+                    if (!IsValidUnquotedFieldName(unquotedPart))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    // 检查格式（只允许字母、数字、下划线）
+                    if (!FieldNamePattern.IsMatch(part))
+                    {
+                        return false;
+                    }
+
+                    // 检查是否是SQL关键字
+                    if (SqlKeywords.Contains(part))
+                    {
+                        return false;
+                    }
+                }
             }
 
             return true;

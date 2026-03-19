@@ -1,4 +1,5 @@
-﻿using Azrng.DbOperator.Helper;
+﻿using Azrng.Core.Model;
+using Azrng.DbOperator.Helper;
 
 namespace Azrng.DbOperator.DbBridge
 {

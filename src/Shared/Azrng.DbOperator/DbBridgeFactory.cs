@@ -1,3 +1,4 @@
+using Azrng.Core.Model;
 using Azrng.DbOperator.DbBridge;
 
 namespace Azrng.DbOperator
@@ -12,7 +13,7 @@ namespace Azrng.DbOperator
                 DatabaseType.SqlServer => new SqlServerBasicDbBridge(connectionString),
                 DatabaseType.Oracle => new OracleBasicDbBridge(connectionString),
                 DatabaseType.PostgresSql => new PostgreBasicDbBridge(connectionString),
-                DatabaseType.SqLite => throw new NotSupportedException("暂不支持 SQLite"),
+                DatabaseType.Sqlite => throw new NotSupportedException("暂不支持 SQLite"),
                 DatabaseType.ClickHouse => new ClickHouseBasicDbBridge(connectionString),
                 _ => throw new ArgumentOutOfRangeException(nameof(dbType), dbType, null)
             };
