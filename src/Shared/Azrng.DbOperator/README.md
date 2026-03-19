@@ -30,45 +30,6 @@ Install-Package Azrng.DbOperator
 dotnet add package Azrng.DbOperator
 ```
 
-## 项目结构
-
-```
-Azrng.DbOperator/
-├── DatabaseType.cs           # 数据库类型枚举
-├── DataSourceConfig.cs       # 数据源配置类
-├── SystemOperatorConst.cs    # 系统常量
-├── GlobalUsings.cs         # 全局 using
-├── DbBridgeFactory.cs       # 桥接工厂
-├── DbBridge/               # 各数据库桥接实现
-│   ├── BasicDbBridge.cs      # 基础桥接抽象
-│   ├── MySqlDbBridge.cs       # MySQL 实现
-│   ├── SqlServerDbBridge.cs    # SQL Server 实现
-│   ├── PostgreDbBridge.cs    # PostgreSQL 实现
-│   ├── OracleDbBridge.cs      # Oracle 实现
-│   └── ClickHouseDbBridge.cs  # ClickHouse 实现
-├── Helper/                 # 数据库帮助类
-│   ├── DbHelperBase.cs       # 帮助基类
-│   ├── MySQLDbHelper.cs       # MySQL 实现
-│   ├── PostgreSqlDbHelper.cs # PostgreSQL 实现
-│   ├── SqlServerDbHelper.cs   # SQL Server 实现
-│   ├── OracleDbHelper.cs      # Oracle 实现
-│   ├── SqliteDbHelper.cs     # SQLite 实现
-│   └── ClickHouseDbHelper.cs  # ClickHouse 实现
-├── Dto/                    # 数据传输对象
-│   ├── ForeignModel.cs
-│   ├── GetSchemaColumnInfoDto.cs
-│   ├── GetSchemaListDto.cs
-│   ├── GetTableInfoBySchemaDto.cs
-│   ├── IndexModel.cs
-│   ├── PrimaryModel.cs
-│   ├── ProcModel.cs
-│   ├── SchemaTableDto.cs
-│   └── ViewModel.cs
-├── IBasicDbBridge.cs        # 基础桥接接口
-├── IDbHelper.cs            # 数据库操作帮助接口
-└── README.md               # 项目文档
-```
-
 ## 支持的数据库
 
 ### 1. MySQL
