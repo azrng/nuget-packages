@@ -25,7 +25,7 @@ namespace Azrng.Core.Helpers
         /// <summary>
         /// 随机数生成
         /// </summary>
-        private static readonly RandomNumberGenerator Rnd = new RNGCryptoServiceProvider();
+        private static readonly RandomNumberGenerator Rnd = RandomNumberGenerator.Create();
 
         /// <summary>
         /// 开始时间戳 首次使用前设置，否则无效，默认2018-3-15

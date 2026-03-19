@@ -297,7 +297,8 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static bool IsSystemAssembly(string asmPath)
         {
-            return LoadAssembly(asmPath).IsSystemAssembly();
+            var assembly = LoadAssembly(asmPath);
+            return assembly != null && assembly.IsSystemAssembly();
         }
 
         class AssemblyEquality : EqualityComparer<Assembly>

@@ -8,7 +8,10 @@ namespace Azrng.Core
     /// </summary>
     public interface ICurrentUser<out T> : IScopedDependency
     {
-        T Sub { get; }
+        /// <summary>
+        /// 主题标识
+        /// </summary>
+        T Subject { get; }
 
         /// <summary>
         /// 用户标识

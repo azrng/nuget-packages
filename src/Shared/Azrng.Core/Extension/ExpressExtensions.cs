@@ -164,17 +164,28 @@ namespace Azrng.Core.Extension
             Expression<Func<T, bool>>? result = express;
 
             //合并表达式
+            if (arrayExpress.Length == 0)
+                return result ?? throw new ArgumentException("No expressions to merge");
+
             foreach (var curExpression in arrayExpress)
             {
                 //表达式树内容
-                var left = result != null ? visitor.Visit(result.Body) : null;
-                var right = visitor.Visit(curExpression.Body)!;
+                Expression? left = null;
+                if (result != null)
+                {
+                    left = visitor.Visit(result.Body);
+                    if (left == null) continue;
+                }
+
+                var right = visitor.Visit(curExpression.Body);
+                if (right == null) continue;
+
                 result = Expression.Lambda<Func<T, bool>>(
                     left != null ? Expression.AndAlso(left, right) : right,
                     parameter);
             }
 
-            return result;
+            return result ?? throw new InvalidOperationException("No valid expressions to merge");
         }
 
         /// <summary>
@@ -215,17 +226,30 @@ namespace Azrng.Core.Extension
             Expression<Func<T, bool>>? result = express;
 
             //合并表达式
+            if (arrayExpress == null || arrayExpress.Length == 0)
+                return result ?? throw new ArgumentException("No expressions to merge");
+
             foreach (var curExpression in arrayExpress)
             {
+                if (curExpression == null) continue;
+
                 //表达式树内容
-                var left = result != null ? visitor.Visit(result.Body) : null;
-                var right = visitor.Visit(curExpression.Body)!;
+                Expression? left = null;
+                if (result != null)
+                {
+                    left = visitor.Visit(result.Body);
+                    if (left == null) continue;
+                }
+
+                var right = visitor.Visit(curExpression.Body);
+                if (right == null) continue;
+
                 result = Expression.Lambda<Func<T, bool>>(
                     left != null ? Expression.OrElse(left, right) : right,
                     parameter);
             }
 
-            return result;
+            return result ?? throw new InvalidOperationException("No valid expressions to merge");
         }
 
         #endregion

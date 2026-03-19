@@ -61,24 +61,30 @@ namespace Azrng.Core.Helpers
                 throw new ArgumentNullException(nameof(targetType));
 
             // 处理可空类型
+            Type? underlyingType = null;
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 // 获取可空类型的实际类型
-                targetType = Nullable.GetUnderlyingType(targetType)!;
+                underlyingType = Nullable.GetUnderlyingType(targetType);
+                if (underlyingType != null)
+                {
+                    targetType = underlyingType;
 
-                // 如果值为null，则对于可空类型来说是有效的
-                if (value is string str && string.IsNullOrEmpty(str))
-                    return null;
+                    // 如果值为null，则对于可空类型来说是有效的
+                    if (value is string str && string.IsNullOrEmpty(str))
+                        return null;
+                }
             }
 
             var valueType = value.GetType();
 
             // 直接匹配类型，避免多次GetType调用
-            if (valueType == targetType || (Nullable.GetUnderlyingType(targetType!) ?? targetType) == valueType)
+            var nullableUnderlyingType = Nullable.GetUnderlyingType(targetType);
+            if (valueType == targetType || (nullableUnderlyingType ?? targetType) == valueType)
                 return value;
 
-            var typeCode = Type.GetTypeCode(targetType!);
-            var isEnum = targetType!.BaseType == typeof(Enum);
+            var typeCode = Type.GetTypeCode(targetType);
+            var isEnum = targetType.BaseType == typeof(Enum);
             return typeCode switch
             {
                 TypeCode.Int32 => isEnum ? HandleSpecialTypes(value, targetType) : Convert.ToInt32(value),

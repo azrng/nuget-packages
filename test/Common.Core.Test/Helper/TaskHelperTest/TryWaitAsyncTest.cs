@@ -52,13 +52,13 @@ namespace Common.Core.Test.Helper.TaskHelperTest
                 throw new Exception("Something went wrong.");
                 return "Success"; // 正常情况下返回结果
             }, 3);
-            _testOutputHelper.WriteLine(result); // 输出结果，可能是默认值
+            _testOutputHelper.WriteLine(result ?? "null"); // 输出结果，可能是默认值
         }
 
         [Fact]
         public async Task ExecuteFuncWithRetryAsync_Test()
         {
-            // 使用Func<T>示例
+            // 使用Func<Task<T>>示例
             var result = await TaskHelper.ExecuteFuncWithRetryAsync(async () =>
             {
                 await Task.Delay(1000);
@@ -70,7 +70,7 @@ namespace Common.Core.Test.Helper.TaskHelperTest
                 throw new Exception("Something went wrong.");
                 return "Success"; // 正常情况下返回结果
             }, 3);
-            _testOutputHelper.WriteLine(result); // 输出结果，可能是默认值
+            _testOutputHelper.WriteLine(result ?? "null"); // 输出结果，可能是默认值
         }
 
         /// <summary>

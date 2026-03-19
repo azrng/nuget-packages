@@ -66,10 +66,10 @@ namespace Azrng.Core.Helpers
         /// <param name="delayInMilliseconds">等待的时间</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static async Task<T> ExecuteFuncWithRetryAsync<T>(Func<Task<T>> func, int maxAttempts, int delayInMilliseconds = 1000)
+        public static async Task<T?> ExecuteFuncWithRetryAsync<T>(Func<Task<T>> func, int maxAttempts, int delayInMilliseconds = 1000)
         {
             var attempts = 0;
-            var result = default(T);
+            T? result = default;
             while (attempts < maxAttempts)
             {
                 try
@@ -85,14 +85,14 @@ namespace Azrng.Core.Helpers
                     if (attempts == maxAttempts)
                     {
                         Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return result!; // 达到最大尝试次数，返回结果（可能是默认值）
+                        return default(T); // 达到最大尝试次数，返回默认值
                     }
 
                     await Task.Delay(delayInMilliseconds);
                 }
             }
 
-            return result;
+            return default(T);
         }
 
         /// <summary>
@@ -103,10 +103,10 @@ namespace Azrng.Core.Helpers
         /// <param name="delayInMilliseconds">等待的时间</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T ExecuteFuncWithRetry<T>(Func<T> func, int maxAttempts, int delayInMilliseconds = 1000)
+        public static T? ExecuteFuncWithRetry<T>(Func<T> func, int maxAttempts, int delayInMilliseconds = 1000)
         {
             var attempts = 0;
-            var result = default(T);
+            T? result = default;
             while (attempts < maxAttempts)
             {
                 try
@@ -122,14 +122,14 @@ namespace Azrng.Core.Helpers
                     if (attempts == maxAttempts)
                     {
                         Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return result!; // 达到最大尝试次数，返回结果（可能是默认值）
+                        return default(T); // 达到最大尝试次数，返回默认值
                     }
 
                     Thread.Sleep(delayInMilliseconds);
                 }
             }
 
-            return result;
+            return default(T);
         }
 
         /// <summary>

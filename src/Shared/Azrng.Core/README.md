@@ -894,6 +894,12 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 📝 版本更新记录
 
+### 1.15.7
+- 修复 HandleAsDefaultWhenException 方法实现错误，异常时正确返回默认值而不是重新抛出异常
+- 修复 GuardClauseNullExtensions 中 NullOrEmpty 方法调用 Null 方法时参数顺序错误
+- 修复 TaskHelperTest 中空引用异常问题
+- 优化 AssemblyHelperTest 测试断言逻辑
+
 ### 1.15.6
 - 修复IJsonSerializer的null问题
 

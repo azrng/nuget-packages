@@ -17,22 +17,22 @@ namespace Azrng.Core.Service
             return new ResultModel<T>(data: data, true, "success", "200");
         }
 
-        protected virtual IResultModel Error(string message = "错误")
+        protected virtual IResultModel Fail(string message = "错误")
         {
             return new ResultModel(false, message, "400");
         }
 
-        protected virtual IResultModel<T> Error<T>(string message = "错误")
+        protected virtual IResultModel<T> Fail<T>(string message = "错误")
         {
             return new ResultModel<T>(default, false, message, "400");
         }
 
-        protected virtual IResultModel Error(string message, string errorCode)
+        protected virtual IResultModel Fail(string message, string errorCode)
         {
             return new ResultModel(false, message, errorCode);
         }
 
-        protected virtual IResultModel<T> Error<T>(string message, string errorCode)
+        protected virtual IResultModel<T> Fail<T>(string message, string errorCode)
         {
             return new ResultModel<T>(default, false, message, errorCode);
         }

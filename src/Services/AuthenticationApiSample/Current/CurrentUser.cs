@@ -12,7 +12,7 @@ namespace AuthenticationApiSample.Current
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public string Sub => _httpContextAccessor.HttpContext.User?.FindFirst("sub")?.Value;
+        public string Subject => _httpContextAccessor.HttpContext.User?.FindFirst("sub")?.Value;
 
         public string UserId => _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 

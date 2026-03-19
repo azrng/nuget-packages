@@ -344,7 +344,9 @@ namespace Azrng.Core.Extension
         public static unsafe string? ToUpperFirst(this string? str)
         {
             if (str == null) return null;
+#pragma warning disable CS0618 // 类型或成员已过时
             var ret = string.Copy(str); // 此处使用 string.Copy 是有意为之，需要创建可变字符串
+#pragma warning restore CS0618
             fixed (char* ptr = ret)
                 *ptr = char.ToUpper(*ptr);
             return ret;

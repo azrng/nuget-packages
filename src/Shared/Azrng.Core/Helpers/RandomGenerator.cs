@@ -17,7 +17,7 @@ namespace Azrng.Core.Helpers
         /// 优点：线程安全、避免种子重复、性能优化(避免重复创建新的Random实例)
         /// </summary>
         public static readonly ThreadLocal<Random> Random = new(() =>
-            new Random(Interlocked.Increment(ref _seed)))!;
+            new Random(Interlocked.Increment(ref _seed)));
 
         /// <summary>
         /// 随机字符

@@ -94,7 +94,7 @@ namespace Azrng.Core.Extension.GuardClause
                                          [CallerArgumentExpression("input")] string? parameterName = null,
                                          Func<Exception>? exceptionCreator = null)
         {
-            Guard.Against.Null(input, parameterName, message, exceptionCreator);
+            Guard.Against.Null(input, message, parameterName, exceptionCreator);
             if (input == string.Empty)
             {
                 throw exceptionCreator?.Invoke() ??
@@ -147,7 +147,7 @@ namespace Azrng.Core.Extension.GuardClause
                                                     [CallerArgumentExpression("input")] string? parameterName = null,
                                                     Func<Exception>? exceptionCreator = null)
         {
-            Guard.Against.Null(input, parameterName, message, exceptionCreator: exceptionCreator);
+            Guard.Against.Null(input, message, parameterName, exceptionCreator: exceptionCreator);
 
             if (input is Array and
                     { Length: 0 } //Try checking first with pattern matching because it's faster than TryGetNonEnumeratedCount on Array
@@ -180,7 +180,7 @@ namespace Azrng.Core.Extension.GuardClause
                                               [CallerArgumentExpression("input")] string? parameterName = null,
                                               Func<Exception>? exceptionCreator = null)
         {
-            Guard.Against.NullOrEmpty(input, message: message, parameterName: parameterName, exceptionCreator: exceptionCreator);
+            Guard.Against.NullOrEmpty(input, message, parameterName, exceptionCreator);
             if (string.IsNullOrWhiteSpace(input))
             {
                 throw exceptionCreator?.Invoke() ??
@@ -207,11 +207,22 @@ namespace Azrng.Core.Extension.GuardClause
                                    [CallerArgumentExpression("input")] string? parameterName = null,
                                    Func<Exception>? exceptionCreator = null)
         {
-            if (input is null || EqualityComparer<T>.Default.Equals(input, default))
+            // 检查是否为null
+            if (input is null)
             {
+                var paramName = parameterName ?? nameof(input);
                 throw exceptionCreator?.Invoke() ??
-                      new ArgumentException(message ?? $"Parameter [{parameterName}] is default value for type {typeof(T).Name}",
-                          parameterName);
+                      new ArgumentException(message ?? $"Parameter [{paramName}] is null",
+                          paramName);
+            }
+
+            // 检查是否为默认值
+            if (default(T) != null && object.Equals(input, default(T)))
+            {
+                var paramName = parameterName ?? nameof(input);
+                throw exceptionCreator?.Invoke() ??
+                      new ArgumentException(message ?? $"Parameter [{paramName}] is default value for type {typeof(T).Name}",
+                          paramName);
             }
 
             return input;
