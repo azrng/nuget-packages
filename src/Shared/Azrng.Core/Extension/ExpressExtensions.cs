@@ -154,7 +154,7 @@ namespace Azrng.Core.Extension
         public static Expression<Func<T, bool>>? MergeAnd<T>(this Expression<Func<T, bool>>? express,
                                                              params Expression<Func<T, bool>>[] arrayExpress)
         {
-            if (!arrayExpress?.Any() ?? true) return express;
+            if (arrayExpress == null || arrayExpress.Length == 0) return express;
 
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
@@ -162,10 +162,6 @@ namespace Azrng.Core.Extension
             //统一管理参数，保证参数一致，否则会报错
             var visitor = new PredicateExpressionVisitor(parameter);
             Expression<Func<T, bool>>? result = express;
-
-            //合并表达式
-            if (arrayExpress.Length == 0)
-                return result ?? throw new ArgumentException("No expressions to merge");
 
             foreach (var curExpression in arrayExpress)
             {

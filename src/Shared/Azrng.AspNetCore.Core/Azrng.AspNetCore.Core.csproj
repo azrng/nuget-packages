@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <IsAotCompatible>true</IsAotCompatible>
-        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+        <EnableConfigurationBindingGenerator>false</EnableConfigurationBindingGenerator>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <Authors>Azrng</Authors>

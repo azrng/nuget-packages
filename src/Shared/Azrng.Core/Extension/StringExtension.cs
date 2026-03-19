@@ -227,7 +227,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static bool HasChinese(this string? str)
         {
-            return !str.IsNullOrWhiteSpace() && Regex.IsMatch(str!, @"[\u4e00-\u9fa5]");
+            return !str.IsNullOrWhiteSpace() && str!.IsMatch(@"[\u4e00-\u9fa5]");
         }
 
         #region 值判断

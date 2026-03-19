@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
+using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Azrng.AspNetCore.Core.Helper
 {
@@ -7,11 +9,13 @@ namespace Azrng.AspNetCore.Core.Helper
     /// </summary>
     public static class AppSettings
     {
-        private static IConfiguration Configuration { get; set; }
+        private static IConfiguration? _configuration;
+
+        private static IConfiguration Configuration => _configuration ?? throw new InvalidOperationException("Configuration has not been initialized.");
 
         public static void InitConfiguration(IConfiguration configuration)
         {
-            Configuration = configuration;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         /// <summary>
@@ -39,9 +43,9 @@ namespace Azrng.AspNetCore.Core.Helper
             return Configuration.GetValue<string>(key);
         }
 
-        public static T? GetValue<T>(string key)
+        public static T? GetValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key)
         {
-            return Configuration.GetValue<T>(key);
+            return (T?)Configuration.GetValue(typeof(T), key);
         }
 
         public static IConfigurationSection GetSection(string key)
@@ -49,9 +53,9 @@ namespace Azrng.AspNetCore.Core.Helper
             return Configuration.GetSection(key);
         }
 
-        public static T? GetSection<T>(string key)
+        public static T? GetSection<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(string key)
         {
-            return Configuration.GetSection(key).Get<T>();
+            return (T?)Configuration.GetSection(key).Get(typeof(T));
         }
     }
 }

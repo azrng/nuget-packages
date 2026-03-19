@@ -8,6 +8,7 @@ using Azrng.Core.Results;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -182,10 +183,10 @@ public static class ServiceCollectionExtensions
             {
                 //获取验证失败的模型字段
                 var errorResults = new List<ErrorInfo>();
-                foreach (var (key, value) in actionContext.ModelState.Where(e => e.Value?.Errors.Count > 0))
+                foreach (var item in actionContext.ModelState.Where(e => e.Value is { Errors.Count: > 0 }))
                 {
-                    var errorInfo = new ErrorInfo { Field = key };
-                    foreach (var error in value.Errors)
+                    var errorInfo = new ErrorInfo { Field = item.Key };
+                    foreach (var error in item.Value!.Errors)
                     {
                         if (!string.IsNullOrEmpty(errorInfo.Message))
                         {
@@ -247,6 +248,7 @@ public static class ServiceCollectionExtensions
     ///  <param name="assembleSearchPattern">程序集匹配范围,示例(NetCoreAPI_EFCore.dll、NetCoreAPI_EFCore.*.dll)</param>
     ///  <param name="ignoreNameSpace">要忽略的命名空间,多个使用逗号隔开</param>
     ///  <returns></returns>
+    [RequiresUnreferencedCode("Scans assemblies and registers implementation types via reflection.")]
     public static IServiceCollection RegisterBusinessServices(this IServiceCollection services,
                                                               string assembleSearchPattern, string ignoreNameSpace = "")
     {
@@ -273,6 +275,7 @@ public static class ServiceCollectionExtensions
     ///  <param name="services">服务容器</param>
     ///  <param name="assemblies">需要注册的程序集</param>
     ///  <returns></returns>
+    [RequiresUnreferencedCode("Scans assemblies and registers implementation types via reflection.")]
     public static IServiceCollection RegisterBusinessServices(this IServiceCollection services,
                                                               params Assembly[] assemblies)
     {
@@ -294,6 +297,7 @@ public static class ServiceCollectionExtensions
     ///  <param name="lifetime"></param>
     ///  <param name="ignoreNameSpaces"></param>
     ///  <returns></returns>
+    [RequiresUnreferencedCode("Scans assemblies and registers implementation types via reflection.")]
     private static IServiceCollection RegisterUniteServices(this IServiceCollection services,
                                                             IEnumerable<Assembly> assemblies, Type lifeType,
                                                             ServiceLifetime lifetime, List<string> ignoreNameSpaces)

@@ -165,7 +165,7 @@ namespace Azrng.Core.Helpers
             for (var i = 0; i < countToRemove; i++)
             {
                 // 在剩余元素中随机选择一个索引
-                var randomIndex = RandomGenerator.Random.Value!.Next(list.Count - i);
+                var randomIndex = RandomGenerator.GenerateNumber(0, list.Count - i);
 
                 // 将选中的元素与当前未处理区域的末尾元素交换
                 (list[randomIndex], list[list.Count - 1 - i]) = (list[list.Count - 1 - i], list[randomIndex]);
@@ -186,7 +186,7 @@ namespace Azrng.Core.Helpers
             // 随机选择要保留的元素
             for (var i = 0; i < countToKeep; i++)
             {
-                var randomIndex = RandomGenerator.Random.Value!.Next(list.Count - i);
+                var randomIndex = RandomGenerator.GenerateNumber(0, list.Count - i);
 
                 // 将选中的元素交换到前面
                 var selectedItem = list[randomIndex];

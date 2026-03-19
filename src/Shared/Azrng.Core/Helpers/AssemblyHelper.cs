@@ -1,4 +1,5 @@
-﻿using Azrng.Core.Extension;
+﻿using Azrng.Core.Exceptions;
+using Azrng.Core.Extension;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -38,6 +39,8 @@ namespace Azrng.Core.Helpers
             if (string.IsNullOrWhiteSpace(searchPattern))
                 return Array.Empty<Assembly>();
 
+            ValidateAssemblySearchPattern(searchPattern);
+
             if (_assembliesDict.TryGetValue(searchPattern, out var assemblies))
             {
                 return assemblies;
@@ -45,11 +48,32 @@ namespace Azrng.Core.Helpers
 
             assemblies = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, searchPattern,
                     SearchOption.AllDirectories)
-                .Select(Assembly.LoadFrom).ToArray();
+                .Where(IsManagedAssembly)
+                .Select(TryLoadAssembly)
+                .Where(static assembly => assembly != null)
+                .Cast<Assembly>()
+                .ToArray();
 
             _assembliesDict.TryAdd(searchPattern, assemblies);
 
             return assemblies;
+        }
+
+        private static void ValidateAssemblySearchPattern(string searchPattern)
+        {
+            var invalidChars = Path.GetInvalidFileNameChars().Except(new[] { '*', '?' }).ToArray();
+            if (searchPattern.IndexOfAny(invalidChars) >= 0)
+            {
+                throw new ParameterException(searchPattern);
+            }
+
+            if (searchPattern.Contains(Path.DirectorySeparatorChar) ||
+                searchPattern.Contains(Path.AltDirectorySeparatorChar) ||
+                Path.IsPathRooted(searchPattern) ||
+                !searchPattern.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ParameterException(searchPattern);
+            }
         }
 
         /// <summary>

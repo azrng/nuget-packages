@@ -24,7 +24,7 @@
             }
 
             // 随机选择一个尚未返回的元素
-            var randomIndex = RandomGenerator.Random.Value!.Next(_currentIndex);
+            var randomIndex = RandomGenerator.GenerateNumber(0, _currentIndex);
             var selectedItem = _items[randomIndex];
 
             // 将选中的元素与当前最后一个未选元素交换

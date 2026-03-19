@@ -70,7 +70,7 @@ namespace Azrng.Core.Extension
         public static ITask<TResult> HandleAsDefaultWhenException<TResult>(this Task<TResult> task)
         {
             return task.Handle()
-                       .WhenCatch<Exception>((Func<Exception, TResult>)(ex => default));
+                       .WhenCatch<Exception>((Func<Exception, TResult>)(_ => default!));
         }
 
         /// <summary>返回提供异常处理请求任务对象</summary>

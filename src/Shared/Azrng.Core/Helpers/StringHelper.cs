@@ -8,6 +8,8 @@ namespace Azrng.Core.Helpers
 {
     public class StringHelper
     {
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
         /// <summary>
         /// 压缩文本
         /// </summary>
@@ -22,7 +24,7 @@ namespace Azrng.Core.Helpers
             var compressed = originStr.Replace("\r", "").Replace("\n", "");
 
             // 移除多余的空格
-            compressed = Regex.Replace(compressed, @"\s+", " ");
+            compressed = Regex.Replace(compressed, @"\s+", " ", RegexOptions.None, RegexTimeout);
 
             return compressed.Trim(); // 去除首尾空格
         }
@@ -61,7 +63,7 @@ namespace Azrng.Core.Helpers
                 return string.Empty;
             }
 
-            return new Regex(@"\\u([0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled).Replace(unicode,
+            return new Regex(@"\\u([0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled, RegexTimeout).Replace(unicode,
                 x => string.Empty + Convert.ToChar(Convert.ToUInt16(x.Result("$1"), 16)));
         }
 
@@ -139,7 +141,7 @@ namespace Azrng.Core.Helpers
 
             // 构建正则表达式模式
             var pattern = string.Join("|", patterns.Select(x => x.Pattern));
-            var regex = new Regex(pattern);
+            var regex = new Regex(pattern, RegexOptions.None, RegexTimeout);
 
             return regex.Replace(input, match =>
             {

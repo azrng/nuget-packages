@@ -68,7 +68,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static bool CheckExt(string ext)
         {
-            return Regex.IsMatch(ext, RegexExtensions.ExtName);
+            return ext.IsMatch(RegexExtensions.ExtName);
         }
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace Azrng.Core.Helpers
         {
             var pattern = isAvailDiskRootPath ? RegexExtensions.FolderPath : RegexExtensions.FolderPath2;
 
-            return Regex.IsMatch(path, pattern);
+            return path.IsMatch(pattern);
         }
 
         /// <summary>
@@ -265,8 +265,18 @@ namespace Azrng.Core.Helpers
                 throw new IOException($"文件路径【{path}】不存在！");
             }
 
-            var xmlDoc = new XmlDocument();
-            xmlDoc.Load(path);
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            };
+            using var reader = XmlReader.Create(path, settings);
+
+            var xmlDoc = new XmlDocument
+            {
+                XmlResolver = null
+            };
+            xmlDoc.Load(reader);
 
             return xmlDoc;
         }

@@ -24,7 +24,7 @@ namespace Azrng.AspNetCore.Core.Middleware
             {
                 if (context.Request.Headers.TryGetValue(_requestIdHeader, out var header))
                 {
-                    requestIdFeature.TraceIdentifier = header;
+                    requestIdFeature.TraceIdentifier = header.ToString();
                 }
 
                 context.Response.Headers[_requestIdHeader] = requestIdFeature.TraceIdentifier;

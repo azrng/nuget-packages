@@ -73,9 +73,15 @@ namespace Azrng.Core.Helpers
             var xml = isPath ? IOHelper.ReadXml(xmlOrPath).InnerXml : xmlOrPath;
 
             var serializer = new XmlSerializer(typeof(T));
-            using var ms = new MemoryStream(encoding.GetBytes(xml));
-            using var sw = new StreamReader(ms, encoding);
-            return (T?)serializer.Deserialize(sw);
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            };
+
+            using var sr = new StringReader(xml);
+            using var reader = XmlReader.Create(sr, settings);
+            return (T?)serializer.Deserialize(reader);
         }
     }
 }

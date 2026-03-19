@@ -14,23 +14,25 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static async Task<DateTime?> GetNetworkTime()
         {
+            const string serviceUrl = "https://cn.apihz.cn/api/time/getapi.php?id=88888888&key=88888888&type=1";
+
             try
             {
-                const string serviceUrl = "https://cn.apihz.cn/api/time/getapi.php?id=88888888&key=88888888&type=1";
-                var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = delegate { return true; } };
-
-                var client = new HttpClient(handler);
-
+                using var client = new HttpClient();
                 var response = await client.GetStringAsync(serviceUrl);
 
                 if (string.IsNullOrEmpty(response) || response.Length < 29)
                     return null;
 
-                var time = response.Substring(19, 10).ToInt64().ToDateTime(true);
-
-                return time;
+                return long.TryParse(response.Substring(19, 10), out var timestamp)
+                    ? timestamp.ToDateTime(true)
+                    : null;
             }
-            catch
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+            catch (TaskCanceledException)
             {
                 return null;
             }
@@ -123,29 +125,18 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string? GetDateIntervalStr(DateTime startDateTime, DateTime endDataTime)
         {
-            string? dateDiff = null;
-            try
+            var ts = endDataTime - startDateTime;
+            if (ts.Days >= 1)
             {
-                var ts = endDataTime - startDateTime;
-                if (ts.Days >= 1)
-                {
-                    dateDiff = startDateTime.Month + "月" + startDateTime.Day + "日";
-                }
-                else
-                {
-                    if (ts.Hours > 1)
-                    {
-                        dateDiff = ts.Hours + "小时前";
-                    }
-                    else
-                    {
-                        dateDiff = ts.Minutes + "分钟前";
-                    }
-                }
+                return startDateTime.Month + "月" + startDateTime.Day + "日";
             }
-            catch { }
 
-            return dateDiff;
+            if (ts.Hours > 1)
+            {
+                return ts.Hours + "小时前";
+            }
+
+            return ts.Minutes + "分钟前";
         }
 
         /// <summary>

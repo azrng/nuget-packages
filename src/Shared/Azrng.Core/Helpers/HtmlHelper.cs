@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -8,6 +9,8 @@ namespace Azrng.Core.Helpers
     /// </summary>
     public static class HtmlHelper
     {
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
         /// <summary>
         /// 将HTML标签转换成TEXT文本
         /// </summary>
@@ -25,7 +28,7 @@ namespace Azrng.Core.Helpers
                 @"<!--.*\n"
             ];
 
-            var strOutput = aryReg.Select(t => new Regex(t, RegexOptions.IgnoreCase))
+            var strOutput = aryReg.Select(t => new Regex(t, RegexOptions.IgnoreCase, RegexTimeout))
                                   .Aggregate(strHtml, (current, regex) => regex.Replace(current, string.Empty));
 
             return strOutput.Replace("<", "").Replace(">", "").Replace("\r\n", "").Trim();

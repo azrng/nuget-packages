@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -8,6 +9,8 @@ namespace Azrng.Core.Extension
     /// </summary>
     public static class RegexExtensions
     {
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
         /// <summary>
         /// 普通字符串处理为正则表达式可识别字符串
         /// </summary>
@@ -15,7 +18,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string ToRegex(this string value)
         {
-            return Regex.Replace(value, @"\W", match => @"\" + match);
+            return new Regex(@"\W", RegexOptions.None, RegexTimeout).Replace(value, match => @"\" + match);
         }
 
         /// <summary>
@@ -26,7 +29,7 @@ namespace Azrng.Core.Extension
         /// <param name="options">筛选条件</param>
         public static bool IsMatch(this string input, string pattern, RegexOptions options)
         {
-            return Regex.IsMatch(input, pattern, options);
+            return Regex.IsMatch(input, pattern, options, RegexTimeout);
         }
 
         /// <summary>
@@ -93,9 +96,9 @@ namespace Azrng.Core.Extension
             if (!ifValidateWhiteSpace && string.IsNullOrWhiteSpace(inputStr))
                 return false; //如果不要求验证空白字符串而此时传入的待验证字符串为空白字符串，则不匹配
             var regex = ifIgnoreCase
-                ? new Regex(patternStr, RegexOptions.IgnoreCase)
+                ? new Regex(patternStr, RegexOptions.IgnoreCase, RegexTimeout)
                 : //指定不区分大小写的匹配
-                new Regex(patternStr);
+                new Regex(patternStr, RegexOptions.None, RegexTimeout);
             return regex.IsMatch(inputStr);
         }
 

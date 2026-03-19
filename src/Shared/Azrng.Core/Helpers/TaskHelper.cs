@@ -68,31 +68,33 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static async Task<T?> ExecuteFuncWithRetryAsync<T>(Func<Task<T>> func, int maxAttempts, int delayInMilliseconds = 1000)
         {
-            var attempts = 0;
-            T? result = default;
-            while (attempts < maxAttempts)
+            if (maxAttempts < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts));
+            if (delayInMilliseconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(delayInMilliseconds));
+
+            for (var attempts = 1; attempts <= maxAttempts; attempts++)
             {
                 try
                 {
-                    result = await func.Invoke();
+                    var result = await func.Invoke();
                     Console.WriteLine("方法执行成功。");
-                    return result; // 成功则返回结果并退出循环
+                    return result;
+                }
+                catch (Exception ex) when (attempts < maxAttempts)
+                {
+                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
+                    await Task.Delay(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    attempts++;
                     Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    if (attempts == maxAttempts)
-                    {
-                        Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return default(T); // 达到最大尝试次数，返回默认值
-                    }
-
-                    await Task.Delay(delayInMilliseconds);
+                    Console.WriteLine("达到最大尝试次数，执行失败。");
+                    throw;
                 }
             }
 
-            return default(T);
+            throw new InvalidOperationException("重试执行流程异常结束。");
         }
 
         /// <summary>
@@ -105,31 +107,33 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static T? ExecuteFuncWithRetry<T>(Func<T> func, int maxAttempts, int delayInMilliseconds = 1000)
         {
-            var attempts = 0;
-            T? result = default;
-            while (attempts < maxAttempts)
+            if (maxAttempts < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts));
+            if (delayInMilliseconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(delayInMilliseconds));
+
+            for (var attempts = 1; attempts <= maxAttempts; attempts++)
             {
                 try
                 {
-                    result = func.Invoke();
+                    var result = func.Invoke();
                     Console.WriteLine("方法执行成功。");
-                    return result; // 成功则返回结果并退出循环
+                    return result;
+                }
+                catch (Exception ex) when (attempts < maxAttempts)
+                {
+                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
+                    Thread.Sleep(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    attempts++;
                     Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    if (attempts == maxAttempts)
-                    {
-                        Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return default(T); // 达到最大尝试次数，返回默认值
-                    }
-
-                    Thread.Sleep(delayInMilliseconds);
+                    Console.WriteLine("达到最大尝试次数，执行失败。");
+                    throw;
                 }
             }
 
-            return default(T);
+            throw new InvalidOperationException("重试执行流程异常结束。");
         }
 
         /// <summary>
@@ -140,26 +144,29 @@ namespace Azrng.Core.Helpers
         /// <param name="delayInMilliseconds">等待的时间</param>
         public static void ExecuteActionWithRetry(Action action, int maxAttempts, int delayInMilliseconds = 1000)
         {
-            var attempts = 0;
-            while (attempts < maxAttempts)
+            if (maxAttempts < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxAttempts));
+            if (delayInMilliseconds < 0)
+                throw new ArgumentOutOfRangeException(nameof(delayInMilliseconds));
+
+            for (var attempts = 1; attempts <= maxAttempts; attempts++)
             {
                 try
                 {
                     action.Invoke();
                     Console.WriteLine("方法执行成功。");
-                    break; // 成功则退出循环
+                    return;
+                }
+                catch (Exception ex) when (attempts < maxAttempts)
+                {
+                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
+                    Thread.Sleep(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    attempts++;
                     Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    if (attempts == maxAttempts)
-                    {
-                        Console.WriteLine("达到最大尝试次数，执行失败。");
-                        break; // 达到最大尝试次数
-                    }
-
-                    Thread.Sleep(delayInMilliseconds);
+                    Console.WriteLine("达到最大尝试次数，执行失败。");
+                    throw;
                 }
             }
         }

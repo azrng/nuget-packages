@@ -6,55 +6,57 @@ namespace Azrng.Core.Helpers
 {
     public class SqlHelper
     {
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
         // 编译好的正则表达式，提高性能
         private static readonly Regex[] _sqlInjectionPatterns =
         [
             // 1. 注释符检测 (--, /* */)
             // 修改：# 必须在行首（可选空白后）才算SQL注释，避免误判 "C#"
             new Regex(@"--.*?$|^\s*#.*?$|/\*.*?\*/",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline, RegexTimeout),
 
             // 2. SQL关键词检测 (SELECT, INSERT, DROP 等)
             // 注意：UNION 单独出现可能是正常词汇(如"European Union")，所以移到后面与 SELECT/ALL 组合检测
             new Regex(
                 @"\b(ALTER|BEGIN|CAST|CREATE|DELETE|DROP|EXEC(UTE)?|FETCH|GRANT|INSERT|KILL|OPEN|RENAME|SELECT|SHUTDOWN|TRUNCATE|UPDATE)\b",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 3. 表达式检测 (OR 1=1, OR 'a'='a')
             new Regex(@"\bOR\s+[\w'""]+\s*=\s*[\w'""]+",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 4. 语句分隔符检测 (;)
             new Regex(@";\s*[^\s]",
-                RegexOptions.Compiled),
+                RegexOptions.Compiled, RegexTimeout),
 
             // 5. 等待/延迟函数检测
             new Regex(@"\b(WAITFOR|SLEEP)\b\s*?\(?[0-9]+\)?",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 6. 系统函数和存储过程检测
             // 修改：移除单独的 VERSION，改为在特殊字符组合中检测 @@VERSION
             // XP_ 和 SP_ 是前缀，不需要后面的词边界
             new Regex(@"\b(CAST|CONVERT|DBCC)\b|XP_|SP_",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 7. 特殊字符组合检测
             new Regex(@"0x[0-9A-Fa-f]{8,}|NULL,NULL|IF\(1=1|@@VERSION",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 8. 字符串拼接和SQL片段检测
             new Regex(@"'\s*?\+\s*?|%27\s*?\+\s*?|\|\|",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase),
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout),
 
             // 9. UNION注入检测 (UNION必须跟SELECT或ALL才算SQL注入)
             new Regex(@"\bUNION\s+(ALL\s+)?SELECT",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase)
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout)
         ];
 
         // 更复杂的SQL注入模式检测 (更精确但性能较低)
         private static readonly Regex _complexPattern =
             new Regex(@"('|\s*?)(OR|AND)\s+?(\d{1,10}|'[^']{1,50}')\s*?(=|LIKE)\s*?\3",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
 
         /// <summary>
         /// 检测输入字符串是否包含潜在的SQL注入攻击
@@ -122,7 +124,7 @@ namespace Azrng.Core.Helpers
             foreach (var keyword in dangerousKeywords)
             {
                 // 使用正则表达式检查词边界，避免 "android" 包含 "and" 的误报
-                if (Regex.IsMatch(lowerInput, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(lowerInput, $@"\b{Regex.Escape(keyword)}\b", RegexOptions.IgnoreCase, RegexTimeout))
                 {
                     return false;
                 }
@@ -218,7 +220,7 @@ namespace Azrng.Core.Helpers
 
                 // 检查单引号与其他SQL操作符的组合
                 if (Regex.IsMatch(input, @"'\s*(OR|AND|UNION|SELECT|INSERT|DELETE|UPDATE|DROP)\s",
-                    RegexOptions.IgnoreCase))
+                    RegexOptions.IgnoreCase, RegexTimeout))
                 {
                     return true;
                 }
@@ -316,7 +318,7 @@ namespace Azrng.Core.Helpers
 
             // 文件系统访问检测
             if (Regex.IsMatch(input, @"\b(BULK INSERT|OPENROWSET|OPENQUERY)\b.*?FROM\s+['""]",
-                    RegexOptions.IgnoreCase))
+                    RegexOptions.IgnoreCase, RegexTimeout))
             {
                 return true;
             }
