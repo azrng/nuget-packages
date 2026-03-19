@@ -121,9 +121,9 @@ namespace Azrng.Core.Helpers
         /// <param name="startDateTime"></param>
         /// <param name="endDataTime"></param>
         /// <returns></returns>
-        public static string GetDateIntervalStr(DateTime startDateTime, DateTime endDataTime)
+        public static string? GetDateIntervalStr(DateTime startDateTime, DateTime endDataTime)
         {
-            string dateDiff = null;
+            string? dateDiff = null;
             try
             {
                 var ts = endDataTime - startDateTime;

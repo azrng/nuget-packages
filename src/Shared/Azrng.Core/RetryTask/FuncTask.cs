@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Azrng.Core.RetryTask
 {
     /// <summary>
-    /// 将 Func<Task<TResult>> 包装为 ITask<TResult>
+    /// 将 Func&lt;Task&lt;TResult&gt;&gt; 包装为 ITask&lt;TResult&gt;
     /// </summary>
     /// <typeparam name="TResult"></typeparam>
     internal class FuncTask<TResult> : ITask<TResult>

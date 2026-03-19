@@ -59,7 +59,7 @@ namespace Azrng.Core.Helpers
 #endif
 
         /// <summary>
-        /// 执行Func<T>委托，直到成功或达到最大尝试次数，并返回结果
+        /// 执行Func&lt;T&gt;委托，直到成功或达到最大尝试次数，并返回结果
         /// </summary>
         /// <param name="func"></param>
         /// <param name="maxAttempts"></param>
@@ -85,7 +85,7 @@ namespace Azrng.Core.Helpers
                     if (attempts == maxAttempts)
                     {
                         Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return result; // 达到最大尝试次数，返回结果（可能是默认值）
+                        return result!; // 达到最大尝试次数，返回结果（可能是默认值）
                     }
 
                     await Task.Delay(delayInMilliseconds);
@@ -96,7 +96,7 @@ namespace Azrng.Core.Helpers
         }
 
         /// <summary>
-        /// 执行Func<T>委托，直到成功或达到最大尝试次数，并返回结果
+        /// 执行Func&lt;T&gt;委托，直到成功或达到最大尝试次数，并返回结果
         /// </summary>
         /// <param name="func"></param>
         /// <param name="maxAttempts"></param>
@@ -122,7 +122,7 @@ namespace Azrng.Core.Helpers
                     if (attempts == maxAttempts)
                     {
                         Console.WriteLine("达到最大尝试次数，执行失败。");
-                        return result; // 达到最大尝试次数，返回结果（可能是默认值）
+                        return result!; // 达到最大尝试次数，返回结果（可能是默认值）
                     }
 
                     Thread.Sleep(delayInMilliseconds);

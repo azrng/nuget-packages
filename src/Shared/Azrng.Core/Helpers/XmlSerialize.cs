@@ -16,9 +16,9 @@ namespace Azrng.Core.Helpers
         /// <param name="obj">待序列化对象</param>
         /// <param name="encoding">编码方式（默认UTF8）</param>
         /// <returns></returns>
-        public static string ToXml<T>(T obj, Encoding encoding = null)
+        public static string ToXml<T>(T obj, Encoding? encoding = null)
         {
-            _ = encoding ?? Encoding.UTF8;
+            encoding ??= Encoding.UTF8;
 
             var serializer = new XmlSerializer(typeof(T));
             using var ms = new MemoryStream();
@@ -65,7 +65,7 @@ namespace Azrng.Core.Helpers
         /// <param name="isPath">是否从指定路径加载文件</param>
         /// <param name="encoding">编码方式（默认UTF8）</param>
         /// <returns></returns>
-        public static T XmlTo<T>(string xmlOrPath, bool isPath = false, Encoding encoding = null)
+        public static T? XmlTo<T>(string xmlOrPath, bool isPath = false, Encoding? encoding = null)
         {
             encoding ??= Encoding.UTF8;
 
@@ -75,7 +75,7 @@ namespace Azrng.Core.Helpers
             var serializer = new XmlSerializer(typeof(T));
             using var ms = new MemoryStream(encoding.GetBytes(xml));
             using var sw = new StreamReader(ms, encoding);
-            return (T)serializer.Deserialize(sw);
+            return (T?)serializer.Deserialize(sw);
         }
     }
 }

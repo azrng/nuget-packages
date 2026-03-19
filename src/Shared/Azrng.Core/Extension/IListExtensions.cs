@@ -82,7 +82,7 @@ namespace Azrng.Core.Extension
 
                 for (var i = 0; i < properties.Length; i++)
                 {
-                    values[i] = properties[i].GetValue(item, null);
+                    values[i] = properties[i].GetValue(item, null)!;
                 }
 
                 dataTable.Rows.Add(values);

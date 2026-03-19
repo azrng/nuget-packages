@@ -26,12 +26,12 @@ namespace Azrng.Core.Helpers
                 if (curDesc?.Length > 0)
                 {
                     if (curDesc[0].Description == description)
-                        return (T)field.GetValue(null);
+                        return (T)field.GetValue(null)!;
                 }
                 else
                 {
                     if (field.Name == description)
-                        return (T)field.GetValue(null);
+                        return (T)field.GetValue(null)!;
                 }
             }
 
@@ -101,7 +101,7 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="fieldInfo">FieldInfo</param>
         /// <returns>DescriptionAttribute[] </returns>
-        private static DescriptionAttribute[] GetDescriptionAttr(FieldInfo fieldInfo)
+        private static DescriptionAttribute[]? GetDescriptionAttr(FieldInfo? fieldInfo)
         {
             if (fieldInfo != null)
             {

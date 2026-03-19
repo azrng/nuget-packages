@@ -195,7 +195,7 @@ namespace Azrng.Core.Extension
             var appliedCount = 0; // 跟踪实际应用的排序操作数量
             for (var i = 0; i < orderParams.Length; i++)
             {
-                var property = typeof(T).GetProperty(orderParams[i].PropertyName);
+                var property = typeof(T).GetProperty(orderParams[i].PropertyName!);
                 if (property == null)
                 {
                     continue;

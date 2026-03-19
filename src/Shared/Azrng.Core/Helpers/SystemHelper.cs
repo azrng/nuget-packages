@@ -35,7 +35,7 @@ public class SystemHelper
     /// 获取本机 IPV4 地址
     /// </summary>
     /// <returns></returns>
-    public static string GetIpv4Address()
+    public static string? GetIpv4Address()
     {
         var ipv4 = Dns.GetHostEntry(Dns.GetHostName())
                       .AddressList
@@ -49,7 +49,7 @@ public class SystemHelper
     /// 获取本机 IPV6 地址
     /// </summary>
     /// <returns></returns>
-    public static string GetIpv6Address()
+    public static string? GetIpv6Address()
     {
         var ipv6 = Dns.GetHostEntry(Dns.GetHostName())
                       .AddressList.FirstOrDefault(address =>

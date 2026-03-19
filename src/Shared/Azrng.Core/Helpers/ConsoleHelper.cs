@@ -47,17 +47,17 @@ namespace Azrng.Core.Helpers
             WriteColorLine(str, color);
         }
 
-        public static string ReadLineWithPrompt(string prompt = "Press Enter to continue")
+        public static string ReadLineWithPrompt(string? prompt = "Press Enter to continue")
         {
             if (prompt != null)
             {
                 WriteInfoLine(prompt);
             }
 
-            return Console.ReadLine();
+            return Console.ReadLine()!;
         }
 
-        public static ConsoleKeyInfo ReadKeyWithPrompt(string prompt = "Press any key to continue")
+        public static ConsoleKeyInfo ReadKeyWithPrompt(string? prompt = "Press any key to continue")
         {
             if (prompt != null)
             {

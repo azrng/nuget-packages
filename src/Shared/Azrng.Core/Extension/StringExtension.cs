@@ -227,7 +227,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static bool HasChinese(this string? str)
         {
-            return !str.IsNullOrWhiteSpace() && Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+            return !str.IsNullOrWhiteSpace() && Regex.IsMatch(str!, @"[\u4e00-\u9fa5]");
         }
 
         #region 值判断
@@ -344,7 +344,7 @@ namespace Azrng.Core.Extension
         public static unsafe string? ToUpperFirst(this string? str)
         {
             if (str == null) return null;
-            var ret = string.Copy(str);
+            var ret = string.Copy(str); // 此处使用 string.Copy 是有意为之，需要创建可变字符串
             fixed (char* ptr = ret)
                 *ptr = char.ToUpper(*ptr);
             return ret;

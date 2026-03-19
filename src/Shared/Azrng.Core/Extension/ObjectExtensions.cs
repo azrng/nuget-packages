@@ -78,7 +78,7 @@ namespace Azrng.Core.Extension
 
                 if (property.PropertyType.IsValueType || property.PropertyType == typeof(string))
                 {
-                    var value = propertyValue.ToString();
+                    var value = propertyValue.ToString()!;
                     var key = paramLower ? property.Name.ToLowerInvariant() : property.Name;
                     ret.Add(key, value);
                 }
@@ -113,7 +113,7 @@ namespace Azrng.Core.Extension
 
                 //如果目标类型为枚举，则使用枚举格式化方法
                 if (type!.IsEnum)
-                    return (TTo)Enum.Parse(type, from.ToString());
+                    return (TTo)Enum.Parse(type, from.ToString()!);
                 return (TTo)Convert.ChangeType(from, type);
             }
             catch
@@ -225,7 +225,7 @@ namespace Azrng.Core.Extension
         /// </remarks>
         public static ExpandoObject ToExpandoObject<T>(this T obj) where T : class, new()
         {
-            IDictionary<string, object> expando = new ExpandoObject();
+            IDictionary<string, object?> expando = new ExpandoObject();
 
             foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(obj.GetType()))
             {

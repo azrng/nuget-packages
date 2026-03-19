@@ -56,7 +56,7 @@ namespace Azrng.Core.Helpers
         /// 获取入口程序集
         /// </summary>
         /// <returns></returns>
-        public static Assembly GetEntryAssembly()
+        public static Assembly? GetEntryAssembly()
         {
             return Assembly.GetEntryAssembly();
         }
@@ -179,7 +179,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static Type GetType(string assemblyName, string typeFullName)
         {
-            return GetAssembly(assemblyName).GetType(typeFullName);
+            return GetAssembly(assemblyName).GetType(typeFullName)!;
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static Assembly LoadAssembly(string path)
+        public static Assembly? LoadAssembly(string path)
         {
             return !File.Exists(path) ? default : Assembly.LoadFrom(path);
         }
@@ -222,7 +222,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static Type GetType(MemoryStream assembly, string typeFullName)
         {
-            return LoadAssembly(assembly).GetType(typeFullName);
+            return LoadAssembly(assembly).GetType(typeFullName)!;
         }
 
         /// <summary>
@@ -230,10 +230,10 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="asmPath"></param>
         /// <returns></returns>
-        public static Assembly TryLoadAssembly(string asmPath)
+        public static Assembly? TryLoadAssembly(string asmPath)
         {
             var asmName = AssemblyName.GetAssemblyName(asmPath);
-            Assembly asm = null;
+            Assembly? asm = null;
             try
             {
                 asm = Assembly.Load(asmName);

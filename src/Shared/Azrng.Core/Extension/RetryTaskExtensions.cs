@@ -67,9 +67,9 @@ namespace Azrng.Core.Extension
         /// <param name="task"></param>
         /// <exception cref="T:System.ArgumentNullException"></exception>
         /// <returns></returns>
-        public static ITask<TResult> HandleAsDefaultWhenException<TResult>(this Task<TResult> task)
+        public static ITask<TResult?> HandleAsDefaultWhenException<TResult>(this Task<TResult> task)
         {
-            return task.Handle().WhenCatch((Func<Exception, TResult>)(ex => default));
+            return task.Handle().WhenCatch((Func<Exception, TResult?>)(ex => default));
         }
 
         /// <summary>返回提供异常处理请求任务对象</summary>

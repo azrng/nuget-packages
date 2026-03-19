@@ -53,7 +53,7 @@ namespace Azrng.Core.Helpers
         /// <summary>
         /// 将对象转换为目标类型的值
         /// </summary>
-        public static object ConvertToTargetType(object value, Type targetType)
+        public static object? ConvertToTargetType(object value, Type targetType)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));
@@ -64,7 +64,7 @@ namespace Azrng.Core.Helpers
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 // 获取可空类型的实际类型
-                targetType = Nullable.GetUnderlyingType(targetType);
+                targetType = Nullable.GetUnderlyingType(targetType)!;
 
                 // 如果值为null，则对于可空类型来说是有效的
                 if (value is string str && string.IsNullOrEmpty(str))
@@ -77,8 +77,8 @@ namespace Azrng.Core.Helpers
             if (valueType == targetType || (Nullable.GetUnderlyingType(targetType!) ?? targetType) == valueType)
                 return value;
 
-            var typeCode = Type.GetTypeCode(targetType);
-            var isEnum = targetType.BaseType == typeof(Enum);
+            var typeCode = Type.GetTypeCode(targetType!);
+            var isEnum = targetType!.BaseType == typeof(Enum);
             return typeCode switch
             {
                 TypeCode.Int32 => isEnum ? HandleSpecialTypes(value, targetType) : Convert.ToInt32(value),

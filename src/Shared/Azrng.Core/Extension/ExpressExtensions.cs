@@ -66,11 +66,11 @@ namespace Azrng.Core.Extension
                 _newValue = newValue;
             }
 
-            public override Expression Visit(Expression node)
+            public override Expression Visit(Expression? node)
             {
                 if (node == _oldValue)
                     return _newValue;
-                return base.Visit(node);
+                return base.Visit(node!);
             }
         }
 
@@ -119,7 +119,7 @@ namespace Azrng.Core.Extension
                 conditionalExpr = conditionalExpr is null ? equalExpr : Expression.AndAlso(conditionalExpr, equalExpr);
             }
 
-            return Expression.Lambda<Func<TItem, bool>>(conditionalExpr, e1);
+            return Expression.Lambda<Func<TItem, bool>>(conditionalExpr!, e1);
         }
 
         #endregion
@@ -168,7 +168,7 @@ namespace Azrng.Core.Extension
             {
                 //表达式树内容
                 var left = result != null ? visitor.Visit(result.Body) : null;
-                var right = visitor.Visit(curExpression.Body);
+                var right = visitor.Visit(curExpression.Body)!;
                 result = Expression.Lambda<Func<T, bool>>(
                     left != null ? Expression.AndAlso(left, right) : right,
                     parameter);
@@ -219,7 +219,7 @@ namespace Azrng.Core.Extension
             {
                 //表达式树内容
                 var left = result != null ? visitor.Visit(result.Body) : null;
-                var right = visitor.Visit(curExpression.Body);
+                var right = visitor.Visit(curExpression.Body)!;
                 result = Expression.Lambda<Func<T, bool>>(
                     left != null ? Expression.OrElse(left, right) : right,
                     parameter);

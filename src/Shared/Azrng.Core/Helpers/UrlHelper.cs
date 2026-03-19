@@ -98,7 +98,7 @@ namespace Azrng.Core.Helpers
                 if (currKey.IsNullOrEmpty())
                     continue;
 
-                dict.Add(item?.ToString() ?? string.Empty, query[currKey]);
+                dict.Add(item?.ToString() ?? string.Empty, query[currKey]!);
             }
 
             return dict;

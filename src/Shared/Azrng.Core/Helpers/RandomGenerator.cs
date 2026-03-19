@@ -17,7 +17,7 @@ namespace Azrng.Core.Helpers
         /// 优点：线程安全、避免种子重复、性能优化(避免重复创建新的Random实例)
         /// </summary>
         public static readonly ThreadLocal<Random> Random = new(() =>
-            new Random(Interlocked.Increment(ref _seed)));
+            new Random(Interlocked.Increment(ref _seed)))!;
 
         /// <summary>
         /// 随机字符
@@ -35,7 +35,7 @@ namespace Azrng.Core.Helpers
         /// <remarks>201008251145409865</remarks>
         public static string GenerateNumber()
         {
-            var strRandom = Random.Value.Next(1000, 10000).ToString(); //生成编号
+            var strRandom = Random.Value!.Next(1000, 10000).ToString(); //生成编号
             return DateTime.Now.ToString("yyyyMMddHHmmss") + strRandom; //形如
         }
 
@@ -49,7 +49,7 @@ namespace Azrng.Core.Helpers
             var sb = new StringBuilder(codeNum);
             for (var i = 1; i < codeNum + 1; i++)
             {
-                var t = Random.Value.Next(9);
+                var t = Random.Value!.Next(9);
                 sb.Append(t);
             }
 
@@ -61,7 +61,7 @@ namespace Azrng.Core.Helpers
         /// </summary>
         public static double GenerateDoubleNumber()
         {
-            return Random.Value.NextDouble();
+            return Random.Value!.NextDouble();
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static double GenerateNumber(double start, double end)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             return random.NextDouble(start, end);
         }
@@ -85,7 +85,7 @@ namespace Azrng.Core.Helpers
             var returnValue = new StringBuilder();
             for (var i = 0; i < stringLength; i++)
             {
-                var r = Random.Value.Next(0, RandomString.Length - 1);
+                var r = Random.Value!.Next(0, RandomString.Length - 1);
                 returnValue.Append(RandomString[r]);
             }
 
@@ -98,7 +98,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static int GenerateNumber(int start, int end)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
             return random.Next(start, end);
         }
 
@@ -140,7 +140,7 @@ namespace Azrng.Core.Helpers
             if (totalSeconds <= int.MinValue)
                 maxValue = int.MinValue + 1;
 
-            var i = Random.Value.Next(Math.Abs(maxValue));
+            var i = Random.Value!.Next(Math.Abs(maxValue));
             return minTime.AddSeconds(i);
         }
 
@@ -154,7 +154,7 @@ namespace Azrng.Core.Helpers
         /// <param name="gender">0-中性名 1-男性名 2-女性名</param>
         public static string GenerateName(int gender = 0)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
             var firstName = RandomConfigDto.FirstNames[random.Next(RandomConfigDto.FirstNames.Length)];
 
             int startIdx = 0, endIdx = RandomConfigDto.LastNames.Length;
@@ -178,7 +178,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static IEnumerable<string> GenerateNameBatch(int count, int gender = 0)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
             var startIdx = gender switch { 1 => 220, 2 => 120, _ => 0 };
             var endIdx = gender switch { 2 => 220, _ => RandomConfigDto.LastNames.Length };
 
@@ -202,7 +202,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string GenerateIdCard(int gender = 0, int minAge = 18, int maxAge = 65)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             var areaCode = RandomConfigDto.AreaCodes[random.Next(RandomConfigDto.AreaCodes.Length)];
 
@@ -243,7 +243,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string GeneratePhoneNumber()
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             var prefix = RandomConfigDto._phonePrefixes[random.Next(RandomConfigDto._phonePrefixes.Length)];
             var suffix = random.Next(10000000, 99999999).ToString();
@@ -261,7 +261,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string GenerateAddress()
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             var province = RandomConfigDto._phonePrefixes[random.Next(RandomConfigDto._provinces.Length)];
             var city = RandomConfigDto._cities[random.Next(RandomConfigDto._cities.Length)];
@@ -284,7 +284,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string GenerateBankCardNumber()
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             var binCode = RandomConfigDto._binCodes[random.Next(RandomConfigDto._binCodes.Length)];
 
@@ -306,9 +306,9 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="name">指定用户名，为空则随机生成</param>
         /// <returns></returns>
-        public static string GenerateEmail(string name = null)
+        public static string GenerateEmail(string? name = null)
         {
-            var random = Random.Value;
+            var random = Random.Value!;
 
             string username;
             if (string.IsNullOrEmpty(name))
@@ -353,8 +353,8 @@ namespace Azrng.Core.Helpers
             for (var i = 0; i < count; i++)
             {
                 //生成两个随机数位置
-                var targetIndex1 = Random.Value.Next(0, arr.Length);
-                var targetIndex2 = Random.Value.Next(0, arr.Length);
+                var targetIndex1 = Random.Value!.Next(0, arr.Length);
+                var targetIndex2 = Random.Value!.Next(0, arr.Length);
 
                 //交换两个随机数位置的值
                 (arr[targetIndex1], arr[targetIndex2]) = (arr[targetIndex2], arr[targetIndex1]);
@@ -387,25 +387,25 @@ namespace Azrng.Core.Helpers
             if (hasNumber)
             {
                 generateTypeRange.Add(0);
-                sb.Append(numStr.AsSpan(Random.Value.Next(0, numStr.Length - 1), 1));
+                sb.Append(numStr.AsSpan(Random.Value!.Next(0, numStr.Length - 1), 1));
             }
 
             if (hasUpper)
             {
                 generateTypeRange.Add(1);
-                sb.Append(upperStr.AsSpan(Random.Value.Next(0, upperStr.Length - 1), 1));
+                sb.Append(upperStr.AsSpan(Random.Value!.Next(0, upperStr.Length - 1), 1));
             }
 
             if (hasLowercase)
             {
                 generateTypeRange.Add(2);
-                sb.Append(lowerStr.AsSpan(Random.Value.Next(0, lowerStr.Length - 1), 1));
+                sb.Append(lowerStr.AsSpan(Random.Value!.Next(0, lowerStr.Length - 1), 1));
             }
 
             if (hasNonAlphanumeric)
             {
                 generateTypeRange.Add(3);
-                sb.Append(nonAlphaStr.AsSpan(Random.Value.Next(0, nonAlphaStr.Length - 1), 1));
+                sb.Append(nonAlphaStr.AsSpan(Random.Value!.Next(0, nonAlphaStr.Length - 1), 1));
             }
 
             //如果一个类别都没有，那么就只是生成数字
@@ -418,21 +418,21 @@ namespace Azrng.Core.Helpers
                 switch (generateTypeRange.OrderBy(_ => Guid.NewGuid()).First())
                 {
                     case 0:
-                        sb.Append(numStr.AsSpan(Random.Value.Next(0, numStr.Length - 1), 1));
+                        sb.Append(numStr.AsSpan(Random.Value!.Next(0, numStr.Length - 1), 1));
                         break;
 
                     case 1:
 
-                        sb.Append(upperStr.AsSpan(Random.Value.Next(0, upperStr.Length - 1), 1));
+                        sb.Append(upperStr.AsSpan(Random.Value!.Next(0, upperStr.Length - 1), 1));
                         break;
 
                     case 2:
-                        sb.Append(lowerStr.AsSpan(Random.Value.Next(0, lowerStr.Length - 1), 1));
+                        sb.Append(lowerStr.AsSpan(Random.Value!.Next(0, lowerStr.Length - 1), 1));
                         break;
 
                     case 3:
 
-                        sb.Append(nonAlphaStr.AsSpan(Random.Value.Next(0, nonAlphaStr.Length - 1), 1));
+                        sb.Append(nonAlphaStr.AsSpan(Random.Value!.Next(0, nonAlphaStr.Length - 1), 1));
                         break;
                 }
             }
