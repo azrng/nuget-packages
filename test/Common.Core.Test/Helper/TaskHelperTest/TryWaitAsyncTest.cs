@@ -29,48 +29,38 @@ namespace Common.Core.Test.Helper.TaskHelperTest
         [Fact]
         public void ExecuteActionWithRetry_Test()
         {
-            TaskHelper.ExecuteActionWithRetry(() =>
+            var exception = Assert.Throws<Exception>(() => TaskHelper.ExecuteActionWithRetry(() =>
             {
-                // 这里是你想要执行的代码
                 _testOutputHelper.WriteLine("Executing action...");
-
-                // 模拟失败情况
                 throw new Exception("Something went wrong.");
-            }, 3);
+            }, 3));
+
+            Assert.Equal("Something went wrong.", exception.Message);
         }
 
         [Fact]
         public void ExecuteFuncWithRetry_Test()
         {
-            // 使用Func<T>示例
-            var result = TaskHelper.ExecuteFuncWithRetry(() =>
+            var exception = Assert.Throws<Exception>(() => TaskHelper.ExecuteFuncWithRetry<string>(() =>
             {
-                // 这里是你想要执行的代码
                 _testOutputHelper.WriteLine("Executing func...");
-
-                // 模拟失败情况
                 throw new Exception("Something went wrong.");
-                return "Success"; // 正常情况下返回结果
-            }, 3);
-            _testOutputHelper.WriteLine(result ?? "null"); // 输出结果，可能是默认值
+            }, 3));
+
+            Assert.Equal("Something went wrong.", exception.Message);
         }
 
         [Fact]
         public async Task ExecuteFuncWithRetryAsync_Test()
         {
-            // 使用Func<Task<T>>示例
-            var result = await TaskHelper.ExecuteFuncWithRetryAsync(async () =>
+            var exception = await Assert.ThrowsAsync<Exception>(() => TaskHelper.ExecuteFuncWithRetryAsync<string>(async () =>
             {
                 await Task.Delay(1000);
-
-                // 这里是你想要执行的代码
                 _testOutputHelper.WriteLine("Executing func...");
-
-                // 模拟失败情况
                 throw new Exception("Something went wrong.");
-                return "Success"; // 正常情况下返回结果
-            }, 3);
-            _testOutputHelper.WriteLine(result ?? "null"); // 输出结果，可能是默认值
+            }, 3));
+
+            Assert.Equal("Something went wrong.", exception.Message);
         }
 
         /// <summary>
