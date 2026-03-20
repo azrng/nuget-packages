@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSQL.csproj" />
+      <ProjectReference Include="..\..\src\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSql.csproj" />
     </ItemGroup>
 
 </Project>

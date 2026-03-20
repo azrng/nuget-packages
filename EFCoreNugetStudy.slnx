@@ -9,7 +9,7 @@
     <Project Path="src/Shared/Common.Db.Core/Common.Db.Core.csproj" />
     <Project Path="src/Shared/Common.EFCore.InMemory/Common.EFCore.InMemory.csproj" />
     <Project Path="src/Shared/Common.EFCore.MySQL/Common.EFCore.MySQL.csproj" />
-    <Project Path="src/Shared/Common.EFCore.PostgresSql/Common.EFCore.PostgresSQL.csproj" />
+    <Project Path="src/Shared/Common.EFCore.PostgresSql/Common.EFCore.PostgresSql.csproj" />
     <Project Path="src/Shared/Common.EFCore.SQLite/Common.EFCore.SQLite.csproj" />
     <Project Path="src/Shared/Common.EFCore.SQLServer/Common.EFCore.SQLServer.csproj" />
     <Project Path="src/Shared/Common.EFCore/Common.EFCore.csproj" />

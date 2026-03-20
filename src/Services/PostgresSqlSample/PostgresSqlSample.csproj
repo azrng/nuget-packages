@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Azrng.EFCore.AutoAudit\Azrng.EFCore.AutoAudit.csproj" />
-    <ProjectReference Include="..\..\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSQL.csproj" />
+    <ProjectReference Include="..\..\Shared\Common.EFCore.PostgresSql\Common.EFCore.PostgresSql.csproj" />
   </ItemGroup>
 
 </Project>
