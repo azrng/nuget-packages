@@ -1,0 +1,25 @@
+{
+  "name": "api-docs-generator",
+  "version": "2.0.0",
+  "description": "High-performance API documentation generator from XML files",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node dist/index.js",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": ["api", "documentation", "xml", "html", "typescript"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fast-xml-parser": "^4.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5"
+  }
+}
