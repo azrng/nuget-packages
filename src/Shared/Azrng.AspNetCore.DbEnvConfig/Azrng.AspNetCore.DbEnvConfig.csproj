@@ -11,7 +11,7 @@
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.DbEnvConfig.xml</DocumentationFile>
+        <DocumentationFile>Azrng.AspNetCore.DbEnvConfig.xml</DocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>

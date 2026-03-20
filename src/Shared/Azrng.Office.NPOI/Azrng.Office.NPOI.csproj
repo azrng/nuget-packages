@@ -10,7 +10,7 @@
         <Version>0.1.0</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.Core.xml</DocumentationFile>
+        <DocumentationFile>Azrng.Office.NPOI.xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
