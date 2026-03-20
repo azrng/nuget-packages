@@ -144,9 +144,16 @@ function main(): void {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    // 创建 .nojekyll 文件以告诉 GitHub Pages 跳过 Jekyll 处理
+    const nojekyllPath = path.join(outputDir, '.nojekyll');
+    if (!fs.existsSync(nojekyllPath)) {
+      fs.writeFileSync(nojekyllPath, '', 'utf-8');
+    }
+
     fs.writeFileSync(CONFIG.outputFile, html, 'utf-8');
     console.log(`📄 输出文件: ${CONFIG.outputFile}`);
     console.log(`📊 文件大小: ${formatSize(html.length)}`);
+    console.log(`✨ 已创建 .nojekyll 文件（跳过 Jekyll 处理）`);
   }
 
   console.log(`\n⏱️  总耗时: ${totalTimer.elapsed().toFixed(0)}ms`);
