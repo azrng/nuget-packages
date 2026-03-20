@@ -342,6 +342,10 @@ healthchecksdb
 
 # 忽略xml文件
 *.xml
+
+# 忽略生成的文档
+docs/
+
 .claude
 NUL
 .dotnet-cli
