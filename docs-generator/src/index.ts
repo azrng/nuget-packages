@@ -10,10 +10,15 @@ import { generateHTML } from './generator.js';
 
 // ==================== 配置 ====================
 
+// 获取项目根目录（支持从 docs-generator 子目录运行）
+const projectRoot = process.cwd().endsWith('docs-generator')
+  ? path.dirname(process.cwd())
+  : process.cwd();
+
 const CONFIG = {
   // XML 文档源目录 - 从 src 目录递归查找所有 bin/**/*.xml 文件
-  sourceDir: path.join(process.cwd(), 'src'),
-  outputFile: path.join(process.cwd(), 'docs', 'index.html'),
+  sourceDir: path.join(projectRoot, 'src'),
+  outputFile: path.join(projectRoot, 'docs', 'index.html'),
   stdoutMode: process.argv.includes('--stdout')
 };
 
@@ -38,8 +43,8 @@ function getXmlFiles(dir: string): string[] {
 
     if (stat.isDirectory()) {
       files.push(...getXmlFiles(fullPath));
-    } else if (item.endsWith('.xml') && fullPath.includes('/bin/')) {
-      // 只收集 bin 目录下的 XML 文件
+    } else if (item.endsWith('.xml') && fullPath.includes(`${path.sep}bin${path.sep}`)) {
+      // 只收集 bin 目录下的 XML 文件（使用 path.sep 兼容 Windows/Linux）
       files.push(fullPath);
     }
   }
