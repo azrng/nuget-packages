@@ -7,10 +7,9 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
     /// </summary>
     public class SqlEqualOperation : SqlOperation
     {
-        public override string GetSqlSentenceResult(string fieldName, object fieldValue, DynamicParameters parameters,Type valueType)
+        public override string GetSqlSentenceResult(string fieldName, object fieldValue, DynamicParameters parameters, Type valueType)
         {
-            var paramName = GetParameterName(fieldName);
-            parameters.Add(paramName, fieldValue);
+            var paramName = AddParameter(fieldName, fieldValue, parameters, valueType);
             return $"  {fieldName} = {paramName}   ";
         }
 

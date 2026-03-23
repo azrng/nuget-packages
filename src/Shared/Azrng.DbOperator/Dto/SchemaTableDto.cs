@@ -8,11 +8,11 @@ namespace Azrng.DbOperator.Dto
         /// <summary>
         /// schema
         /// </summary>
-        public string SchemaName { get; set; }
+        public string SchemaName { get; set; } = string.Empty;
 
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
     }
 }

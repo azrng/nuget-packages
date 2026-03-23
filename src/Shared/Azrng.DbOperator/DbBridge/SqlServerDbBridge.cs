@@ -1,11 +1,8 @@
-﻿using Azrng.Core.Model;
+using Azrng.Core.Model;
 using Azrng.DbOperator.Helper;
 
 namespace Azrng.DbOperator.DbBridge
 {
-    /// <summary>
-    /// sqlserver 系统操作
-    /// </summary>
     public class SqlServerBasicDbBridge : BasicDbBridge
     {
         public SqlServerBasicDbBridge(string connectionString) : base(connectionString) { }
@@ -13,62 +10,311 @@ namespace Azrng.DbOperator.DbBridge
         public SqlServerBasicDbBridge(DataSourceConfig dataSourceConfig) : base(dataSourceConfig) { }
 
         public override Dictionary<string, string> QuerySqlMap =>
-            new Dictionary<string, string>
+            new()
             {
                 {
-                    "Schema",
-                    "SELECT distinct b.name as Schema_name, ep.value AS Schema_comment from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id LEFT JOIN  sys.extended_properties ep ON ep.major_id = b.schema_id AND ep.class = 3 AND ep.name = 'MS_Description';"
+                    SystemOperatorConst.SchemaName,
+                    @"SELECT DISTINCT s.name AS Schema_name
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id;"
                 },
                 {
-                    "SchemaTable",
-                    "SELECT a.name as TableName,id,(select top 1 value from sys.extended_properties where id = major_id) as TableComment from sys.sysobjects a inner join sys.tables b on a.id = b.object_id inner join sys.schemas c on b.schema_id = c.schema_id where xtype = 'U' and c.name = @schema_name"
+                    SystemOperatorConst.SchemaInfo,
+                    @"SELECT DISTINCT s.name AS SchemaName,
+       CAST(ep.value AS nvarchar(4000)) AS SchemaComment
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = s.schema_id
+      AND ep.class = 3
+      AND ep.name = 'MS_Description';"
                 },
                 {
-                    "TableColumn",
-                    "SELECT [Is_IDENTITY] = case when COLUMNPROPERTY([Columns].object_id,[Columns].name,'IsIdentity')=1   then 1 else 0 end,[ColName] = [Columns].name , [ColType] = [Types].name , [ColLength] = [Columns].max_length , [Is_Null] = [Columns].is_nullable , [ColComment] = [Properties].value, [INFORMATION].COLUMN_DEFAULT as ColDefault FROM sys.tables AS [Tables] INNER JOIN sys.columns AS [Columns] ON [Tables].object_id = [Columns].object_id INNER JOIN sys.types AS [Types] ON [Columns].system_type_id = [Types].system_type_id AND is_user_defined = 0 AND [Types].name <> 'sysname' inner join INFORMATION_SCHEMA.COLUMNS [INFORMATION] on [INFORMATION].TABLE_NAME=[Tables].name and [INFORMATION].COLUMN_NAME=[Columns].name LEFT OUTER JOIN sys.extended_properties AS [Properties] ON [Properties].major_id = [Tables].object_id AND [Properties].minor_id = [Columns].column_id AND [Properties].name = 'MS_Description' WHERE [INFORMATION].TABLE_SCHEMA =@schema_name and [Tables].name =@table_name ORDER BY [Columns].column_id"
+                    SystemOperatorConst.SchemaTableName,
+                    @"SELECT s.name AS SchemaName,
+       t.name AS TableName
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id;"
                 },
                 {
-                    "SchemaColumn",
-                    "SELECT   obj.name AS [TableName],col.is_identity AS [Is_IDENTITY],col.name AS [ColName],typ.name AS [ColType],col.max_length AS [ColLength],col.is_nullable AS [Is_Null],  sep.value AS [ColComment], def.definition AS [ColDefault] FROM sys.columns col INNER JOIN sys.objects obj ON col.object_id = obj.object_id INNER JOIN sys.schemas sch ON obj.schema_id = sch.schema_id LEFT JOIN  sys.types typ ON col.user_type_id = typ.user_type_id LEFT JOIN  sys.extended_properties sep ON col.object_id = sep.major_id AND col.column_id = sep.minor_id  AND sep.class = 1  AND sep.name = 'MS_Description' LEFT JOIN sys.default_constraints def ON col.default_object_id = def.object_id WHERE sch.name = @schema_name ORDER BY col.column_id"
+                    SystemOperatorConst.SchemaTableInfoList,
+                    @"SELECT t.object_id AS TableId,
+       t.name AS TableName,
+       CAST(ep.value AS nvarchar(4000)) AS TableComment
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = t.object_id
+      AND ep.minor_id = 0
+      AND ep.name = 'MS_Description'
+WHERE s.name = @schema_name;"
                 },
                 {
-                    "TablePrimary",
-                    "SELECT COLUMN_NAME as ColName, kcu.CONSTRAINT_NAME as ColConstraintName from INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc  JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS kcu ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.TABLE_NAME = @table_name and kcu.CONSTRAINT_SCHEMA = @schema_name"
+                    SystemOperatorConst.SchemaTableInfo,
+                    @"SELECT t.object_id AS TableId,
+       t.name AS TableName,
+       CAST(ep.value AS nvarchar(4000)) AS TableComment
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = t.object_id
+      AND ep.minor_id = 0
+      AND ep.name = 'MS_Description'
+WHERE s.name = @schema_name
+  AND t.name = @table_name;"
                 },
                 {
-                    "SchemaPrimary",
-                    "SELECT kcu.TABLE_NAME as TableName,COLUMN_NAME as ColName, kcu.CONSTRAINT_NAME as ColConstraintName from INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc  JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS kcu ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and kcu.CONSTRAINT_SCHEMA = @schema_name"
+                    SystemOperatorConst.TableColumn,
+                    @"SELECT t.name AS TableName,
+       c.name AS ColumnName,
+       ty.name AS ColumnType,
+       CASE
+           WHEN c.max_length = -1 THEN 'MAX'
+           WHEN ty.name IN ('nchar', 'nvarchar') THEN CAST(c.max_length / 2 AS varchar(50))
+           ELSE CAST(c.max_length AS varchar(50))
+           END AS ColumnLength,
+       dc.definition AS ColumnDefault,
+       CAST(ep.value AS nvarchar(4000)) AS ColumnComment,
+       CONVERT(bit, COLUMNPROPERTY(c.object_id, c.name, 'IsIdentity')) AS IsIdentity,
+       CONVERT(bit, c.is_nullable) AS IsNull,
+       CONVERT(bit, CASE WHEN pk.column_id IS NULL THEN 0 ELSE 1 END) AS IsPrimaryKey,
+       CONVERT(bit, CASE WHEN fk.parent_column_id IS NULL THEN 0 ELSE 1 END) AS IsForeignKey,
+       c.column_id AS RowNumber
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+INNER JOIN sys.columns c ON t.object_id = c.object_id
+INNER JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = c.object_id
+      AND ep.minor_id = c.column_id
+      AND ep.name = 'MS_Description'
+LEFT JOIN (
+    SELECT ic.object_id, ic.column_id
+    FROM sys.indexes i
+    INNER JOIN sys.index_columns ic
+            ON i.object_id = ic.object_id
+           AND i.index_id = ic.index_id
+    WHERE i.is_primary_key = 1
+) pk ON pk.object_id = c.object_id AND pk.column_id = c.column_id
+LEFT JOIN sys.foreign_key_columns fk
+       ON fk.parent_object_id = c.object_id
+      AND fk.parent_column_id = c.column_id
+WHERE s.name = @schema_name
+  AND t.name = @table_name
+ORDER BY c.column_id;"
                 },
                 {
-                    "TableForeign",
-                    "SELECT fk.name as ColConstraintName , fcn.name as ColName , rtable.name as ForeignTableName, rcn.name as ForeignColumnName, 'dbo' as ForeignSchemaName FROM sysforeignkeys JOIN sysobjects fk ON sysforeignkeys.constid = fk.id JOIN sysobjects ftable ON sysforeignkeys.fkeyid = ftable.id JOIN sysobjects rtable ON sysforeignkeys.rkeyid = rtable.id JOIN syscolumns fcn ON sysforeignkeys.fkeyid = fcn.id AND sysforeignkeys.fkey = fcn.colid JOIN syscolumns rcn ON sysforeignkeys.rkeyid = rcn.id AND sysforeignkeys.rkey = rcn.colid WHERE ftable.name = @table_name"
+                    SystemOperatorConst.SchemaColumn,
+                    @"SELECT t.name AS TableName,
+       c.name AS ColumnName,
+       ty.name AS ColumnType,
+       CASE
+           WHEN c.max_length = -1 THEN 'MAX'
+           WHEN ty.name IN ('nchar', 'nvarchar') THEN CAST(c.max_length / 2 AS varchar(50))
+           ELSE CAST(c.max_length AS varchar(50))
+           END AS ColumnLength,
+       dc.definition AS ColumnDefault,
+       CAST(ep.value AS nvarchar(4000)) AS ColumnComment,
+       CONVERT(bit, COLUMNPROPERTY(c.object_id, c.name, 'IsIdentity')) AS IsIdentity,
+       CONVERT(bit, c.is_nullable) AS IsNull,
+       CONVERT(bit, CASE WHEN pk.column_id IS NULL THEN 0 ELSE 1 END) AS IsPrimaryKey,
+       CONVERT(bit, CASE WHEN fk.parent_column_id IS NULL THEN 0 ELSE 1 END) AS IsForeignKey,
+       ROW_NUMBER() OVER (PARTITION BY t.object_id ORDER BY c.column_id) AS RowNumber
+FROM sys.tables t
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+INNER JOIN sys.columns c ON t.object_id = c.object_id
+INNER JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = c.object_id
+      AND ep.minor_id = c.column_id
+      AND ep.name = 'MS_Description'
+LEFT JOIN (
+    SELECT ic.object_id, ic.column_id
+    FROM sys.indexes i
+    INNER JOIN sys.index_columns ic
+            ON i.object_id = ic.object_id
+           AND i.index_id = ic.index_id
+    WHERE i.is_primary_key = 1
+) pk ON pk.object_id = c.object_id AND pk.column_id = c.column_id
+LEFT JOIN sys.foreign_key_columns fk
+       ON fk.parent_object_id = c.object_id
+      AND fk.parent_column_id = c.column_id
+WHERE s.name = @schema_name
+ORDER BY t.name, c.column_id;"
                 },
                 {
-                    "SchemaForeign",
-                    "SELECT  ftable.name as TableName,fk.name as ColConstraintName , fcn.name as ColName , rtable.name as ForeignTableName, rcn.name as ForeignColumnName, 'dbo' as ForeignSchemaName FROM sysforeignkeys JOIN sysobjects fk ON sysforeignkeys.constid = fk.id JOIN sysobjects ftable ON sysforeignkeys.fkeyid = ftable.id JOIN sysobjects rtable ON sysforeignkeys.rkeyid = rtable.id JOIN syscolumns fcn ON sysforeignkeys.fkeyid = fcn.id AND sysforeignkeys.fkey = fcn.colid JOIN syscolumns rcn ON sysforeignkeys.rkeyid = rcn.id AND sysforeignkeys.rkey = rcn.colid"
+                    SystemOperatorConst.TablePrimary,
+                    @"SELECT kcu.TABLE_NAME AS TableName,
+       kcu.COLUMN_NAME AS ColumnName,
+       kcu.CONSTRAINT_NAME AS ColumnConstraintName
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+  ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+ AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+  AND tc.TABLE_SCHEMA = @schema_name
+  AND tc.TABLE_NAME = @table_name;"
                 },
                 {
-                    "TableIndex",
-                    " SELECT a.name as IndexName, '' as Indexdef, a.is_unique as Indisunique, a.is_primary_key as Indisprimary, '' as description, d.ORDINAL_POSITION as IndexPostion, (CASE INDEXKEY_PROPERTY(b.[object_id],b.index_id,b.index_column_id,'IsDescending') WHEN 1 THEN 'DESC' WHEN 0 THEN 'ASC' ELSE '' END) as IndexSort, e.name as ColName FROM sys.indexes a (NOLOCK) INNER JOIN sys.index_columns b (NOLOCK) ON a.object_id = b.object_id and a.index_id = b.index_id INNER JOIN sysindexkeys c (NOLOCK) ON a.object_id = c.id and b.index_id = c.indid and b.column_id = c.colid INNER JOIN INFORMATION_SCHEMA.COLUMNS d (NOLOCK) ON a.object_id = object_id(d.TABLE_NAME) and c.keyno = d.ORDINAL_POSITION left join syscolumns e (nolock) on e.id = c.id and c.colid=e.colid WHERE a.object_id = object_id(@table_name) ORDER BY a.name,d.ORDINAL_POSITION"
+                    SystemOperatorConst.SchemaPrimary,
+                    @"SELECT kcu.TABLE_NAME AS TableName,
+       kcu.COLUMN_NAME AS ColumnName,
+       kcu.CONSTRAINT_NAME AS ColumnConstraintName
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+  ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+ AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+  AND tc.TABLE_SCHEMA = @schema_name;"
                 },
                 {
-                    "SchemaIndex",
-                    "SELECT object_name(a.object_id) as TableName, a.name as IndexName, '' as Indexdef, a.is_unique as Indisunique, a.is_primary_key as Indisprimary, '' as description, d.ORDINAL_POSITION as IndexPostion, (CASE INDEXKEY_PROPERTY(b.[object_id],b.index_id,b.index_column_id,'IsDescending') WHEN 1 THEN 'DESC' WHEN 0 THEN 'ASC' ELSE '' END) as IndexSort, e.name as ColName FROM sys.indexes a (NOLOCK) INNER JOIN sys.index_columns b (NOLOCK) ON a.object_id = b.object_id and a.index_id = b.index_id INNER JOIN sysindexkeys c (NOLOCK) ON a.object_id = c.id and b.index_id = c.indid and b.column_id = c.colid INNER JOIN INFORMATION_SCHEMA.COLUMNS d (NOLOCK) ON a.object_id = object_id(d.TABLE_NAME) and c.keyno = d.ORDINAL_POSITION left join syscolumns e (nolock) on e.id = c.id and c.colid=e.colid  ORDER BY a.name,d.ORDINAL_POSITION"
+                    SystemOperatorConst.TableForeign,
+                    @"SELECT pt.name AS TableName,
+       pc.name AS ColumnName,
+       fk.name AS ColumnConstraintName,
+       rs.name AS ForeignSchemaName,
+       rt.name AS ForeignTableName,
+       rc.name AS ForeignColumnName
+FROM sys.foreign_keys fk
+INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
+INNER JOIN sys.tables pt ON fkc.parent_object_id = pt.object_id
+INNER JOIN sys.schemas ps ON pt.schema_id = ps.schema_id
+INNER JOIN sys.columns pc
+        ON fkc.parent_object_id = pc.object_id
+       AND fkc.parent_column_id = pc.column_id
+INNER JOIN sys.tables rt ON fkc.referenced_object_id = rt.object_id
+INNER JOIN sys.schemas rs ON rt.schema_id = rs.schema_id
+INNER JOIN sys.columns rc
+        ON fkc.referenced_object_id = rc.object_id
+       AND fkc.referenced_column_id = rc.column_id
+WHERE ps.name = @schema_name
+  AND pt.name = @table_name;"
                 },
                 {
-                    "SchemaView",
-                    @"SELECT e.value  as ViewDescription,v.TABLE_NAME as ViewName,  l.name   as ViewOwner, v.VIEW_DEFINITION as ViewDefinition from sys.sysobjects s inner join INFORMATION_SCHEMA.VIEWS v on s.name = v.TABLE_NAME and s.type = 'V' and v.TABLE_SCHEMA = @schema_name inner join sys.schemas m on s.uid = m.schema_id and m.name = @schema_name left join sys.extended_properties e on e.major_id = s.id and e.name = 'MS_Description' left join sys.sysusers u on u.uid = s.uid  left join sys.syslogins l on l.sid = u.sid"
+                    SystemOperatorConst.SchemaForeign,
+                    @"SELECT pt.name AS TableName,
+       pc.name AS ColumnName,
+       fk.name AS ColumnConstraintName,
+       rs.name AS ForeignSchemaName,
+       rt.name AS ForeignTableName,
+       rc.name AS ForeignColumnName
+FROM sys.foreign_keys fk
+INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
+INNER JOIN sys.tables pt ON fkc.parent_object_id = pt.object_id
+INNER JOIN sys.schemas ps ON pt.schema_id = ps.schema_id
+INNER JOIN sys.columns pc
+        ON fkc.parent_object_id = pc.object_id
+       AND fkc.parent_column_id = pc.column_id
+INNER JOIN sys.tables rt ON fkc.referenced_object_id = rt.object_id
+INNER JOIN sys.schemas rs ON rt.schema_id = rs.schema_id
+INNER JOIN sys.columns rc
+        ON fkc.referenced_object_id = rc.object_id
+       AND fkc.referenced_column_id = rc.column_id
+WHERE ps.name = @schema_name;"
                 },
                 {
-                    "SchemaProc",
-                    @"SELECT p.SPECIFIC_NAME  as ProcName, p.ROUTINE_DEFINITION as ProcDefinition, e.value as ProcDescription from sys.sysobjects s inner join INFORMATION_SCHEMA.ROUTINES p on s.name = p.SPECIFIC_NAME and s.type='P' and p.SPECIFIC_SCHEMA=@schema_name inner join sys.schemas m on s.uid = m.schema_id and m.name = @schema_name left join sys.extended_properties e on e.major_id = s.id and e.name = 'MS_Description'"
-                }
+                    SystemOperatorConst.TableIndex,
+                    @"SELECT t.name AS TableName,
+       i.name AS IndexName,
+       '' AS Indexdef,
+       CONVERT(bit, i.is_unique) AS Indisunique,
+       CONVERT(bit, i.is_primary_key) AS Indisprimary,
+       CAST(ep.value AS nvarchar(4000)) AS Description,
+       c.name AS ColumnName,
+       ic.key_ordinal AS IndexPostion,
+       CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END AS IndexSort
+FROM sys.indexes i
+INNER JOIN sys.tables t ON i.object_id = t.object_id
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+LEFT JOIN sys.index_columns ic
+       ON i.object_id = ic.object_id
+      AND i.index_id = ic.index_id
+LEFT JOIN sys.columns c
+       ON ic.object_id = c.object_id
+      AND ic.column_id = c.column_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = i.object_id
+      AND ep.minor_id = i.index_id
+      AND ep.name = 'MS_Description'
+WHERE s.name = @schema_name
+  AND t.name = @table_name
+  AND i.index_id > 0
+ORDER BY i.name, ic.key_ordinal;"
+                },
+                {
+                    SystemOperatorConst.SchemaIndex,
+                    @"SELECT t.name AS TableName,
+       i.name AS IndexName,
+       '' AS Indexdef,
+       CONVERT(bit, i.is_unique) AS Indisunique,
+       CONVERT(bit, i.is_primary_key) AS Indisprimary,
+       CAST(ep.value AS nvarchar(4000)) AS Description,
+       c.name AS ColumnName,
+       ic.key_ordinal AS IndexPostion,
+       CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END AS IndexSort
+FROM sys.indexes i
+INNER JOIN sys.tables t ON i.object_id = t.object_id
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+LEFT JOIN sys.index_columns ic
+       ON i.object_id = ic.object_id
+      AND i.index_id = ic.index_id
+LEFT JOIN sys.columns c
+       ON ic.object_id = c.object_id
+      AND ic.column_id = c.column_id
+LEFT JOIN sys.extended_properties ep
+       ON ep.major_id = i.object_id
+      AND ep.minor_id = i.index_id
+      AND ep.name = 'MS_Description'
+WHERE s.name = @schema_name
+  AND i.index_id > 0
+ORDER BY t.name, i.name, ic.key_ordinal;"
+                },
+                {
+                    SystemOperatorConst.SchemaView,
+                    @"SELECT CAST(e.value AS nvarchar(4000)) AS ViewDescription,
+       v.TABLE_NAME AS ViewName,
+       u.name AS ViewOwner,
+       v.VIEW_DEFINITION AS ViewDefinition
+FROM INFORMATION_SCHEMA.VIEWS v
+INNER JOIN sys.views sv ON sv.name = v.TABLE_NAME
+INNER JOIN sys.schemas s ON sv.schema_id = s.schema_id
+LEFT JOIN sys.extended_properties e
+       ON e.major_id = sv.object_id
+      AND e.minor_id = 0
+      AND e.name = 'MS_Description'
+LEFT JOIN sys.sysusers u ON u.uid = sv.principal_id
+WHERE s.name = @schema_name;"
+                },
+                {
+                    SystemOperatorConst.SchemaProc,
+                    @"SELECT p.SPECIFIC_NAME AS ProcName,
+       NULL AS InputParam,
+       NULL AS OutputParam,
+       p.ROUTINE_DEFINITION AS ProcDefinition,
+       CAST(e.value AS nvarchar(4000)) AS ProcDescription
+FROM INFORMATION_SCHEMA.ROUTINES p
+INNER JOIN sys.procedures sp ON sp.name = p.SPECIFIC_NAME
+INNER JOIN sys.schemas s ON sp.schema_id = s.schema_id
+LEFT JOIN sys.extended_properties e
+       ON e.major_id = sp.object_id
+      AND e.minor_id = 0
+      AND e.name = 'MS_Description'
+WHERE p.ROUTINE_TYPE = 'PROCEDURE'
+  AND s.name = @schema_name;"
+                },
+                { SystemOperatorConst.DbView, string.Empty },
+                { SystemOperatorConst.DbProc, string.Empty }
             };
 
         public override DatabaseType DatabaseType => DatabaseType.SqlServer;
 
-        private IDbHelper _dbHelper;
+        private IDbHelper? _dbHelper;
 
-        public override IDbHelper DbHelper => _dbHelper ??= new SqlServerDbHelper(DataSourceConfig);
+        public override IDbHelper DbHelper =>
+            _dbHelper ??= HasConnectionString
+                ? new SqlServerDbHelper(ConnectionString)
+                : new SqlServerDbHelper(DataSourceConfig);
     }
 }

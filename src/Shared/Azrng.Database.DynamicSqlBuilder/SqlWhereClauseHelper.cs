@@ -1,7 +1,8 @@
-﻿using Azrng.Core.Exceptions;
+using Azrng.Core.Exceptions;
 using Azrng.Core.Extension;
 using Azrng.Database.DynamicSqlBuilder.Model;
 using Azrng.Database.DynamicSqlBuilder.SqlOperation;
+using Azrng.Database.DynamicSqlBuilder.Validation;
 using Dapper;
 using System.Text;
 
@@ -17,7 +18,10 @@ public class SqlWhereClauseHelper
     /// <returns></returns>
     public static string SplicingWhereConditionSql(SqlWhereClauseInfoDto sqlWhereClause, DynamicParameters parameters)
     {
-        if (sqlWhereClause.NestedChildrens == null)
+        var logicalOperator = SqlBuilderInputValidator.NormalizeLogicalOperator(sqlWhereClause.LogicalOperator);
+        var hasNestedChildren = sqlWhereClause.NestedChildrens?.Any() == true;
+
+        if (!hasNestedChildren)
         {
             switch (sqlWhereClause.MatchOperator)
             {
@@ -32,141 +36,113 @@ public class SqlWhereClauseHelper
                 case MatchOperator.GreaterThan:
                 case MatchOperator.LessThan:
                 case MatchOperator.NotEqual:
-                    return GetSpecificConditionSqlWithSwitchOperator(sqlWhereClause, parameters);
+                    return GetSpecificConditionSqlWithSwitchOperator(sqlWhereClause, parameters, logicalOperator);
 
                 case MatchOperator.And:
-                    return $" {sqlWhereClause.LogicalOperator} {sqlWhereClause.FieldName} ";
+                    return $" {logicalOperator} {sqlWhereClause.FieldName} ";
 
                 default:
                     throw new LogicBusinessException($"不支持的操作符{sqlWhereClause.MatchOperator}");
             }
         }
-        else
-        {
-            var sqlBuilder = new StringBuilder();
-            foreach (var sqlWhereClauseInfo in sqlWhereClause.NestedChildrens)
-            {
-                sqlBuilder.Append(SplicingWhereConditionSql(sqlWhereClauseInfo, parameters));
-            }
 
-            return $" {SqlConstant.LogicalOperatorAnd} ( {sqlBuilder} ) ";
+        var sqlBuilder = new StringBuilder();
+        foreach (var sqlWhereClauseInfo in sqlWhereClause.NestedChildrens!)
+        {
+            sqlBuilder.Append(SplicingWhereConditionSql(sqlWhereClauseInfo, parameters));
         }
+
+        return $" {logicalOperator} ( {sqlBuilder} ) ";
     }
 
     /// <summary>
     /// 根据不同的操作符,得到具体匹配符条件sql
     /// </summary>
-    /// <param name="sqlWhereClause"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
-    private static string GetSpecificConditionSqlWithSwitchOperator(SqlWhereClauseInfoDto sqlWhereClause, DynamicParameters parameters) =>
+    private static string GetSpecificConditionSqlWithSwitchOperator(
+        SqlWhereClauseInfoDto sqlWhereClause,
+        DynamicParameters parameters,
+        string logicalOperator) =>
         sqlWhereClause.MatchOperator switch
         {
-            //特殊处理Between ...And 目前只有日期类型支持
-            MatchOperator.Between => GetBetweenOperatorConditionSql(sqlWhereClause, parameters),
-
-            //like 操作
-            MatchOperator.Like => GetLikeOrNotLikeOperatorConditionSql(sqlWhereClause, parameters),
-
-            //not like操作
-            MatchOperator.NotLike => GetLikeOrNotLikeOperatorConditionSql(sqlWhereClause, parameters),
-
-            //其它操作符 统一方式
-            _ => GeOtherOperatorConditionSql(sqlWhereClause, parameters)
+            MatchOperator.Between => GetBetweenOperatorConditionSql(sqlWhereClause, parameters, logicalOperator),
+            MatchOperator.Like => GetLikeOrNotLikeOperatorConditionSql(sqlWhereClause, parameters, logicalOperator),
+            MatchOperator.NotLike => GetLikeOrNotLikeOperatorConditionSql(sqlWhereClause, parameters, logicalOperator),
+            _ => GetOtherOperatorConditionSql(sqlWhereClause, parameters, logicalOperator)
         };
 
-    /// <summary>
-    /// 获取Between...And 方式的具体条件SQL
-    /// </summary>
-    /// <param name="sqlWhereClause"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
-    private static string GetBetweenOperatorConditionSql(SqlWhereClauseInfoDto sqlWhereClause, DynamicParameters parameters)
+    private static string GetBetweenOperatorConditionSql(
+        SqlWhereClauseInfoDto sqlWhereClause,
+        DynamicParameters parameters,
+        string logicalOperator)
     {
-        //目前只有日期类型支持 between ... and
-        if (sqlWhereClause.FieldValueInfos.Any())
-        {
-            var sqlOperation = SqlOperationFactory.CreateSqlOperation(sqlWhereClause.MatchOperator);
-            var (beginTime, endTime) = GetTimeZoneWhereCondition(sqlWhereClause.FieldValueInfos?.ToList() ?? new List<FieldValueInfoDto>());
-            if (beginTime.HasValue && endTime.HasValue)
-            {
-                return
-                    $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, beginTime.Value, endTime.Value, parameters)}";
-            }
-        }
-
-        return string.Empty;
-    }
-
-    /// <summary>
-    /// 获取Like方式的具体条件SQL
-    /// </summary>
-    /// <param name="sqlWhereClause"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
-    private static string GetLikeOrNotLikeOperatorConditionSql(SqlWhereClauseInfoDto sqlWhereClause, DynamicParameters parameters)
-    {
-        if (sqlWhereClause.FieldValueInfos.Any())
-        {
-            var sqlOperation = SqlOperationFactory.CreateSqlOperation(sqlWhereClause.MatchOperator);
-            var valuesList = sqlWhereClause.FieldValueInfos.Where(x => x.Value.ToString().IsNotNullOrWhiteSpace())
-                                           .Select(t => t.Value)
-                                           .ToList();
-            if (valuesList.Any())
-            {
-                // Like操作需要字符串，如果Value不是字符串则转换
-                var stringValue = valuesList.First().ToString() ?? string.Empty;
-                return
-                    $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, stringValue, parameters)} ";
-            }
-            else
-            {
-                // Like操作需要字符串，如果Value不是字符串则转换
-                var codes = sqlWhereClause.FieldValueInfos.Select(x => x.Code).FirstOrDefault();
-                var stringValue = codes?.ToString() ?? string.Empty;
-                return
-                    $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, stringValue, parameters)} ";
-            }
-        }
-
-        return string.Empty;
-    }
-
-    /// <summary>
-    /// 获取其他方式的具体条件SQL
-    /// </summary>
-    /// <param name="sqlWhereClause"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
-    private static string GeOtherOperatorConditionSql(SqlWhereClauseInfoDto sqlWhereClause, DynamicParameters parameters)
-    {
-        if (sqlWhereClause.FieldValueInfos.Count == 0)
+        var fieldValueInfos = sqlWhereClause.FieldValueInfos ?? new List<FieldValueInfoDto>();
+        if (!fieldValueInfos.Any())
         {
             return string.Empty;
         }
 
         var sqlOperation = SqlOperationFactory.CreateSqlOperation(sqlWhereClause.MatchOperator);
+        var (beginTime, endTime) = GetTimeZoneWhereCondition(fieldValueInfos);
+        if (beginTime.HasValue && endTime.HasValue)
+        {
+            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, beginTime.Value, endTime.Value, parameters)}";
+        }
 
-        // 检查是否有Code值
-        var values = sqlWhereClause.FieldValueInfos.Where(x => x.Value.ToString().IsNotNullOrWhiteSpace())
-                                   .Select(x => x.Value)
-                                   .ToList();
+        return string.Empty;
+    }
+
+    private static string GetLikeOrNotLikeOperatorConditionSql(
+        SqlWhereClauseInfoDto sqlWhereClause,
+        DynamicParameters parameters,
+        string logicalOperator)
+    {
+        var fieldValueInfos = sqlWhereClause.FieldValueInfos ?? new List<FieldValueInfoDto>();
+        if (!fieldValueInfos.Any())
+        {
+            return string.Empty;
+        }
+
+        var sqlOperation = SqlOperationFactory.CreateSqlOperation(sqlWhereClause.MatchOperator);
+        var valuesList = fieldValueInfos
+            .Where(x => x.Value?.ToString().IsNotNullOrWhiteSpace() == true)
+            .Select(t => t.Value)
+            .ToList();
+
+        if (valuesList.Any())
+        {
+            var stringValue = valuesList.First().ToString() ?? string.Empty;
+            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, stringValue, parameters)} ";
+        }
+
+        var codeValue = fieldValueInfos.Select(x => x.Code).FirstOrDefault();
+        return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, codeValue?.ToString() ?? string.Empty, parameters)} ";
+    }
+
+    private static string GetOtherOperatorConditionSql(
+        SqlWhereClauseInfoDto sqlWhereClause,
+        DynamicParameters parameters,
+        string logicalOperator)
+    {
+        var fieldValueInfos = sqlWhereClause.FieldValueInfos ?? new List<FieldValueInfoDto>();
+        if (fieldValueInfos.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sqlOperation = SqlOperationFactory.CreateSqlOperation(sqlWhereClause.MatchOperator);
+        var values = fieldValueInfos
+            .Where(x => x.Value?.ToString().IsNotNullOrWhiteSpace() == true)
+            .Select(x => x.Value)
+            .ToList();
+
         return values.Count switch
         {
-            1 =>
-                $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values.First(), parameters, sqlWhereClause.ValueType)} ",
-            > 1 =>
-                $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values, parameters, sqlWhereClause.ValueType)} ",
-            _ =>
-                $" {sqlWhereClause.LogicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, sqlWhereClause.FieldValueInfos.Select(x => x.Code), parameters, sqlWhereClause.ValueType)} "
+            1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values.First(), parameters, sqlWhereClause.ValueType)} ",
+            > 1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values, parameters, sqlWhereClause.ValueType)} ",
+            _ => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, fieldValueInfos.Select(x => x.Code), parameters, sqlWhereClause.ValueType)} "
         };
     }
 
-    /// <summary>
-    /// 获取时间区间边界查询
-    /// </summary>
-    /// <param name="fieldValueInfos"></param>
-    /// <returns></returns>
     private static (DateTime? beginTime, DateTime? endTime) GetTimeZoneWhereCondition(
         IList<FieldValueInfoDto> fieldValueInfos)
     {
@@ -186,8 +162,8 @@ public class SqlWhereClauseHelper
 
         if (!beginTime.HasValue && fieldValueInfos.Count >= 2)
         {
-            var value0Str = (fieldValueInfos[0]?.Value?.ToString() ?? "");
-            var value1Str = (fieldValueInfos[1]?.Value?.ToString() ?? "");
+            var value0Str = fieldValueInfos[0]?.Value?.ToString() ?? string.Empty;
+            var value1Str = fieldValueInfos[1]?.Value?.ToString() ?? string.Empty;
 
             if (value0Str.IsDateFormat() && value1Str.IsDateFormat())
             {

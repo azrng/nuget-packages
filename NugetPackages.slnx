@@ -121,6 +121,7 @@
   </Folder>
   <Folder Name="/Test/DataBase/">
     <Project Path="test/Azrng.Database.DynamicSqlBuilder.Test/Azrng.Database.DynamicSqlBuilder.Test.csproj" />
+    <Project Path="test/Azrng.DbOperator.Test/Azrng.DbOperator.Test.csproj" />
     <Project Path="test/Azrng.NMaxCompute.Test/Azrng.NMaxCompute.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.MySql.Test\Common.DbSystemOperator.MySql.Test.csproj" />

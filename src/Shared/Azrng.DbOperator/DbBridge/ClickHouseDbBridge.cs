@@ -1,11 +1,8 @@
-﻿using Azrng.Core.Model;
+using Azrng.Core.Model;
 using Azrng.DbOperator.Helper;
 
 namespace Azrng.DbOperator.DbBridge
 {
-    /// <summary>
-    /// ch 系统操作
-    /// </summary>
     public class ClickHouseBasicDbBridge : BasicDbBridge
     {
         public ClickHouseBasicDbBridge(string connectionString) : base(connectionString) { }
@@ -13,120 +10,164 @@ namespace Azrng.DbOperator.DbBridge
         public ClickHouseBasicDbBridge(DataSourceConfig dataSourceConfig) : base(dataSourceConfig) { }
 
         public override Dictionary<string, string> QuerySqlMap =>
-            new Dictionary<string, string>
+            new()
             {
-                { "Schema", "SELECT name as Schema_name FROM `system`.databases;" },
+                { SystemOperatorConst.SchemaName, "SELECT name AS Schema_name FROM system.databases;" },
+                { SystemOperatorConst.SchemaInfo, "SELECT name AS SchemaName, NULL AS SchemaComment FROM system.databases;" },
                 {
-                    "SchemaTable", "select name as TableName, `comment` as TableComment from `system`.tables where database = @schema_name;"
+                    SystemOperatorConst.SchemaTableName,
+                    @"SELECT database AS SchemaName,
+       name AS TableName
+FROM system.tables;"
                 },
                 {
-                    "TableColumn",
-                    @"SELECT t.name                                                      AS TableName,
-       c.name                                                      AS ColumnName,
-       c.type                                                      AS ColumnType,
+                    SystemOperatorConst.SchemaTableInfoList,
+                    @"SELECT 0 AS TableId,
+       name AS TableName,
+       comment AS TableComment
+FROM system.tables
+WHERE database = @schema_name;"
+                },
+                {
+                    SystemOperatorConst.SchemaTableInfo,
+                    @"SELECT 0 AS TableId,
+       name AS TableName,
+       comment AS TableComment
+FROM system.tables
+WHERE database = @schema_name
+  AND name = @table_name;"
+                },
+                {
+                    SystemOperatorConst.TableColumn,
+                    @"SELECT t.name AS TableName,
+       c.name AS ColumnName,
+       c.type AS ColumnType,
        CASE
-           WHEN c.type LIKE 'Nullable(%' THEN TRUE
-           ELSE FALSE
-           END                                                     AS IsNull,
-       -- 列长度（仅适用于某些类型，如 FixedString 和 Decimal）
-       CASE
-           WHEN c.type LIKE 'FixedString(%' THEN
-               CAST(substring(c.type, 13, length(c.type) - 13) AS Int32)
-           WHEN c.type LIKE 'String(%' THEN
-               CAST(substring(c.type, 8, length(c.type) - 8) AS Int32)
-           WHEN c.type LIKE 'Decimal(%' THEN
-               CAST(substring(c.type, 8, position(c.type, ',') - 8) AS Int32)
-           WHEN c.type LIKE 'Enum%' THEN
-               CAST(substring(c.type, 6, position(c.type, '(') - 6) AS Int32)
+           WHEN c.type LIKE 'FixedString(%' THEN CAST(substring(c.type, 13, length(c.type) - 13) AS Int32)
+           WHEN c.type LIKE 'String(%' THEN CAST(substring(c.type, 8, length(c.type) - 8) AS Int32)
+           WHEN c.type LIKE 'Decimal(%' THEN CAST(substring(c.type, 8, position(c.type, ',') - 8) AS Int32)
+           WHEN c.type LIKE 'Enum%' THEN CAST(substring(c.type, 6, position(c.type, '(') - 6) AS Int32)
            ELSE NULL
            END AS ColumnLength,
-       c.default_expression                                        AS ColumnDefault,
-       c.comment                                                   AS ColumnComment,
-       c.is_in_primary_key                                        as IsPrimary,
-       -- ClickHouse 不支持自增列（IDENTITY），因此这里返回 false
-       false                                                       AS IsIdentity,
-       -- ClickHouse 不支持外键，因此这里返回 false
-       false                                                       AS IsForeignKey,
-       -- 排序值（RowNumber）按列的顺序编号
+       c.default_expression AS ColumnDefault,
+       c.comment AS ColumnComment,
+       FALSE AS IsIdentity,
+       CASE WHEN c.type LIKE 'Nullable(%' THEN TRUE ELSE FALSE END AS IsNull,
+       c.is_in_primary_key AS IsPrimaryKey,
+       FALSE AS IsForeignKey,
        row_number() OVER (PARTITION BY t.name ORDER BY c.position) AS RowNumber
 FROM system.tables t
-         JOIN
-     system.columns c ON t.name = c.table AND t.database = c.database
-where database = @schema_name and `table` = @table_name
+JOIN system.columns c ON t.name = c.table AND t.database = c.database
+WHERE t.database = @schema_name
+  AND c.table = @table_name
 ORDER BY t.name, c.position;"
                 },
                 {
-                    "SchemaColumn",
-                    @"SELECT t.name                                                      AS TableName,
-       c.name                                                      AS ColumnName,
-       c.type                                                      AS ColumnType,
+                    SystemOperatorConst.SchemaColumn,
+                    @"SELECT t.name AS TableName,
+       c.name AS ColumnName,
+       c.type AS ColumnType,
        CASE
-           WHEN c.type LIKE 'Nullable(%' THEN TRUE
-           ELSE FALSE
-           END                                                     AS IsNull,
-       -- 列长度（仅适用于某些类型，如 FixedString 和 Decimal）
-       CASE
-           WHEN c.type LIKE 'FixedString(%' THEN
-               CAST(substring(c.type, 13, length(c.type) - 13) AS Int32)
-           WHEN c.type LIKE 'String(%' THEN
-               CAST(substring(c.type, 8, length(c.type) - 8) AS Int32)
-           WHEN c.type LIKE 'Decimal(%' THEN
-               CAST(substring(c.type, 8, position(c.type, ',') - 8) AS Int32)
-           WHEN c.type LIKE 'Enum%' THEN
-               CAST(substring(c.type, 6, position(c.type, '(') - 6) AS Int32)
+           WHEN c.type LIKE 'FixedString(%' THEN CAST(substring(c.type, 13, length(c.type) - 13) AS Int32)
+           WHEN c.type LIKE 'String(%' THEN CAST(substring(c.type, 8, length(c.type) - 8) AS Int32)
+           WHEN c.type LIKE 'Decimal(%' THEN CAST(substring(c.type, 8, position(c.type, ',') - 8) AS Int32)
+           WHEN c.type LIKE 'Enum%' THEN CAST(substring(c.type, 6, position(c.type, '(') - 6) AS Int32)
            ELSE NULL
            END AS ColumnLength,
-       c.default_expression                                        AS ColumnDefault,
-       c.comment                                                   AS ColumnComment,
-       c.is_in_primary_key                                        as IsPrimary,
-       -- ClickHouse 不支持自增列（IDENTITY），因此这里返回 false
-       false                                                       AS IsIdentity,
-       -- ClickHouse 不支持外键，因此这里返回 false
-       false                                                       AS IsForeignKey,
-       -- 排序值（RowNumber）按列的顺序编号
+       c.default_expression AS ColumnDefault,
+       c.comment AS ColumnComment,
+       FALSE AS IsIdentity,
+       CASE WHEN c.type LIKE 'Nullable(%' THEN TRUE ELSE FALSE END AS IsNull,
+       c.is_in_primary_key AS IsPrimaryKey,
+       FALSE AS IsForeignKey,
        row_number() OVER (PARTITION BY t.name ORDER BY c.position) AS RowNumber
 FROM system.tables t
-         JOIN
-     system.columns c ON t.name = c.table AND t.database = c.database
-where database = @schema_name
-ORDER BY t.table,t.name, c.position;"
+JOIN system.columns c ON t.name = c.table AND t.database = c.database
+WHERE t.database = @schema_name
+ORDER BY t.name, c.position;"
                 },
                 {
-                    "TablePrimary",
-                    "select name as ColName, 'PRIMARY' AS ColConstraintName from `system`.columns c where database = @schema_name and `table` = @table_name and is_in_primary_key = TRUE;"
+                    SystemOperatorConst.TablePrimary,
+                    @"SELECT c.table AS TableName,
+       c.name AS ColumnName,
+       'PRIMARY' AS ColumnConstraintName
+FROM system.columns c
+WHERE c.database = @schema_name
+  AND c.table = @table_name
+  AND c.is_in_primary_key = TRUE;"
                 },
                 {
-                    "SchemaPrimary",
-                    "select `table` as TableName, name as ColName, 'PRIMARY' AS ColConstraintName from `system`.columns c where database = @schema_name and is_in_primary_key = TRUE;"
+                    SystemOperatorConst.SchemaPrimary,
+                    @"SELECT c.table AS TableName,
+       c.name AS ColumnName,
+       'PRIMARY' AS ColumnConstraintName
+FROM system.columns c
+WHERE c.database = @schema_name
+  AND c.is_in_primary_key = TRUE;"
                 },
                 {
-                    "TableForeign",
-                    "select name as ColName, NULL AS ColConstraintName, NULL AS ForeignSchemaName, NULL AS ForeignTableName, NULL AS ForeignColumnName from `system`.columns c where database = @schema_name and `table` = @table_name LIMIT 0;"
+                    SystemOperatorConst.TableForeign,
+                    @"SELECT @table_name AS TableName,
+       CAST(NULL AS Nullable(String)) AS ColumnName,
+       CAST(NULL AS Nullable(String)) AS ColumnConstraintName,
+       CAST(NULL AS Nullable(String)) AS ForeignSchemaName,
+       CAST(NULL AS Nullable(String)) AS ForeignTableName,
+       CAST(NULL AS Nullable(String)) AS ForeignColumnName
+FROM system.one
+WHERE 1 = 0;"
                 },
                 {
-                    "SchemaForeign",
-                    "select name as ColName, NULL AS ColConstraintName, NULL AS ForeignSchemaName, NULL AS ForeignTableName, NULL AS ForeignColumnName from `system`.columns c where database = @schema_name LIMIT 0;"
+                    SystemOperatorConst.SchemaForeign,
+                    @"SELECT CAST(NULL AS Nullable(String)) AS TableName,
+       CAST(NULL AS Nullable(String)) AS ColumnName,
+       CAST(NULL AS Nullable(String)) AS ColumnConstraintName,
+       CAST(NULL AS Nullable(String)) AS ForeignSchemaName,
+       CAST(NULL AS Nullable(String)) AS ForeignTableName,
+       CAST(NULL AS Nullable(String)) AS ForeignColumnName
+FROM system.one
+WHERE 1 = 0;"
                 },
                 {
-                    "TableIndex",
-                    "select NULL as IndexName, NULL as Indexdef, NULL as Indisunique, NULL as description, name as ColName, NULL as IndexPostion, NULL as IndexSort, NULL as Indisprimary from `system`.columns c where database = @schema_name and `table` = @table_name LIMIT 0;"
+                    SystemOperatorConst.TableIndex,
+                    @"SELECT @table_name AS TableName,
+       CAST(NULL AS Nullable(String)) AS IndexName,
+       CAST(NULL AS Nullable(String)) AS Indexdef,
+       FALSE AS Indisunique,
+       FALSE AS Indisprimary,
+       CAST(NULL AS Nullable(String)) AS Description,
+       CAST(NULL AS Nullable(String)) AS ColumnName,
+       CAST(NULL AS Nullable(Int32)) AS IndexPostion,
+       CAST(NULL AS Nullable(String)) AS IndexSort
+FROM system.one
+WHERE 1 = 0;"
                 },
                 {
-                    "SchemaIndex",
-                    "select name as TableName, NULL as IndexName, NULL as Indexdef, NULL as Indisunique, NULL as description, name as ColName, NULL as IndexPostion, NULL as IndexSort, NULL as Indisprimary from `system`.columns c where database = @schema_name LIMIT 0;"
+                    SystemOperatorConst.SchemaIndex,
+                    @"SELECT CAST(NULL AS Nullable(String)) AS TableName,
+       CAST(NULL AS Nullable(String)) AS IndexName,
+       CAST(NULL AS Nullable(String)) AS Indexdef,
+       FALSE AS Indisunique,
+       FALSE AS Indisprimary,
+       CAST(NULL AS Nullable(String)) AS Description,
+       CAST(NULL AS Nullable(String)) AS ColumnName,
+       CAST(NULL AS Nullable(Int32)) AS IndexPostion,
+       CAST(NULL AS Nullable(String)) AS IndexSort
+FROM system.one
+WHERE 1 = 0;"
                 },
+                { SystemOperatorConst.DbView, string.Empty },
+                { SystemOperatorConst.SchemaView, string.Empty },
+                { SystemOperatorConst.DbProc, string.Empty },
+                { SystemOperatorConst.SchemaProc, string.Empty }
             };
 
         public override DatabaseType DatabaseType => DatabaseType.ClickHouse;
 
-        private IDbHelper _dbHelper;
+        private IDbHelper? _dbHelper;
 
-        public override IDbHelper DbHelper => _dbHelper ??= new ClickHouseDbHelper(DataSourceConfig);
-
-        public override Task<List<string>> GetSchemaNameListAsync()
-        {
-            var sql = QuerySqlMap.GetValueOrDefault(SystemOperatorConst.SchemaName);
-            return sql is null ? null : Task.FromResult(new List<string>());
-        }
+        public override IDbHelper DbHelper =>
+            _dbHelper ??= HasConnectionString
+                ? new ClickHouseDbHelper(ConnectionString)
+                : new ClickHouseDbHelper(DataSourceConfig);
     }
 }

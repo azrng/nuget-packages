@@ -8,27 +8,27 @@
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 列名
         /// </summary>
-        public string ColumnName { get; set; }
+        public string ColumnName { get; set; } = string.Empty;
 
         /// <summary>
         /// 列类型
         /// </summary>
-        public string ColumnType { get; set; }
+        public string ColumnType { get; set; } = string.Empty;
 
         /// <summary>
         /// 列长度
         /// </summary>
-        public string ColumnLength { get; set; }
+        public string ColumnLength { get; set; } = string.Empty;
 
         /// <summary>
         /// 列默认值
         /// </summary>
-        public string ColumnDefault { get; set; }
+        public string ColumnDefault { get; set; } = string.Empty;
 
         /// <summary>
         /// 是否为标识列

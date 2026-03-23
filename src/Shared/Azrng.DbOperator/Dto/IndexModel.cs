@@ -5,17 +5,17 @@
         /// <summary>
         /// 表名称
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 索引名称
         /// </summary>
-        public string IndexName { get; set; }
+        public string IndexName { get; set; } = string.Empty;
 
         /// <summary>
         /// 索引定义
         /// </summary>
-        public string Indexdef { get; set; }
+        public string Indexdef { get; set; } = string.Empty;
 
         /// <summary>
         /// 是否唯一索引
@@ -30,12 +30,12 @@
         /// <summary>
         /// 描述
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         /// 列名
         /// </summary>
-        public string ColumnName { get; set; }
+        public string ColumnName { get; set; } = string.Empty;
 
         /// <summary>
         /// 索引位置
@@ -45,6 +45,6 @@
         /// <summary>
         /// 索引排序方式
         /// </summary>
-        public string IndexSort { get; set; }
+        public string IndexSort { get; set; } = string.Empty;
     }
 }

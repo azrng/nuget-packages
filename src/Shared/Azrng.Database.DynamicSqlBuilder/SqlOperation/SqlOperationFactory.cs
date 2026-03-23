@@ -1,4 +1,5 @@
 using Azrng.Database.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.Utils;
 using Dapper;
 
 namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
@@ -48,6 +49,14 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
             // 添加时间戳和GUID部分确保全局唯一性
             var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
             return $"@p_{fieldName}_{uniqueId}_{index}";
+        }
+
+        protected string AddParameter(string fieldName, object fieldValue, DynamicParameters parameters, Type valueType)
+        {
+            var paramName = GetParameterName(fieldName);
+            var convertedValue = TypeConvertHelper.ConvertToTargetType(fieldValue, valueType);
+            parameters.Add(paramName, convertedValue);
+            return paramName;
         }
 
         /// <summary>

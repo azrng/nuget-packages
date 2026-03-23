@@ -1,4 +1,5 @@
-﻿using Dapper;
+using Azrng.DbOperator.Validation;
+using Dapper;
 using MySqlConnector;
 using System.Data.Common;
 
@@ -6,18 +7,24 @@ namespace Azrng.DbOperator.Helper
 {
     public class MySqlDbHelper : DbHelperBase
     {
-        /// <summary>
-        /// 连接字符串格式
-        /// </summary>
-        private static string ConnectionStringFormat =>
-            "DataSource={0};port={1};Database={2};UserId={3};Password={4};pooling=false;CharSet=utf8;";
-
         public MySqlDbHelper(string connectionString) : base(connectionString) { }
 
         public MySqlDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(ConnectionStringFormat, dataSourceConfig.Host, dataSourceConfig.Port,
-                dataSourceConfig.DbName, dataSourceConfig.User, dataSourceConfig.Password);
+            var builder = new MySqlConnectionStringBuilder
+            {
+                Server = dataSourceConfig.Host,
+                Port = (uint)dataSourceConfig.Port,
+                Database = dataSourceConfig.DbName,
+                UserID = dataSourceConfig.User,
+                Password = dataSourceConfig.Password,
+                Pooling = dataSourceConfig.Pooling,
+                MinimumPoolSize = (uint)Math.Max(0, dataSourceConfig.MinPoolSize),
+                MaximumPoolSize = (uint)Math.Max(dataSourceConfig.MinPoolSize, dataSourceConfig.MaxPoolSize),
+                CharacterSet = "utf8"
+            };
+
+            ConnectionString = builder.ConnectionString;
         }
 
         protected override DbConnection GetConnection()
@@ -39,6 +46,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     columns.Add(reader.GetName(i));
                 }
+
                 rows.Add(columns.ToArray());
             }
 
@@ -49,6 +57,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     row[i] = reader[i];
                 }
+
                 rows.Add(row);
             }
 
@@ -60,12 +69,22 @@ namespace Azrng.DbOperator.Helper
             return new MySqlParameter($"@{key}", value);
         }
 
-        public override string BuildSplitPageSql(string sourceSql, int pageIndex, int pageSize,
-                                                 string? orderColumn = null,
-                                                 string? orderDirection = null)
+        public override string BuildSplitPageSql(
+            string sourceSql,
+            int pageIndex,
+            int pageSize,
+            string? orderColumn = null,
+            string? orderDirection = null)
         {
-            if (orderColumn.IsNotNullOrWhiteSpace() && orderDirection.IsNotNullOrWhiteSpace())
-                sourceSql += $" ORDER BY {orderColumn} {orderDirection}";
+            SqlPaginationValidator.ValidatePageArguments(pageIndex, pageSize);
+
+            var normalizedOrderColumn = SqlPaginationValidator.NormalizeOrderColumn(orderColumn);
+            var normalizedOrderDirection = SqlPaginationValidator.NormalizeOrderDirection(orderDirection);
+            if (normalizedOrderColumn.IsNotNullOrWhiteSpace() && normalizedOrderDirection.IsNotNullOrWhiteSpace())
+            {
+                sourceSql += $" ORDER BY {normalizedOrderColumn} {normalizedOrderDirection}";
+            }
+
             sourceSql += $" LIMIT {pageSize} OFFSET {(pageIndex - 1) * pageSize}";
             return sourceSql;
         }

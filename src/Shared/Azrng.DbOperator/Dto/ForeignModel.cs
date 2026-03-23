@@ -8,31 +8,31 @@
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 列名
         /// </summary>
-        public string ColumnName { get; set; }
+        public string ColumnName { get; set; } = string.Empty;
 
         /// <summary>
         /// 外键约束名
         /// </summary>
-        public string ColumnConstraintName { get; set; }
+        public string ColumnConstraintName { get; set; } = string.Empty;
 
         /// <summary>
         /// 外键schema名
         /// </summary>
-        public string ForeignSchemaName { get; set; }
+        public string ForeignSchemaName { get; set; } = string.Empty;
 
         /// <summary>
         /// 外键表明
         /// </summary>
-        public string ForeignTableName { get; set; }
+        public string ForeignTableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 外键列名
         /// </summary>
-        public string ForeignColumnName { get; set; }
+        public string ForeignColumnName { get; set; } = string.Empty;
     }
 }

@@ -8,16 +8,16 @@
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 列名
         /// </summary>
-        public string ColumnName { get; set; }
+        public string ColumnName { get; set; } = string.Empty;
 
         /// <summary>
         /// 约束名
         /// </summary>
-        public string ColumnConstraintName { get; set; }
+        public string ColumnConstraintName { get; set; } = string.Empty;
     }
 }

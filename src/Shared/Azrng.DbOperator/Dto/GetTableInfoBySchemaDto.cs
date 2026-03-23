@@ -13,11 +13,11 @@
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public string TableName { get; set; } = string.Empty;
 
         /// <summary>
         /// 表备注
         /// </summary>
-        public string TableComment { get; set; }
+        public string TableComment { get; set; } = string.Empty;
     }
 }

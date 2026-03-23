@@ -8,6 +8,6 @@
         /// <summary>
         /// 表名
         /// </summary>
-        public string TableName { get; set; }
+        public new string TableName { get; set; } = string.Empty;
     }
 }

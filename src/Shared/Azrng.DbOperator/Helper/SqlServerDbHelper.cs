@@ -1,4 +1,5 @@
-﻿using Dapper;
+using Azrng.DbOperator.Validation;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Data.Common;
 
@@ -6,15 +7,19 @@ namespace Azrng.DbOperator.Helper
 {
     public class SqlServerDbHelper : DbHelperBase
     {
-        /// <summary>
-        /// 连接字符串格式
-        /// </summary>
         private static string ConnectionStringFormat => "Server={0},{1};Database={2};Uid={3};Pwd={4};Encrypt=no;";
+
+        public SqlServerDbHelper(string connectionString) : base(connectionString) { }
 
         public SqlServerDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(ConnectionStringFormat, dataSourceConfig.Host, dataSourceConfig.Port,
-                dataSourceConfig.DbName, dataSourceConfig.User, dataSourceConfig.Password);
+            ConnectionString = string.Format(
+                ConnectionStringFormat,
+                dataSourceConfig.Host,
+                dataSourceConfig.Port,
+                dataSourceConfig.DbName,
+                dataSourceConfig.User,
+                dataSourceConfig.Password);
         }
 
         protected override DbConnection GetConnection()
@@ -36,6 +41,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     columns.Add(reader.GetName(i));
                 }
+
                 rows.Add(columns.ToArray());
             }
 
@@ -46,6 +52,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     row[i] = reader[i];
                 }
+
                 rows.Add(row);
             }
 
@@ -57,16 +64,25 @@ namespace Azrng.DbOperator.Helper
             return new SqlParameter($"@{key}", value);
         }
 
-        public override string BuildSplitPageSql(string sourceSql, int pageIndex, int pageSize,
-                                                 string? orderColumn = null, string? orderDirection = null)
+        public override string BuildSplitPageSql(
+            string sourceSql,
+            int pageIndex,
+            int pageSize,
+            string? orderColumn = null,
+            string? orderDirection = null)
         {
-            var orderData = "(SELECT NULL)";
-            if (orderColumn.IsNotNullOrWhiteSpace() && orderDirection.IsNotNullOrWhiteSpace())
-                orderData = $"{orderColumn} {orderDirection}";
+            SqlPaginationValidator.ValidatePageArguments(pageIndex, pageSize);
 
-            var sql = $"SELECT *, ROW_NUMBER() OVER (ORDER BY {orderData}) AS RowNumber FROM ({sourceSql}) t ";
-            var ret = $"SELECT * FROM ({sql}) t2 WHERE RowNumber BETWEEN {(pageIndex - 1) * pageSize + 1} AND {pageIndex * pageSize}";
-            return ret;
+            var orderData = "(SELECT NULL)";
+            var normalizedOrderColumn = SqlPaginationValidator.NormalizeOrderColumn(orderColumn);
+            var normalizedOrderDirection = SqlPaginationValidator.NormalizeOrderDirection(orderDirection);
+            if (normalizedOrderColumn.IsNotNullOrWhiteSpace() && normalizedOrderDirection.IsNotNullOrWhiteSpace())
+            {
+                orderData = $"{normalizedOrderColumn} {normalizedOrderDirection}";
+            }
+
+            var sql = $"SELECT *, ROW_NUMBER() OVER (ORDER BY {orderData}) AS RowNumber FROM ({sourceSql}) t";
+            return $"SELECT * FROM ({sql}) t2 WHERE RowNumber BETWEEN {(pageIndex - 1) * pageSize + 1} AND {pageIndex * pageSize}";
         }
     }
 }

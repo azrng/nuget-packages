@@ -1,4 +1,4 @@
-﻿using Azrng.Core.Model;
+using Azrng.Core.Model;
 using Azrng.DbOperator.Helper;
 
 namespace Azrng.DbOperator.DbBridge
@@ -10,300 +10,350 @@ namespace Azrng.DbOperator.DbBridge
         public PostgreBasicDbBridge(string connectionString) : base(connectionString) { }
 
         public override Dictionary<string, string> QuerySqlMap =>
-            new Dictionary<string, string>
+            new()
             {
                 {
-                    SystemOperatorConst.SchemaName, @"select schema_name
-                from information_schema.schemata
-                where schema_name not like 'pg_%'
-                  and schema_name != 'information_schema';"
+                    SystemOperatorConst.SchemaName,
+                    @"SELECT schema_name
+FROM information_schema.schemata
+WHERE schema_name NOT LIKE 'pg_%'
+  AND schema_name <> 'information_schema';"
                 },
                 {
-                    SystemOperatorConst.SchemaInfo, @"SELECT n.nspname AS SchemaName, d.description AS SchemaComment
+                    SystemOperatorConst.SchemaInfo,
+                    @"SELECT n.nspname AS SchemaName,
+       d.description AS SchemaComment
 FROM pg_namespace n
-         LEFT JOIN pg_description d ON n.oid = d.objoid AND d.objsubid = 0
-where n.nspname not like 'pg_%'
-  and n.nspname != 'information_schema';"
+LEFT JOIN pg_description d ON n.oid = d.objoid AND d.objsubid = 0
+WHERE n.nspname NOT LIKE 'pg_%'
+  AND n.nspname <> 'information_schema';"
                 },
                 {
-                    SystemOperatorConst.SchemaTableName, @"SELECT a.relname AS TableName, n.nspname schemaname
+                    SystemOperatorConst.SchemaTableName,
+                    @"SELECT n.nspname AS SchemaName,
+       a.relname AS TableName
 FROM pg_class a
-         inner join pg_namespace n on a.relnamespace = n.oid
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+INNER JOIN pg_namespace n ON a.relnamespace = n.oid
 WHERE a.relkind = 'r'
-ORDER BY a.relname"
+ORDER BY a.relname;"
                 },
                 {
-                    SystemOperatorConst.SchemaTableInfoList, @"SELECT a.oid TableId, a.relname AS TableName, b.description AS TableComment
+                    SystemOperatorConst.SchemaTableInfoList,
+                    @"SELECT a.oid AS TableId,
+       a.relname AS TableName,
+       b.description AS TableComment
 FROM pg_class a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
 WHERE a.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
   AND a.relkind = 'r'
-ORDER BY a.relname"
+ORDER BY a.relname;"
                 },
                 {
-                    SystemOperatorConst.SchemaTableInfo, @"SELECT a.oid TableId, a.relname AS TableName, b.description AS TableComment
+                    SystemOperatorConst.SchemaTableInfo,
+                    @"SELECT a.oid AS TableId,
+       a.relname AS TableName,
+       b.description AS TableComment
 FROM pg_class a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
 WHERE a.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
-  AND a.relkind = 'r' and a.relname = @table_name
-ORDER BY a.relname"
+  AND a.relkind = 'r'
+  AND a.relname = @table_name
+ORDER BY a.relname;"
                 },
                 {
-                    SystemOperatorConst.TableColumn, @"SELECT DISTINCT col.ColumnName,
-                col.ColumnLength,
-                col.Sort,
-                col.ColumnType,
-                col.ColumnDefault,
-                col.IsIdentity,
-                colInfo.ColumnComment,
-                colInfo.IsNull,
-                colInfo.IsPrimaryKey,
-                CASE
-                    WHEN EXISTS (SELECT 1
-                                 FROM pg_constraint
-                                 WHERE conrelid = colInfo.attrelid
-                                   AND conkey[1] = colInfo.attnum
-                                   AND contype = 'f') THEN true
-                    ELSE false
-                    END AS IsForeignKey
-from (select column_name                                                             ColumnName,
-             (case
-                  when (numeric_precision is not null) then (case
-                                                                 when numeric_scale <= 0
-                                                                     then cast(numeric_precision AS text)
-                                                                 else concat_ws(',', numeric_precision, numeric_scale) end)
-                  when (datetime_precision IS NOT NULL) then cast(datetime_precision AS text)
-                  when (interval_precision IS NOT NULL) then cast(datetime_precision AS text)
-                  else cast(character_maximum_length AS text) end)                as ColumnLength,
-             ordinal_position                                                        Sort,
-             data_type                                                               ColumnType,
-             column_default                                                          ColumnDefault,
-             (case when column_default like '%nextval%' then true else false end) as IsIdentity
-      from information_schema.columns
-      where table_name = @table_name
-        and table_schema = @schema_name) col
-         inner join (SELECT distinct col_description(a.attrelid, a.attnum) as ColumnComment,
-                                     a.attname                             as name,
-                                     not a.attnotnull                      as IsNull,
-                                     (
-                                         CASE
-                                             WHEN (SELECT COUNT(*)
-                                                   FROM pg_constraint
-                                                   WHERE conrelid = a.attrelid
-                                                     AND a.attnum = ANY (conkey)
-                                                     AND contype = 'p') > 0 THEN true
-                                             ELSE false
-                                             END
-                                         )                                 AS IsPrimaryKey,
-                                     a.attrelid,
-                                     a.attnum
-                     FROM pg_class as c,
-                          pg_attribute as a
-                     where c.relname = @table_name
-                       and c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
-                       and a.attrelid = c.oid
-                       and a.attnum > 0) colInfo on colInfo.name = col.ColumnName
-order by Sort;"
+                    SystemOperatorConst.TableColumn,
+                    @"SELECT DISTINCT @table_name AS TableName,
+       col.ColumnName,
+       col.ColumnLength,
+       col.Sort AS RowNumber,
+       col.ColumnType,
+       col.ColumnDefault,
+       col.IsIdentity,
+       colInfo.ColumnComment,
+       colInfo.IsNull,
+       colInfo.IsPrimaryKey,
+       CASE
+           WHEN EXISTS (
+               SELECT 1
+               FROM pg_constraint
+               WHERE conrelid = colInfo.attrelid
+                 AND conkey[1] = colInfo.attnum
+                 AND contype = 'f') THEN TRUE
+           ELSE FALSE
+           END AS IsForeignKey
+FROM (
+    SELECT column_name AS ColumnName,
+           CASE
+               WHEN numeric_precision IS NOT NULL THEN
+                   CASE WHEN numeric_scale <= 0 THEN CAST(numeric_precision AS text)
+                        ELSE concat_ws(',', numeric_precision, numeric_scale) END
+               WHEN datetime_precision IS NOT NULL THEN CAST(datetime_precision AS text)
+               WHEN interval_precision IS NOT NULL THEN CAST(datetime_precision AS text)
+               ELSE CAST(character_maximum_length AS text)
+               END AS ColumnLength,
+           ordinal_position AS Sort,
+           data_type AS ColumnType,
+           column_default AS ColumnDefault,
+           CASE WHEN column_default LIKE '%nextval%' THEN TRUE ELSE FALSE END AS IsIdentity
+    FROM information_schema.columns
+    WHERE table_name = @table_name
+      AND table_schema = @schema_name
+) col
+INNER JOIN (
+    SELECT DISTINCT col_description(a.attrelid, a.attnum) AS ColumnComment,
+           a.attname AS name,
+           NOT a.attnotnull AS IsNull,
+           CASE
+               WHEN (
+                   SELECT COUNT(*)
+                   FROM pg_constraint
+                   WHERE conrelid = a.attrelid
+                     AND a.attnum = ANY (conkey)
+                     AND contype = 'p') > 0 THEN TRUE
+               ELSE FALSE
+               END AS IsPrimaryKey,
+           a.attrelid,
+           a.attnum
+    FROM pg_class c
+    JOIN pg_attribute a ON a.attrelid = c.oid
+    WHERE c.relname = @table_name
+      AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
+      AND a.attnum > 0
+) colInfo ON colInfo.name = col.ColumnName
+ORDER BY RowNumber;"
                 },
                 {
-                    SystemOperatorConst.SchemaColumn, @"SELECT distinct *
-from (select table_name                                                              TableName,
-             column_name                                                             ColumnName,
-             (case
-                  when (numeric_precision is not null) then (case
-                                                                 when numeric_scale <= 0
-                                                                     then cast(numeric_precision AS text)
-                                                                 else concat_ws(',', numeric_precision, numeric_scale) end)
-                  when (datetime_precision IS NOT NULL) then cast(datetime_precision AS text)
-                  when (interval_precision IS NOT NULL) then cast(datetime_precision AS text)
-                  else cast(character_maximum_length AS text) end)                as ColumnLength,
-             ordinal_position                                                        Sort,
-             data_type                                                               ColumnType,
-             column_default                                                          ColumnDefault,
-             (case when column_default like '%nextval%' then true else false end) as IsIdentity
-      from information_schema.columns
-      where table_schema = @schema_name) col
-         inner join (SELECT distinct c.relname                                TableName,
-                                     col_description(a.attrelid, a.attnum) as ColumnComment,
-                                     a.attname                             as name,
-                                     not a.attnotnull                          as IsNull,
-                                     (
-                                         CASE
-                                             WHEN (SELECT COUNT(*)
-                                                   FROM pg_constraint
-                                                   WHERE conrelid = a.attrelid
-                                                     AND a.attnum = ANY (conkey)
-                                                     AND contype = 'p') > 0 THEN true
-                                             ELSE false
-                                             END
-                                         )                                 AS IsPrimaryKey
-                     FROM pg_class as c,
-                          pg_attribute as a
-                     where c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
-                       and a.attrelid = c.oid
-                       and a.attnum > 0) colInfo on colInfo.name = col.ColumnName and colInfo.TableName = col.TableName
-order by col.TableName,Sort"
+                    SystemOperatorConst.SchemaColumn,
+                    @"SELECT DISTINCT col.TableName,
+       col.ColumnName,
+       col.ColumnLength,
+       col.Sort AS RowNumber,
+       col.ColumnType,
+       col.ColumnDefault,
+       col.IsIdentity,
+       colInfo.ColumnComment,
+       colInfo.IsNull,
+       colInfo.IsPrimaryKey,
+       CASE
+           WHEN EXISTS (
+               SELECT 1
+               FROM pg_constraint pc
+               WHERE pc.conrelid = colInfo.attrelid
+                 AND colInfo.attnum = ANY (pc.conkey)
+                 AND pc.contype = 'f') THEN TRUE
+           ELSE FALSE
+           END AS IsForeignKey
+FROM (
+    SELECT table_name AS TableName,
+           column_name AS ColumnName,
+           CASE
+               WHEN numeric_precision IS NOT NULL THEN
+                   CASE WHEN numeric_scale <= 0 THEN CAST(numeric_precision AS text)
+                        ELSE concat_ws(',', numeric_precision, numeric_scale) END
+               WHEN datetime_precision IS NOT NULL THEN CAST(datetime_precision AS text)
+               WHEN interval_precision IS NOT NULL THEN CAST(datetime_precision AS text)
+               ELSE CAST(character_maximum_length AS text)
+               END AS ColumnLength,
+           ordinal_position AS Sort,
+           data_type AS ColumnType,
+           column_default AS ColumnDefault,
+           CASE WHEN column_default LIKE '%nextval%' THEN TRUE ELSE FALSE END AS IsIdentity
+    FROM information_schema.columns
+    WHERE table_schema = @schema_name
+) col
+INNER JOIN (
+    SELECT DISTINCT c.relname AS TableName,
+           col_description(a.attrelid, a.attnum) AS ColumnComment,
+           a.attname AS name,
+           NOT a.attnotnull AS IsNull,
+           CASE
+               WHEN (
+                   SELECT COUNT(*)
+                   FROM pg_constraint
+                   WHERE conrelid = a.attrelid
+                     AND a.attnum = ANY (conkey)
+                     AND contype = 'p') > 0 THEN TRUE
+               ELSE FALSE
+               END AS IsPrimaryKey,
+           a.attrelid,
+           a.attnum
+    FROM pg_class c
+    JOIN pg_attribute a ON a.attrelid = c.oid
+    WHERE c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = @schema_name)
+      AND a.attnum > 0
+) colInfo ON colInfo.name = col.ColumnName AND colInfo.TableName = col.TableName
+ORDER BY col.TableName, RowNumber;"
                 },
                 {
                     SystemOperatorConst.TablePrimary,
-                    @"SELECT tc.table_name as TableName, tc.constraint_name as ColumnConstraintName, kcu.column_name as ColumnName
-FROM information_schema.table_constraints AS tc
-         JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name and tc.table_schema = kcu.table_schema
-WHERE constraint_type = 'PRIMARY KEY'
-  and tc.table_schema =@schema_name
+                    @"SELECT tc.table_name AS TableName,
+       kcu.column_name AS ColumnName,
+       tc.constraint_name AS ColumnConstraintName
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+ AND tc.table_schema = kcu.table_schema
+WHERE tc.constraint_type = 'PRIMARY KEY'
+  AND tc.table_schema = @schema_name
   AND tc.table_name = @table_name;"
                 },
                 {
                     SystemOperatorConst.SchemaPrimary,
-                    @"SELECT tc.table_name as TableName, tc.constraint_name as ColumnConstraintName, kcu.column_name as ColumnName
-FROM information_schema.table_constraints AS tc
-         JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name and tc.table_schema = kcu.table_schema
-WHERE constraint_type = 'PRIMARY KEY'
-  and tc.table_schema =@schema_name"
+                    @"SELECT tc.table_name AS TableName,
+       kcu.column_name AS ColumnName,
+       tc.constraint_name AS ColumnConstraintName
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+ AND tc.table_schema = kcu.table_schema
+WHERE tc.constraint_type = 'PRIMARY KEY'
+  AND tc.table_schema = @schema_name;"
                 },
                 {
-                    SystemOperatorConst.TableForeign, @"SELECT tc.table_name      as TableName,
-       kcu.column_name    as ColumnName,
-       tc.constraint_name as ColConstraintName,
-       ccu.table_schema   as ForeignSchemaName,
-       ccu.table_name     as ForeignTableName,
-       ccu.column_name    as ForeignColumnName
-FROM information_schema.table_constraints AS tc
-         JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name and tc.table_schema = kcu.table_schema
-                  and tc.constraint_schema = kcu.constraint_schema
-         JOIN information_schema.constraint_column_usage AS ccu
-              ON ccu.constraint_name = tc.constraint_name and ccu.table_schema = tc.table_schema
-                  and ccu.constraint_schema = tc.constraint_schema
-WHERE constraint_type = 'FOREIGN KEY'
-  and tc.table_schema = @schema_name
+                    SystemOperatorConst.TableForeign,
+                    @"SELECT tc.table_name AS TableName,
+       kcu.column_name AS ColumnName,
+       tc.constraint_name AS ColumnConstraintName,
+       ccu.table_schema AS ForeignSchemaName,
+       ccu.table_name AS ForeignTableName,
+       ccu.column_name AS ForeignColumnName
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+ AND tc.table_schema = kcu.table_schema
+ AND tc.constraint_schema = kcu.constraint_schema
+JOIN information_schema.constraint_column_usage ccu
+  ON ccu.constraint_name = tc.constraint_name
+ AND ccu.table_schema = tc.table_schema
+ AND ccu.constraint_schema = tc.constraint_schema
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = @schema_name
   AND tc.table_name = @table_name;"
                 },
                 {
-                    SystemOperatorConst.SchemaForeign, @"SELECT tc.table_name      as TableName,
-       kcu.column_name    as ColumnName,
-       tc.constraint_name as ColConstraintName,
-       ccu.table_schema   as ForeignSchemaName,
-       ccu.table_name     as ForeignTableName,
-       ccu.column_name    as ForeignColumnName
-FROM information_schema.table_constraints AS tc
-         JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name and tc.table_schema = kcu.table_schema
-                  and tc.constraint_schema = kcu.constraint_schema
-         JOIN information_schema.constraint_column_usage AS ccu
-              ON ccu.constraint_name = tc.constraint_name and ccu.table_schema = tc.table_schema
-                  and ccu.constraint_schema = tc.constraint_schema
-WHERE constraint_type = 'FOREIGN KEY'
-  and tc.table_schema = @schema_name;"
+                    SystemOperatorConst.SchemaForeign,
+                    @"SELECT tc.table_name AS TableName,
+       kcu.column_name AS ColumnName,
+       tc.constraint_name AS ColumnConstraintName,
+       ccu.table_schema AS ForeignSchemaName,
+       ccu.table_name AS ForeignTableName,
+       ccu.column_name AS ForeignColumnName
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+ AND tc.table_schema = kcu.table_schema
+ AND tc.constraint_schema = kcu.constraint_schema
+JOIN information_schema.constraint_column_usage ccu
+  ON ccu.constraint_name = tc.constraint_name
+ AND ccu.table_schema = tc.table_schema
+ AND ccu.constraint_schema = tc.constraint_schema
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = @schema_name;"
                 },
                 {
                     SystemOperatorConst.TableIndex,
-                    @"select E.RELNAME                                                      as TableName,
-       A.INDEXNAME                                                    as IndexName,
-       A.INDEXDEF                                                     as Indexdef,
-       C.INDISUNIQUE                                                  as Indisunique,
-       C.INDISPRIMARY                                                 as Indisprimary,
-       D.DESCRIPTION                                                  as description,
-       G.attname                                                      as ColumnName,
-       G.attnum                                                       as IndexPostion,
-       (case when C.indoption::text = '0' then 'ASC' else 'DESC' end) as IndexSort
-from PG_AM B
-         left join PG_CLASS F on B.OID = F.RELAM
-         left join PG_STAT_ALL_INDEXES E on F.OID = E.INDEXRELID
-         left join PG_INDEX C on E.INDEXRELID = C.INDEXRELID
-         left outer join PG_DESCRIPTION D on C.INDEXRELID = D.OBJOID
-         left join pg_attribute G on F.oid = G.attrelid,
-     PG_INDEXES A
-where A.SCHEMANAME = E.SCHEMANAME
-  and A.TABLENAME = E.RELNAME
-  and A.INDEXNAME = E.INDEXRELNAME
-  and E.SCHEMANAME = @schema_name
-  and E.RELNAME = @table_name;"
+                    @"SELECT e.relname AS TableName,
+       a.indexname AS IndexName,
+       a.indexdef AS Indexdef,
+       c.indisunique AS Indisunique,
+       c.indisprimary AS Indisprimary,
+       d.description AS Description,
+       g.attname AS ColumnName,
+       g.attnum AS IndexPostion,
+       CASE WHEN c.indoption::text = '0' THEN 'ASC' ELSE 'DESC' END AS IndexSort
+FROM pg_am b
+LEFT JOIN pg_class f ON b.oid = f.relam
+LEFT JOIN pg_stat_all_indexes e ON f.oid = e.indexrelid
+LEFT JOIN pg_index c ON e.indexrelid = c.indexrelid
+LEFT JOIN pg_description d ON c.indexrelid = d.objoid
+LEFT JOIN pg_attribute g ON f.oid = g.attrelid,
+     pg_indexes a
+WHERE a.schemaname = e.schemaname
+  AND a.tablename = e.relname
+  AND a.indexname = e.indexrelname
+  AND e.schemaname = @schema_name
+  AND e.relname = @table_name;"
                 },
                 {
                     SystemOperatorConst.SchemaIndex,
-                    @"select E.RELNAME                                                      as TableName,
-       A.INDEXNAME                                                    as IndexName,
-       A.INDEXDEF                                                     as Indexdef,
-       C.INDISUNIQUE                                                  as Indisunique,
-       C.INDISPRIMARY                                                 as Indisprimary,
-       D.DESCRIPTION                                                  as description,
-       G.attname                                                      as ColumnName,
-       G.attnum                                                       as IndexPostion,
-       (case when C.indoption::text = '0' then 'ASC' else 'DESC' end) as IndexSort
-from PG_AM B
-         left join PG_CLASS F on B.OID = F.RELAM
-         left join PG_STAT_ALL_INDEXES E on F.OID = E.INDEXRELID
-         left join PG_INDEX C on E.INDEXRELID = C.INDEXRELID
-         left outer join PG_DESCRIPTION D on C.INDEXRELID = D.OBJOID
-         left join pg_attribute G on F.oid = G.attrelid,
-     PG_INDEXES A
-where A.SCHEMANAME = E.SCHEMANAME
-  and A.TABLENAME = E.RELNAME
-  and A.INDEXNAME = E.INDEXRELNAME
-  and E.SCHEMANAME = @schema_name"
+                    @"SELECT e.relname AS TableName,
+       a.indexname AS IndexName,
+       a.indexdef AS Indexdef,
+       c.indisunique AS Indisunique,
+       c.indisprimary AS Indisprimary,
+       d.description AS Description,
+       g.attname AS ColumnName,
+       g.attnum AS IndexPostion,
+       CASE WHEN c.indoption::text = '0' THEN 'ASC' ELSE 'DESC' END AS IndexSort
+FROM pg_am b
+LEFT JOIN pg_class f ON b.oid = f.relam
+LEFT JOIN pg_stat_all_indexes e ON f.oid = e.indexrelid
+LEFT JOIN pg_index c ON e.indexrelid = c.indexrelid
+LEFT JOIN pg_description d ON c.indexrelid = d.objoid
+LEFT JOIN pg_attribute g ON f.oid = g.attrelid,
+     pg_indexes a
+WHERE a.schemaname = e.schemaname
+  AND a.tablename = e.relname
+  AND a.indexname = e.indexrelname
+  AND e.schemaname = @schema_name;"
                 },
                 {
                     SystemOperatorConst.DbView,
-                    @"SELECT b.description as ViewDescription,
-       c.viewname    as ViewName,
-       c.viewowner   as ViewOwner,
-       c.definition  as ViewDefinition
+                    @"SELECT b.description AS ViewDescription,
+       c.viewname AS ViewName,
+       c.viewowner AS ViewOwner,
+       c.definition AS ViewDefinition
 FROM pg_class a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
-         inner join pg_views c on a.relname = c.viewname
-         inner join pg_namespace d on a.relnamespace = d.oid
-where c.schemaname not in ('pg_catalog', 'information_schema')"
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+INNER JOIN pg_views c ON a.relname = c.viewname
+INNER JOIN pg_namespace d ON a.relnamespace = d.oid
+WHERE c.schemaname NOT IN ('pg_catalog', 'information_schema');"
                 },
                 {
                     SystemOperatorConst.SchemaView,
-                    @"SELECT b.description as ViewDescription,
-       c.viewname    as ViewName,
-       c.viewowner   as ViewOwner,
-       c.definition  as ViewDefinition
+                    @"SELECT b.description AS ViewDescription,
+       c.viewname AS ViewName,
+       c.viewowner AS ViewOwner,
+       c.definition AS ViewDefinition
 FROM pg_class a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
-         inner join pg_views c on a.relname = c.viewname and c.schemaname =@schema_name
-         inner join pg_namespace d on a.relnamespace = d.oid and nspname =@schema_name"
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+INNER JOIN pg_views c ON a.relname = c.viewname AND c.schemaname = @schema_name
+INNER JOIN pg_namespace d ON a.relnamespace = d.oid AND d.nspname = @schema_name;"
                 },
                 {
                     SystemOperatorConst.SchemaProc,
-                    @"SELECT proname  as ProcName,
-       coalesce(pg_get_function_arguments(a.oid),'') inputParam,
-       coalesce(pg_get_function_result(a.oid),'') outputParam,
-       pg_get_functiondef(a.oid)                          as ProcDefinition,
-       b.description                                      as ProcDescription
+                    @"SELECT proname AS ProcName,
+       COALESCE(pg_get_function_arguments(a.oid), '') AS InputParam,
+       COALESCE(pg_get_function_result(a.oid), '') AS OutputParam,
+       pg_get_functiondef(a.oid) AS ProcDefinition,
+       b.description AS ProcDescription
 FROM pg_proc a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
-         inner join pg_namespace d on a.pronamespace = d.oid and d.nspname =@schema_name
-where a.proname not in ('median')
--- median is an aggregate function 这个名称是public域下隐藏的系统聚合函数 无法查找定义.."
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+INNER JOIN pg_namespace d ON a.pronamespace = d.oid AND d.nspname = @schema_name
+WHERE a.proname NOT IN ('median');"
                 },
                 {
                     SystemOperatorConst.DbProc,
-                    @"SELECT n.nspname                 SchemaName,
-       a.proname                 ProcName,
-       coalesce(pg_get_function_arguments(a.oid),'') inputParam,
-       coalesce(pg_get_function_result(a.oid),'') outputParam,
-       b.description             ProcDescription,
-       pg_get_functiondef(a.oid) ProcDefinition
+                    @"SELECT n.nspname AS SchemaName,
+       a.proname AS ProcName,
+       COALESCE(pg_get_function_arguments(a.oid), '') AS InputParam,
+       COALESCE(pg_get_function_result(a.oid), '') AS OutputParam,
+       b.description AS ProcDescription,
+       pg_get_functiondef(a.oid) AS ProcDefinition
 FROM pg_proc a
-         LEFT OUTER JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
-         inner join pg_namespace n ON n.oid = a.pronamespace
-WHERE n.nspname not in ('pg_catalog', 'information_schema');"
+LEFT JOIN pg_description b ON b.objsubid = 0 AND a.oid = b.objoid
+INNER JOIN pg_namespace n ON n.oid = a.pronamespace
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema');"
                 }
             };
 
         public override DatabaseType DatabaseType => DatabaseType.PostgresSql;
 
-        private IDbHelper _dbHelper;
+        private IDbHelper? _dbHelper;
 
         public override IDbHelper DbHelper =>
-            _dbHelper ??= ConnectionString is null
-                ? new PostgresSqlDbHelper(DataSourceConfig)
-                : new PostgresSqlDbHelper(ConnectionString);
+            _dbHelper ??= HasConnectionString
+                ? new PostgresSqlDbHelper(ConnectionString)
+                : new PostgresSqlDbHelper(DataSourceConfig);
     }
 }

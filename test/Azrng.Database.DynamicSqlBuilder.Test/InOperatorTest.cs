@@ -120,7 +120,7 @@ public class InOperatorTest
 
         // 验证是否包含NOT IN操作符
         Assert.Contains("!=", sql.ToUpper());
-        Assert.Contains("ANY", sql.ToUpper());
+        Assert.Contains("ALL", sql.ToUpper());
         return Task.CompletedTask;
     }
 

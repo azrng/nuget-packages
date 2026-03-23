@@ -1,4 +1,5 @@
-﻿using Dapper;
+using Azrng.DbOperator.Validation;
+using Dapper;
 using Oracle.ManagedDataAccess.Client;
 using System.Data.Common;
 
@@ -6,13 +7,15 @@ namespace Azrng.DbOperator.Helper
 {
     public class OracleDbHelper : DbHelperBase
     {
-        private const string ConnectionStringFormat = "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={0})(PORT={1}))(CONNECT_DATA=(SERVICE_NAME={2})));User Id={3};Password={4};";
+        private const string ConnectionStringFormat =
+            "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={0})(PORT={1}))(CONNECT_DATA=(SERVICE_NAME={2})));User Id={3};Password={4};";
 
         public OracleDbHelper(string connectionString) : base(connectionString) { }
 
         public OracleDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(ConnectionStringFormat,
+            ConnectionString = string.Format(
+                ConnectionStringFormat,
                 dataSourceConfig.Host,
                 dataSourceConfig.Port,
                 dataSourceConfig.DbName,
@@ -39,6 +42,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     columns.Add(reader.GetName(i));
                 }
+
                 rows.Add(columns.ToArray());
             }
 
@@ -49,6 +53,7 @@ namespace Azrng.DbOperator.Helper
                 {
                     row[i] = reader[i];
                 }
+
                 rows.Add(row);
             }
 
@@ -60,15 +65,25 @@ namespace Azrng.DbOperator.Helper
             return new OracleParameter($":{key}", value);
         }
 
-        public override string BuildSplitPageSql(string sourceSql, int pageIndex, int pageSize,
-                                                 string? orderColumn = null,
-                                                 string? orderDirection = null)
+        public override string BuildSplitPageSql(
+            string sourceSql,
+            int pageIndex,
+            int pageSize,
+            string? orderColumn = null,
+            string? orderDirection = null)
         {
+            SqlPaginationValidator.ValidatePageArguments(pageIndex, pageSize);
+
             var orderSql = " ORDER BY 1 ";
-            if (orderColumn.IsNotNullOrWhiteSpace() && orderDirection.IsNotNullOrWhiteSpace())
-                orderSql = $" ORDER BY {orderColumn} {orderDirection}";
-            var sql = $"SELECT * FROM (SELECT A.*, ROW_NUMBER() OVER ({orderSql}) Reserved_Field_RowNumber FROM ({sourceSql}) A) WHERE Reserved_Field_RowNumber > {(pageIndex - 1) * pageSize} AND Reserved_Field_RowNumber <= {pageIndex * pageSize}";
-            return sql;
+            var normalizedOrderColumn = SqlPaginationValidator.NormalizeOrderColumn(orderColumn);
+            var normalizedOrderDirection = SqlPaginationValidator.NormalizeOrderDirection(orderDirection);
+            if (normalizedOrderColumn.IsNotNullOrWhiteSpace() && normalizedOrderDirection.IsNotNullOrWhiteSpace())
+            {
+                orderSql = $" ORDER BY {normalizedOrderColumn} {normalizedOrderDirection}";
+            }
+
+            return
+                $"SELECT * FROM (SELECT A.*, ROW_NUMBER() OVER ({orderSql}) Reserved_Field_RowNumber FROM ({sourceSql}) A) WHERE Reserved_Field_RowNumber > {(pageIndex - 1) * pageSize} AND Reserved_Field_RowNumber <= {pageIndex * pageSize}";
         }
     }
 }

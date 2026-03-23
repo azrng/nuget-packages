@@ -49,7 +49,7 @@ namespace Azrng.DbOperator.Helper
 
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    row[i] = ConvertReaderValueObject(reader[i], reader.GetFieldType(i));
+                    row[i] = ConvertReaderValueObject(reader[i], reader.GetFieldType(i)) ?? DBNull.Value;
                 }
 
                 rows.Add(row);

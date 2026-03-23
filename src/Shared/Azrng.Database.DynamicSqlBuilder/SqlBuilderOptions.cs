@@ -30,7 +30,7 @@ public class SqlBuilderOptions
     /// <summary>
     /// 默认配置实例
     /// </summary>
-    public static readonly SqlBuilderOptions Default = new();
+    public static SqlBuilderOptions Default => new();
 }
 
 /// <summary>

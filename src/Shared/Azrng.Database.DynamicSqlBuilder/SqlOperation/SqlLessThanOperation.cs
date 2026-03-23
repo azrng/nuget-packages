@@ -16,7 +16,8 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 
         public override string GetSqlSentenceResult(string fieldName, object fieldValue, DynamicParameters parameters, Type valueType)
         {
-            return $"  {fieldName} < {fieldValue}   ";
+            var paramName = AddParameter(fieldName, fieldValue, parameters, valueType);
+            return $"  {fieldName} < {paramName}   ";
         }
     }
 
@@ -34,7 +35,8 @@ namespace Azrng.Database.DynamicSqlBuilder.SqlOperation
 
         public override string GetSqlSentenceResult(string fieldName, object fieldValue, DynamicParameters parameters, Type valueType)
         {
-            return $"  {fieldName} <= {fieldValue}   ";
+            var paramName = AddParameter(fieldName, fieldValue, parameters, valueType);
+            return $"  {fieldName} <= {paramName}   ";
         }
     }
 }

@@ -1,7 +1,9 @@
 using Azrng.Database.DynamicSqlBuilder.Model;
+using Azrng.Database.DynamicSqlBuilder.Services;
 using Azrng.Database.DynamicSqlBuilder.SqlOperation;
 using Azrng.Database.DynamicSqlBuilder.Validation;
 using Dapper;
+using System.Diagnostics;
 using System.Text;
 
 namespace Azrng.Database.DynamicSqlBuilder;
@@ -24,73 +26,22 @@ public static class DynamicSqlBuilderHelper
         List<SortFieldDto> sortFields = null,
         bool isQueryTotalCount = false)
     {
-        // 验证表名
-        FieldNameValidator.ValidateFieldName(tableName, nameof(tableName));
-
-        // 验证查询字段
-        if (queryResultFields == null || queryResultFields.Count == 0)
-        {
-            throw new ArgumentException("查询字段列表不能为空", nameof(queryResultFields));
-        }
-
-        if (!FieldNameValidator.AreValidFieldNames(queryResultFields, out var invalidFields))
-        {
-            throw new ArgumentException($"查询字段包含无效的字段名: {string.Join(", ", invalidFields)}", nameof(queryResultFields));
-        }
-
-        // 验证WHERE子句中的字段名
-        if (sqlWhereClauses != null)
-        {
-            foreach (var whereClause in sqlWhereClauses)
-            {
-                FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(sqlWhereClauses));
-            }
-        }
-
-        // 验证IN操作符字段名
-        if (inOperatorFields != null)
-        {
-            foreach (var inField in inOperatorFields)
-            {
-                FieldNameValidator.ValidateFieldName(inField.Field, nameof(inOperatorFields));
-            }
-        }
-
-        // 验证NOT IN操作符字段名
-        if (notInOperatorFields != null)
-        {
-            foreach (var notInField in notInOperatorFields)
-            {
-                FieldNameValidator.ValidateFieldName(notInField.Field, nameof(notInOperatorFields));
-            }
-        }
-
-        // 验证排序字段名
-        if (sortFields != null)
-        {
-            foreach (var sortField in sortFields)
-            {
-                FieldNameValidator.ValidateFieldName(sortField.Field, nameof(sortFields));
-            }
-        }
+        ValidateBuilderInputs(tableName, queryResultFields, sqlWhereClauses, inOperatorFields, notInOperatorFields, sortFields);
 
         var parameters = new DynamicParameters();
-
-        if (string.IsNullOrEmpty(necessaryCondition))
-        {
-            necessaryCondition = " where 1=1 ";
-        }
+        var normalizedNecessaryCondition = SqlBuilderInputValidator.NormalizeNecessaryCondition(necessaryCondition);
+        var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+        var orderByClause = GetOrderByClause(sortFields);
 
         var querySqlBuilder = new StringBuilder();
         var basicTemplate = isQueryTotalCount
-            ? $" SELECT COUNT(1) FROM {tableName} {necessaryCondition} "
-            : $" SELECT {string.Join(",", queryResultFields)} FROM {tableName} {necessaryCondition}";
+            ? $" SELECT COUNT(1) FROM {tableName} {normalizedNecessaryCondition} "
+            : $" SELECT {string.Join(",", queryResultFields)} FROM {tableName} {normalizedNecessaryCondition}";
         querySqlBuilder.Append(basicTemplate);
 
         foreach (var sqlWhereClauseItem in sqlWhereClauses ?? new List<SqlWhereClauseInfoDto>())
         {
-            var whereConditionSql = SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters);
-            querySqlBuilder.Append(whereConditionSql);
+            querySqlBuilder.Append(SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters));
         }
 
         if (inOperatorFields?.Any() == true)
@@ -103,20 +54,24 @@ public static class DynamicSqlBuilderHelper
             querySqlBuilder.Append(SpecialHandlerNotInOperator(notInOperatorFields, MatchOperator.NotIn, parameters));
         }
 
-        if (sortFields != null && !isQueryTotalCount && sortFields.Any())
+        if (!isQueryTotalCount)
         {
-            querySqlBuilder.Append(SqlConstant.SortOperatorOrderBy)
-                           .Append(string.Empty)
-                           .Append(string.Join(",", sortFields.Select(p => p.Field + p.OrderStr)));
+            if (pageIndex.HasValue && pageSize.HasValue)
+            {
+                var pagingSql = SqlDialectService.GetPagingSql(querySqlBuilder.ToString(), pageIndex.Value, pageSize.Value, orderByClause, dialect);
+                querySqlBuilder.Clear();
+                querySqlBuilder.Append(pagingSql);
+            }
+            else if (!string.IsNullOrWhiteSpace(orderByClause))
+            {
+                querySqlBuilder.Append(SqlConstant.SortOperatorOrderBy)
+                    .Append(orderByClause);
+            }
         }
 
-        if (pageIndex.HasValue && pageSize.HasValue && !isQueryTotalCount)
-        {
-            querySqlBuilder.AppendFormat(SqlConstant.PaginationOperatorTemplate, pageSize.Value,
-                (pageIndex.Value - 1) * pageSize.Value);
-        }
-
-        return (querySqlBuilder.ToString(), parameters);
+        var sql = querySqlBuilder.ToString();
+        NotifySqlGenerated(sql, parameters);
+        return (sql, parameters);
     }
 
     /// <summary>
@@ -143,109 +98,51 @@ public static class DynamicSqlBuilderHelper
         int? pageSize = null,
         IReadOnlyCollection<SortFieldDto> sortFields = null)
     {
-        // 验证表名
-        FieldNameValidator.ValidateFieldName(tableName, nameof(tableName));
-
-        // 验证查询字段
-        var queryFields = queryResultFields.ToList();
-        if (queryFields.Count == 0)
-        {
-            throw new ArgumentException("查询字段列表不能为空", nameof(queryResultFields));
-        }
-
-        if (!FieldNameValidator.AreValidFieldNames(queryFields, out var invalidFields))
-        {
-            throw new ArgumentException($"查询字段包含无效的字段名: {string.Join(", ", invalidFields)}", nameof(queryResultFields));
-        }
-
-        // 验证WHERE子句中的字段名
-        if (sqlWhereClauses != null)
-        {
-            foreach (var whereClause in sqlWhereClauses)
-            {
-                FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(sqlWhereClauses));
-            }
-        }
-
-        // 验证IN操作符字段名
-        if (inOperatorFields != null)
-        {
-            foreach (var inField in inOperatorFields)
-            {
-                FieldNameValidator.ValidateFieldName(inField.Field, nameof(inOperatorFields));
-            }
-        }
-
-        // 验证NOT IN操作符字段名
-        if (notInOperatorFields != null)
-        {
-            foreach (var notInField in notInOperatorFields)
-            {
-                FieldNameValidator.ValidateFieldName(notInField.Field, nameof(notInOperatorFields));
-            }
-        }
-
-        // 验证排序字段名
-        if (sortFields != null)
-        {
-            foreach (var sortField in sortFields)
-            {
-                FieldNameValidator.ValidateFieldName(sortField.Field, nameof(sortFields));
-            }
-        }
+        ValidateBuilderInputs(tableName, queryResultFields, sqlWhereClauses, inOperatorFields, notInOperatorFields, sortFields);
 
         var parameters = new DynamicParameters();
+        var normalizedNecessaryCondition = SqlBuilderInputValidator.NormalizeNecessaryCondition(necessaryCondition);
+        var dialect = SqlBuilderConfigurer.GetCurrentOptions().Dialect;
+        var orderByClause = GetOrderByClause(sortFields);
 
-        if (string.IsNullOrEmpty(necessaryCondition))
-        {
-            necessaryCondition = " where 1=1 ";
-        }
-
-        var baseQuerySqlBuilder = new StringBuilder();
-
+        var whereSqlBuilder = new StringBuilder();
         foreach (var sqlWhereClauseItem in sqlWhereClauses ?? new List<SqlWhereClauseInfoDto>())
         {
-            var whereConditionSql = SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters);
-            baseQuerySqlBuilder.Append(whereConditionSql);
+            whereSqlBuilder.Append(SqlWhereClauseHelper.SplicingWhereConditionSql(sqlWhereClauseItem, parameters));
         }
 
         if (inOperatorFields?.Any() == true)
         {
-            baseQuerySqlBuilder.Append(SpecialHandlerInOperator(inOperatorFields, MatchOperator.In, parameters));
+            whereSqlBuilder.Append(SpecialHandlerInOperator(inOperatorFields, MatchOperator.In, parameters));
         }
 
         if (notInOperatorFields?.Any() == true)
         {
-            baseQuerySqlBuilder.Append(SpecialHandlerNotInOperator(notInOperatorFields, MatchOperator.NotIn, parameters));
+            whereSqlBuilder.Append(SpecialHandlerNotInOperator(notInOperatorFields, MatchOperator.NotIn, parameters));
         }
 
-        var countSql = $" SELECT COUNT(1) FROM {tableName} {necessaryCondition} {baseQuerySqlBuilder}";
-        if (sortFields != null && sortFields.Any())
-        {
-            baseQuerySqlBuilder.Append(SqlConstant.SortOperatorOrderBy)
-                               .Append(string.Empty)
-                               .Append(string.Join(",", sortFields.Select(p => p.Field + p.OrderStr)));
-        }
+        var whereSql = whereSqlBuilder.ToString();
+        var countSql = $" SELECT COUNT(1) FROM {tableName} {normalizedNecessaryCondition} {whereSql}";
+        var querySql = $" SELECT {string.Join(",", queryResultFields)} FROM {tableName} {normalizedNecessaryCondition} {whereSql}";
 
         if (pageIndex.HasValue && pageSize.HasValue)
         {
-            baseQuerySqlBuilder.AppendFormat(SqlConstant.PaginationOperatorTemplate, pageSize.Value,
-                (pageIndex.Value - 1) * pageSize.Value);
+            querySql = SqlDialectService.GetPagingSql(querySql, pageIndex.Value, pageSize.Value, orderByClause, dialect);
+        }
+        else if (!string.IsNullOrWhiteSpace(orderByClause))
+        {
+            querySql = $"{querySql}{SqlConstant.SortOperatorOrderBy}{orderByClause}";
         }
 
-        var querySql =
-            $" SELECT {string.Join(",", queryResultFields)} FROM {tableName} {necessaryCondition} {baseQuerySqlBuilder}";
-
+        NotifySqlGenerated(querySql, parameters);
+        NotifySqlGenerated(countSql, parameters);
         return (querySql, countSql, parameters);
     }
 
-    /// <summary>
-    /// 单独 特殊处理 in查询的列筛选入参
-    /// </summary>
-    /// <returns></returns>
-    private static string SpecialHandlerInOperator(IEnumerable<InOperatorFieldDto> inOperatorFields,
-                                                   MatchOperator matchOperator,
-                                                   DynamicParameters parameters)
+    private static string SpecialHandlerInOperator(
+        IEnumerable<InOperatorFieldDto> inOperatorFields,
+        MatchOperator matchOperator,
+        DynamicParameters parameters)
     {
         var sqlBuilder = new StringBuilder();
         foreach (var inOperatorField in inOperatorFields)
@@ -253,11 +150,7 @@ public static class DynamicSqlBuilderHelper
             if (inOperatorField.Ids.Any())
             {
                 var sqlOperation = SqlOperationFactory.CreateSqlOperation(matchOperator);
-
-                // 根据ValueType使用新的重载方法
-                var sqlResult = sqlOperation.GetSqlSentenceResult(inOperatorField.Field,
-                    inOperatorField.Ids, parameters, inOperatorField.ValueType);
-
+                var sqlResult = sqlOperation.GetSqlSentenceResult(inOperatorField.Field, inOperatorField.Ids, parameters, inOperatorField.ValueType);
                 sqlBuilder.Append($" {SqlConstant.LogicalOperatorAnd} {sqlResult}");
             }
             else
@@ -269,13 +162,10 @@ public static class DynamicSqlBuilderHelper
         return sqlBuilder.ToString();
     }
 
-    /// <summary>
-    ///单独 特殊处理 not in查询的列筛选入参
-    /// </summary>
-    /// <returns></returns>
-    private static string SpecialHandlerNotInOperator(IEnumerable<NotInOperatorFieldDto> notInOperatorFields,
-                                                      MatchOperator matchOperator,
-                                                      DynamicParameters parameters)
+    private static string SpecialHandlerNotInOperator(
+        IEnumerable<NotInOperatorFieldDto> notInOperatorFields,
+        MatchOperator matchOperator,
+        DynamicParameters parameters)
     {
         var sqlBuilder = new StringBuilder();
         foreach (var notInOperatorField in notInOperatorFields)
@@ -283,11 +173,7 @@ public static class DynamicSqlBuilderHelper
             if (notInOperatorField.Ids.Any())
             {
                 var sqlOperation = SqlOperationFactory.CreateSqlOperation(matchOperator);
-
-                // 根据ValueType使用新的重载方法
-                var sqlResult = sqlOperation.GetSqlSentenceResult(notInOperatorField.Field,
-                    notInOperatorField.Ids, parameters, notInOperatorField.ValueType);
-
+                var sqlResult = sqlOperation.GetSqlSentenceResult(notInOperatorField.Field, notInOperatorField.Ids, parameters, notInOperatorField.ValueType);
                 sqlBuilder.Append($" {SqlConstant.LogicalOperatorAnd} {sqlResult}");
             }
             else
@@ -297,5 +183,91 @@ public static class DynamicSqlBuilderHelper
         }
 
         return sqlBuilder.ToString();
+    }
+
+    private static void ValidateBuilderInputs(
+        string tableName,
+        List<string> queryResultFields,
+        IEnumerable<SqlWhereClauseInfoDto> sqlWhereClauses,
+        IEnumerable<InOperatorFieldDto> inOperatorFields,
+        IEnumerable<NotInOperatorFieldDto> notInOperatorFields,
+        IEnumerable<SortFieldDto> sortFields)
+    {
+        if (queryResultFields == null || queryResultFields.Count == 0)
+        {
+            throw new ArgumentException("查询字段列表不能为空", nameof(queryResultFields));
+        }
+
+        var options = SqlBuilderConfigurer.GetCurrentOptions();
+        if (!options.EnableFieldNameValidation)
+        {
+            return;
+        }
+
+        FieldNameValidator.ValidateFieldName(tableName, nameof(tableName));
+
+        if (!FieldNameValidator.AreValidFieldNames(queryResultFields, out var invalidFields))
+        {
+            throw new ArgumentException($"查询字段包含无效字段名: {string.Join(", ", invalidFields)}", nameof(queryResultFields));
+        }
+
+        foreach (var whereClause in sqlWhereClauses ?? Enumerable.Empty<SqlWhereClauseInfoDto>())
+        {
+            ValidateWhereClause(whereClause);
+        }
+
+        foreach (var inField in inOperatorFields ?? Enumerable.Empty<InOperatorFieldDto>())
+        {
+            FieldNameValidator.ValidateFieldName(inField.Field, nameof(inOperatorFields));
+        }
+
+        foreach (var notInField in notInOperatorFields ?? Enumerable.Empty<NotInOperatorFieldDto>())
+        {
+            FieldNameValidator.ValidateFieldName(notInField.Field, nameof(notInOperatorFields));
+        }
+
+        foreach (var sortField in sortFields ?? Enumerable.Empty<SortFieldDto>())
+        {
+            FieldNameValidator.ValidateFieldName(sortField.Field, nameof(sortFields));
+        }
+    }
+
+    private static void ValidateWhereClause(SqlWhereClauseInfoDto whereClause)
+    {
+        if (whereClause == null)
+        {
+            return;
+        }
+
+        SqlBuilderInputValidator.NormalizeLogicalOperator(whereClause.LogicalOperator);
+
+        if (whereClause.NestedChildrens?.Any() == true)
+        {
+            foreach (var childClause in whereClause.NestedChildrens)
+            {
+                ValidateWhereClause(childClause);
+            }
+
+            return;
+        }
+
+        FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(whereClause.FieldName));
+    }
+
+    private static string GetOrderByClause(IEnumerable<SortFieldDto> sortFields)
+    {
+        return string.Join(",", (sortFields ?? Enumerable.Empty<SortFieldDto>())
+            .Select(p => p.Field + p.OrderStr));
+    }
+
+    private static void NotifySqlGenerated(string sql, DynamicParameters parameters)
+    {
+        var options = SqlBuilderConfigurer.GetCurrentOptions();
+        if (options.EnableSqlLogging)
+        {
+            Debug.WriteLine(sql);
+        }
+
+        options.OnSqlGenerated?.Invoke(sql, parameters);
     }
 }
