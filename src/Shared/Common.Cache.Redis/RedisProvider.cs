@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using StackExchange.Redis;
@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,423 +18,352 @@ namespace Common.Cache.Redis
         private readonly RedisConfig _redisConfig;
         private readonly RedisManage _redisManage;
         private readonly ILogger<RedisProvider> _logger;
-        // 使用 ConcurrentDictionary 保证线程安全，无需额外锁
         private readonly ConcurrentDictionary<string, ChannelSubscription> _activeSubscriptions = new();
 
-        public RedisProvider(IOptions<RedisConfig> options, RedisManage redisManage,
+        public RedisProvider(IOptions<RedisConfig> options,
+                             RedisManage redisManage,
                              ILogger<RedisProvider> logger)
         {
-            _redisManage = redisManage;
-            _logger = logger;
-            _redisConfig = options.Value;
+            _redisConfig = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _redisManage = redisManage ?? throw new ArgumentNullException(nameof(redisManage));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<string> GetAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
             try
             {
-                var redisKey = GetKey(key);
-                return await _redisManage.Database.StringGetAsync(redisKey);
+                var redisValue = await _redisManage.Database.StringGetAsync(GetKey(key));
+                return redisValue.HasValue ? redisValue.ToString() : null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return null;
+                _logger.LogError(ex, "redis缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<T> GetAsync<T>(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
             try
             {
-                var redisKey = GetKey(key);
-                var value = await _redisManage.Database.StringGetAsync(redisKey);
-                return value.HasValue ? GetObject<T>(value) : default;
+                var redisValue = await _redisManage.Database.StringGetAsync(GetKey(key));
+                return redisValue.HasValue && TryGetObject(redisValue, out T value) ? value : default;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
-        public async Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)
+        public Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            if (getData == null)
+            {
+                throw new ArgumentNullException(nameof(getData));
+            }
+
+            return GetOrCreateInternalAsync(key, () => Task.FromResult(getData()), expiry);
+        }
+
+        public Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
+        {
+            if (getData == null)
+            {
+                throw new ArgumentNullException(nameof(getData));
+            }
+
+            return GetOrCreateInternalAsync(key, getData, expiry);
+        }
+
+        private async Task<T> GetOrCreateInternalAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry)
+        {
+            EnsureKey(key);
 
             try
             {
                 var redisKey = GetKey(key);
+                var database = _redisManage.Database;
+                var rawValue = await database.StringGetAsync(redisKey);
 
-                // 直接从 Redis 获取原始字符串值，避免重复调用 GetKey
-                var rawValue = await _redisManage.Database.StringGetAsync(redisKey);
-                T value = default;
-
-                if (rawValue.HasValue)
+                if (rawValue.HasValue && TryGetObject(rawValue, out T cachedValue))
                 {
-                    value = GetObject<T>(rawValue);
+                    return cachedValue;
                 }
 
-                if (value is null || value.Equals(default(T)))
-                {
-                    _logger.LogInformation($"redis读取为空，开始执行查询操作：key:{key}");
-                    value = getData();
+                _logger.LogInformation("redis读取为空，开始执行查询操作：key:{Key}", key);
+                var value = await getData();
 
-                    // 检查是否应该缓存该值
-                    if (ShouldCacheValue(value))
-                    {
-                        await _redisManage.Database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
-                    }
-                    else
-                    {
-                        var reason = value == null || value.Equals(default(T)) ? "查询结果为空或默认值" :
-                            !_redisConfig.CacheEmptyCollections && IsEmptyCollectionOrString(value) ? "查询结果为空集合/空字符串且配置不缓存" : "其他原因";
-                        _logger.LogInformation($"{reason}，不存储到Redis：key:{key}");
-                    }
+                if (ShouldCacheValue(value))
+                {
+                    await database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
+                }
+                else
+                {
+                    _logger.LogInformation("{Reason}，不存储到Redis：key:{Key}", GetSkipCacheReason(value), key);
                 }
 
                 return value;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
-            }
-        }
-
-        public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
-        {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
-
-            try
-            {
-                var redisKey = GetKey(key);
-
-                // 直接从 Redis 获取原始字符串值，避免重复调用 GetKey
-                var rawValue = await _redisManage.Database.StringGetAsync(redisKey);
-                T value = default;
-
-                if (rawValue.HasValue)
-                {
-                    value = GetObject<T>(rawValue);
-                }
-
-                if (value is null || value.Equals(default(T)))
-                {
-                    _logger.LogInformation($"redis读取为空，开始执行查询操作：key:{key}");
-                    value = await getData();
-
-                    // 检查是否应该缓存该值
-                    if (ShouldCacheValue(value))
-                    {
-                        await _redisManage.Database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
-                    }
-                    else
-                    {
-                        var reason = value == null || value.Equals(default(T)) ? "查询结果为空或默认值" :
-                            !_redisConfig.CacheEmptyCollections && IsEmptyCollectionOrString(value) ? "查询结果为空集合/空字符串且配置不缓存" : "其他原因";
-                        _logger.LogInformation($"{reason}，不存储到Redis：key:{key}");
-                    }
-                }
-
-                return value;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存GetOrCreate失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<bool> SetAsync(string key, string value, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
-            var redisKey = GetKey(key);
             try
             {
-                if (ShouldCacheValue(value))
-                    return await _redisManage.Database.StringSetAsync(redisKey, value, expiry);
-                return false;
+                if (!ShouldCacheValue(value))
+                {
+                    return false;
+                }
+
+                return await _redisManage.Database.StringSetAsync(GetKey(key), value, expiry);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<bool> SetAsync<T>(string key, T value, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
-            var redisKey = GetKey(key);
             try
             {
-                if (ShouldCacheValue(value))
-                    return await _redisManage.Database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
-                return false;
+                if (!ShouldCacheValue(value))
+                {
+                    return false;
+                }
+
+                return await _redisManage.Database.StringSetAsync(GetKey(key), GetJsonStr(value), expiry);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<bool> RemoveAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
+
             try
             {
-                var redisKey = GetKey(key);
-
-                return await _redisManage.Database.KeyDeleteAsync(redisKey);
+                return await _redisManage.Database.KeyDeleteAsync(GetKey(key));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存删除失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<int> RemoveAsync(IEnumerable<string> keys)
         {
-            if (keys is null)
+            if (keys == null)
+            {
                 throw new ArgumentNullException(nameof(keys));
+            }
+
             try
             {
-                var successCount = 0;
-                foreach (var item in keys)
-                {
-                    var redisKey = GetKey(item);
+                var redisKeys = keys
+                    .Where(key => !string.IsNullOrWhiteSpace(key))
+                    .Select(GetKey)
+                    .Distinct(StringComparer.Ordinal)
+                    .Select(key => (RedisKey)key)
+                    .ToArray();
 
-                    var result = await _redisManage.Database.KeyDeleteAsync(redisKey);
-                    if (result)
-                        successCount++;
+                if (redisKeys.Length == 0)
+                {
+                    return 0;
                 }
 
-                _logger.LogInformation($"批量删除完成，成功删除 {successCount} 个key，总共 {keys.Count()} 个key");
-                return successCount;
+                var deletedCount = await _redisManage.Database.KeyDeleteAsync(redisKeys);
+                _logger.LogInformation("批量删除完成，成功删除 {DeletedCount} 个key，总共 {TotalCount} 个key",
+                    deletedCount, redisKeys.Length);
+                return (int)deletedCount;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
-                return 0;
+                _logger.LogError(ex, "redis缓存批量删除失败 message:{Message}", ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<bool> RemoveMatchKeyAsync(string prefixMatchStr)
         {
-            if (string.IsNullOrWhiteSpace(prefixMatchStr))
-                throw new ArgumentNullException(nameof(prefixMatchStr));
+            EnsureKey(prefixMatchStr, nameof(prefixMatchStr));
+
             try
             {
-                await _redisManage.Database.KeyDeleteAsync(await SearchRedisKeys(prefixMatchStr));
+                var matchedKeys = await SearchRedisKeys(GetKey(prefixMatchStr));
+                if (matchedKeys.Length == 0)
+                {
+                    return true;
+                }
+
+                await _redisManage.Database.KeyDeleteAsync(matchedKeys);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"根据前缀匹配符,批量删除Key异常，前缀匹配符:{prefixMatchStr}");
-                return false;
+                _logger.LogError(ex, "根据前缀匹配符批量删除Key异常，前缀匹配符:{PrefixMatchStr}", prefixMatchStr);
+                throw;
             }
         }
 
         public async Task<bool> ExpireAsync(string key, TimeSpan expire)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
+
             try
             {
-                var redisKey = GetKey(key);
-                return await _redisManage.Database.KeyExpireAsync(redisKey, expire);
+                return await _redisManage.Database.KeyExpireAsync(GetKey(key), expire);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存过期时间设置失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
         public async Task<bool> ExistAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
             try
             {
-                var redisKey = GetKey(key);
-                return await _redisManage.Database.KeyExistsAsync(redisKey);
+                return await _redisManage.Database.KeyExistsAsync(GetKey(key));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"redis缓存报错 message:{ex.GetExceptionAndStack()}");
-                return default;
+                _logger.LogError(ex, "redis缓存存在性检查失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
-        /// <summary>
-        /// 根据前缀匹配符,批量删除Key
-        /// * 表示可以匹配多个任意字符
-        /// ? 表示可以匹配单个任意字符
-        /// [] 表示可以匹配指定范围内的字符
-        /// </summary>
-        /// <param name="prefixMatchStr">前缀匹配符</param>
-        /// <returns></returns>
         private async Task<RedisKey[]> SearchRedisKeys(string prefixMatchStr)
         {
             var keys = new HashSet<RedisKey>();
 
             try
             {
-                var nextCursor = 0;
+                ulong nextCursor = 0;
                 do
                 {
-                    var redisResult = await _redisManage.Database.ExecuteAsync("SCAN", nextCursor.ToString(),
-                        "MATCH",
-                        prefixMatchStr, "COUNT", "1000");
-
-                    var innerResult = (RedisResult[])redisResult;
-                    if (innerResult is null || innerResult.Length < 2)
-                    {
-                        _logger.LogWarning($"SCAN命令返回结果长度异常：{prefixMatchStr}");
-                        break;
-                    }
-
-                    if (!int.TryParse(innerResult[0].ToString(), out nextCursor))
-                    {
-                        _logger.LogWarning($"SCAN命令返回游标格式异常：{prefixMatchStr}");
-                        break;
-                    }
-
-                    var resultLines = (RedisKey[])innerResult[1];
-                    if (resultLines is not null)
-                    {
-                        keys.UnionWith(resultLines);
-                    }
+                    var scanResult = await _redisManage.Database.ScanAsync(nextCursor, prefixMatchStr, 1000);
+                    nextCursor = scanResult.Cursor;
+                    keys.UnionWith(scanResult.Keys ?? Array.Empty<RedisKey>());
                 } while (nextCursor != 0);
+
+                return keys.ToArray();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"SCAN命令执行异常，前缀匹配符:{prefixMatchStr} message:{ex.GetExceptionAndStack()}");
+                _logger.LogError(ex, "SCAN命令执行异常，前缀匹配符:{PrefixMatchStr} message:{Message}",
+                    prefixMatchStr, ex.GetExceptionAndStack());
+                throw;
             }
-
-            return keys.ToArray();
         }
 
-        /// <summary>
-        /// 获取redis key
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
         private string GetKey(string key)
         {
             if (string.IsNullOrWhiteSpace(key))
-                return key;
-
-            if (string.IsNullOrWhiteSpace(_redisConfig?.KeyPrefix))
             {
                 return key;
             }
 
-            // 检查 key 是否已经包含前缀（包括冒号）
+            if (string.IsNullOrWhiteSpace(_redisConfig.KeyPrefix))
+            {
+                return key;
+            }
+
             var fullPrefix = _redisConfig.KeyPrefix + ":";
-            if (key.StartsWith(fullPrefix, StringComparison.Ordinal))
-            {
-                return key;
-            }
-
-            // 添加前缀
-            return fullPrefix + key;
+            return key.StartsWith(fullPrefix, StringComparison.Ordinal) ? key : fullPrefix + key;
         }
 
-        /// <summary>
-        /// 反序列化对象
-        /// </summary>
-        /// <param name="str"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        private T GetObject<T>(string str)
+        private bool TryGetObject<T>(string str, out T value)
         {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                value = default;
+                return false;
+            }
+
             try
             {
-                if (string.IsNullOrWhiteSpace(str))
-                    return default;
-
-                return JsonConvert.DeserializeObject<T>(str);
+                value = JsonConvert.DeserializeObject<T>(str);
+                return value != null || typeof(T).IsValueType;
             }
             catch (Exception ex)
             {
-                var preview = str != null && str.Length > 200 ? str[..200] : str;
-                _logger.LogError(ex, "JSON反序列化失败，目标类型：{TypeName}，数据长度：{DataLength}，数据内容：{DataPreview}...",
-                    typeof(T).Name, str?.Length ?? 0, preview);
-                return default;
+                var preview = str.Length > 200 ? str[..200] : str;
+                _logger.LogError(ex,
+                    "JSON反序列化失败，目标类型：{TypeName}，数据长度：{DataLength}，数据内容：{DataPreview}...",
+                    typeof(T).Name, str.Length, preview);
+                value = default;
+                return false;
             }
         }
 
-        /// <summary>
-        /// 对象序列化为字符串
-        /// </summary>
-        /// <param name="value"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
         private string GetJsonStr<T>(T value)
         {
             try
             {
-                if (value == null)
-                    return null;
-
                 return JsonConvert.SerializeObject(value);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"JSON序列化失败：{value}");
-                return null;
+                _logger.LogError(ex, "JSON序列化失败：{Value}", value);
+                throw;
             }
         }
 
-        /// <summary>
-        /// 检查类型是否为集合类型
-        /// </summary>
-        /// <param name="type">要检查的类型</param>
-        /// <returns>如果是集合类型返回true，否则返回false</returns>
-        private bool IsCollectionType(Type type)
+        private static void EnsureKey(string key, string paramName = "key")
         {
-            if (type == typeof(string))
-                return false;
-
-            return typeof(IEnumerable).IsAssignableFrom(type);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException(paramName);
+            }
         }
 
-        /// <summary>
-        /// 检查值是否为空集合或空字符串
-        /// </summary>
-        /// <param name="value">要检查的值</param>
-        /// <returns>如果是空集合、null或空字符串返回true，否则返回false</returns>
-        private bool IsEmptyCollectionOrString<T>(T value)
+        private static bool IsCollectionType(Type type)
+        {
+            return type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
+        }
+
+        private static bool IsEmptyCollectionOrString<T>(T value)
         {
             if (value == null)
+            {
                 return true;
+            }
 
-            // 检查空字符串
             if (value is string str)
+            {
                 return string.IsNullOrEmpty(str);
+            }
 
-            var type = typeof(T);
-            if (!IsCollectionType(type))
+            var runtimeType = value.GetType();
+            if (!IsCollectionType(runtimeType))
+            {
                 return false;
+            }
 
             if (value is IEnumerable enumerable)
             {
@@ -448,380 +378,341 @@ namespace Common.Cache.Redis
             return false;
         }
 
-        /// <summary>
-        /// 检查是否应该缓存该值
-        /// </summary>
-        /// <param name="value">要检查的值</param>
-        /// <returns>如果应该缓存返回true，否则返回false</returns>
         private bool ShouldCacheValue<T>(T value)
         {
-            if (value == null || value.Equals(default(T)))
+            if (value == null)
+            {
                 return false;
+            }
 
             return _redisConfig.CacheEmptyCollections || !IsEmptyCollectionOrString(value);
         }
 
+        private string GetSkipCacheReason<T>(T value)
+        {
+            if (value == null)
+            {
+                return "查询结果为空";
+            }
+
+            if (!_redisConfig.CacheEmptyCollections && IsEmptyCollectionOrString(value))
+            {
+                return "查询结果为空集合/空字符串且配置不缓存";
+            }
+
+            return "其他原因";
+        }
+
         #region 发布/订阅
 
-        /// <summary>
-        /// 发布消息到指定频道
-        /// </summary>
         public async Task<long> PublishAsync<T>(string channel, T message)
         {
-            if (string.IsNullOrWhiteSpace(channel))
-                throw new ArgumentNullException(nameof(channel));
+            EnsureKey(channel, nameof(channel));
+
+            if (message == null)
+            {
+                _logger.LogWarning("发布消息失败，消息为空，频道：{Channel}", channel);
+                return 0;
+            }
 
             try
             {
-                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
                 var jsonMessage = GetJsonStr(message);
-
-                if (string.IsNullOrEmpty(jsonMessage))
+                if (string.IsNullOrWhiteSpace(jsonMessage))
                 {
                     _logger.LogWarning("发布消息失败，消息序列化为空，频道：{Channel}", channel);
                     return 0;
                 }
 
-                var result = await subscriber.PublishAsync(RedisChannel.Literal(channel), jsonMessage);
+                var result = await _redisManage.Subscriber.PublishAsync(RedisChannel.Literal(channel), jsonMessage);
                 _logger.LogInformation("发布消息成功，频道：{Channel}，订阅者数量：{SubscriberCount}", channel, result);
-
                 return result;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "发布消息失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
-                return 0;
+                throw;
             }
         }
 
-        /// <summary>
-        /// 订阅频道，当有消息发布时触发回调，返回订阅ID
-        /// </summary>
         public Task<Guid> SubscribeAsync<T>(string channel, Action<T> handler, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(channel))
-                throw new ArgumentNullException(nameof(channel));
+            EnsureKey(channel, nameof(channel));
             if (handler == null)
+            {
                 throw new ArgumentNullException(nameof(handler));
+            }
 
+            return SubscribeCoreAsync<T>(
+                subscriptionKey: channel,
+                redisChannel: RedisChannel.Literal(channel),
+                handler: (actualChannel, message) => handler(message),
+                cancellationToken: cancellationToken);
+        }
+
+        public Task UnsubscribeAsync(string channel, Guid subscriptionId)
+        {
+            EnsureKey(channel, nameof(channel));
+            return RemoveSubscriberAsync(channel, RedisChannel.Literal(channel), subscriptionId, throwOnError: true);
+        }
+
+        public Task UnsubscribeAllAsync(string channel)
+        {
+            EnsureKey(channel, nameof(channel));
+            return UnsubscribeAllCoreAsync(channel, RedisChannel.Literal(channel), throwOnError: true);
+        }
+
+        public Task<Guid> SubscribePatternAsync<T>(string pattern,
+                                                   Action<string, T> handler,
+                                                   CancellationToken cancellationToken = default)
+        {
+            EnsureKey(pattern, nameof(pattern));
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            return SubscribeCoreAsync<T>(
+                subscriptionKey: GetPatternSubscriptionKey(pattern),
+                redisChannel: RedisChannel.Pattern(pattern),
+                handler: (actualChannel, message) => handler(actualChannel, message),
+                cancellationToken: cancellationToken);
+        }
+
+        public Task UnsubscribePatternAsync(string pattern, Guid subscriptionId)
+        {
+            EnsureKey(pattern, nameof(pattern));
+            return RemoveSubscriberAsync(GetPatternSubscriptionKey(pattern),
+                RedisChannel.Pattern(pattern),
+                subscriptionId,
+                throwOnError: true);
+        }
+
+        public Task UnsubscribePatternAllAsync(string pattern)
+        {
+            EnsureKey(pattern, nameof(pattern));
+            return UnsubscribeAllCoreAsync(GetPatternSubscriptionKey(pattern),
+                RedisChannel.Pattern(pattern),
+                throwOnError: true);
+        }
+
+        private async Task<Guid> SubscribeCoreAsync<T>(string subscriptionKey,
+                                                       RedisChannel redisChannel,
+                                                       Action<string, T> handler,
+                                                       CancellationToken cancellationToken)
+        {
             try
             {
-                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
-
-                // 使用 GetOrAdd 原子操作，避免竞态条件
-                var subscription = _activeSubscriptions.GetOrAdd(channel, ch =>
+                while (true)
                 {
-                    // 创建新的订阅
-                    var cts = new CancellationTokenSource();
-                    var newSubscription = new ChannelSubscription(ch, cts);
-
-                    // 订阅 Redis 频道
-                    subscriber.Subscribe(RedisChannel.Literal(ch), (redisCh, value) =>
+                    var subscription = GetOrCreateSubscription(subscriptionKey, redisChannel);
+                    var subscriptionId = Guid.NewGuid();
+                    var subscriberInfo = new SubscriberInfo
                     {
-                        if (cts.Token.IsCancellationRequested)
-                            return;
-
-                        // 分发消息给所有订阅者
-                        newSubscription.Broadcast(value, _logger, this);
-                    });
-
-                    _logger.LogInformation("创建新订阅，频道：{Channel}", ch);
-                    return newSubscription;
-                });
-
-                // 生成订阅ID并添加订阅者
-                var subscriptionId = Guid.NewGuid();
-                var subscriberInfo = new SubscriberInfo
-                {
-                    Id = subscriptionId,
-                    Handler = (msg) =>
-                    {
-                        if (!cancellationToken.IsCancellationRequested)
+                        Id = subscriptionId,
+                        Handler = (actualChannel, value) =>
                         {
-                            try
+                            if (TryGetObject(value, out T message))
                             {
-                                var message = GetObject<T>(msg);
-                                if (message != null)
-                                {
-                                    handler(message);
-                                }
+                                handler(actualChannel.ToString(), message);
                             }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "处理订阅消息失败，频道：{Channel}", channel);
-                            }
-                        }
-                    },
-                    CancellationToken = cancellationToken
-                };
+                        },
+                        CancellationToken = cancellationToken
+                    };
 
-                subscription.AddSubscriber(subscriberInfo);
-                _logger.LogInformation("添加订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，当前订阅者数量：{Count}",
-                    channel, subscriberInfo.Id, subscription.SubscriberCount);
-
-                // 启动后台任务监控取消令牌
-                _ = Task.Run(async () =>
-                {
-                    try
+                    if (!subscription.TryAddSubscriber(subscriberInfo))
                     {
-                        while (!cancellationToken.IsCancellationRequested)
+                        subscriberInfo.Dispose();
+                        continue;
+                    }
+
+                    if (cancellationToken.CanBeCanceled)
+                    {
+                        var registration = cancellationToken.Register(static state =>
                         {
-                            await Task.Delay(1000, cancellationToken);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // 正常取消，不记录错误
-                    }
-                    finally
-                    {
-                        // 移除订阅者（如果这是最后一个订阅者，会自动取消 Redis 订阅）
-                        await RemoveSubscriberAsync(channel, subscriptionId);
-                    }
-                }, cancellationToken);
+                            var registrationState = (SubscriptionCancellationState)state;
+                            registrationState.Provider.RemoveSubscriberSafe(
+                                registrationState.SubscriptionKey,
+                                registrationState.RedisChannel,
+                                registrationState.SubscriptionId);
+                        }, new SubscriptionCancellationState(this, subscriptionKey, redisChannel, subscriptionId));
 
-                // 立即返回订阅ID
-                return Task.FromResult(subscriptionId);
+                        subscriberInfo.SetCancellationRegistration(registration);
+                    }
+
+                    _logger.LogInformation("添加订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，当前订阅者数量：{Count}",
+                        subscriptionKey, subscriptionId, subscription.SubscriberCount);
+                    return subscriptionId;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "订阅频道失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
-                return Task.FromResult(Guid.Empty);
+                _logger.LogError(ex, "订阅频道失败，频道：{Channel}，消息：{Message}", subscriptionKey, ex.GetExceptionAndStack());
+                throw;
             }
         }
 
-        /// <summary>
-        /// 内部方法：广播消息给所有订阅者
-        /// </summary>
-        private void BroadcastMessage<T>(string channel, IEnumerable<SubscriberInfo> subscribers, RedisValue value, ILogger logger)
+        private ChannelSubscription GetOrCreateSubscription(string subscriptionKey, RedisChannel redisChannel)
         {
-            foreach (var subscriber in subscribers.ToArray()) // ToArray 避免在枚举时修改集合
+            while (true)
             {
-                if (subscriber.CancellationToken.IsCancellationRequested)
+                if (_activeSubscriptions.TryGetValue(subscriptionKey, out var existingSubscription))
                 {
+                    if (!existingSubscription.IsClosing)
+                    {
+                        return existingSubscription;
+                    }
+
+                    _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                    continue;
+                }
+
+                var createdSubscription = new ChannelSubscription(subscriptionKey, new CancellationTokenSource());
+                if (!_activeSubscriptions.TryAdd(subscriptionKey, createdSubscription))
+                {
+                    createdSubscription.Dispose();
                     continue;
                 }
 
                 try
                 {
-                    subscriber.Handler?.Invoke(value);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "订阅者处理消息失败，频道：{Channel}，订阅者ID：{SubscriberId}", channel, subscriber.Id);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 取消指定订阅者的订阅
-        /// </summary>
-        public Task UnsubscribeAsync(string channel, Guid subscriptionId)
-        {
-            if (string.IsNullOrWhiteSpace(channel))
-                throw new ArgumentNullException(nameof(channel));
-
-            return RemoveSubscriberAsync(channel, subscriptionId);
-        }
-
-        /// <summary>
-        /// 强制取消频道的所有订阅（紧急情况使用）
-        /// </summary>
-        public Task UnsubscribeAllAsync(string channel)
-        {
-            if (string.IsNullOrWhiteSpace(channel))
-                throw new ArgumentNullException(nameof(channel));
-
-            try
-            {
-                if (_activeSubscriptions.TryGetValue(channel, out var subscription))
-                {
-                    // 强制取消 Redis 订阅
-                    subscription.CancellationTokenSource.Cancel();
-                    subscription.CancellationTokenSource.Dispose();
-                    _activeSubscriptions.TryRemove(channel, out _);
-
-                    var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
-                    subscriber.Unsubscribe(RedisChannel.Literal(channel));
-
-                    _logger.LogInformation("强制取消频道所有订阅成功：{Channel}，取消时订阅者数量：{Count}",
-                        channel, subscription.SubscriberCount);
-                }
-
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "强制取消频道订阅失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
-                return Task.CompletedTask;
-            }
-        }
-
-        /// <summary>
-        /// 移除订阅者（内部方法，当订阅者取消时调用）
-        /// </summary>
-        private Task RemoveSubscriberAsync(string channel, Guid subscriberId)
-        {
-            try
-            {
-                if (_activeSubscriptions.TryGetValue(channel, out var subscription))
-                {
-                    subscription.RemoveSubscriber(subscriberId);
-                    _logger.LogInformation("移除订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，剩余订阅者数量：{Count}",
-                        channel, subscriberId, subscription.SubscriberCount);
-
-                    // 如果没有订阅者了，取消整个频道订阅
-                    if (subscription.SubscriberCount == 0)
+                    _redisManage.Subscriber.Subscribe(redisChannel, (channel, value) =>
                     {
-                        subscription.CancellationTokenSource.Cancel();
-                        subscription.CancellationTokenSource.Dispose();
-                        _activeSubscriptions.TryRemove(channel, out _);
-
-                        var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
-                        subscriber.Unsubscribe(RedisChannel.Literal(channel));
-
-                        _logger.LogInformation("频道 {Channel} 没有订阅者了，已取消 Redis 订阅", channel);
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 不存在或已被移除", channel);
-                }
-
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "移除订阅者失败，频道：{Channel}，消息：{Message}", channel, ex.GetExceptionAndStack());
-                return Task.CompletedTask;
-            }
-        }
-
-        /// <summary>
-        /// 订阅匹配模式的频道，返回订阅ID
-        /// 注意：模式订阅暂时只支持单一订阅者
-        /// </summary>
-        public Task<Guid> SubscribePatternAsync<T>(string pattern, Action<string, T> handler, CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(pattern))
-                throw new ArgumentNullException(nameof(pattern));
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
-
-            try
-            {
-                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
-                var patternKey = $"pattern:{pattern}";
-
-                // 如果已经订阅过该模式，先取消订阅
-                if (_activeSubscriptions.TryGetValue(patternKey, out var existingSubscription))
-                {
-                    existingSubscription.CancellationTokenSource.Cancel();
-                    existingSubscription.CancellationTokenSource.Dispose();
-                    _activeSubscriptions.TryRemove(patternKey, out _);
-                }
-
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                var subscriptionId = Guid.NewGuid();
-                var subscription = new ChannelSubscription(patternKey, cts);
-
-                _activeSubscriptions[patternKey] = subscription;
-
-                // 订阅模式
-                subscriber.Subscribe(RedisChannel.Pattern(pattern), (ch, value) =>
-                {
-                    if (cts.Token.IsCancellationRequested)
-                        return;
-
-                    try
-                    {
-                        var message = GetObject<T>(value);
-                        if (message != null)
+                        if (createdSubscription.IsClosing || createdSubscription.CancellationTokenSource.IsCancellationRequested)
                         {
-                            var channelName = ch.ToString();
-                            handler(channelName, message);
-                            _logger.LogDebug("收到模式消息，模式：{Pattern}，频道：{Channel}，消息类型：{MessageType}",
-                                pattern, channelName, typeof(T).Name);
+                            return;
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "处理模式订阅消息失败，模式：{Pattern}", pattern);
-                    }
-                });
 
-                _logger.LogInformation("订阅频道模式成功：{Pattern}，订阅ID：{SubscriptionId}", pattern, subscriptionId);
+                        createdSubscription.Broadcast(channel, value, _logger);
+                    });
 
-                // 启动后台任务监控取消令牌
-                _ = Task.Run(async () =>
+                    _logger.LogInformation("创建新订阅，频道：{Channel}", subscriptionKey);
+                    return createdSubscription;
+                }
+                catch
                 {
-                    try
-                    {
-                        while (!cancellationToken.IsCancellationRequested)
-                        {
-                            await Task.Delay(1000, cancellationToken);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // 正常取消，不记录错误
-                    }
-                    finally
-                    {
-                        await UnsubscribePatternAllAsync(pattern);
-                    }
-                }, cancellationToken);
+                    _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                    createdSubscription.TryBeginClose();
+                    createdSubscription.CancellationTokenSource.Cancel();
+                    createdSubscription.Dispose();
+                    throw;
+                }
+            }
+        }
 
-                return Task.FromResult(subscriptionId);
+        private Task RemoveSubscriberAsync(string subscriptionKey,
+                                           RedisChannel redisChannel,
+                                           Guid subscriberId,
+                                           bool throwOnError)
+        {
+            try
+            {
+                if (!_activeSubscriptions.TryGetValue(subscriptionKey, out var subscription))
+                {
+                    _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 不存在或已被移除", subscriptionKey);
+                    return Task.CompletedTask;
+                }
+
+                if (!subscription.RemoveSubscriber(subscriberId, out var removedSubscriber, out var remainingCount))
+                {
+                    _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 中不存在订阅者 {SubscriberId}",
+                        subscriptionKey, subscriberId);
+                    return Task.CompletedTask;
+                }
+
+                removedSubscriber.Dispose();
+                _logger.LogInformation("移除订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，剩余订阅者数量：{Count}",
+                    subscriptionKey, subscriberId, remainingCount);
+
+                if (remainingCount == 0)
+                {
+                    CloseSubscription(subscriptionKey, redisChannel, subscription);
+                }
+
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "订阅频道模式失败，模式：{Pattern}，消息：{Message}", pattern, ex.GetExceptionAndStack());
-                return Task.FromResult(Guid.Empty);
+                _logger.LogError(ex, "移除订阅者失败，频道：{Channel}，消息：{Message}",
+                    subscriptionKey, ex.GetExceptionAndStack());
+
+                if (throwOnError)
+                {
+                    throw;
+                }
+
+                return Task.CompletedTask;
             }
         }
 
-        /// <summary>
-        /// 取消指定模式订阅者的订阅
-        /// 注意：模式订阅会强制取消所有订阅者
-        /// </summary>
-        public Task UnsubscribePatternAsync(string pattern, Guid subscriptionId)
+        private Task UnsubscribeAllCoreAsync(string subscriptionKey, RedisChannel redisChannel, bool throwOnError)
         {
-            // 模式订阅暂时只支持单一订阅者，所以直接取消所有
-            return UnsubscribePatternAllAsync(pattern);
+            try
+            {
+                if (!_activeSubscriptions.TryRemove(subscriptionKey, out var subscription))
+                {
+                    return Task.CompletedTask;
+                }
+
+                CloseSubscription(subscriptionKey, redisChannel, subscription);
+                _logger.LogInformation("取消订阅成功：{Channel}", subscriptionKey);
+                return Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取消订阅失败，频道：{Channel}，消息：{Message}",
+                    subscriptionKey, ex.GetExceptionAndStack());
+
+                if (throwOnError)
+                {
+                    throw;
+                }
+
+                return Task.CompletedTask;
+            }
         }
 
-        /// <summary>
-        /// 强制取消模式的所有订阅
-        /// </summary>
-        public Task UnsubscribePatternAllAsync(string pattern)
+        private void CloseSubscription(string subscriptionKey, RedisChannel redisChannel, ChannelSubscription subscription)
         {
-            if (string.IsNullOrWhiteSpace(pattern))
-                throw new ArgumentNullException(nameof(pattern));
+            if (!subscription.TryBeginClose())
+            {
+                return;
+            }
 
             try
             {
-                var patternKey = $"pattern:{pattern}";
+                _activeSubscriptions.TryRemove(subscriptionKey, out _);
 
-                if (_activeSubscriptions.TryGetValue(patternKey, out var subscription))
+                foreach (var subscriber in subscription.RemoveAllSubscribers())
                 {
-                    subscription.CancellationTokenSource.Cancel();
-                    subscription.CancellationTokenSource.Dispose();
-                    _activeSubscriptions.TryRemove(patternKey, out _);
+                    subscriber.Dispose();
                 }
 
-                var subscriber = _redisManage.ConnectionMultiplexer.GetSubscriber();
-                subscriber.Unsubscribe(RedisChannel.Pattern(pattern));
-
-                _logger.LogInformation("取消订阅频道模式成功：{Pattern}", pattern);
-                return Task.CompletedTask;
+                subscription.CancellationTokenSource.Cancel();
+                _redisManage.Subscriber.Unsubscribe(redisChannel);
+                _logger.LogInformation("频道 {Channel} 没有订阅者了，已取消 Redis 订阅", subscriptionKey);
             }
-            catch (Exception ex)
+            finally
             {
-                _logger.LogError(ex, "取消订阅频道模式失败，模式：{Pattern}，消息：{Message}", pattern, ex.GetExceptionAndStack());
-                return Task.CompletedTask;
+                subscription.Dispose();
             }
         }
+
+        private void RemoveSubscriberSafe(string subscriptionKey, RedisChannel redisChannel, Guid subscriptionId)
+        {
+            _ = RemoveSubscriberAsync(subscriptionKey, redisChannel, subscriptionId, throwOnError: false);
+        }
+
+        private static string GetPatternSubscriptionKey(string pattern)
+        {
+            return $"pattern:{pattern}";
+        }
+
+        private sealed record SubscriptionCancellationState(
+            RedisProvider Provider,
+            string SubscriptionKey,
+            RedisChannel RedisChannel,
+            Guid SubscriptionId);
 
         #endregion
     }

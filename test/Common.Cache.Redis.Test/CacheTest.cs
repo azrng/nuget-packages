@@ -18,7 +18,7 @@ public class CacheTest
     /// <summary>
     /// 获取字符然后设置字符串最后删除字符串
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetStringAndSet_ReturnOk()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -39,7 +39,7 @@ public class CacheTest
     /// <summary>
     /// 测试缓存时间
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Exist_ReturnOk()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -53,7 +53,7 @@ public class CacheTest
         Assert.False(result);
     }
 
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Get_Int()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -68,7 +68,7 @@ public class CacheTest
         Assert.Equal(0, result);
     }
 
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Get_Object()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -87,7 +87,7 @@ public class CacheTest
     /// <summary>
     /// 测试没有重置过期时间
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetOrCreate_NotResetExpiryTime_Test()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -113,7 +113,7 @@ public class CacheTest
     /// <summary>
     /// 测试默认没有 然后存储然后 到点过期
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetOrCreate_Async_ObjectAsync()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -135,7 +135,7 @@ public class CacheTest
     /// <summary>
     /// 测试获取数据异常
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetOrCreate_Async_ExceptionAsync()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -147,8 +147,8 @@ public class CacheTest
             var result = await _cacheProvider.GetOrCreateAsync(key, async () =>
             {
                 await Task.Delay(100);
-                string aa = null;
-                return aa.ToString();
+                string? aa = null;
+                return aa!.ToString();
             }, TimeSpan.FromSeconds(2));
         }
         catch (Exception e)
@@ -160,7 +160,7 @@ public class CacheTest
     /// <summary>
     /// 测试获取数据返回null
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetOrCreate_Async_NullAsync()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -170,7 +170,7 @@ public class CacheTest
         var result = await _cacheProvider.GetOrCreateAsync(key, async () =>
             {
                 await Task.Delay(100);
-                UserInfo aa = null;
+                UserInfo? aa = null;
                 return aa;
             },
             TimeSpan.FromSeconds(2));
@@ -181,7 +181,7 @@ public class CacheTest
     /// <summary>
     /// 测试没有重置过期时间
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task GetOrCreate_Async_NotResetExpiryTime_Test()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -204,7 +204,7 @@ public class CacheTest
         Assert.Null(result);
     }
 
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Remove_Async()
     {
         var key = Guid.NewGuid().ToString("N");
@@ -220,7 +220,7 @@ public class CacheTest
         Assert.Null(result);
     }
 
-    [Fact]
+    [RedisIntegrationFact]
     public async Task RemoveMany_Async()
     {
         var key1 = Guid.NewGuid().ToString("N");

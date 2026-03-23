@@ -12,7 +12,7 @@ namespace Common.Cache.Redis.Test
             _cacheProvider = cacheProvider;
         }
 
-        [Fact]
+        [RedisIntegrationFact]
         public async Task GetOrCreate_Object()
         {
             var key = Guid.NewGuid().ToString("N");
@@ -35,7 +35,7 @@ namespace Common.Cache.Redis.Test
         /// <summary>
         /// 缓存空集合测试=>默认不缓存空集合
         /// </summary>
-        [Fact]
+        [RedisIntegrationFact]
         public async Task CacheEmptyCollections_Test()
         {
             var key = Guid.NewGuid().ToString("N");
@@ -53,7 +53,7 @@ namespace Common.Cache.Redis.Test
         /// <summary>
         /// 缓存空集合测试=>默认不缓存空集合
         /// </summary>
-        [Fact]
+        [RedisIntegrationFact]
         public async Task CacheEmptyCollections_Async_Test()
         {
             var key = Guid.NewGuid().ToString("N");
@@ -71,7 +71,7 @@ namespace Common.Cache.Redis.Test
         /// <summary>
         /// 缓存字符串测试=>不缓存
         /// </summary>
-        [Fact]
+        [RedisIntegrationFact]
         public async Task CacheEmptyString_Test()
         {
             var key = Guid.NewGuid().ToString("N");
@@ -89,7 +89,7 @@ namespace Common.Cache.Redis.Test
         /// <summary>
         /// 缓存字符串测试=>不缓存
         /// </summary>
-        [Fact]
+        [RedisIntegrationFact]
         public async Task CacheEmptyString_Async_Test()
         {
             var key = Guid.NewGuid().ToString("N");

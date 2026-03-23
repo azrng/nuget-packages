@@ -1,5 +1,6 @@
-﻿using Azrng.Cache.Core;
+using Azrng.Cache.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 
 namespace Common.Cache.Redis
@@ -14,15 +15,15 @@ namespace Common.Cache.Redis
         public static IServiceCollection AddRedisCacheStore(this IServiceCollection services,
                                                             Action<RedisConfig> action = null)
         {
-            if (services is null)
+            if (services == null)
+            {
                 throw new ArgumentNullException(nameof(services));
+            }
 
-            services.Configure(action ?? (config => { }));
-
-            services.AddScoped<ICacheProvider, RedisProvider>();
-            services.AddSingleton<RedisManage>();
-            services.AddSingleton<ICacheProvider, RedisProvider>();
-            services.AddSingleton<IRedisProvider, RedisProvider>();
+            services.Configure(action ?? (_ => { }));
+            services.TryAddSingleton<RedisManage>();
+            services.TryAddSingleton<IRedisProvider, RedisProvider>();
+            services.TryAddSingleton<ICacheProvider>(sp => sp.GetRequiredService<IRedisProvider>());
             return services;
         }
 
@@ -35,18 +36,12 @@ namespace Common.Cache.Redis
         public static IServiceCollection AddRedisCacheService(this IServiceCollection services,
                                                               Action<RedisConfig> action)
         {
-            if (services is null)
-                throw new ArgumentNullException(nameof(services));
-            if (action is null)
+            if (action == null)
+            {
                 throw new ArgumentNullException(nameof(action));
+            }
 
-            services.Configure(action);
-
-            services.AddScoped<ICacheProvider, RedisProvider>();
-            services.AddSingleton<RedisManage>();
-            services.AddSingleton<ICacheProvider, RedisProvider>();
-            services.AddSingleton<IRedisProvider, RedisProvider>();
-            return services;
+            return services.AddRedisCacheStore(action);
         }
     }
 }

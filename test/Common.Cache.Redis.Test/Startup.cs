@@ -7,18 +7,14 @@ namespace Common.Cache.Redis.Test
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            // services.AddRedisCacheStore(x =>
-            // {
-            //     x.ConnectionString = "localhost:6379,password=,DefaultDatabase=0";
-            //     x.KeyPrefix = "test";
-            //     x.CacheEmptyCollections = false;
-            // });
+            var connectionString = "127.0.0.1:6379,DefaultDatabase=0";
 
             services.AddRedisCacheStore(x =>
             {
-                x.ConnectionString = "172.16.127.100:25089,password=,DefaultDatabase=0";
+                x.ConnectionString = connectionString;
                 x.KeyPrefix = "azrng";
                 x.CacheEmptyCollections = false;
+                x.InitErrorIntervalSecond = 0;
             });
 
             services.AddLogging(x => x.AddXunitOutput());

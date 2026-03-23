@@ -20,7 +20,7 @@ public class PubSubTest
     /// <summary>
     /// 测试发布和订阅简单消息
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task PublishAndSubscribe_StringMessage_ReturnOk()
     {
         var channel = $"test:{Guid.NewGuid():N}";
@@ -70,7 +70,7 @@ public class PubSubTest
     /// <summary>
     /// 测试发布和订阅对象消息
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task PublishAndSubscribe_ObjectMessage_ReturnOk()
     {
         var channel = $"test:user:{Guid.NewGuid():N}";
@@ -120,7 +120,7 @@ public class PubSubTest
     /// <summary>
     /// 测试多个订阅者
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Publish_MultipleSubscribers_ReturnOk()
     {
         var channel = $"test:multi:{Guid.NewGuid():N}";
@@ -203,7 +203,7 @@ public class PubSubTest
     /// <summary>
     /// 测试模式订阅
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task SubscribePattern_MultipleChannels_ReturnOk()
     {
         var pattern = "test:pattern:*";
@@ -253,7 +253,7 @@ public class PubSubTest
     /// <summary>
     /// 测试通过订阅ID取消订阅
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Unsubscribe_WithSubscriptionId_NoLongerReceiveMessages_ReturnOk()
     {
         var channel = $"test:unsubscribe:{Guid.NewGuid():N}";
@@ -327,7 +327,7 @@ public class PubSubTest
     /// <summary>
     /// 测试强制取消频道订阅（取消所有订阅者）
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task UnsubscribeAll_ForceCancelAllSubscribers_ReturnOk()
     {
         var channel = $"test:forceunsubscribe:{Guid.NewGuid():N}";
@@ -400,7 +400,7 @@ public class PubSubTest
     /// <summary>
     /// 测试取消令牌取消订阅
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Subscribe_WithCancellationToken_CancelSuccessfully()
     {
         var channel = $"test:cancellation:{Guid.NewGuid():N}";
@@ -452,7 +452,7 @@ public class PubSubTest
     /// <summary>
     /// 测试高频消息发布
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Publish_HighFrequencyMessages_ReturnOk()
     {
         var channel = $"test:highfreq:{Guid.NewGuid():N}";
@@ -501,7 +501,7 @@ public class PubSubTest
     /// <summary>
     /// 测试发布空消息
     /// </summary>
-    [Fact]
+    [RedisIntegrationFact]
     public async Task Publish_NullMessage_ReturnsZero()
     {
         var channel = $"test:nullmsg:{Guid.NewGuid():N}";

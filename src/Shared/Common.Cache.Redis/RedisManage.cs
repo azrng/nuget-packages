@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System;
@@ -14,105 +14,156 @@ namespace Common.Cache.Redis
     {
         private readonly RedisConfig _redisConfig;
         private readonly ILogger<RedisManage> _logger;
+        private readonly IRedisConnectionFactory _connectionFactory;
+        private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
-        /// <summary>
-        /// redis连接对象
-        /// </summary>
-        private ConnectionMultiplexer _connection;
-
-        /// <summary>
-        /// 是否释放了资源
-        /// </summary>
+        private IRedisConnection _connection;
+        private IRedisDatabase _database;
+        private IRedisSubscriber _subscriber;
+        private Exception _lastConnectionException;
+        private DateTimeOffset _nextRetryAt = DateTimeOffset.MinValue;
         private bool _disposed;
 
-        public ConnectionMultiplexer ConnectionMultiplexer => _connection;
-
-        /// <summary>
-        /// 使用信号量保证同步操作
-        /// </summary>
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
-
-        /// <summary>
-        /// 最后一次连接失败的时间
-        /// </summary>
-        private DateTime _initConnectErrorTime = DateTime.UtcNow;
-
         public RedisManage(ILogger<RedisManage> logger, IOptions<RedisConfig> options)
+            : this(logger, options, new StackExchangeRedisConnectionFactory())
         {
-            _logger = logger;
-            _redisConfig = options.Value;
+        }
+
+        internal RedisManage(ILogger<RedisManage> logger,
+                             IOptions<RedisConfig> options,
+                             IRedisConnectionFactory connectionFactory)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _redisConfig = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+
             try
             {
                 _logger.LogInformation("redis开始初始化连接");
                 ConnectAsync().GetAwaiter().GetResult();
-                _logger.LogInformation("redis开始初始化建立成功");
+                _logger.LogInformation("redis初始化连接建立成功");
             }
             catch (Exception ex)
             {
-                // 如果第一次连接失败后续会再次连接
-                _initConnectErrorTime = DateTime.UtcNow;
                 _logger.LogError(ex,
-                    $"redis初始化报错失败 连接字符串：{_redisConfig.ConnectionString} message:{ex.Message} stackTrace:{ex.StackTrace}");
+                    "redis初始化连接失败 连接字符串：{ConnectionString} message:{Message}",
+                    _redisConfig.ConnectionString, ex.Message);
             }
         }
 
-        private IDatabase _database;
+        public ConnectionMultiplexer ConnectionMultiplexer => (_connection as StackExchangeRedisConnection)?.ConnectionMultiplexer;
 
-        /// <summary>
-        /// 数据库对象
-        /// </summary>
-        public IDatabase Database
+        internal IRedisDatabase Database => EnsureDatabase();
+
+        internal IRedisSubscriber Subscriber => EnsureSubscriber();
+
+        private bool HasConnection => _database != null && _subscriber != null;
+
+        private IRedisDatabase EnsureDatabase()
         {
-            get
+            EnsureConnected();
+            return _database ?? throw CreateUnavailableException();
+        }
+
+        private IRedisSubscriber EnsureSubscriber()
+        {
+            EnsureConnected();
+            return _subscriber ?? throw CreateUnavailableException();
+        }
+
+        private void EnsureConnected()
+        {
+            ThrowIfDisposed();
+
+            if (HasConnection)
             {
-                if (_database != null)
-                    return _database;
-
-                // 如果上次失败时间距离现在不够指定间隔 那么就提示连接不可用
-                if (_initConnectErrorTime.AddSeconds(_redisConfig.InitErrorIntervalSecond) >= DateTime.UtcNow)
-                {
-                    _logger.LogInformation($"忽略连接，连接不可用 {DateTime.UtcNow} {_initConnectErrorTime}");
-                    throw new Exception("redis连接不可用");
-                }
-
-                _logger.LogInformation($"重新尝试建立redis连接 {DateTime.UtcNow} {_initConnectErrorTime}");
-                try
-                {
-                    ConnectAsync().GetAwaiter().GetResult();
-                    return _database;
-                }
-                catch (Exception ex)
-                {
-                    _initConnectErrorTime = DateTime.UtcNow;
-                    _logger.LogError(ex,
-                        $"redis建立连接失败 连接字符串：{_redisConfig.ConnectionString} message:{ex.Message} stackTrace:{ex.StackTrace}");
-                    throw;
-                }
+                return;
             }
-        }
 
-        /// <summary>
-        /// 连接
-        /// </summary>
-        private async Task ConnectAsync()
-        {
+            if (DateTimeOffset.UtcNow < _nextRetryAt)
+            {
+                _logger.LogInformation("忽略连接，连接不可用 {Now} {NextRetryAt}",
+                    DateTimeOffset.UtcNow, _nextRetryAt);
+                throw CreateUnavailableException();
+            }
+
+            _logger.LogInformation("重新尝试建立redis连接 {Now}", DateTimeOffset.UtcNow);
+
             try
             {
-                await _semaphoreSlim.WaitAsync();
-                if (_database == null)
-                {
-                    var configurationOptions = ConfigurationOptions.Parse(_redisConfig.ConnectionString);
-                    _connection = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
-                    _database = _connection.GetDatabase();
-                }
+                ConnectAsync().GetAwaiter().GetResult();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // 连接失败不会报错，而是等待下次重试
+                _logger.LogError(ex,
+                    "redis建立连接失败 连接字符串：{ConnectionString} message:{Message}",
+                    _redisConfig.ConnectionString, ex.Message);
+                throw CreateUnavailableException(ex);
+            }
+
+            if (!HasConnection)
+            {
+                throw CreateUnavailableException();
+            }
+        }
+
+        private async Task ConnectAsync()
+        {
+            await _semaphoreSlim.WaitAsync();
+            IRedisConnection createdConnection = null;
+
+            try
+            {
+                ThrowIfDisposed();
+
+                if (HasConnection)
+                {
+                    return;
+                }
+
+                var configurationOptions = ConfigurationOptions.Parse(_redisConfig.ConnectionString);
+                createdConnection = await _connectionFactory.ConnectAsync(configurationOptions);
+                var createdDatabase = createdConnection.GetDatabase();
+                var createdSubscriber = createdConnection.GetSubscriber();
+
+                var previousConnection = Interlocked.Exchange(ref _connection, createdConnection);
+                _database = createdDatabase;
+                _subscriber = createdSubscriber;
+                _lastConnectionException = null;
+                _nextRetryAt = DateTimeOffset.MinValue;
+                createdConnection = null;
+
+                previousConnection?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                MarkConnectionFailure(ex);
+                createdConnection?.Dispose();
+                throw;
             }
             finally
             {
                 _semaphoreSlim.Release();
+            }
+        }
+
+        private void MarkConnectionFailure(Exception ex)
+        {
+            _lastConnectionException = ex;
+            var retryDelaySeconds = Math.Max(0, _redisConfig.InitErrorIntervalSecond);
+            _nextRetryAt = DateTimeOffset.UtcNow.AddSeconds(retryDelaySeconds);
+        }
+
+        private InvalidOperationException CreateUnavailableException(Exception ex = null)
+        {
+            return new InvalidOperationException("redis连接不可用", ex ?? _lastConnectionException);
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(RedisManage));
             }
         }
 
@@ -123,16 +174,10 @@ namespace Common.Cache.Redis
 
         public void Dispose()
         {
-            // 在此释放托管资源
             Dispose(true);
-            // 通知垃圾回收机制不在调用终结器
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// 释放资源
-        /// </summary>
-        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)
@@ -142,8 +187,10 @@ namespace Common.Cache.Redis
 
             if (disposing)
             {
-                // 释放托管资源
-                _connection?.Dispose();
+                Interlocked.Exchange(ref _connection, null)?.Dispose();
+                _database = null;
+                _subscriber = null;
+                _semaphoreSlim.Dispose();
             }
 
             _disposed = true;

@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 
@@ -10,10 +10,11 @@ namespace Common.Cache.Redis
     /// <summary>
     /// 频道订阅信息，管理一个 Redis 频道的多个订阅者
     /// </summary>
-    internal class ChannelSubscription
+    internal sealed class ChannelSubscription : IDisposable
     {
-        private readonly Dictionary<Guid, SubscriberInfo> _subscribers = new();
-        private readonly object _lock = new();
+        private readonly ConcurrentDictionary<Guid, SubscriberInfo> _subscribers = new();
+        private int _isClosing;
+        private int _disposed;
 
         public string Channel { get; }
 
@@ -21,46 +22,51 @@ namespace Common.Cache.Redis
 
         public int SubscriberCount => _subscribers.Count;
 
+        public bool IsClosing => Volatile.Read(ref _isClosing) == 1;
+
         public ChannelSubscription(string channel, CancellationTokenSource cancellationTokenSource)
         {
-            Channel = channel;
-            CancellationTokenSource = cancellationTokenSource;
+            Channel = channel ?? throw new ArgumentNullException(nameof(channel));
+            CancellationTokenSource = cancellationTokenSource ?? throw new ArgumentNullException(nameof(cancellationTokenSource));
         }
 
-        /// <summary>
-        /// 添加订阅者
-        /// </summary>
-        public void AddSubscriber(SubscriberInfo subscriber)
+        public bool TryAddSubscriber(SubscriberInfo subscriber)
         {
-            lock (_lock)
+            if (subscriber == null)
             {
-                _subscribers[subscriber.Id] = subscriber;
+                throw new ArgumentNullException(nameof(subscriber));
             }
+
+            if (IsClosing)
+            {
+                return false;
+            }
+
+            return _subscribers.TryAdd(subscriber.Id, subscriber);
         }
 
-        /// <summary>
-        /// 移除订阅者
-        /// </summary>
-        public void RemoveSubscriber(Guid subscriberId)
+        public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo subscriber, out int remainingCount)
         {
-            lock (_lock)
-            {
-                _subscribers.Remove(subscriberId);
-            }
+            var removed = _subscribers.TryRemove(subscriberId, out subscriber);
+            remainingCount = _subscribers.Count;
+            return removed;
         }
 
-        /// <summary>
-        /// 广播消息给所有订阅者
-        /// </summary>
-        public void Broadcast(RedisValue value, ILogger logger, RedisProvider provider)
+        public SubscriberInfo[] RemoveAllSubscribers()
         {
-            List<SubscriberInfo> subscribers;
-            lock (_lock)
-            {
-                subscribers = _subscribers.Values.ToList();
-            }
+            var removedSubscribers = _subscribers.Values.ToArray();
+            _subscribers.Clear();
+            return removedSubscribers;
+        }
 
-            foreach (var subscriber in subscribers)
+        public bool TryBeginClose()
+        {
+            return Interlocked.CompareExchange(ref _isClosing, 1, 0) == 0;
+        }
+
+        public void Broadcast(RedisChannel channel, RedisValue value, ILogger logger)
+        {
+            foreach (var subscriber in _subscribers.Values.ToArray())
             {
                 if (subscriber.CancellationToken.IsCancellationRequested)
                 {
@@ -69,26 +75,51 @@ namespace Common.Cache.Redis
 
                 try
                 {
-                    subscriber.Handler?.Invoke(value);
+                    subscriber.Handler?.Invoke(channel, value);
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "订阅者处理消息失败，频道：{Channel}，订阅者ID：{SubscriberId}",
-                        Channel, subscriber.Id);
+                        channel.ToString(), subscriber.Id);
                 }
             }
         }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+
+            CancellationTokenSource.Dispose();
+        }
     }
 
-    /// <summary>
-    /// 订阅者信息
-    /// </summary>
-    internal class SubscriberInfo
+    internal sealed class SubscriberInfo : IDisposable
     {
-        public Guid Id { get; set; }
+        private int _disposed;
+        private CancellationTokenRegistration _cancellationRegistration;
 
-        public Action<RedisValue> Handler { get; set; } = null!;
+        public Guid Id { get; init; }
 
-        public CancellationToken CancellationToken { get; set; }
+        public Action<RedisChannel, RedisValue> Handler { get; init; }
+
+        public CancellationToken CancellationToken { get; init; }
+
+        public void SetCancellationRegistration(CancellationTokenRegistration cancellationRegistration)
+        {
+            _cancellationRegistration = cancellationRegistration;
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+
+            _cancellationRegistration.Dispose();
+        }
     }
 }

@@ -40,6 +40,7 @@ services.AddRedisCacheStore(options =>
     options.ConnectionString = "localhost:6379,password=123456,DefaultDatabase=0";
     options.KeyPrefix = "myapp";
     options.CacheEmptyCollections = true; // 是否缓存空集合和空字符串数据
+    options.InitErrorIntervalSecond = 10; // 连接失败后的快速失败重试间隔（秒）
 });
 
 // 或使用旧方法（已过时）
@@ -48,8 +49,11 @@ services.AddRedisCacheService(options =>
     options.ConnectionString = "localhost:6379,password=123456,DefaultDatabase=0";
     options.KeyPrefix = "myapp";
     options.CacheEmptyCollections = true; // 是否缓存空集合和空字符串数据
+    options.InitErrorIntervalSecond = 10; // 连接失败后的快速失败重试间隔（秒）
 });
 ```
+
+> 提示：如果希望应用启动时 Redis 暂不可用也继续在后台重试，可以在连接字符串中追加 `abortConnect=false`。
 
 ### 在服务中使用
 
@@ -101,6 +105,9 @@ await _cacheProvider.RemoveAsync(keysToDelete);
 // 模糊匹配删除
 await _cacheProvider.RemoveMatchKeyAsync("user_*");
 ```
+
+`RemoveMatchKeyAsync` 会自动复用 `KeyPrefix` 配置。  
+例如配置 `KeyPrefix = "myapp"` 时，`RemoveMatchKeyAsync("user_*")` 会匹配 `myapp:user_*`。
 
 ### 发布订阅功能
 
@@ -309,6 +316,24 @@ await newsService.SubscribeAllNewsAsync(cts.Token);
 - `InitErrorIntervalSecond`: 初始化错误间隔时间（秒）
 - `CacheEmptyCollections`: 是否缓存空集合和空字符串数据（默认为true）
 
+### 行为说明
+
+- `GetOrCreateAsync` 和 `SetAsync<T>` 从 `1.4.1` 开始支持缓存合法默认值，例如 `0`、`false`、`DateTime.MinValue`
+- 仅 `null` 和按 `CacheEmptyCollections` 配置禁止缓存的空集合/空字符串会跳过写入
+- Redis 连接或读写失败时会记录日志并抛出异常，不再返回 `default/null/false` 掩盖故障
+- 发布订阅支持 `false`、`0` 等合法默认值消息；仅 `null` 消息会跳过发布
+
+### 测试
+
+集成测试默认通过环境变量 `COMMON_CACHE_REDIS_TEST_CONNECTION` 启用：
+
+```powershell
+$env:COMMON_CACHE_REDIS_TEST_CONNECTION="127.0.0.1:6379,password=,DefaultDatabase=0"
+dotnet test test/Common.Cache.Redis.Test/Common.Cache.Redis.Test.csproj
+```
+
+未设置该环境变量时，外部 Redis 依赖的测试会自动跳过，本地仍会执行无需 Redis 的单元测试。
+
 ### 模糊匹配规则
 
 模糊匹配支持以下通配符：
@@ -324,6 +349,15 @@ await newsService.SubscribeAllNewsAsync(cts.Token);
 
 ## 版本更新记录
 
+* 1.4.1
+  * 修复：Redis 初始化失败被误记为成功的问题，连接失败时保留真实异常并按重试窗口快速失败
+  * 修复：`GetOrCreateAsync` / `SetAsync<T>` 现在支持缓存合法默认值，例如 `0`、`false`
+  * 修复：`RemoveMatchKeyAsync` 自动复用 `KeyPrefix`，避免模糊删除和普通读写的 key 语义不一致
+  * 修复：`SCAN` 游标改为 `ulong` 处理，避免大 keyspace 下的游标解析风险
+  * 优化：统一依赖注入生命周期，`ICacheProvider` / `IRedisProvider` 共享同一个单例实现
+  * 优化：发布订阅内部订阅者管理改为并发安全实现，完善取消订阅与最后一个订阅者退出时的清理
+  * 调整：Redis 操作失败时记录日志并抛出异常，不再返回 `default/null/false` 掩盖故障
+  * 测试：新增无 Redis 依赖的单元测试，并将集成测试改为按环境变量启用
 * 1.4.0
   * **新增**：发布订阅功能支持
     * 支持频道订阅和模式订阅
