@@ -2,14 +2,8 @@ using System.Text.RegularExpressions;
 
 namespace Azrng.Database.DynamicSqlBuilder.Validation
 {
-    /// <summary>
-    /// 字段名验证器 - 防止SQL注入和无效字段名
-    /// </summary>
     public static class FieldNameValidator
     {
-        /// <summary>
-        /// SQL关键字列表（不应用作字段名）
-        /// </summary>
         private static readonly HashSet<string> SqlKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             "CREATE", "ALTER", "DROP", "TRUNCATE", "COMMENT", "RENAME", "SELECT", "INSERT", "UPDATE", "DELETE",
@@ -22,9 +16,6 @@ namespace Azrng.Database.DynamicSqlBuilder.Validation
             "DEFAULT", "CONSTRAINT", "COLLATE", "CHARACTER", "SET"
         };
 
-        /// <summary>
-        /// 字段名格式，支持字母、数字、下划线和点
-        /// </summary>
         private static readonly Regex FieldNamePattern = new(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled);
 
         private const int MaxFieldNameLength = 128;
@@ -160,8 +151,8 @@ namespace Azrng.Database.DynamicSqlBuilder.Validation
             if (!IsValidFieldName(fieldName))
             {
                 var message = string.IsNullOrWhiteSpace(fieldName)
-                    ? "字段名不能为空"
-                    : $"字段名 '{fieldName}' 无效。字段名必须以字母或下划线开头，只能包含字母、数字和下划线，且不能是SQL关键字。";
+                    ? "Field name cannot be empty."
+                    : $"Invalid field name '{fieldName}'. Field names must start with a letter or underscore, contain only letters, numbers, underscores, or a single table alias prefix, and must not be SQL keywords.";
 
                 throw new ArgumentException(message, paramName ?? nameof(fieldName));
             }

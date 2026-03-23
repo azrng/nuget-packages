@@ -29,7 +29,7 @@ internal static class SqlBuilderInputValidator
         {
             "AND" => "AND",
             "OR" => "OR",
-            _ => throw new ArgumentException($"不支持的逻辑操作符: {logicalOperator}", nameof(logicalOperator))
+            _ => throw new ArgumentException($"Unsupported logical operator: {logicalOperator}", nameof(logicalOperator))
         };
     }
 
@@ -43,17 +43,23 @@ internal static class SqlBuilderInputValidator
         var normalized = necessaryCondition.Trim();
         if (!NecessaryConditionPrefixPattern.IsMatch(normalized))
         {
-            throw new ArgumentException("necessaryCondition 必须以 WHERE、AND 或 OR 开头", nameof(necessaryCondition));
+            throw new ArgumentException(
+                "necessaryCondition must start with WHERE, AND, or OR.",
+                nameof(necessaryCondition));
         }
 
         if (ContainsSuspiciousSqlPattern(normalized))
         {
-            throw new ArgumentException("necessaryCondition 包含不安全的 SQL 片段", nameof(necessaryCondition));
+            throw new ArgumentException(
+                "necessaryCondition contains unsafe SQL fragments.",
+                nameof(necessaryCondition));
         }
 
         if (!HasBalancedParentheses(normalized))
         {
-            throw new ArgumentException("necessaryCondition 括号不匹配", nameof(necessaryCondition));
+            throw new ArgumentException(
+                "necessaryCondition contains unbalanced parentheses.",
+                nameof(necessaryCondition));
         }
 
         return $" {normalized} ";
