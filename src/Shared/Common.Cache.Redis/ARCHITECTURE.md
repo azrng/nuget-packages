@@ -17,6 +17,7 @@
 Common.Cache.Redis/
 ├── RedisConfig.cs                    # Redis 配置类
 ├── RedisManage.cs                    # Redis 连接管理
+├── RedisTransport.cs                 # Redis 传输抽象与 StackExchange.Redis 适配层
 ├── RedisProvider.cs                  # 缓存提供者核心实现
 ├── IRedisProvider.cs                 # Redis 提供者接口
 ├── ChannelSubscription.cs            # 发布订阅内部类
@@ -76,6 +77,11 @@ classDiagram
    - 构造函数中连接失败不会抛出异常
    - 后续通过 `Database` 属性访问时触发重连
 
+4. **失败语义修正**
+   - 初始化失败不会再记录“连接成功”日志
+   - 连接失败时保留原始异常，并在重试窗口内快速失败
+   - `Database` 与 `Subscriber` 共用同一条连接生命周期
+
 ### 3. RedisProvider - 缓存核心实现
 
 **文件**: [RedisProvider.cs](RedisProvider.cs)
@@ -134,8 +140,8 @@ private string GetKey(string key)
 ```csharp
 private bool ShouldCacheValue<T>(T value)
 {
-    // null 或默认值不缓存
-    if (value == null || value.Equals(default(T)))
+    // 仅 null 不缓存
+    if (value == null)
         return false;
 
     // 根据配置决定是否缓存空集合
@@ -144,7 +150,7 @@ private bool ShouldCacheValue<T>(T value)
 ```
 
 **支持场景**:
-- **启用空值缓存** (默认): 防止缓存穿透，空值也会被缓存
+- **合法默认值可缓存**: `0`、`false`、`DateTime.MinValue` 等不会再被误判为未命中
 - **禁用空值缓存**: 节省 Redis 内存，空值不存储
 
 ##### 3.3 GetOrCreateAsync 缓存穿透保护
@@ -177,18 +183,12 @@ public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, Time
 private async Task<RedisKey[]> SearchRedisKeys(string prefixMatchStr)
 {
     var keys = new HashSet<RedisKey>();
-    var nextCursor = 0;
+    ulong nextCursor = 0;
 
     do {
-        // SCAN + MATCH + COUNT
-        var redisResult = await _database.ExecuteAsync("SCAN", nextCursor.ToString(),
-            "MATCH", prefixMatchStr, "COUNT", "1000");
-
-        var innerResult = (RedisResult[])redisResult;
-        nextCursor = int.Parse(innerResult[0].ToString());
-        var resultLines = (RedisKey[])innerResult[1];
-
-        keys.UnionWith(resultLines);
+        var scanResult = await _database.ScanAsync(nextCursor, prefixMatchStr, 1000);
+        nextCursor = scanResult.Cursor;
+        keys.UnionWith(scanResult.Keys);
     } while (nextCursor != 0);
 
     return keys.ToArray();
@@ -198,6 +198,7 @@ private async Task<RedisKey[]> SearchRedisKeys(string prefixMatchStr)
 **优势**:
 - `SCAN` 是增量迭代，不会阻塞 Redis 服务器
 - 每次迭代 1000 条，平衡性能和网络开销
+- 模糊删除统一走 `GetKey`，与普通读写使用相同的 `KeyPrefix` 语义
 
 ### 4. 发布订阅架构
 
@@ -238,19 +239,19 @@ graph TB
 管理单个 Redis 频道的多个本地订阅者：
 
 ```csharp
-internal class ChannelSubscription
+internal sealed class ChannelSubscription
 {
-    private readonly Dictionary<Guid, SubscriberInfo> _subscribers = new();
-    private readonly object _lock = new();
+    private readonly ConcurrentDictionary<Guid, SubscriberInfo> _subscribers = new();
+    private int _isClosing;
 
     public string Channel { get; }
     public CancellationTokenSource CancellationTokenSource { get; }
     public int SubscriberCount => _subscribers.Count;
 
-    // 线程安全的订阅者管理
-    public void AddSubscriber(SubscriberInfo subscriber) { ... }
-    public void RemoveSubscriber(Guid subscriberId) { ... }
-    public void Broadcast(RedisValue value, ILogger logger, RedisProvider provider) { ... }
+    public bool TryAddSubscriber(SubscriberInfo subscriber) { ... }
+    public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo subscriber, out int remainingCount) { ... }
+    public bool TryBeginClose() { ... }
+    public void Broadcast(RedisChannel channel, RedisValue value, ILogger logger) { ... }
 }
 ```
 
@@ -318,7 +319,7 @@ sequenceDiagram
 1. **多订阅者支持**
    - 同一频道可以有多个订阅者
    - 使用 `ConcurrentDictionary` 管理频道订阅
-   - 使用 `Dictionary + lock` 管理订阅者列表
+   - 使用 `ConcurrentDictionary` 管理订阅者列表
 
 2. **订阅 ID 管理**
    ```csharp
@@ -335,8 +336,9 @@ sequenceDiagram
 
 4. **线程安全**
    - 频道级别使用 `ConcurrentDictionary`
-   - 订阅者级别使用 `lock` 保护
-   - 消息广播使用 `ToArray()` 快照避免枚举修改
+   - 订阅者级别使用原子添加/移除与关闭标记
+   - 消息广播使用快照避免枚举期间修改
+   - 取消订阅与“最后一个订阅者退出”清理流程可以并发安全执行
 
 5. **模式订阅**
    - 支持 `*`, `?`, `[]` 通配符
@@ -353,10 +355,9 @@ public static IServiceCollection AddRedisCacheStore(
     Action<RedisConfig> action = null)
 {
     services.Configure(action ?? (config => { }));
-    services.AddScoped<ICacheProvider, RedisProvider>();
     services.AddSingleton<RedisManage>();
-    services.AddSingleton<ICacheProvider, RedisProvider>();
     services.AddSingleton<IRedisProvider, RedisProvider>();
+    services.AddSingleton<ICacheProvider>(sp => sp.GetRequiredService<IRedisProvider>());
     return services;
 }
 ```
@@ -364,7 +365,7 @@ public static IServiceCollection AddRedisCacheStore(
 **注册策略**:
 - `RedisManage`: 单例，整个应用共享一个连接
 - `RedisProvider`: 单例，共享缓存提供者实例
-- `ICacheProvider`: 同时支持 Scoped 和 Singleton
+- `ICacheProvider`: 复用同一个 `IRedisProvider` 单例实例，避免生命周期冲突
 
 ## 数据流转
 
@@ -421,11 +422,12 @@ flowchart TD
 2. **操作异常处理**
    - 所有 Redis 操作都有 try-catch
    - 异常记录到日志（包含堆栈信息）
-   - 返回默认值而不是抛出异常
+   - 重新抛出异常，不再返回默认值掩盖 Redis 故障
 
 3. **序列化异常**
    - JSON 序列化/反序列化失败记录日志
-   - 返回 default 值
+   - 反序列化失败时返回未命中语义
+   - 序列化失败时直接抛出异常
    - 日志包含数据预览（前 200 字符）
 
 ## 性能优化
@@ -442,7 +444,7 @@ flowchart TD
 |------|-------------|
 | `RedisManage` | `SemaphoreSlim` 保护连接初始化 |
 | `_activeSubscriptions` | `ConcurrentDictionary` 原子操作 |
-| `ChannelSubscription._subscribers` | `lock` 保护读写操作 |
+| `ChannelSubscription._subscribers` | `ConcurrentDictionary` + 关闭标记 |
 | `RedisProvider` | 无状态方法调用，线程安全 |
 
 ## 扩展性
@@ -472,6 +474,7 @@ public interface ICacheProvider
 
 ## 版本历史
 
+- **2.0.0**: 连接失败语义改为显式抛异常，属于破坏性更新；同时修复默认值缓存、前缀模糊删除、发布订阅并发安全与测试体系
 - **1.4.0**: 发布订阅功能支持
 - **1.3.2**: 更新 GetOrCreateAsync 方法
 - **1.2.0-beta6**: 增加可设置是否存储空字符串或空集合选项
