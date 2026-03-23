@@ -1,5 +1,6 @@
 ﻿using Azrng.Cache.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 
 namespace Azrng.Cache.MemoryCache
@@ -18,8 +19,10 @@ namespace Azrng.Cache.MemoryCache
 
             services.Configure(action ?? (config => { }));
             services.AddMemoryCache();
-            services.AddScoped<IMemoryCacheProvider, MemoryCacheProvider>();
-            services.AddScoped<ICacheProvider, MemoryCacheProvider>();
+            services.TryAddSingleton<MemoryCacheKeyManager>();
+            services.TryAddScoped<MemoryCacheProvider>();
+            services.TryAddScoped<IMemoryCacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
+            services.TryAddScoped<ICacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
 
             return services;
         }
@@ -38,8 +41,10 @@ namespace Azrng.Cache.MemoryCache
 
             services.Configure(action);
             services.AddMemoryCache();
-            services.AddScoped<IMemoryCacheProvider, MemoryCacheProvider>();
-            services.AddScoped<ICacheProvider, MemoryCacheProvider>();
+            services.TryAddSingleton<MemoryCacheKeyManager>();
+            services.TryAddScoped<MemoryCacheProvider>();
+            services.TryAddScoped<IMemoryCacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
+            services.TryAddScoped<ICacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
 
             return services;
         }

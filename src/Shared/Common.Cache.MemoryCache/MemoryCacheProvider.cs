@@ -5,7 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -19,197 +19,249 @@ namespace Azrng.Cache.MemoryCache
         private readonly IMemoryCache _cache;
         private readonly MemoryConfig _memoryConfig;
         private readonly ILogger<MemoryCacheProvider> _logger;
+        private readonly MemoryCacheKeyManager _keyManager;
 
-        public MemoryCacheProvider(IMemoryCache memoryCache, IOptions<MemoryConfig> options, ILogger<MemoryCacheProvider> logger)
+        public MemoryCacheProvider(IMemoryCache memoryCache,
+                                   IOptions<MemoryConfig> options,
+                                   ILogger<MemoryCacheProvider> logger,
+                                   MemoryCacheKeyManager keyManager)
         {
-            _cache = memoryCache;
-            _logger = logger;
-            _memoryConfig = options.Value;
+            _cache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+            _memoryConfig = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _keyManager = keyManager ?? throw new ArgumentNullException(nameof(keyManager));
         }
 
         public Task<string> GetAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
-
+            EnsureKey(key);
             return Task.FromResult(_cache.Get<string>(key));
         }
 
         public Task<T> GetAsync<T>(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
-
+            EnsureKey(key);
             return Task.FromResult(_cache.Get<T>(key));
         }
 
         public Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
-
-            try
-            {
-                ValidateValueType<T>();
-
-                if (_cache.TryGetValue(key, out T result))
-                {
-                    return Task.FromResult(result);
-                }
-
-                expiry ??= _memoryConfig.DefaultExpiry;
-
-                result = getData.Invoke();
-
-                // 根据配置决定是否缓存空集合和空字符串
-                if (ShouldCacheValue(result))
-                {
-                    _cache.Set<T>(key, result,
-                        new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
-                }
-
-                return Task.FromResult(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"内存缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
-            }
+            ArgumentNullException.ThrowIfNull(getData);
+            return GetOrCreateInternalAsync(key, () => Task.FromResult(getData()), expiry);
         }
 
-        public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
+        public Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
-
-            try
-            {
-                ValidateValueType<T>();
-
-                if (_cache.TryGetValue(key, out T result))
-                {
-                    return result;
-                }
-
-                expiry ??= _memoryConfig.DefaultExpiry;
-
-                result = await getData();
-
-                // 根据配置决定是否缓存空集合和空字符串
-                if (ShouldCacheValue(result))
-                {
-                    _cache.Set<T>(key, result,
-                        new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"内存缓存报错 key:{key} message:{ex.GetExceptionAndStack()}");
-                return default;
-            }
+            ArgumentNullException.ThrowIfNull(getData);
+            return GetOrCreateInternalAsync(key, getData, expiry);
         }
 
         public Task<bool> SetAsync(string key, string value, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
-            expiry ??= _memoryConfig.DefaultExpiry;
-            if (ShouldCacheValue(value))
+            if (!ShouldCacheValue(value))
             {
-                _cache.Set(key, value,
-                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
-                return Task.FromResult(true);
+                _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
+                return Task.FromResult(false);
             }
 
-            _logger.LogInformation($"空值/空集合不存储到Cache：key:{key}");
-            return Task.FromResult(false);
+            SetCore(key, value, expiry ?? _memoryConfig.DefaultExpiry);
+            return Task.FromResult(true);
         }
 
         public Task<bool> SetAsync<T>(string key, T value, TimeSpan? expiry = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-
-            expiry ??= _memoryConfig.DefaultExpiry;
-            if (ShouldCacheValue(value))
+            if (!ShouldCacheValue(value))
             {
-                _cache.Set(key, value,
-                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expiry, Priority = CacheItemPriority.NeverRemove });
-                return Task.FromResult(true);
+                _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
+                return Task.FromResult(false);
             }
 
-            _logger.LogInformation($"空值/空集合不存储到Cache：key:{key}");
-            return Task.FromResult(false);
+            SetCore(key, value, expiry ?? _memoryConfig.DefaultExpiry);
+            return Task.FromResult(true);
         }
 
         public Task<bool> RemoveAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
             _cache.Remove(key);
+            _keyManager.UntrackKey(key);
             return Task.FromResult(true);
         }
 
         public Task<int> RemoveAsync(IEnumerable<string> keys)
         {
             if (keys is null)
+            {
                 throw new ArgumentNullException(nameof(keys));
-            try
-            {
-                var successCount = 0;
-                foreach (var item in keys)
-                {
-                    _cache.Remove(item);
-                    successCount++;
-                }
-
-                _logger.LogInformation($"批量删除缓存完成，成功删除 {successCount} 个key，涉及{keys.Count()} 个key");
-                return Task.FromResult(successCount);
             }
-            catch (Exception ex)
+
+            var keyList = keys
+                .Where(key => !string.IsNullOrWhiteSpace(key))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            if (keyList.Length == 0)
             {
-                _logger.LogError(ex, $"内存缓存报错 message:{ex.Message}");
                 return Task.FromResult(0);
             }
+
+            var removedCount = 0;
+            foreach (var item in keyList)
+            {
+                if (_cache.TryGetValue(item, out _))
+                {
+                    removedCount++;
+                }
+
+                _cache.Remove(item);
+                _keyManager.UntrackKey(item);
+            }
+
+            _logger.LogInformation("批量删除缓存完成，成功删除 {RemovedCount} 个key，总共 {TotalCount} 个key", removedCount, keyList.Length);
+            return Task.FromResult(removedCount);
         }
 
         public async Task<bool> RemoveMatchKeyAsync(string prefixMatchStr)
         {
+            EnsureKey(prefixMatchStr, nameof(prefixMatchStr));
+
+            var matcher = BuildWildcardRegex(prefixMatchStr);
             var cacheKeys = GetAllKeys();
-            var list = cacheKeys.Where(k => Regex.IsMatch(k, prefixMatchStr)).ToList();
-            return await RemoveAsync(list) > 0;
+            var matchedKeys = cacheKeys.Where(key => matcher.IsMatch(key)).ToArray();
+
+            if (matchedKeys.Length == 0)
+            {
+                return true;
+            }
+
+            await RemoveAsync(matchedKeys);
+            return true;
         }
 
         public Task<bool> ExpireAsync(string key, TimeSpan expire)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
 
             if (_cache.TryGetValue(key, out var value))
             {
-                // 如果key存在，则更新过期时间
-                _cache.Set(key, value,
-                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = expire, Priority = CacheItemPriority.NeverRemove });
+                SetCore(key, value, expire);
                 return Task.FromResult(true);
             }
 
-            // 如果key不存在，返回false
+            _keyManager.UntrackKey(key);
             return Task.FromResult(false);
         }
 
         public Task<bool> ExistAsync(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentNullException(nameof(key));
+            EnsureKey(key);
+            return Task.FromResult(_cache.TryGetValue(key, out _));
+        }
 
-            return Task.FromResult(_cache.TryGetValue(key, out var _));
+        public Task<Dictionary<string, object>> GetAllAsync(IEnumerable<string> keys)
+        {
+            if (keys == null)
+            {
+                throw new ArgumentNullException(nameof(keys));
+            }
+
+            var dict = new Dictionary<string, object>();
+            foreach (var item in keys)
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                {
+                    dict[item] = _cache.Get(item);
+                }
+            }
+
+            return Task.FromResult(dict);
+        }
+
+        public Task RemoveAllKeyAsync()
+        {
+            foreach (var key in GetAllKeys())
+            {
+                _cache.Remove(key);
+                _keyManager.UntrackKey(key);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public List<string> GetAllKeys()
+        {
+            return _keyManager.GetAllKeys();
+        }
+
+        private async Task<T> GetOrCreateInternalAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry)
+        {
+            EnsureKey(key);
+            ValidateValueType<T>();
+
+            try
+            {
+                if (_cache.TryGetValue(key, out T cachedValue))
+                {
+                    return cachedValue;
+                }
+
+                var effectiveExpiry = expiry ?? _memoryConfig.DefaultExpiry;
+                return await _keyManager.ExecuteSynchronizedAsync(key, async () =>
+                {
+                    if (_cache.TryGetValue(key, out T lockedCachedValue))
+                    {
+                        return lockedCachedValue;
+                    }
+
+                    var value = await getData();
+                    if (ShouldCacheValue(value))
+                    {
+                        SetCore(key, value, effectiveExpiry);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
+                    }
+
+                    return value;
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "内存缓存执行失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                throw;
+            }
+        }
+
+        private void SetCore<T>(string key, T value, TimeSpan expiry)
+        {
+            var entryOptions = CreateEntryOptions(key, expiry);
+            _cache.Set(key, value, entryOptions);
+            _keyManager.TrackKey(key);
+        }
+
+        private MemoryCacheEntryOptions CreateEntryOptions(string key, TimeSpan expiry)
+        {
+            var options = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = expiry
+            };
+
+            options.RegisterPostEvictionCallback(static (_, _, _, state) =>
+            {
+                if (state is CacheEntryRegistration registration &&
+                    !registration.Cache.TryGetValue(registration.Key, out _))
+                {
+                    registration.KeyManager.UntrackKey(registration.Key);
+                }
+            }, new CacheEntryRegistration(key, _cache, _keyManager));
+
+            return options;
         }
 
         /// <summary>
@@ -219,166 +271,93 @@ namespace Azrng.Cache.MemoryCache
         /// <exception cref="InvalidOperationException"></exception>
         private static void ValidateValueType<TResult>()
         {
-            //因为IEnumerable、IQueryable等有延迟执行的问题，造成麻烦，因此禁止用这些类型
             var typeResult = typeof(TResult);
-            if (typeResult.IsGenericType) //如果是IEnumerable<String>这样的泛型类型，则把String这样的具体类型信息去掉，再比较
+            if (typeResult == typeof(IEnumerable) || typeResult == typeof(IQueryable))
             {
-                typeResult = typeResult.GetGenericTypeDefinition();
+                throw new InvalidOperationException($"TResult of {typeResult} is not allowed, please use List<T> or T[] instead.");
             }
 
-            //注意用相等比较，不要用IsAssignableTo
-            if (typeResult == typeof(IEnumerable<>) ||
-                typeResult == typeof(IEnumerable) ||
-                typeResult == typeof(IAsyncEnumerable<TResult>) ||
-                typeResult == typeof(IQueryable<TResult>) ||
-                typeResult == typeof(IQueryable))
+            if (!typeResult.IsGenericType)
+            {
+                return;
+            }
+
+            var genericTypeDefinition = typeResult.GetGenericTypeDefinition();
+            if (genericTypeDefinition == typeof(IEnumerable<>) ||
+                genericTypeDefinition == typeof(IAsyncEnumerable<>) ||
+                genericTypeDefinition == typeof(IQueryable<>))
             {
                 throw new InvalidOperationException($"TResult of {typeResult} is not allowed, please use List<T> or T[] instead.");
             }
         }
 
-        public Task<Dictionary<string, object>> GetAllAsync(IEnumerable<string> keys)
+        private static void EnsureKey(string key, string paramName = "key")
         {
-            if (keys == null)
-                throw new ArgumentNullException(nameof(keys));
-
-            var dict = new Dictionary<string, object>();
-            foreach (var item in keys)
+            if (string.IsNullOrWhiteSpace(key))
             {
-                if (!string.IsNullOrWhiteSpace(item))
-                {
-                    var value = _cache.Get(item);
-                    dict[item] = value;
-                }
+                throw new ArgumentNullException(paramName);
             }
-
-            return Task.FromResult(dict);
         }
 
-        public Task RemoveAllKeyAsync()
+        private static Regex BuildWildcardRegex(string pattern)
         {
-            var keys = GetAllKeys();
+            var builder = new StringBuilder("^");
+            var insideCharacterGroup = false;
 
-            keys.ToList().ForEach(item => _cache.Remove(item));
-            return Task.CompletedTask;
-        }
-
-        public List<string> GetAllKeys()
-        {
-            var keys = new List<string>();
-
-            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-
-#if NET7_0_OR_GREATER
-            // .NET 7及以上版本使用_coherentState字段
-            var coherentStateField = _cache.GetType().GetField("_coherentState", flags);
-            if (coherentStateField != null)
+            foreach (var ch in pattern)
             {
-                var coherentStateValue = coherentStateField.GetValue(_cache);
-                var entriesProperty = coherentStateValue?.GetType().GetProperty("EntriesCollection", flags) ??
-                                      coherentStateValue?.GetType().GetProperty("StringEntriesCollection", flags);
-                var entriesCollection = entriesProperty?.GetValue(coherentStateValue);
-
-                if (entriesCollection != null)
+                if (!insideCharacterGroup)
                 {
-                    // 使用反射获取集合中的键
-                    foreach (var item in (IEnumerable)entriesCollection)
+                    switch (ch)
                     {
-                        var keyProp = item.GetType().GetProperty("Key");
-                        var key = keyProp?.GetValue(item);
-                        if (key != null)
-                        {
-                            keys.Add(key.ToString());
-                        }
+                        case '*':
+                            builder.Append(".*");
+                            continue;
+                        case '?':
+                            builder.Append('.');
+                            continue;
+                        case '[':
+                            insideCharacterGroup = true;
+                            builder.Append('[');
+                            continue;
                     }
                 }
-            }
-#else
-
-            // .NET 6及以下版本使用_entries字段
-            var entriesField = _cache.GetType().GetField("_entries", flags);
-            if (entriesField is not null)
-            {
-                // .NET 6及以下版本
-                var entries = entriesField.GetValue(_cache);
-                if (entries is IDictionary dictionary)
+                else if (ch == ']')
                 {
-                    foreach (DictionaryEntry cacheItem in dictionary)
-                    {
-                        keys.Add(cacheItem.Key.ToString());
-                    }
+                    insideCharacterGroup = false;
+                    builder.Append(']');
+                    continue;
                 }
+
+                builder.Append(insideCharacterGroup ? ch : Regex.Escape(ch.ToString()));
             }
 
-#endif
-            return keys;
+            builder.Append('$');
+            return new Regex(builder.ToString(), RegexOptions.Compiled | RegexOptions.CultureInvariant);
         }
 
-        /// <summary>
-        /// 初始化缓存 设置缓存时间
-        /// </summary>
-        /// <param name="entry"></param>
-        /// <param name="baseExpireSeconds"></param>
-        private static void InitCacheEntry(ICacheEntry entry, int baseExpireSeconds)
-        {
-#if NET6_0_OR_GREATER
-
-            //过期时间.Random.Shared 是.NET6新增的
-            var sec = NextDouble(Random.Shared, baseExpireSeconds, baseExpireSeconds * 1.5);
-#else
-            var sec = NextDouble(new Random(), baseExpireSeconds, baseExpireSeconds * 1.5);
-#endif
-
-            var expiration = TimeSpan.FromSeconds(sec);
-            entry.AbsoluteExpirationRelativeToNow = expiration;
-        }
-
-        /// <summary>
-        ///  Returns a random integer that is within a specified range.
-        /// </summary>
-        /// <param name="random"></param>
-        /// <param name="minValue">The inclusive lower bound of the random number returned.</param>
-        /// <param name="maxValue">The exclusive upper bound of the random number returned. maxValue must be greater than or equal to minValue.</param>
-        /// <returns></returns>
-        private static double NextDouble(Random random, double minValue, double maxValue)
-        {
-            if (minValue >= maxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(minValue), "minValue cannot be bigger than maxValue");
-            }
-
-            //https://stackoverflow.com/questions/65900931/c-sharp-random-number-between-double-minvalue-and-double-maxvalue
-            var x = random.NextDouble();
-            return x * maxValue + (1 - x) * minValue;
-        }
-
-        /// <summary>
-        /// 检查类型是否为集合类型
-        /// </summary>
-        /// <param name="type">要检查的类型</param>
-        /// <returns>如果是集合类型返回true，否则返回false</returns>
-        private bool IsCollectionType(Type type)
+        private static bool IsCollectionType(Type type)
         {
             return type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
         }
 
-        /// <summary>
-        /// 检查值是否为空集合或空字符串
-        /// </summary>
-        /// <param name="value">要检查的值</param>
-        /// <returns>如果是空集合、null或空字符串返回true，否则返回false</returns>
-        private bool IsEmptyCollectionOrString<T>(T value)
+        private static bool IsEmptyCollectionOrString<T>(T value)
         {
-            if (value == null || value.Equals(default(T)))
+            if (value == null)
+            {
                 return true;
+            }
 
-            // 检查空字符串
             if (value is string str)
+            {
                 return string.IsNullOrEmpty(str);
+            }
 
-            var type = typeof(T);
-            if (!IsCollectionType(type))
+            var runtimeType = value.GetType();
+            if (!IsCollectionType(runtimeType))
+            {
                 return false;
+            }
 
             if (value is IEnumerable enumerable)
             {
@@ -393,17 +372,31 @@ namespace Azrng.Cache.MemoryCache
             return false;
         }
 
-        /// <summary>
-        /// 检查是否应该缓存该值
-        /// </summary>
-        /// <param name="value">要检查的值</param>
-        /// <returns>如果应该缓存返回true，否则返回false</returns>
         private bool ShouldCacheValue<T>(T value)
         {
-            if (value == null || value.Equals(default(T)))
+            if (value == null)
+            {
                 return false;
+            }
 
             return _memoryConfig.CacheEmptyCollections || !IsEmptyCollectionOrString(value);
         }
+
+        private string GetSkipCacheReason<T>(T value)
+        {
+            if (value == null)
+            {
+                return "查询结果为空";
+            }
+
+            if (!_memoryConfig.CacheEmptyCollections && IsEmptyCollectionOrString(value))
+            {
+                return "查询结果为空集合/空字符串且配置为不缓存";
+            }
+
+            return "其他原因";
+        }
+
+        private sealed record CacheEntryRegistration(string Key, IMemoryCache Cache, MemoryCacheKeyManager KeyManager);
     }
 }
