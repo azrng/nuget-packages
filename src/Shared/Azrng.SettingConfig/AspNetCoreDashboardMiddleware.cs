@@ -22,18 +22,16 @@ namespace Azrng.SettingConfig
         private readonly StaticFileMiddleware _staticFileMiddleware;
         private readonly DashboardOptions _dashboardOptions;
         private readonly ManifestResourceService _manifestResourceService;
-        private readonly IWebHostEnvironment _hostingEnvironment;
 
         public AspNetCoreDashboardMiddleware(RequestDelegate next,
-            IWebHostEnvironment hostingEnv,
-            ILoggerFactory loggerFactory,
-            IOptions<DashboardOptions> options,
-            ManifestResourceService manifestResourceService)
+                                             IWebHostEnvironment hostingEnv,
+                                             ILoggerFactory loggerFactory,
+                                             IOptions<DashboardOptions> options,
+                                             ManifestResourceService manifestResourceService)
         {
             _dashboardOptions = options.Value;
             _staticFileMiddleware = CreateStaticFileMiddleware(next, hostingEnv, loggerFactory);
             _manifestResourceService = manifestResourceService;
-            _hostingEnvironment = hostingEnv;
         }
 
         public async Task Invoke(HttpContext httpContext)

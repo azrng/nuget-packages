@@ -21,8 +21,8 @@ public interface IDataSourceProvider
     /// <param name="keyword">关键字</param>
     /// <param name="version">版本</param>
     /// <returns></returns>
-    Task<List<GetSettingInfoDto>> GetPageListAsync(int pageIndex, int pageSize, string keyword,
-        string version);
+    Task<List<GetSettingInfoDto>?> GetPageListAsync(int pageIndex, int pageSize, string? keyword,
+                                                    string? version);
 
     /// <summary>
     /// 查询配置总数
@@ -35,14 +35,14 @@ public interface IDataSourceProvider
     /// </summary>
     /// <param name="configId"></param>
     /// <returns></returns>
-    Task<GetConfigDetailsResult> GetConfigDetails(int configId);
+    Task<GetConfigDetailsResult?> GetConfigDetails(int configId);
 
     /// <summary>
     /// 获取配置信息
     /// </summary>
     /// <param name="configId"></param>
     /// <returns></returns>
-    Task<GetConfigInfoDto> GetConfigInfoAsync(int configId);
+    Task<GetConfigInfoDto?> GetConfigInfoAsync(int configId);
 
     /// <summary>
     /// 获取配置key
@@ -67,7 +67,14 @@ public interface IDataSourceProvider
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
-    Task<List<GetConfigVersionListResult>> GetConfigHistoryListAsync(string key);
+    Task<List<GetConfigVersionListResult>?> GetConfigHistoryListAsync(string key);
+
+    /// <summary>
+    /// 根据历史记录ID获取历史记录详情
+    /// </summary>
+    /// <param name="historyId"></param>
+    /// <returns></returns>
+    Task<GetConfigVersionListResult?> GetHistoryInfoAsync(int historyId);
 
     /// <summary>
     /// 删除指定配置
@@ -97,7 +104,7 @@ public interface IDataSourceProvider
     /// <param name="value"></param>
     /// <param name="updateUserId"></param>
     /// <returns></returns>
-    Task<bool> UpdateConfigValueAsync(string key, string value, string updateUserId = null);
+    Task<bool> UpdateConfigValueAsync(string key, string value, string? updateUserId = null);
 
     /// <summary>
     /// 添加配置
