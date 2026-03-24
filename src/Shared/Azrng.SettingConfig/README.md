@@ -2,7 +2,7 @@
 
 > 一个轻量级、高性能的业务配置管理解决方案，为 ASP.NET Core 应用提供可视化配置管理界面。
 
-[![NuGet](https://img.shields.io/badge/NuGet-1.4.0-green.svg)](https://www.nuget.org/packages/SettingConfig)
+[![NuGet](https://img.shields.io/badge/NuGet-1.5.0-green.svg)](https://www.nuget.org/packages/SettingConfig)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-6.0%20%7C%207.0%20%7C%208.0%20%7C%209.0%20%7C%2010.0-purple.svg)](https://dotnet.microsoft.com/download)
 
@@ -16,6 +16,7 @@
 - 🚦 **访问控制** - 支持 Basic 认证和自定义授权策略
 - 💨 **智能缓存** - 内置内存缓存，可扩展分布式缓存
 - 📊 **可视化界面** - 直观的配置管理 Dashboard，支持搜索、筛选、编辑
+- 🔔 **业务回调** - 支持配置编辑前/后、删除前/后的业务回调处理
 
 ## 📦 安装
 
@@ -98,6 +99,164 @@ public class MyService
         // 获取配置内容（反序列化对象）
         var settings = await _configService.GetConfigAsync<MySettings>("my-config-key");
     }
+}
+```
+
+## 🔔 业务回调（新功能）
+
+### 概述
+
+业务回调允许您在配置变更的关键节点插入自定义逻辑，例如：
+- 配置变更前的业务校验
+- 配置变更后清除应用缓存
+- 配置变更后发送通知
+- 配置删除后释放资源
+
+### 使用自定义回调
+
+```csharp
+using Azrng.SettingConfig;
+using Azrng.SettingConfig.Interface;
+using Azrng.SettingConfig.Dto;
+
+// 1. 实现自定义回调接口
+public class MyConnectInterface : IConnectInterface
+{
+    private readonly ILogger<MyConnectInterface> _logger;
+    private readonly IDistributedCache _cache;
+
+    public MyConnectInterface(ILogger<MyConnectInterface> logger, IDistributedCache cache)
+    {
+        _logger = logger;
+        _cache = cache;
+    }
+
+    // 编辑/删除前校验
+    public async Task<(bool IsOk, string ErrMsg)> ItemValidate(UpdateConfigDetailsRequest request)
+    {
+        // 自定义校验逻辑
+        if (request.Value.Length > 10000)
+        {
+            return (false, "配置值不能超过 10000 字符");
+        }
+
+        // 可以根据 key 进行特定校验
+        if (request.ConfigId == 0) // 假设这是删除操作
+        {
+            var key = await GetConfigKeyAsync(request.ConfigId);
+            if (key == "critical.config")
+            {
+                return (false, "关键配置不允许删除");
+            }
+        }
+
+        return (true, string.Empty);
+    }
+
+    // 编辑成功后回调
+    public async Task<(bool IsOk, string ErrMsg)> EditSuccessHandle(string key, string value)
+    {
+        try
+        {
+            // 清除应用缓存
+            await _cache.RemoveAsync($"app_config_{key}");
+
+            // 发送通知
+            _logger.LogInformation($"配置已更新: {key}");
+
+            // 刷新相关配置
+            await RefreshConfiguration(key);
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    // 删除成功后回调
+    public async Task<(bool IsOk, string ErrMsg)> DeleteSuccessHandle(string key, string value)
+    {
+        try
+        {
+            // 清除应用缓存
+            await _cache.RemoveAsync($"app_config_{key}");
+
+            // 记录删除日志
+            _logger.LogWarning($"配置已删除: {key}, 原值: {value}");
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    private async Task<string> GetConfigKeyAsync(int configId)
+    {
+        // 实现获取配置 key 的逻辑
+        return string.Empty;
+    }
+
+    private async Task RefreshConfiguration(string key)
+    {
+        // 实现刷新配置的逻辑
+    }
+}
+
+// 2. 注册时使用自定义回调
+builder.Services.AddSettingConfig<MyConnectInterface>(options =>
+{
+    options.DbConnectionString = conn;
+    options.DbSchema = "sample";
+    options.RoutePrefix = "configDashboard";
+    options.ApiRoutePrefix = "/api/configDashboard";
+});
+```
+
+### 使用默认回调（无需回调处理）
+
+```csharp
+// 使用默认实现，所有回调都返回成功
+builder.Services.AddSettingConfig(options =>
+{
+    options.DbConnectionString = conn;
+    options.DbSchema = "sample";
+});
+```
+
+### 回调触发时机
+
+| 操作 | 编辑前回调 | 编辑成功后回调 | 删除成功后回调 |
+|------|----------|---------------|---------------|
+| **更新配置** | ✅ `ItemValidate` | ✅ `EditSuccessHandle` | - |
+| **删除配置** | ✅ `ItemValidate` | - | ✅ `DeleteSuccessHandle` |
+| **恢复配置** | - | ✅ `EditSuccessHandle` | - |
+
+### 回调接口定义
+
+```csharp
+public interface IConnectInterface
+{
+    /// <summary>
+    /// 配置项业务校验（编辑/删除前回调）
+    /// 返回 (false, "错误信息") 将中断操作
+    /// </summary>
+    Task<(bool IsOk, string ErrMsg)> ItemValidate(UpdateConfigDetailsRequest request);
+
+    /// <summary>
+    /// 应用配置项更新成功后的业务处理
+    /// 用于清除缓存、发送通知等
+    /// </summary>
+    Task<(bool IsOk, string ErrMsg)> EditSuccessHandle(string key, string value);
+
+    /// <summary>
+    /// 应用配置项删除成功后的业务处理
+    /// 用于清除缓存、释放资源等
+    /// </summary>
+    Task<(bool IsOk, string ErrMsg)> DeleteSuccessHandle(string key, string value);
 }
 ```
 
@@ -199,46 +358,58 @@ public class CustomDataSourceProvider : IDataSourceProvider
 }
 ```
 
-## 版本更新记录
+## 📝 版本更新记录
 
-* **1.4.0** (最新) - 🎉 重大优化版本
-  - 🚀 **前端优化**: 移除所有外部依赖 (jQuery, Bootstrap, Bootstrap Table, Layer.js)
-  - ✅ **后端优化**: 简化代码，提升可维护性
-  - 🔒 **安全增强**: 修复所有 XSS 漏洞，添加完整的安全头
-  - ⚡ **性能提升**: 资源大小减少 97%，加载时间减少 75%
-  * 🚀 **重大改进**：完全重构前端，移除所有外部依赖 (jQuery, Bootstrap, Bootstrap Table, Layer.js)
-  * ✅ **性能优化**：资源大小减少 97% (500KB → 15KB)，加载时间减少 75%
-  * 🔒 **安全增强**：修复所有 XSS 漏洞，添加完整的安全头 (CSP, X-Frame-Options 等)
-  * 🎨 **UI 重构**：采用现代化设计，响应式布局，更好的用户体验
-  * 📱 **移动端优化**：完美支持各种屏幕尺寸
-  * ✨ **功能增强**：改进搜索、分页、复制等功能
-  * 🛠️ **技术升级**：使用原生 JavaScript，现代 CSS (Grid, Flexbox)
+### 1.5.0 (最新) - 🎉 业务回调版本
+- 🆕 **新功能**：业务回调支持
+  - ✅ 支持配置编辑/删除前的业务校验 (`ItemValidate`)
+  - ✅ 支持配置编辑成功后的回调处理 (`EditSuccessHandle`)
+  - ✅ 支持配置删除成功后的回调处理 (`DeleteSuccessHandle`)
+  - ✅ 支持配置恢复成功后的回调处理
+  - ✅ 支持泛型注册自定义回调接口 (`AddSettingConfig<T>`)
+  - ✅ 提供默认回调实现 (`DefaultConnectInterface`)
+- ✅ **缓存优化**：所有配置变更操作（更新、删除、恢复）统一先清除缓存
+- ✅ **代码质量**：启用可空引用类型，完善 XML 文档注释
+- ✅ **错误处理**：改进回调异常处理，确保回调失败不影响主流程
 
-* 1.3.1
-  * 🆕 新增：支持完全离线使用，所有前端资源本地化
-  * ✅ 优化：下载并本地化 Bootstrap、jQuery、Bootstrap Table 等依赖资源
-  * ✅ 优化：添加 Bootstrap Icons 字体文件支持
-  * ✅ 优化：内网环境无需外部网络连接即可正常使用
+### 1.4.0 - 🎉 重大优化版本
+- 🚀 **前端优化**: 移除所有外部依赖 (jQuery, Bootstrap, Bootstrap Table, Layer.js)
+- ✅ **后端优化**: 简化代码，提升可维护性
+- 🔒 **安全增强**: 修复所有 XSS 漏洞，添加完整的安全头
+- ⚡ **性能提升**: 资源大小减少 97%，加载时间减少 75%
+- 🚀 **重大改进**：完全重构前端，移除所有外部依赖
+- ✅ **性能优化**：资源大小减少 97% (500KB → 15KB)，加载时间减少 75%
+- 🔒 **安全增强**：修复所有 XSS 漏洞，添加完整的安全头
+- 🎨 **UI 重构**：采用现代化设计，响应式布局，更好的用户体验
+- 📱 **移动端优化**：完美支持各种屏幕尺寸
+- ✨ **功能增强**：改进搜索、分页、复制等功能
+- 🛠️ **技术升级**：使用原生 JavaScript，现代 CSS (Grid, Flexbox)
 
-* 1.3.0
-  * 🆕 新增：支持 .NET 9.0
-  * ✅ 优化：启用可空引用类型支持
-  * ✅ 优化：改进包版本管理，使用浮动版本号
-  * ✅ 优化：完善 `DashboardOptions` 的 XML 文档注释
-  * ✅ 重构：移除注释代码，清理构造函数逻辑
+### 1.3.1
+- 🆕 新增：支持完全离线使用，所有前端资源本地化
+- ✅ 优化：下载并本地化 Bootstrap、jQuery、Bootstrap Table 等依赖资源
+- ✅ 优化：添加 Bootstrap Icons 字体文件支持
+- ✅ 优化：内网环境无需外部网络连接即可正常使用
 
-* 1.2.0
-  * 支持 .NET 10
+### 1.3.0
+- 🆕 新增：支持 .NET 9.0
+- ✅ 优化：启用可空引用类型支持
+- ✅ 优化：改进包版本管理，使用浮动版本号
+- ✅ 优化：完善 `DashboardOptions` 的 XML 文档注释
+- ✅ 重构：移除注释代码，清理构造函数逻辑
 
-* 1.1.0
-    * 适配 Azrng.Core 1.2.1 的修改
+### 1.2.0
+- 支持 .NET 10
 
-* 1.0.1
-    * 支持通过调用 AddIfNotExistsAsync 接口初始化数据
+### 1.1.0
+- 适配 Azrng.Core 1.2.1 的修改
 
-* 1.0.0
-    * 增加了历史版本配置的复制
-    * 增加 Basic 认证方案
+### 1.0.1
+- 支持通过调用 AddIfNotExistsAsync 接口初始化数据
 
-* 0.0.1
-    * 基本的配置更新
+### 1.0.0
+- 增加了历史版本配置的复制
+- 增加 Basic 认证方案
+
+### 0.0.1
+- 基本的配置更新
