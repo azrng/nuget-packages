@@ -894,6 +894,9 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 📝 版本更新记录
 
+### 1.15.8
+- 修复DateDiff扩展方法引用本身问题
+
 ### 1.15.7
 - 修复 HandleAsDefaultWhenException 方法实现错误，异常时正确返回默认值而不是重新抛出异常
 - 修复 GuardClauseNullExtensions 中 NullOrEmpty 方法调用 Null 方法时参数顺序错误
