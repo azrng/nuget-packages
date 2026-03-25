@@ -11,7 +11,7 @@
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <PackageId>Azrng.AspNetCore.Authentication.JwtBearer</PackageId>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.AspNetCore.Authentication.JwtBearer.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.AspNetCore.Authentication.JwtBearer.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>

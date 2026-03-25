@@ -5,7 +5,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Version>2.0.0</Version>
-        <DocumentationFile>Common.Cache.Redis.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Common.Cache.Redis.xml</DocumentationFile>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>

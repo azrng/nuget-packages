@@ -11,7 +11,7 @@
         <Version>1.3.0</Version>
         <PackageId>Azrng.AspNetCore.Core</PackageId>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.AspNetCore.Core.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.AspNetCore.Core.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591;IL2026;IL3050;CA1416</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>

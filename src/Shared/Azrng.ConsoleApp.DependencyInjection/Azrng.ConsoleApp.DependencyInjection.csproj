@@ -10,7 +10,7 @@
         <Version>1.3.4</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.ConsoleApp.DependencyInjection.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.ConsoleApp.DependencyInjection.xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

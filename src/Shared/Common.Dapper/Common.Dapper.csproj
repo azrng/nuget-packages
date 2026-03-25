@@ -12,7 +12,7 @@
         <Copyright>Azrng</Copyright>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <NoWarn>1701;1702;1591</NoWarn>
-        <DocumentationFile>Azrng.Dapper.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.Dapper.xml</DocumentationFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Dapper Wrapper</Title>

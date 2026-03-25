@@ -8,7 +8,7 @@
         <Copyright>Azrng</Copyright>
         <Version>0.0.1-beta2</Version>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Common.YuQueSdk.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Common.YuQueSdk.xml</DocumentationFile>
         <PackageReleaseNotes>获取用户信息以及获取文档详情，逐步更新中</PackageReleaseNotes>
         <ApplicationIcon>yuque.ico</ApplicationIcon>
         <EnableNETAnalyzers>True</EnableNETAnalyzers>

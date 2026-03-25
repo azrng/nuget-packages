@@ -8,7 +8,7 @@
         <PackageId>AzrngCommon.Security</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Common.Security.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Common.Security.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Security Extensions</Title>

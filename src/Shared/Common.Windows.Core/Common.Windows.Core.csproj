@@ -10,7 +10,7 @@
         <PackageId>Common.Windows.Core</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Common.Windows.Core.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Common.Windows.Core.xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageTags>windows;utility;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>

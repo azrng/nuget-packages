@@ -11,7 +11,7 @@
         <PackageId>Azrng.DistributeLock.PostgreSql</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.DistributeLock.PostgreSql.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.DistributeLock.PostgreSql.xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
