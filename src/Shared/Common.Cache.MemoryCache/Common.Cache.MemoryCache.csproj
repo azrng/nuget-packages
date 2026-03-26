@@ -6,7 +6,7 @@
         <!--        <TargetFramework>net9.0</TargetFramework>-->
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <Version>2.0.0</Version>
+        <Version>2.1.0</Version>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RootNamespace>Azrng.Cache.MemoryCache</RootNamespace>
         <DocumentationFile>Azrng.Cache.MemoryCache.xml</DocumentationFile>

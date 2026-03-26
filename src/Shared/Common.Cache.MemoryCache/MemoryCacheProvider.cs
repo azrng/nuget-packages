@@ -234,7 +234,11 @@ namespace Azrng.Cache.MemoryCache
             catch (Exception ex)
             {
                 _logger.LogError(ex, "内存缓存执行失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_memoryConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return await getData();
             }
         }
 

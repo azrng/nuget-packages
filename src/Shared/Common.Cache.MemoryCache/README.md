@@ -32,6 +32,7 @@ services.AddMemoryCacheStore(options =>
 {
     options.DefaultExpiry = TimeSpan.FromSeconds(30);
     options.CacheEmptyCollections = false;
+    options.FailThrowException = true; // 缓存操作失败时是否抛出异常（默认为true）
 });
 ```
 
@@ -42,6 +43,7 @@ services.AddMemoryCacheExtension(options =>
 {
     options.DefaultExpiry = TimeSpan.FromSeconds(30);
     options.CacheEmptyCollections = false;
+    options.FailThrowException = true; // 缓存操作失败时是否抛出异常（默认为true）
 });
 ```
 
@@ -113,6 +115,7 @@ await ((IMemoryCacheProvider)_cacheProvider).RemoveAllKeyAsync();
 
 - `DefaultExpiry`: 默认过期时间，默认值为 5 秒
 - `CacheEmptyCollections`: 是否缓存空集合和空字符串，默认值为 `true`
+- `FailThrowException`: 缓存操作失败时是否抛出异常，默认值为 `true`
 
 ## 行为说明
 
@@ -134,11 +137,12 @@ var value = await _cacheProvider.GetAsync<bool>("bool:false"); // false
 - 空集合不会缓存
 - `0`、`false` 等合法默认值仍然会缓存
 
-### 3. `GetOrCreateAsync` 失败时会抛出异常
+### 3. 异常处理可通过配置控制
 
-如果缓存读写异常，或者工厂方法本身抛出异常，`GetOrCreateAsync` 会记录日志后继续抛出异常，而不是返回 `default`。
+从 `2.1.0` 开始，可通过 `FailThrowException` 配置控制缓存操作失败时的行为：
 
-这可以避免把真实故障误判成“缓存未命中”。
+- `true`（默认）：记录日志并抛出异常，避免把真实故障误判成”缓存未命中”
+- `false`：记录日志并返回默认值，不抛出异常，提供更灵活的错误处理策略
 
 ### 4. 并发访问同一个 Key 时会做单 Key 同步
 
@@ -179,6 +183,11 @@ await _cacheProvider.RemoveMatchKeyAsync("order:2026-03-??");
 
 ## 版本更新记录
 
+* 2.1.0
+  * **新增**：`FailThrowException` 配置项，允许控制缓存操作失败时的行为
+    * `true`（默认）：记录日志并抛出异常，与 2.0.0 行为一致
+    * `false`：记录日志并返回默认值，不抛出异常，提供更灵活的错误处理策略
+  * **优化**：`GetOrCreateAsync` 支持 `FailThrowException` 配置，统一异常处理行为
 * 2.0.0
   * **破坏性更新**：`GetOrCreateAsync` 发生异常时不再吞掉异常并返回 `default`，改为记录日志后继续抛出异常
   * **破坏性更新**：`RemoveMatchKeyAsync` 改为按通配符语义匹配，支持 `*`、`?`、`[]`，不再直接把输入当作正则表达式
