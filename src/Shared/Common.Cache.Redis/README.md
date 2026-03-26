@@ -41,6 +41,7 @@ services.AddRedisCacheStore(options =>
     options.KeyPrefix = "myapp";
     options.CacheEmptyCollections = true; // 是否缓存空集合和空字符串数据
     options.InitErrorIntervalSecond = 10; // 连接失败后的快速失败重试间隔（秒）
+    options.FailThrowException = true; // 缓存操作失败时是否抛出异常（默认为true）
 });
 
 // 或使用旧方法（已过时）
@@ -50,6 +51,7 @@ services.AddRedisCacheService(options =>
     options.KeyPrefix = "myapp";
     options.CacheEmptyCollections = true; // 是否缓存空集合和空字符串数据
     options.InitErrorIntervalSecond = 10; // 连接失败后的快速失败重试间隔（秒）
+    options.FailThrowException = true; // 缓存操作失败时是否抛出异常（默认为true）
 });
 ```
 
@@ -315,24 +317,7 @@ await newsService.SubscribeAllNewsAsync(cts.Token);
 - `KeyPrefix`: Key 前缀
 - `InitErrorIntervalSecond`: 初始化错误间隔时间（秒）
 - `CacheEmptyCollections`: 是否缓存空集合和空字符串数据（默认为 `true`）
-
-### 行为说明
-
-- `GetOrCreateAsync` 和 `SetAsync<T>` 从 `2.0.0` 开始支持缓存合法默认值，例如 `0`、`false`、`DateTime.MinValue`
-- 仅 `null` 和按 `CacheEmptyCollections` 配置禁止缓存的空集合/空字符串会跳过写入
-- Redis 连接或读写失败时会记录日志并抛出异常，不再返回 `default`、`null`、`false` 掩盖故障
-- 发布订阅支持 `false`、`0` 等合法默认值消息；仅 `null` 消息会跳过发布
-
-### 测试
-
-集成测试默认通过环境变量 `COMMON_CACHE_REDIS_TEST_CONNECTION` 启用：
-
-```powershell
-$env:COMMON_CACHE_REDIS_TEST_CONNECTION="127.0.0.1:6379,password=,DefaultDatabase=0"
-dotnet test test/Common.Cache.Redis.Test/Common.Cache.Redis.Test.csproj
-```
-
-未设置该环境变量时，外部 Redis 依赖的测试会自动跳过，本地仍会执行无需 Redis 的单元测试。
+- `FailThrowException`: 缓存操作失败时是否抛出异常（默认为 `true`）
 
 ### 模糊匹配规则
 
@@ -349,6 +334,11 @@ dotnet test test/Common.Cache.Redis.Test/Common.Cache.Redis.Test.csproj
 
 ## 版本更新记录
 
+* 2.1.0
+  * **新增**：`FailThrowException` 配置项，允许控制缓存操作失败时的行为
+    * `true`（默认）：记录日志并抛出异常，与 2.0.0 行为一致
+    * `false`：记录日志并返回默认值，不抛出异常，提供更灵活的错误处理策略
+  * **优化**：所有缓存操作（Get、Set、Remove、GetOrCreate、Exist、Expire等）统一支持 `FailThrowException` 配置
 * 2.0.0
   * **破坏性更新**：Redis 连接、读写、发布订阅失败时不再返回 `default`、`null`、`false`、`0`
     * 旧版本会把很多 Redis 故障静默降级成缓存未命中或默认值

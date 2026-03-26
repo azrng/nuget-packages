@@ -6,7 +6,6 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +40,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return null;
             }
         }
 
@@ -57,7 +60,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return default;
             }
         }
 
@@ -113,7 +120,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存GetOrCreate失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return await getData();
             }
         }
 
@@ -133,7 +144,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -153,7 +168,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -168,7 +187,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存删除失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -201,7 +224,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存批量删除失败 message:{Message}", ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return 0;
             }
         }
 
@@ -223,7 +250,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "根据前缀匹配符批量删除Key异常，前缀匹配符:{PrefixMatchStr}", prefixMatchStr);
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -238,7 +269,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存过期时间设置失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -253,7 +288,11 @@ namespace Common.Cache.Redis
             catch (Exception ex)
             {
                 _logger.LogError(ex, "redis缓存存在性检查失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return false;
             }
         }
 
@@ -277,7 +316,11 @@ namespace Common.Cache.Redis
             {
                 _logger.LogError(ex, "SCAN命令执行异常，前缀匹配符:{PrefixMatchStr} message:{Message}",
                     prefixMatchStr, ex.GetExceptionAndStack());
-                throw;
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+                return Array.Empty<RedisKey>();
             }
         }
 

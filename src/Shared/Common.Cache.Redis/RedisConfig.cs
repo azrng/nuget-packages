@@ -29,5 +29,10 @@
         /// 是否缓存空集合和空字符串数据（默认为true，即缓存空集合和空字符串）
         /// </summary>
         public bool CacheEmptyCollections { get; set; } = true;
+
+        /// <summary>
+        /// 缓存操作失败时是否抛出异常（默认为true）
+        /// </summary>
+        public bool FailThrowException { get; set; } = true;
     }
 }
