@@ -1,7 +1,7 @@
 using Azrng.Core.Json;
-using Azrng.DbOperator;
-using Azrng.DbOperator.DbBridge;
-using Azrng.DbOperator.Helper;
+using Azrng.DataAccess;
+using Azrng.DataAccess.DbBridge;
+using Azrng.DataAccess.Helper;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 

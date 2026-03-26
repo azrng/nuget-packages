@@ -5,7 +5,7 @@
     <Project Path="src/Shared/Azrng.Database.DynamicSqlBuilder/Azrng.Database.DynamicSqlBuilder.csproj" />
     <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
-    <Project Path="src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+    <Project Path="src\Shared\Azrng.DataAccess\Azrng.DataAccess.csproj" />
     <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
   </Folder>
   <Folder Name="/Tests/">

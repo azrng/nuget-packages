@@ -25,7 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
-        <ProjectReference Include="..\..\src\Shared\Azrng.DbOperator\Azrng.DbOperator.csproj" />
+        <ProjectReference Include="..\..\src\Shared\Azrng.DataAccess\Azrng.DataAccess.csproj" />
     </ItemGroup>
 
 </Project>

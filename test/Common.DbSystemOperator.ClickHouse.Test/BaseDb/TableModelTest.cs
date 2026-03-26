@@ -1,5 +1,5 @@
 ﻿using Azrng.Core;
-using Azrng.DbOperator;
+using Azrng.DataAccess;
 using Common.DbSystemOperator.ClickHouse.Test.Helper;
 using Microsoft.Extensions.Logging;
 using Xunit;

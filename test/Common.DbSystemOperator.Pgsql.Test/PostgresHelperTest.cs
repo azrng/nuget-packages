@@ -1,4 +1,4 @@
-﻿using Azrng.DbOperator;
+﻿using Azrng.DataAccess;
 using Xunit.Abstractions;
 
 namespace Common.DbSystemOperator.Pgsql.Test

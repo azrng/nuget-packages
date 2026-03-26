@@ -1,6 +1,6 @@
 ﻿using Azrng.Core;
-using Azrng.DbOperator;
-using Azrng.DbOperator.Dto;
+using Azrng.DataAccess;
+using Azrng.DataAccess.Dto;
 using Common.DbSystemOperator.ClickHouse.Test.Dto;
 using Microsoft.Extensions.Logging;
 using Xunit;

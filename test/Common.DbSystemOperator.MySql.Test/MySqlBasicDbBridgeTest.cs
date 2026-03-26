@@ -1,6 +1,6 @@
 using Azrng.Core;
 using Azrng.Core.Model;
-using Azrng.DbOperator;
+using Azrng.DataAccess;
 using Xunit.Abstractions;
 
 namespace Common.DbSystemOperator.MySql.Test;
