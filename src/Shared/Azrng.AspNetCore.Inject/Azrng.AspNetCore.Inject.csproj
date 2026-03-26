@@ -10,7 +10,7 @@
         <Version>0.0.1-beta1</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>Azrng.AspNetCore.Inject.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.AspNetCore.Inject.xml</DocumentationFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <IsPackable>false</IsPackable>

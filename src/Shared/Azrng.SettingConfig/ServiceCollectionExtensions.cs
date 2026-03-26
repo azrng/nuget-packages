@@ -1,4 +1,5 @@
-﻿using Azrng.SettingConfig.Service;
+using Azrng.SettingConfig.Interface;
+using Azrng.SettingConfig.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using System.Data;
@@ -19,13 +20,25 @@ public static class ServiceCollectionExtensions
     internal static string CurrentApiRoutePrefix = "/api/platform";
 
     /// <summary>
-    /// 添加配置服务
+    /// 添加配置服务（使用默认回调接口）
     /// </summary>
     /// <param name="services">服务集合</param>
     /// <param name="setupAction">配置选项设置</param>
     /// <exception cref="ArgumentNullException">当参数为空时抛出</exception>
     public static void AddSettingConfig(this IServiceCollection services,
         Action<DashboardOptions> setupAction)
+    {
+        services.AddSettingConfig<DefaultConnectInterface>(setupAction);
+    }
+
+    /// <summary>
+    /// 添加配置服务（使用自定义回调接口）
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="setupAction">配置选项设置</param>
+    /// <exception cref="ArgumentNullException">当参数为空时抛出</exception>
+    public static void AddSettingConfig<TConnectInterface>(this IServiceCollection services,
+        Action<DashboardOptions> setupAction) where TConnectInterface : class, IConnectInterface
     {
         // 添加控制器支持
         services.AddControllers().AddApplicationPart(typeof(ServiceCollectionExtensions).Assembly);
@@ -43,6 +56,9 @@ public static class ServiceCollectionExtensions
 
         // 注册数据库连接
         services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(options.DbConnectionString));
+
+        // 注册回调接口
+        services.AddScoped<IConnectInterface, TConnectInterface>();
 
         // 注册仓储和服务
         services.AddDapper();

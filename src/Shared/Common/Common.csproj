@@ -12,7 +12,7 @@
         <PackageId>AzrngCommon</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <DocumentationFile>Common.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Common.xml</DocumentationFile>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <IsPackable>false</IsPackable>

@@ -106,8 +106,8 @@ EXECUTE PROCEDURE {_options.DbSchema}.""func_addSystemConfigFlow""();");
         return await _dapperRepository.ExecuteAsync(sb.ToString()) > 0;
     }
 
-    public async Task<List<GetSettingInfoDto>> GetPageListAsync(int pageIndex, int pageSize, string keyword,
-        string version)
+    public async Task<List<GetSettingInfoDto>?> GetPageListAsync(int pageIndex, int pageSize, string? keyword,
+                                                                 string? version)
     {
         var sql = $@"
 SELECT config.id, config.key, config.name, config.value, config.description, config.version
@@ -144,7 +144,7 @@ WHERE config.is_deleted = false";
         return await _dapperRepository.ExecuteScalarAsync<int>(sql);
     }
 
-    public async Task<GetConfigDetailsResult> GetConfigDetails(int configId)
+    public async Task<GetConfigDetailsResult?> GetConfigDetails(int configId)
     {
         var sql = $@"
 SELECT config.key, config.name, config.value, config.description, config.version, config.id
@@ -155,9 +155,9 @@ WHERE config.is_deleted = false AND config.id = @configId";
         return await _dapperRepository.QueryFirstOrDefaultAsync<GetConfigDetailsResult>(sql, new { configId });
     }
 
-    public async Task<GetConfigInfoDto> GetConfigInfoAsync(int configId)
+    public async Task<GetConfigInfoDto?> GetConfigInfoAsync(int configId)
     {
-        var sql = $"SELECT key, name FROM {_options.DbSchema}.system_config WHERE id = @id";
+        var sql = $"SELECT key, name,value FROM {_options.DbSchema}.system_config WHERE id = @id";
         _logger.LogInformation("查询配置信息 SQL: {Sql}", sql);
         return await _dapperRepository.QueryFirstOrDefaultAsync<GetConfigInfoDto>(sql, new { id = configId });
     }
@@ -192,7 +192,7 @@ WHERE id = @configId";
             }) > 0;
     }
 
-    public async Task<List<GetConfigVersionListResult>> GetConfigHistoryListAsync(string key)
+    public async Task<List<GetConfigVersionListResult>?> GetConfigHistoryListAsync(string key)
     {
         var sql = $@"
 SELECT id AS hisoryId, key, value, version, update_time AS updateTime
@@ -202,6 +202,17 @@ ORDER BY update_time DESC";
 
         _logger.LogInformation("查询配置历史 SQL: {Sql}", sql);
         return await _dapperRepository.QueryAsync<GetConfigVersionListResult>(sql, new { key });
+    }
+
+    public async Task<GetConfigVersionListResult?> GetHistoryInfoAsync(int historyId)
+    {
+        var sql = $@"
+SELECT id AS hisoryId, key, value, version, update_time AS updateTime
+FROM {_options.DbSchema}.system_config_history
+WHERE id = @historyId";
+
+        _logger.LogInformation("查询历史记录详情 SQL: {Sql}", sql);
+        return await _dapperRepository.QueryFirstOrDefaultAsync<GetConfigVersionListResult>(sql, new { historyId });
     }
 
     public async Task<bool> DeleteConfigAsync(int configId)
@@ -237,7 +248,7 @@ WHERE config.is_deleted = false
         return await _dapperRepository.ExecuteScalarAsync<string>(sql, new { key });
     }
 
-    public async Task<bool> UpdateConfigValueAsync(string key, string value, string updateUserId = null)
+    public async Task<bool> UpdateConfigValueAsync(string key, string value, string? updateUserId = null)
     {
         var sql =
             $"update {_options.DbSchema}.system_config set value=@value,update_user_id=@update_user_id,update_time=@update_time where key=@key";
@@ -259,6 +270,8 @@ WHERE config.is_deleted = false
         var existCodes = await _dapperRepository.QueryAsync<string>(
             $"select key from {_options.DbSchema}.system_config where key =ANY(@codes)",
             new { codes });
+        if (existCodes is null)
+            return false;
 
         // 留下不存在的key
         addSettingInfos = addSettingInfos.Where(t => !existCodes.Contains(t.Key)).ToList();

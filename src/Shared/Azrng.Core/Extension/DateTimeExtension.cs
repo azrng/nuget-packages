@@ -298,7 +298,7 @@ namespace Azrng.Core.Extension
                 return 0;
             }
 
-            return dateStart.DateDiff(dateEnd.Value);
+            return dateStart.Value.DateDiff(dateEnd.Value);
         }
 
         /// <summary>
@@ -314,7 +314,7 @@ namespace Azrng.Core.Extension
                 return 0;
             }
 
-            return dateStart.DateDiff(dateEnd);
+            return dateStart.Value.DateDiff(dateEnd);
         }
 
         /// <summary>

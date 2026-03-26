@@ -14,4 +14,9 @@ public class GetConfigInfoDto
     /// 配置名称
     /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 配置值
+    /// </summary>
+    public string Value { get; set; } = string.Empty;
 }

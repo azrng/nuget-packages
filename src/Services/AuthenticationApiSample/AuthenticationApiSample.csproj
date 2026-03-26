@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <DocumentationFile>AuthenticationApiSample.xml</DocumentationFile>
+    <DocumentationFile>$(OutputPath)AuthenticationApiSample.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

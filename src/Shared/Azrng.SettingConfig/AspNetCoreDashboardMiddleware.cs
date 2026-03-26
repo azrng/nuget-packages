@@ -22,18 +22,16 @@ namespace Azrng.SettingConfig
         private readonly StaticFileMiddleware _staticFileMiddleware;
         private readonly DashboardOptions _dashboardOptions;
         private readonly ManifestResourceService _manifestResourceService;
-        private readonly IWebHostEnvironment _hostingEnvironment;
 
         public AspNetCoreDashboardMiddleware(RequestDelegate next,
-            IWebHostEnvironment hostingEnv,
-            ILoggerFactory loggerFactory,
-            IOptions<DashboardOptions> options,
-            ManifestResourceService manifestResourceService)
+                                             IWebHostEnvironment hostingEnv,
+                                             ILoggerFactory loggerFactory,
+                                             IOptions<DashboardOptions> options,
+                                             ManifestResourceService manifestResourceService)
         {
             _dashboardOptions = options.Value;
             _staticFileMiddleware = CreateStaticFileMiddleware(next, hostingEnv, loggerFactory);
             _manifestResourceService = manifestResourceService;
-            _hostingEnvironment = hostingEnv;
         }
 
         public async Task Invoke(HttpContext httpContext)
@@ -182,9 +180,9 @@ namespace Azrng.SettingConfig
 
         private static int GetUnauthorizedStatusCode(HttpContext httpContext)
         {
-            return httpContext.User?.Identity?.IsAuthenticated == true
-                ? (int)HttpStatusCode.Forbidden
-                : (int)HttpStatusCode.Unauthorized;
+            // 当使用自定义授权过滤器时，返回 401 Unauthorized
+            // 如果需要区分 401 和 403，可以在过滤器中设置状态码
+            return (int)HttpStatusCode.Unauthorized;
         }
     }
 }

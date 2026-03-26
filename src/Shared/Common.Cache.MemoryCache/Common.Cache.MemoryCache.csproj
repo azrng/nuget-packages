@@ -9,7 +9,7 @@
         <Version>2.1.0</Version>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RootNamespace>Azrng.Cache.MemoryCache</RootNamespace>
-        <DocumentationFile>Azrng.Cache.MemoryCache.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)Azrng.Cache.MemoryCache.xml</DocumentationFile>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
