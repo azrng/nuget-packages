@@ -894,6 +894,9 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 📝 版本更新记录
 
+### 1.16.0
+- 完善 DatabaseType 枚举的 XML 文档注释，为所有数据库类型添加详细的中文说明
+
 ### 1.15.8
 - 修复DateDiff扩展方法引用本身问题
 
