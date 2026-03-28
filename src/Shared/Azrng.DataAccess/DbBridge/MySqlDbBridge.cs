@@ -202,10 +202,78 @@ FROM information_schema.STATISTICS a
 WHERE a.TABLE_SCHEMA = @schema_name
   AND a.INDEX_NAME <> 'PRIMARY';"
                 },
-                { SystemOperatorConst.DbView, string.Empty },
-                { SystemOperatorConst.SchemaView, string.Empty },
+                {
+                    SystemOperatorConst.DbView,
+                    @"SELECT COALESCE(t.TABLE_COMMENT, '') AS ViewDescription,
+       v.TABLE_NAME AS ViewName,
+       v.TABLE_SCHEMA AS ViewOwner,
+       CONCAT(
+           'CREATE VIEW `',
+           REPLACE(v.TABLE_SCHEMA, '`', '``'),
+           '`.`',
+           REPLACE(v.TABLE_NAME, '`', '``'),
+           '` AS',
+           CHAR(10),
+           COALESCE(v.VIEW_DEFINITION, '')) AS ViewDefinition
+FROM information_schema.VIEWS v
+LEFT JOIN information_schema.TABLES t
+       ON t.TABLE_SCHEMA = v.TABLE_SCHEMA
+      AND t.TABLE_NAME = v.TABLE_NAME
+WHERE v.TABLE_SCHEMA NOT IN ('information_schema', 'performance_schema', 'sys', 'mysql')
+ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME;"
+                },
+                {
+                    SystemOperatorConst.SchemaView,
+                    @"SELECT COALESCE(t.TABLE_COMMENT, '') AS ViewDescription,
+       v.TABLE_NAME AS ViewName,
+       v.TABLE_SCHEMA AS ViewOwner,
+       CONCAT(
+           'CREATE VIEW `',
+           REPLACE(v.TABLE_SCHEMA, '`', '``'),
+           '`.`',
+           REPLACE(v.TABLE_NAME, '`', '``'),
+           '` AS',
+           CHAR(10),
+           COALESCE(v.VIEW_DEFINITION, '')) AS ViewDefinition
+FROM information_schema.VIEWS v
+LEFT JOIN information_schema.TABLES t
+       ON t.TABLE_SCHEMA = v.TABLE_SCHEMA
+      AND t.TABLE_NAME = v.TABLE_NAME
+WHERE v.TABLE_SCHEMA = @schema_name
+ORDER BY v.TABLE_NAME;"
+                },
                 { SystemOperatorConst.DbProc, string.Empty },
-                { SystemOperatorConst.SchemaProc, string.Empty },
+                {
+                    SystemOperatorConst.SchemaProc,
+                    @"SELECT ROUTINE_NAME AS ProcName,
+       '' AS InputParam,
+       CASE
+           WHEN ROUTINE_TYPE = 'FUNCTION' THEN COALESCE(DTD_IDENTIFIER, '')
+           ELSE ''
+       END AS OutputParam,
+       COALESCE(ROUTINE_DEFINITION, '') AS ProcDefinition,
+       COALESCE(ROUTINE_COMMENT, '') AS ProcDescription
+FROM information_schema.ROUTINES
+WHERE ROUTINE_SCHEMA = @schema_name
+  AND ROUTINE_TYPE = 'PROCEDURE'
+ORDER BY ROUTINE_NAME;"
+                },
+                {
+                    SystemOperatorConst.SchemaRoutine,
+                    @"SELECT ROUTINE_SCHEMA AS SchemaName,
+       ROUTINE_NAME AS RoutineName,
+       ROUTINE_TYPE AS RoutineType,
+       '' AS InputParam,
+       CASE
+           WHEN ROUTINE_TYPE = 'FUNCTION' THEN COALESCE(DTD_IDENTIFIER, '')
+           ELSE ''
+       END AS OutputParam,
+       COALESCE(ROUTINE_DEFINITION, '') AS RoutineDefinition,
+       COALESCE(ROUTINE_COMMENT, '') AS RoutineDescription
+FROM information_schema.ROUTINES
+WHERE ROUTINE_SCHEMA = @schema_name
+ORDER BY ROUTINE_TYPE, ROUTINE_NAME;"
+                },
                 { "ColumnSize", "SELECT '{3}' CKEY,(SUM(OCTET_LENGTH({0}))) CSIZE FROM {1}.{2};" }
             };
 

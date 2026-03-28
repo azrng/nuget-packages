@@ -136,5 +136,12 @@ namespace Azrng.DataAccess
         /// <param name="schemaName"></param>
         /// <returns></returns>
         Task<List<ProcModel>> GetSchemaProcListAsync(string schemaName);
+
+        /// <summary>
+        /// 查询 schema 下所有例程信息
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <returns></returns>
+        Task<List<RoutineModel>> GetSchemaRoutineListAsync(string schemaName);
     }
 }

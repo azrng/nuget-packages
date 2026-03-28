@@ -151,6 +151,15 @@ namespace Azrng.DataAccess.DbBridge
             return await DbHelper.QueryAsync<ProcModel>(sql, new { schema_name = schemaName });
         }
 
+        public async Task<List<RoutineModel>> GetSchemaRoutineListAsync(string schemaName)
+        {
+            var sql = GetOptionalSql(SystemOperatorConst.SchemaRoutine);
+            if (string.IsNullOrWhiteSpace(sql))
+                throw new NotSupportedException("璇ユ暟鎹簱绫诲瀷鏆備笉鏀寔璇ユ柟娉?");
+
+            return await DbHelper.QueryAsync<RoutineModel>(sql, new { schema_name = schemaName });
+        }
+
         protected string GetRequiredSql(string key)
         {
             if (QuerySqlMap.TryGetValue(key, out var sql) && !string.IsNullOrWhiteSpace(sql))

@@ -86,5 +86,10 @@
         /// 查询schema下存储过程
         /// </summary>
         public const string SchemaProc = "SchemaProc";
+
+        /// <summary>
+        /// 查询 schema 下所有例程
+        /// </summary>
+        public const string SchemaRoutine = "SchemaRoutine";
     }
 }
