@@ -158,17 +158,21 @@ catch
 
 ## 版本历史
 
+### 1.0.0-beta2
+
+- 添加MySQL视图和函数操作
+
 ### 1.0.0-beta1
 
-- ✅ 支持 6 种主流数据库（MySQL、SQL Server、PostgreSQL、SQLite、ClickHouse、Oracle）
-- ✅ 工厂模式创建数据库桥接
-- ✅ 分页查询功能
-- ✅ 参数化查询（防 SQL 注入）
-- ✅ 异步操作
-- ✅ 事务支持
-- ✅ 连接池管理（MySQL/PostgreSQL）
-- ✅ 基于 Dapper ORM
-- ✅ 支持 .NET 8.0/9.0/10.0
+-  支持 6 种主流数据库（MySQL、SQL Server、PostgreSQL、SQLite、ClickHouse、Oracle）
+-  工厂模式创建数据库桥接
+-  分页查询功能
+-  参数化查询（防 SQL 注入）
+-  异步操作
+-  事务支持
+-  连接池管理（MySQL/PostgreSQL）
+-  基于 Dapper ORM
+-  支持 .NET 8.0/9.0/10.0
 
 ## License
 
