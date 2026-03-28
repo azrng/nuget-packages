@@ -39,6 +39,15 @@ namespace Azrng.DataAccess.DbBridge
             return await DbHelper.QueryAsync<string>(sql);
         }
 
+        public virtual async Task<List<string>> GetDatabaseNameListAsync()
+        {
+            var sql = GetOptionalSql(SystemOperatorConst.DbName);
+            if (string.IsNullOrWhiteSpace(sql))
+                throw new NotSupportedException("Current database bridge does not support database list metadata.");
+
+            return await DbHelper.QueryAsync<string>(sql);
+        }
+
         public async Task<List<GetSchemaListDto>> GetSchemaListAsync()
         {
             var sql = GetRequiredSql(SystemOperatorConst.SchemaInfo);
@@ -202,6 +211,21 @@ namespace Azrng.DataAccess.DbBridge
             }
 
             throw new NotSupportedException("Current database bridge does not support routine metadata.");
+        }
+
+        public async Task<TableTimestampDto?> GetTableTimestampAsync(string schemaName, string tableName)
+        {
+            var sql = GetOptionalSql(SystemOperatorConst.TableTimestamp);
+            if (string.IsNullOrWhiteSpace(sql))
+            {
+                return null;
+            }
+
+            return await DbHelper.QueryFirstOrDefaultAsync<TableTimestampDto>(sql, new
+            {
+                schema_name = schemaName,
+                table_name = tableName
+            });
         }
 
         protected string GetRequiredSql(string key)

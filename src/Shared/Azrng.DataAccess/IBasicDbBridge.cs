@@ -25,6 +25,12 @@ namespace Azrng.DataAccess
         Task<List<string>> GetSchemaNameListAsync();
 
         /// <summary>
+        /// 获取数据库名列表
+        /// </summary>
+        /// <returns></returns>
+        Task<List<string>> GetDatabaseNameListAsync();
+
+        /// <summary>
         /// 获取schema信息列表
         /// </summary>
         /// <returns></returns>
@@ -159,5 +165,13 @@ namespace Azrng.DataAccess
         /// <param name="routineName"></param>
         /// <returns></returns>
         Task<RoutineModel?> GetSchemaRoutineAsync(string schemaName, string routineName);
+
+        /// <summary>
+        /// 查询表时间戳
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        Task<TableTimestampDto?> GetTableTimestampAsync(string schemaName, string tableName);
     }
 }

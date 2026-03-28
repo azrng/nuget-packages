@@ -13,6 +13,12 @@ namespace Azrng.DataAccess.DbBridge
             new()
             {
                 {
+                    SystemOperatorConst.DbName,
+                    @"SELECT USERNAME
+FROM ALL_USERS
+ORDER BY USERNAME"
+                },
+                {
                     SystemOperatorConst.SchemaName,
                     "SELECT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AS Schema_name FROM dual"
                 },

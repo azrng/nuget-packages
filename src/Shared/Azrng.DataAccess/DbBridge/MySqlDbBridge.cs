@@ -13,6 +13,10 @@ namespace Azrng.DataAccess.DbBridge
             new()
             {
                 {
+                    SystemOperatorConst.DbName,
+                    "SHOW DATABASES;"
+                },
+                {
                     SystemOperatorConst.SchemaName,
                     @"SELECT SCHEMA_NAME AS Schema_name
 FROM information_schema.SCHEMATA
@@ -273,6 +277,15 @@ ORDER BY ROUTINE_NAME;"
 FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = @schema_name
 ORDER BY ROUTINE_TYPE, ROUTINE_NAME;"
+                },
+                {
+                    SystemOperatorConst.TableTimestamp,
+                    @"SELECT create_time AS CreateTime,
+       update_time AS ModifyTime
+FROM information_schema.tables
+WHERE table_schema = @schema_name
+  AND table_name = @table_name
+LIMIT 1;"
                 },
                 { "ColumnSize", "SELECT '{3}' CKEY,(SUM(OCTET_LENGTH({0}))) CSIZE FROM {1}.{2};" }
             };

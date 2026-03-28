@@ -91,5 +91,15 @@
         /// 查询 schema 下所有例程
         /// </summary>
         public const string SchemaRoutine = "SchemaRoutine";
+
+        /// <summary>
+        /// 查询数据库列表
+        /// </summary>
+        public const string DbName = "DbName";
+
+        /// <summary>
+        /// 查询表时间戳
+        /// </summary>
+        public const string TableTimestamp = "TableTimestamp";
     }
 }

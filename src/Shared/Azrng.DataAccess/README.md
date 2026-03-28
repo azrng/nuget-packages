@@ -158,6 +158,13 @@ catch
 
 ## 版本历史
 
+### 1.0.0-beta3
+
+- 新增数据库名列表查询接口 `GetDatabaseNameListAsync`
+- 新增表时间戳查询接口 `GetTableTimestampAsync`
+- 补充 MySQL、SQL Server、PostgreSQL、Oracle 的数据库列表元数据查询支持
+- 补充 MySQL、SQL Server 的表创建时间和修改时间查询支持
+
 ### 1.0.0-beta2
 
 - 添加MySQL视图和函数操作

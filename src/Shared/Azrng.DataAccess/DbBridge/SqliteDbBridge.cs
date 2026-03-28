@@ -12,6 +12,7 @@ namespace Azrng.DataAccess.DbBridge
         public override Dictionary<string, string> QuerySqlMap =>
             new()
             {
+                { SystemOperatorConst.DbName, string.Empty },
                 { SystemOperatorConst.SchemaName, "SELECT 'main' AS Schema_name;" },
                 { SystemOperatorConst.SchemaInfo, "SELECT 'main' AS SchemaName, NULL AS SchemaComment;" },
                 {
@@ -182,6 +183,7 @@ WHERE type = 'view';"
 FROM sqlite_master
 WHERE type = 'view';"
                 },
+                { SystemOperatorConst.TableTimestamp, string.Empty },
                 { SystemOperatorConst.DbProc, string.Empty },
                 { SystemOperatorConst.SchemaProc, string.Empty }
             };

@@ -13,6 +13,13 @@ namespace Azrng.DataAccess.DbBridge
             new()
             {
                 {
+                    SystemOperatorConst.DbName,
+                    @"SELECT datname
+FROM pg_database
+WHERE datistemplate = false
+ORDER BY datname;"
+                },
+                {
                     SystemOperatorConst.SchemaName,
                     @"SELECT schema_name
 FROM information_schema.schemata

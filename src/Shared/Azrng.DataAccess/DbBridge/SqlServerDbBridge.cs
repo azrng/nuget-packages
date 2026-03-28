@@ -13,6 +13,12 @@ namespace Azrng.DataAccess.DbBridge
             new()
             {
                 {
+                    SystemOperatorConst.DbName,
+                    @"SELECT [name]
+FROM sys.databases
+ORDER BY [name];"
+                },
+                {
                     SystemOperatorConst.SchemaName,
                     @"SELECT DISTINCT s.name AS Schema_name
 FROM sys.tables t
@@ -303,6 +309,15 @@ LEFT JOIN sys.extended_properties e
       AND e.name = 'MS_Description'
 WHERE p.ROUTINE_TYPE = 'PROCEDURE'
   AND s.name = @schema_name;"
+                },
+                {
+                    SystemOperatorConst.TableTimestamp,
+                    @"SELECT t.create_date AS CreateTime,
+       t.modify_date AS ModifyTime
+FROM sys.tables t
+INNER JOIN sys.schemas s ON s.schema_id = t.schema_id
+WHERE s.name = @schema_name
+  AND t.name = @table_name;"
                 },
                 { SystemOperatorConst.DbView, string.Empty },
                 { SystemOperatorConst.DbProc, string.Empty }
