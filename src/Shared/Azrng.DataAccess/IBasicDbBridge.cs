@@ -125,6 +125,14 @@ namespace Azrng.DataAccess
         Task<List<ViewModel>> GetSchemaViewListAsync(string schemaName);
 
         /// <summary>
+        /// 查询单个视图信息
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="viewName"></param>
+        /// <returns></returns>
+        Task<ViewModel?> GetSchemaViewAsync(string schemaName, string viewName);
+
+        /// <summary>
         /// 获取数据库下存储过程
         /// </summary>
         /// <returns></returns>
@@ -143,5 +151,13 @@ namespace Azrng.DataAccess
         /// <param name="schemaName"></param>
         /// <returns></returns>
         Task<List<RoutineModel>> GetSchemaRoutineListAsync(string schemaName);
+
+        /// <summary>
+        /// 查询单个例程信息
+        /// </summary>
+        /// <param name="schemaName"></param>
+        /// <param name="routineName"></param>
+        /// <returns></returns>
+        Task<RoutineModel?> GetSchemaRoutineAsync(string schemaName, string routineName);
     }
 }

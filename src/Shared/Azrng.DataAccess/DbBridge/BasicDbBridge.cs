@@ -133,6 +133,13 @@ namespace Azrng.DataAccess.DbBridge
             return await DbHelper.QueryAsync<ViewModel>(sql, new { schema_name = schemaName });
         }
 
+        public async Task<ViewModel?> GetSchemaViewAsync(string schemaName, string viewName)
+        {
+            var views = await GetSchemaViewListAsync(schemaName);
+            return views.FirstOrDefault(view =>
+                string.Equals(view.ViewName, viewName, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task<List<DbProcModel>> GetProcListAsync()
         {
             var sql = GetOptionalSql(SystemOperatorConst.DbProc);
@@ -158,6 +165,43 @@ namespace Azrng.DataAccess.DbBridge
                 throw new NotSupportedException("璇ユ暟鎹簱绫诲瀷鏆備笉鏀寔璇ユ柟娉?");
 
             return await DbHelper.QueryAsync<RoutineModel>(sql, new { schema_name = schemaName });
+        }
+
+        public async Task<RoutineModel?> GetSchemaRoutineAsync(string schemaName, string routineName)
+        {
+            var routineSql = GetOptionalSql(SystemOperatorConst.SchemaRoutine);
+            if (!string.IsNullOrWhiteSpace(routineSql))
+            {
+                var routines = await DbHelper.QueryAsync<RoutineModel>(routineSql, new { schema_name = schemaName });
+                return routines.FirstOrDefault(routine =>
+                    string.Equals(routine.RoutineName, routineName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var procSql = GetOptionalSql(SystemOperatorConst.SchemaProc);
+            if (!string.IsNullOrWhiteSpace(procSql))
+            {
+                var procedures = await DbHelper.QueryAsync<ProcModel>(procSql, new { schema_name = schemaName });
+                var procedure = procedures.FirstOrDefault(proc =>
+                    string.Equals(proc.ProcName, routineName, StringComparison.OrdinalIgnoreCase));
+
+                if (procedure == null)
+                {
+                    return null;
+                }
+
+                return new RoutineModel
+                {
+                    SchemaName = schemaName,
+                    RoutineName = procedure.ProcName,
+                    RoutineType = "PROCEDURE",
+                    InputParam = procedure.InputParam,
+                    OutputParam = procedure.OutputParam,
+                    RoutineDefinition = procedure.ProcDefinition,
+                    RoutineDescription = procedure.ProcDescription
+                };
+            }
+
+            throw new NotSupportedException("Current database bridge does not support routine metadata.");
         }
 
         protected string GetRequiredSql(string key)
