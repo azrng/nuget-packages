@@ -40,7 +40,8 @@ services.AddHttpClientService(options =>
     options.MaxRetryAttempts = 3;                    // 最大重试次数，范围：0-10
     options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒），范围：1-300
     options.ConcurrencyLimit = 100;                  // 并发限制，范围：1-10000
-    options.MaxOutputResponseLength = 1024 * 1024;   // 日志最大输出长度 1MB
+    options.MaxRequestBodyLength = 4096;             // 请求体日志默认保留 4KB
+    options.MaxOutputResponseLength = 4096;          // 响应体日志默认保留 4KB
     options.IgnoreUntrustedCertificate = false;      // ⚠️ 生产环境建议设为 false
     options.RetryOnUnauthorized = true;              // 401未授权错误时自动重试
     options.AdditionalSensitiveHeaders = new[] { "X-Secret" }; // 额外脱敏请求头
@@ -86,7 +87,8 @@ public class MyService
 | `ConcurrencyLimit` | int | 100 | 并发限制，范围：1-10000，建议按下游容量调整 |
 | `MaxRetryAttempts` | int | 3 | 最大重试次数，范围：0-10 |
 | `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避，范围：1-300 |
-| `MaxOutputResponseLength` | int | 0 | 日志最大输出响应长度（字节），≥0。0 表示不限制 |
+| `MaxRequestBodyLength` | int | 4096 | 请求体日志最大输出长度，≥0。0 表示不限制 |
+| `MaxOutputResponseLength` | int | 4096 | 响应体日志最大输出长度，≥0。0 表示不限制 |
 | `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书，⚠️ 仅建议开发/测试环境使用 |
 | `RetryOnUnauthorized` | bool | false | 401未授权错误时是否重试 |
 | `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头（不区分大小写） |
@@ -342,6 +344,11 @@ options.AdditionalSensitiveHeaders = new[] { "X-Custom-Auth" };
 
 ## 版本更新记录
 
+* 2.1.0
+  * 新增 `MaxRequestBodyLength` 配置项，用于限制请求体日志输出长度
+  * `MaxOutputResponseLength` 用于限制响应体日志输出长度
+  * 审计日志默认仅保留请求体和响应体前 4096 个字符
+  * 优化 `LoggingHandler` 的请求体和响应体日志截断逻辑
 * 2.0.0
   * **[破坏性变更]** 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
   * 请求超时统一由 `AddHttpClientService(options => options.Timeout = xx)` 全局配置控制

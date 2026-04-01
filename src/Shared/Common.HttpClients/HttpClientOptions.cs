@@ -28,9 +28,14 @@ namespace Common.HttpClients
         public int Timeout { get; set; } = 100;
 
         /// <summary>
+        /// 请求体日志最大输出长度
+        /// </summary>
+        public int MaxRequestBodyLength { get; set; } = 4096;
+
+        /// <summary>
         /// 最大输出响应长度
         /// </summary>
-        public int MaxOutputResponseLength { get; set; }
+        public int MaxOutputResponseLength { get; set; } = 4096;
 
         /// <summary>
         /// 是否忽略不安全证书

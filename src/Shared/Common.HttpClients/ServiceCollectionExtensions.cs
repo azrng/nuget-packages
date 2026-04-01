@@ -53,6 +53,12 @@ namespace Common.HttpClients
                     "MaxOutputResponseLength不能小于0");
             }
 
+            if (opt.MaxRequestBodyLength < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opt.MaxRequestBodyLength), opt.MaxRequestBodyLength,
+                    "MaxRequestBodyLength不能小于0");
+            }
+
             if (opt.ConcurrencyLimit < 1 || opt.ConcurrencyLimit > 10000)
             {
                 throw new ArgumentOutOfRangeException(nameof(opt.ConcurrencyLimit), opt.ConcurrencyLimit,
@@ -218,7 +224,8 @@ namespace Common.HttpClients
         /// - EnableLogRedaction = true
         /// - FailThrowException = false
         /// - Timeout = 100 秒
-        /// - MaxOutputResponseLength = 1MB
+        /// - MaxRequestBodyLength = 4096
+        /// - MaxOutputResponseLength = 4096
         /// - ConcurrencyLimit = 100
         /// - MaxRetryAttempts = 3
         /// - RetryDelaySeconds = 1
@@ -236,7 +243,8 @@ namespace Common.HttpClients
                 config.EnableLogRedaction = true;
                 config.FailThrowException = false;
                 config.Timeout = 100;
-                config.MaxOutputResponseLength = 1024 * 1024; // 1MB
+                config.MaxRequestBodyLength = 4096;
+                config.MaxOutputResponseLength = 4096;
                 config.ConcurrencyLimit = 100;
                 config.MaxRetryAttempts = 3;
                 config.RetryDelaySeconds = 1;

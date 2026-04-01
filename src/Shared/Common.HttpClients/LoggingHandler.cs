@@ -178,12 +178,15 @@ namespace Common.HttpClients
                 }
 
                 var reqHeader = ReadRequestHeader(request);
-                var reqContent = await ReadRequestContentAsync(request).ConfigureAwait(false);
+                var reqContent = TruncateContent(
+                    await ReadRequestContentAsync(request).ConfigureAwait(false),
+                    _httpConfig.MaxRequestBodyLength);
 
                 var respHeader = ReadResponseHeader(response);
-                var respContent = await ReadResponseContentAsync(request, response).ConfigureAwait(false);
+                var respContent = TruncateContent(
+                    await ReadResponseContentAsync(request, response).ConfigureAwait(false),
+                    _httpConfig.MaxOutputResponseLength);
                 var statusCode = response.StatusCode.ToString();
-                var finalRespContent = TruncateResponseContent(respContent);
                 var elapsed = DateTime.UtcNow - startTime;
 
                 _logger.LogInformation(
@@ -191,7 +194,7 @@ namespace Common.HttpClients
                     "RequestHeader:{RequestHeader}\nRequestContent:{RequestContent}\n" +
                     "ResponseHeader:{ResponseHeader}\nResponseContent:{ResponseContent}",
                     traceId, request.RequestUri, request.Method, statusCode, elapsed.TotalMilliseconds,
-                    reqHeader, reqContent, respHeader, finalRespContent);
+                    reqHeader, reqContent, respHeader, respContent);
             }
             catch (Exception logEx)
             {
@@ -229,16 +232,16 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="content">原始内容</param>
         /// <returns>截断后的内容或原始内容</returns>
-        private string TruncateResponseContent(string content)
+        private static string TruncateContent(string content, int limit)
         {
             if (string.IsNullOrEmpty(content))
             {
                 return content;
             }
 
-            if (_httpConfig.MaxOutputResponseLength > 0 && content.Length > _httpConfig.MaxOutputResponseLength)
+            if (limit > 0 && content.Length > limit)
             {
-                var truncatedContent = content.Substring(0, _httpConfig.MaxOutputResponseLength);
+                var truncatedContent = content.Substring(0, limit);
                 return $"{truncatedContent}... [内容已截断，总长度：{content.Length} 字符]";
             }
 

@@ -104,7 +104,8 @@
 | `AuditLog` | bool | true | 是否启用审计日志 |
 | `FailThrowException` | bool | false | 失败时是否抛出异常 |
 | `Timeout` | int | 100 | 超时时间（秒） |
-| `MaxOutputResponseLength` | int | 0 | 日志最大输出长度（0=不限制） |
+| `MaxRequestBodyLength` | int | 4096 | 请求体日志最大输出长度（0=不限制） |
+| `MaxOutputResponseLength` | int | 4096 | 响应体日志最大输出长度（0=不限制） |
 | `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全SSL证书 |
 | `RetryOnUnauthorized` | bool | false | 401错误时是否重试 |
 
@@ -187,7 +188,7 @@ services.AddHttpClientService(options => {
 
 4. **日志控制**:
    - 通过 `X-Skip-Logger` 或 `X-Logger: none/skip` 请求头跳过日志
-   - 支持响应内容长度限制（`MaxOutputResponseLength`）
+   - 支持请求体/响应体日志长度限制（`MaxRequestBodyLength` / `MaxOutputResponseLength`）
    - 自动过滤二进制内容（图片、视频、文件等）
 
 **文件**: [LoggingHandler.cs](LoggingHandler.cs)
@@ -546,7 +547,8 @@ services.AddHttpClientService(options =>
     options.AuditLog = true;
     options.FailThrowException = false;  // 由业务代码决定异常处理
     options.Timeout = 30;                // 根据业务需求设置
-    options.MaxOutputResponseLength = 1024 * 1024;  // 1MB
+    options.MaxRequestBodyLength = 4096;     // 4KB
+    options.MaxOutputResponseLength = 4096;  // 4KB
     options.IgnoreUntrustedCertificate = false;     // 生产环境必须为 false
     options.RetryOnUnauthorized = true;    // 如果使用 token 刷新机制
 });
@@ -569,6 +571,7 @@ options.RetryOnUnauthorized = true;
 
 // 场景 2: 上传大文件
 options.Timeout = 300;
+options.MaxRequestBodyLength = 0;     // 不限制
 options.MaxOutputResponseLength = 0;  // 不限制
 
 // 场景 3: 开发环境忽略 SSL 证书
