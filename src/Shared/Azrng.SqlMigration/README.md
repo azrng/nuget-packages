@@ -198,11 +198,9 @@ builder.Services.AddSqlMigrationService<DefaultMigrationHandler>("default", conf
 }).AddAutoMigration();
 ```
 
-#### 分布式锁
+#### 分布式锁处理
 
-如果系统以多实例部署，建议配置分布式锁，避免多个实例同时执行迁移。
-
-示例：
+为了防止多实例的情况下迁移出现问题，这里可以使用nuget包Azrng.DistributeLock.Redis来实现多实例的情况下只有一个实例进行迁移
 
 ```csharp
 builder.Services.AddRedisLockProvider("localhost:6379,password=123456,defaultdatabase=0,abortConnect=false");
