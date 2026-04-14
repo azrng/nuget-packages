@@ -122,6 +122,7 @@
     <Project Path="test/Common.QRCode.Test/Common.QRCode.Test.csproj" />
     <Project Path="test\APIStudy.Test\APIStudy.Test.csproj" />
     <Project Path="test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj" />
+    <Project Path="test/Azrng.SettingConfig.Test/Azrng.SettingConfig.Test.csproj" />
     <Project Path="test/Azrng.SettingConfig.BasicAuthorization.Test/Azrng.SettingConfig.BasicAuthorization.Test.csproj" />
     <Project Path="test\CommonCollect.Test\CommonCollect.Test.csproj" />
   </Folder>

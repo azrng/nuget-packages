@@ -14,7 +14,7 @@ namespace Azrng.SettingConfig.Dto
 
         public string ContentType
         {
-            get => _context.Response.ContentType;
+            get => _context.Response.ContentType ?? string.Empty;
             set
             {
                 if (!_context.Response.HasStarted)

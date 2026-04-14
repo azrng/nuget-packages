@@ -16,11 +16,11 @@ public class UpdateConfigDetailsRequest
     /// 配置说明
     /// </summary>
     [Required(ErrorMessage = "请输入配置说明")]
-    public string Description { get; set; }
+    public string Description { get; set; } = default!;
 
     /// <summary>
     /// 配置的值
     /// </summary>
     [Required(ErrorMessage = "请输入配置的值")]
-    public string Value { get; set; }
+    public string Value { get; set; } = default!;
 }

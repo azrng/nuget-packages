@@ -557,3 +557,119 @@ Based on testability after finishing `Common.Db.Core`, the next best candidates 
 2. `Azrng.Cache.Core`
 3. `Azrng.Swashbuckle`
 4. `Common.Email`
+
+## Continuation Round: Azrng.SettingConfig
+
+This continuation round focused on `src/Shared/Azrng.SettingConfig`, which previously had no dedicated corresponding test project beyond the already covered `Azrng.SettingConfig.BasicAuthorization` subpackage.
+
+### New Test Project Added
+
+- `test/Azrng.SettingConfig.Test/Azrng.SettingConfig.Test.csproj`
+
+### Test Files Added
+
+- `test/Azrng.SettingConfig.Test/TestInfrastructure.cs`
+- `test/Azrng.SettingConfig.Test/DashboardOptionsAndFiltersTests.cs`
+- `test/Azrng.SettingConfig.Test/ContextAndWrapperTests.cs`
+- `test/Azrng.SettingConfig.Test/MiddlewareAndBuilderTests.cs`
+- `test/Azrng.SettingConfig.Test/ServiceRegistrationTests.cs`
+
+### Coverage Added For Azrng.SettingConfig
+
+Covered behaviors:
+
+- `DashboardOptions` default values and parameter validation
+- default local-only authorization filter registration and local request authorization behavior
+- `AspNetCoreDashboardContextExtensions.GetHttpContext`
+- `AspNetCoreDashboardRequest` query, path, IP, and form access
+- `AspNetCoreDashboardResponse` content type, status code, body, and write behavior
+- `ManifestResourceService` embedded dashboard resource loading
+- `AspNetCoreDashboardMiddleware` redirect flow, unauthorized flow, authorized HTML rendering, and security headers
+- `ApplicationBuilderExtensions.UseSettingDashboard` data source initialization and middleware registration
+- `ServiceCollectionExtensions.AddSettingConfig` options binding, route prefix propagation, and service registration
+- `DefaultConnectInterface` default callback behavior
+
+Test count:
+
+- `net8.0`: 17 passed
+- `net9.0`: 17 passed
+
+### Additional Production Fixes Made
+
+This round exposed and corrected several null-safety gaps in the dashboard request/response wrappers:
+
+- File: `src/Shared/Azrng.SettingConfig/Dto/AspNetCoreDashboardRequest.cs`
+- Change:
+  - made `Path`, `PathBase`, `LocalIpAddress`, `RemoteIpAddress`, and `GetQuery` return empty strings instead of throwing when ASP.NET Core provides null backing values
+- Reason:
+  - the new wrapper tests exposed that requests without connection IPs could crash authorization and request inspection paths with `NullReferenceException`
+
+- File: `src/Shared/Azrng.SettingConfig/Dto/AspNetCoreDashboardResponse.cs`
+- Change:
+  - made the `ContentType` getter null-safe
+- Reason:
+  - this keeps the response wrapper stable before ASP.NET Core initializes a response content type
+
+- File: `src/Shared/Azrng.SettingConfig/AspNetCoreDashboardMiddleware.cs`
+- Change:
+  - normalized request path reads with an empty-string fallback
+- Reason:
+  - this avoids nullable path issues when matching dashboard routes
+
+Additional quality cleanup made during this round:
+
+- File: `src/Shared/Azrng.SettingConfig/DashboardContext.cs`
+- Change:
+  - initialized `Request` and `Response` with `default!`
+- Reason:
+  - this removes constructor exit nullable warnings while preserving the current inheritance pattern
+
+- File: `src/Shared/Azrng.SettingConfig/Dto/UpdateConfigDetailsRequest.cs`
+- Change:
+  - initialized `Description` and `Value` with `default!`
+- Reason:
+  - this removes nullable warnings without changing validation behavior
+
+### Solution File Changes
+
+Confirmed entry added to `NugetPackages.slnx`:
+
+- `test/Azrng.SettingConfig.Test/Azrng.SettingConfig.Test.csproj`
+
+### Verification Commands Executed
+
+The following command was executed successfully:
+
+```powershell
+dotnet test test/Azrng.SettingConfig.Test/Azrng.SettingConfig.Test.csproj
+```
+
+### Inventory Update After This Continuation
+
+Remaining projects without dedicated corresponding test coverage after adding `Azrng.SettingConfig`:
+
+- `Azrng.Cache.Core`
+- `Azrng.Cache.FreeRedis`
+- `Azrng.DistributeLock.Core`
+- `Azrng.Swashbuckle`
+- `Azrng.YuntongxunSms`
+- `Common.Cache.CSRedis`
+- `Common.Dapper`
+- `Common.EFCore.InMemory`
+- `Common.EFCore.MySQL`
+- `Common.EFCore.SQLite`
+- `Common.EFCore.SQLServer`
+- `Common.EFCore`
+- `Common.Email`
+- `Common.YuQueSdk`
+- `Azrng.EventBus.RabbitMQ`
+- `StudyUse`
+
+### Recommended Next Batch
+
+Based on testability after finishing `Azrng.SettingConfig`, the next best candidates are:
+
+1. `Azrng.Cache.Core`
+2. `Azrng.Swashbuckle`
+3. `Common.Email`
+4. `Azrng.Cache.FreeRedis`

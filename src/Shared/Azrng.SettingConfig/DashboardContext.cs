@@ -9,9 +9,9 @@ namespace Azrng.SettingConfig
             Options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
-        public AspNetCoreDashboardRequest Request { get; protected set; }
+        public AspNetCoreDashboardRequest Request { get; protected set; } = default!;
 
-        public AspNetCoreDashboardResponse Response { get; protected set; }
+        public AspNetCoreDashboardResponse Response { get; protected set; } = default!;
 
         /// <summary>
         /// Dashboard配置

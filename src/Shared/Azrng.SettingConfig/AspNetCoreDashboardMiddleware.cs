@@ -37,7 +37,7 @@ namespace Azrng.SettingConfig
         public async Task Invoke(HttpContext httpContext)
         {
             var httpMethod = httpContext.Request.Method;
-            var path = httpContext.Request.Path.Value;
+            var path = httpContext.Request.Path.Value ?? string.Empty;
 
             // 如果请求方法为GET，并且路径匹配指定的RoutePrefix（带有或不带尾部斜杠），则重定向到index.html页面
             if (httpMethod == "GET" &&
