@@ -324,7 +324,7 @@ namespace Azrng.Core.Extensions
                                                     object value)
             where T : class
         {
-            return queryable.Where(whereField, value, 1);
+            return queryable.Where(whereField, value, 3);
         }
 
         /// <summary>

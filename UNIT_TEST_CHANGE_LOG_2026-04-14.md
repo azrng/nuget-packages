@@ -452,3 +452,108 @@ If the repository continues this effort, the next reasonable batch is:
 6. `Common.Email`
 
 These are likely to provide the best next step between value and testability.
+
+## Continuation Round: Common.Db.Core
+
+This continuation round focused on `src/Shared/Common.Db.Core`, which previously had no dedicated corresponding test project.
+
+### New Test Project Added
+
+- `test/Common.Db.Core.Test/Common.Db.Core.Test.csproj`
+
+### Test Files Added
+
+- `test/Common.Db.Core.Test/CommonDto/RefAsyncTests.cs`
+- `test/Common.Db.Core.Test/CommonDto/PredicateExpressionVisitorTests.cs`
+- `test/Common.Db.Core.Test/Extensions/ExpressExtensionsTests.cs`
+- `test/Common.Db.Core.Test/Extensions/QueryableExtensionsTests.cs`
+- `test/Common.Db.Core.Test/Requests/RequestAndResultTests.cs`
+
+### Coverage Added For Common.Db.Core
+
+Covered behaviors:
+
+- `RefAsync<T>` implicit conversion and `ToString`
+- `PredicateExpressionVisitor` parameter replacement
+- `ExpressExtensions.MarkEqual`
+- `ExpressExtensions.MergeAnd` and `MergeOr` for single and multi-predicate composition
+- `QueryableExtensions.SelectMapper`
+- `QueryableExtensions.OrderBy` for lambda, `SortContent`, string field name, and multi-field ordering
+- `QueryableExtensions.PagedBy` overloads and `CountBy`
+- `QueryableExtensions.WhereAny`
+- `QueryableExtensions.EqualWhere`, `LessWhere`, and `GreaterWhere`
+- request/result DTO constructors and pagination metadata calculations
+
+Test count:
+
+- `net8.0`: 19 passed
+- `net9.0`: 19 passed
+
+### Additional Production Fixes Made
+
+Two production-code defects were exposed and corrected while adding these tests:
+
+- File: `src/Shared/Common.Db.Core/Extensions/ExpressExtensions.cs`
+- Change:
+  - fixed `MergeAnd` and `MergeOr` multi-expression overloads so they no longer dereference a null intermediate expression and they retain the incoming base predicate when one is supplied
+- Reason:
+  - the newly added tests exposed that both overloads threw `NullReferenceException` before they could combine the expressions
+
+- File: `src/Shared/Common.Db.Core/Extensions/QueryableExtensions.cs`
+- Change:
+  - corrected `GreaterWhere` to use the greater-than comparison branch instead of the less-than branch
+- Reason:
+  - the newly added comparison helper tests exposed that `GreaterWhere` returned records below the threshold instead of above it
+
+Additional quality cleanup made during this round:
+
+- File: `src/Shared/Common.Db.Core/CommonDto/RefAsync.cs`
+- Change:
+  - initialized `Value` with `default!`
+- Reason:
+  - this removes the nullable warning from the parameterless constructor while preserving the existing API shape
+
+### Solution File Changes
+
+Confirmed entry added to `NugetPackages.slnx`:
+
+- `test/Common.Db.Core.Test/Common.Db.Core.Test.csproj`
+
+### Verification Commands Executed
+
+The following command was executed successfully:
+
+```powershell
+dotnet test test/Common.Db.Core.Test/Common.Db.Core.Test.csproj
+```
+
+### Inventory Update After This Continuation
+
+Remaining projects without dedicated corresponding test coverage after adding `Common.Db.Core`:
+
+- `Azrng.Cache.Core`
+- `Azrng.Cache.FreeRedis`
+- `Azrng.DistributeLock.Core`
+- `Azrng.SettingConfig`
+- `Azrng.Swashbuckle`
+- `Azrng.YuntongxunSms`
+- `Common.Cache.CSRedis`
+- `Common.Dapper`
+- `Common.EFCore.InMemory`
+- `Common.EFCore.MySQL`
+- `Common.EFCore.SQLite`
+- `Common.EFCore.SQLServer`
+- `Common.EFCore`
+- `Common.Email`
+- `Common.YuQueSdk`
+- `Azrng.EventBus.RabbitMQ`
+- `StudyUse`
+
+### Recommended Next Batch
+
+Based on testability after finishing `Common.Db.Core`, the next best candidates are:
+
+1. `Azrng.SettingConfig`
+2. `Azrng.Cache.Core`
+3. `Azrng.Swashbuckle`
+4. `Common.Email`

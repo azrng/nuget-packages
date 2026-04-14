@@ -85,7 +85,7 @@ namespace Azrng.Core.Extensions
         public static Expression<Func<T, bool>>? MergeAnd<T>(this Expression<Func<T, bool>>? express,
                                                              params Expression<Func<T, bool>>[] arrayExpress)
         {
-            if (!arrayExpress?.Any() ?? true) return express;
+            if (arrayExpress == null || arrayExpress.Length == 0) return express;
 
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
@@ -97,9 +97,23 @@ namespace Azrng.Core.Extensions
             //合并表达式
             foreach (var curExpression in arrayExpress)
             {
+                if (result == null)
+                {
+                    if (express == null)
+                    {
+                        result = Expression.Lambda<Func<T, bool>>(visitor.Visit(curExpression.Body)!, parameter);
+                    }
+                    else
+                    {
+                        result = Expression.Lambda<Func<T, bool>>(visitor.Visit(express.Body)!, parameter);
+                    }
+                }
+
+                var currentResult = result!;
+
                 //表达式树内容
-                var left = visitor.Visit(result.Body);
-                var right = visitor.Visit(curExpression.Body);
+                var left = visitor.Visit(currentResult.Body)!;
+                var right = visitor.Visit(curExpression.Body)!;
                 result = Expression.Lambda<Func<T, bool>>(Expression.AndAlso(left, right), parameter);
             }
 
@@ -134,7 +148,7 @@ namespace Azrng.Core.Extensions
         public static Expression<Func<T, bool>>? MergeOr<T>(this Expression<Func<T, bool>>? express,
                                                             params Expression<Func<T, bool>>[] arrayExpress)
         {
-            if (!arrayExpress?.Any() ?? true) return express;
+            if (arrayExpress == null || arrayExpress.Length == 0) return express;
 
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
@@ -146,9 +160,23 @@ namespace Azrng.Core.Extensions
             //合并表达式
             foreach (var curExpression in arrayExpress)
             {
+                if (result == null)
+                {
+                    if (express == null)
+                    {
+                        result = Expression.Lambda<Func<T, bool>>(visitor.Visit(curExpression.Body)!, parameter);
+                    }
+                    else
+                    {
+                        result = Expression.Lambda<Func<T, bool>>(visitor.Visit(express.Body)!, parameter);
+                    }
+                }
+
+                var currentResult = result!;
+
                 //表达式树内容
-                var left = visitor.Visit(result.Body);
-                var right = visitor.Visit(curExpression.Body);
+                var left = visitor.Visit(currentResult.Body)!;
+                var right = visitor.Visit(curExpression.Body)!;
                 result = Expression.Lambda<Func<T, bool>>(Expression.OrElse(left, right), parameter);
             }
 

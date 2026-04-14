@@ -139,6 +139,7 @@
   </Folder>
   <Folder Name="/Test/DataBase/EfCore/">
     <Project Path="test\Azrng.EFCore.AutoAudit.Test\Azrng.EFCore.AutoAudit.Test.csproj" />
+    <Project Path="test\Common.Db.Core.Test\Common.Db.Core.Test.csproj" />
     <Project Path="test\Common.EFCore.PostgreSql.Test\Common.EFCore.PostgreSql.Test.csproj" />
   </Folder>
   <Folder Name="/Test/DistributeLock/">
