@@ -38,6 +38,11 @@ public class SqlMigrationOption
     public string Schema { get; set; } = "public";
 
     /// <summary>
+    /// 版本日志表配置
+    /// </summary>
+    public SqlVersionLogOption VersionLog { get; } = new();
+
+    /// <summary>
     /// 针对于不存在迁移表或迁移表数据为空的情况
     /// 来确认当前系统的版本
     /// 默认是0.0.0
