@@ -112,11 +112,14 @@
   </Folder>
   <Folder Name="/Test/">
     <Project Path="test/Azrng.AspNetCore.Authentication.Basic.Test/Azrng.AspNetCore.Authentication.Basic.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Core.Test/Azrng.AspNetCore.Core.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.Authentication.JwtBearer.Test/Azrng.AspNetCore.Authentication.JwtBearer.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.Authorization.Default.Test/Azrng.AspNetCore.Authorization.Default.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.Job.Quartz.Test/Azrng.AspNetCore.Job.Quartz.Test.csproj" />
+    <Project Path="test/Azrng.SqlMigration.Test/Azrng.SqlMigration.Test.csproj" />
+    <Project Path="test/Common.QRCode.Test/Common.QRCode.Test.csproj" />
     <Project Path="test\APIStudy.Test\APIStudy.Test.csproj" />
     <Project Path="test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj" />
     <Project Path="test/Azrng.SettingConfig.BasicAuthorization.Test/Azrng.SettingConfig.BasicAuthorization.Test.csproj" />

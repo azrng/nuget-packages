@@ -9,18 +9,16 @@ The user also requested that any newly created unit test projects must be added 
 ## Inventory Summary
 
 - `src/Shared` project count at the time of execution: `57`
-- `test` project count after this round: `42`
-- Shared libraries that now have at least one corresponding test project: `36`
-- Shared libraries that still do not have a dedicated corresponding test project: `21`
+- `test` project count after this round: `45`
+- Shared libraries that now have at least one corresponding test project: `39`
+- Shared libraries that still do not have a dedicated corresponding test project: `18`
 
 Remaining projects without dedicated test coverage after this round:
 
-- `Azrng.AspNetCore.Core`
 - `Azrng.Cache.Core`
 - `Azrng.Cache.FreeRedis`
 - `Azrng.DistributeLock.Core`
 - `Azrng.SettingConfig`
-- `Azrng.SqlMigration`
 - `Azrng.Swashbuckle`
 - `Azrng.YuntongxunSms`
 - `Common.Cache.CSRedis`
@@ -32,7 +30,6 @@ Remaining projects without dedicated test coverage after this round:
 - `Common.EFCore.SQLServer`
 - `Common.EFCore`
 - `Common.Email`
-- `Common.QRCode`
 - `Common.YuQueSdk`
 - `Azrng.EventBus.RabbitMQ`
 - `StudyUse`
@@ -51,6 +48,9 @@ The following new unit test projects were created:
 8. `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
 9. `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
 10. `test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj`
+11. `test/Azrng.SqlMigration.Test/Azrng.SqlMigration.Test.csproj`
+12. `test/Common.QRCode.Test/Common.QRCode.Test.csproj`
+13. `test/Azrng.AspNetCore.Core.Test/Azrng.AspNetCore.Core.Test.csproj`
 
 ## Test Files Added
 
@@ -75,6 +75,9 @@ The following new unit test projects were created:
 19. `test/Azrng.AspNetCore.Inject.Test/ServiceCollectionExtensionsTests.cs`
 20. `test/Azrng.ConsoleApp.DependencyInjection.Test/ConsoleAppServerTests.cs`
 21. `test/Azrng.AspNetCore.DbEnvConfig.Test/DbConfigurationProviderTests.cs`
+22. `test/Azrng.SqlMigration.Test/SqlMigrationTests.cs`
+23. `test/Common.QRCode.Test/QrCodeHelpTests.cs`
+24. `test/Azrng.AspNetCore.Core.Test/CoreFeatureTests.cs`
 
 ## Coverage Added By Area
 
@@ -271,6 +274,66 @@ Test count:
 - `net8.0`: 6 passed
 - `net9.0`: 6 passed
 
+### 11. Azrng.SqlMigration
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- rejecting blank migration names
+- rejecting duplicate migration-name registrations
+- rejecting `AddAutoMigration()` when no migration configuration exists
+- registering named options, keyed migration handlers, keyed init-version setters, and startup filters
+- `SqlVersionLogOption.OrderByColumn` fallback behavior
+- end-to-end migration execution through `SqlMigrationStartupFilter`
+- lock-provider execution and disposal around migration
+- selecting only newer SQL scripts and applying them in version order
+- transaction commit on successful script execution
+- rollback and failure callbacks when a script throws
+- validating `PgSqlDbVersionService` configuration when a custom `OrderByColumn` requires custom table-init SQL
+
+Test count:
+
+- `net8.0`: 7 passed
+- `net9.0`: 7 passed
+
+### 12. Common.QRCode
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- service registration through `AddQrCode`
+- generating QR codes as BMP byte arrays
+- generating CODE_128 barcodes as BMP byte arrays
+- honoring requested output image dimensions for both QR code and barcode generation
+
+Test count:
+
+- `net8.0`: 5 passed
+
+### 13. Azrng.AspNetCore.Core
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- `CollectionNotEmptyAttribute` validation for empty and non-empty enumerables
+- `MinValueAttribute` validation across multiple numeric types
+- `LongToStringConverter` string-based serialization and dual-mode deserialization
+- ordered execution in `PreConfigureActionList<TOptions>`
+- object accessor registration, retrieval, and duplicate-registration protection
+- reuse of pre-configure action lists via `PreConfigure` and `GetPreConfigureActions`
+- permissive CORS policy registration through `AddAnyCors`
+- origin-restricted CORS registration through `AddCorsByOrigins`
+- snapshotting service metadata through `AddShowAllServices`
+- custom invalid-model-state response creation through `AddMvcModelVerifyFilter`
+
+Test count:
+
+- `net8.0`: 10 passed
+- `net9.0`: 10 passed
+
 ## Source Code Fixes Made
 
 One production-code change was made while adding tests:
@@ -332,6 +395,9 @@ Confirmed entries added for:
 - `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
 - `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
 - `test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj`
+- `test/Azrng.SqlMigration.Test/Azrng.SqlMigration.Test.csproj`
+- `test/Common.QRCode.Test/Common.QRCode.Test.csproj`
+- `test/Azrng.AspNetCore.Core.Test/Azrng.AspNetCore.Core.Test.csproj`
 
 ## Verification Commands Executed
 
@@ -362,6 +428,9 @@ dotnet test test/Azrng.Core.Test/Azrng.Core.Test.csproj --framework net9.0
 dotnet test test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj
 dotnet test test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj
 dotnet test test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj
+dotnet test test/Azrng.SqlMigration.Test/Azrng.SqlMigration.Test.csproj
+dotnet test test/Common.QRCode.Test/Common.QRCode.Test.csproj
+dotnet test test/Azrng.AspNetCore.Core.Test/Azrng.AspNetCore.Core.Test.csproj
 ```
 
 ## Important Notes
@@ -369,16 +438,17 @@ dotnet test test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.
 - Some existing projects emit warnings during build. These warnings were already present in the referenced projects and were not introduced by the newly added tests.
 - `Azrng.Swashbuckle` was analyzed during this round, but no test project was created yet because the current source file for `FileUploadOperationFilter` is commented out and does not provide a stable, testable active implementation.
 - External-service-heavy libraries were intentionally deprioritized in favor of pure unit-testable components first.
+- `Common.QRCode` currently references `System.Drawing.Common` `5.0.0`, and the restore/test output reports an existing critical vulnerability advisory for that dependency. This warning comes from the source project dependency graph and was not introduced by the tests.
 
 ## Recommended Next Batch
 
 If the repository continues this effort, the next reasonable batch is:
 
 1. `Azrng.Swashbuckle`
-2. `Azrng.SqlMigration`
-3. `Common.Db.Core`
-4. `Common.QRCode`
-5. `Azrng.Cache.Core`
-6. `Azrng.Cache.FreeRedis`
+2. `Common.Db.Core`
+3. `Azrng.Cache.Core`
+4. `Azrng.Cache.FreeRedis`
+5. `Azrng.SettingConfig`
+6. `Common.Email`
 
 These are likely to provide the best next step between value and testability.
