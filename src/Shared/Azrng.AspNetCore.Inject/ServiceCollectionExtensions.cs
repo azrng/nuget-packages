@@ -52,7 +52,6 @@ public static class ServiceCollectionExtensions
         // 根模块依赖的其他模块
         // IModule => InjectModuleAttribute
         var rootDependencies = startupModule.GetCustomAttributes(false)
-            .Where(x => x.GetType().IsSubclassOf(typeof(InjectModuleAttribute)))
             .OfType<InjectModuleAttribute>();
 
         // 构建模块依赖树
@@ -104,7 +103,7 @@ public static class ServiceCollectionExtensions
             currentNode.Childs.Add(childTree);
             // 子模块依赖的其他模块
             var childDependencies = childModule.ModuleType.GetCustomAttributes(inherit: false)
-                .Where(x => x.GetType().IsSubclassOf(typeof(InjectModuleAttribute))).OfType<InjectModuleAttribute>()
+                .OfType<InjectModuleAttribute>()
                 .ToHashSet();
             // 子模块也依赖其他模块
             BuildTree(services, childTree, childDependencies);

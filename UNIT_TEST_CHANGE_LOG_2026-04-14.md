@@ -9,18 +9,16 @@ The user also requested that any newly created unit test projects must be added 
 ## Inventory Summary
 
 - `src/Shared` project count at the time of execution: `57`
-- `test` project count after this round: `39`
-- Shared libraries that now have at least one corresponding test project: `33`
-- Shared libraries that still do not have a dedicated corresponding test project: `24`
+- `test` project count after this round: `41`
+- Shared libraries that now have at least one corresponding test project: `35`
+- Shared libraries that still do not have a dedicated corresponding test project: `22`
 
 Remaining projects without dedicated test coverage after this round:
 
 - `Azrng.AspNetCore.Core`
 - `Azrng.AspNetCore.DbEnvConfig`
-- `Azrng.AspNetCore.Inject`
 - `Azrng.Cache.Core`
 - `Azrng.Cache.FreeRedis`
-- `Azrng.ConsoleApp.DependencyInjection`
 - `Azrng.DistributeLock.Core`
 - `Azrng.SettingConfig`
 - `Azrng.SqlMigration`
@@ -51,6 +49,8 @@ The following new unit test projects were created:
 5. `test/Azrng.EventBus.Core.Test/Azrng.EventBus.Core.Test.csproj`
 6. `test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.csproj`
 7. `test/Azrng.Core.Test/Azrng.Core.Test.csproj`
+8. `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
+9. `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
 
 ## Test Files Added
 
@@ -72,6 +72,8 @@ The following new unit test projects were created:
 16. `test/Azrng.Core.Test/Helpers/SnowflakeTests.cs`
 17. `test/Azrng.Core.Test/Extension/AssemblyExtensionsTests.cs`
 18. `test/Azrng.Core.Test/Helpers/RandomArraySelectorTests.cs`
+19. `test/Azrng.AspNetCore.Inject.Test/ServiceCollectionExtensionsTests.cs`
+20. `test/Azrng.ConsoleApp.DependencyInjection.Test/ConsoleAppServerTests.cs`
 
 ## Coverage Added By Area
 
@@ -207,6 +209,46 @@ Test count:
 - `net8.0`: 62 passed
 - `net9.0`: 62 passed
 
+### 8. Azrng.AspNetCore.Inject
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- invalid startup module type rejection
+- circular module dependency detection
+- module registration into the service collection
+- child-before-parent module initialization order
+- passing configuration into `ServiceContext`
+- module-level service registration during `ConfigureServices`
+- automatic service registration for self registration, interface registration, base-class registration, and explicit `ServicesType` registration
+- duplicate registration prevention when the same assembly is scanned through multiple dependent modules
+
+Test count:
+
+- `net8.0`: 4 passed
+- `net9.0`: 4 passed
+
+### 9. Azrng.ConsoleApp.DependencyInjection
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- command-line configuration loading
+- registration of `IConfiguration` and logging services
+- replacing an existing `IServiceStart` registration during `Build<TStart>()`
+- delegate-based service registration through `Build<TStart>(Action<IServiceCollection>)`
+- running the start service inside a created scope
+- rethrowing unhandled exceptions from `RunAsync`
+- logger provider and minimum log-level behavior
+- console title output formatting through `ConsoleTool`
+
+Test count:
+
+- `net8.0`: 6 passed
+- `net9.0`: 6 passed
+
 ## Source Code Fixes Made
 
 One production-code change was made while adding tests:
@@ -230,6 +272,14 @@ Additional production-code fixes made while expanding `Azrng.Core` tests:
   - fixed initialization of `_msStart` in `Init()`
 - Reason:
   - newly added tests exposed that the timestamp offset was not initialized because `_watch` was already non-null, which could make parsed time values fall back to the base date instead of the current timeline.
+
+Additional production-code fixes made while expanding `Azrng.AspNetCore.Inject` tests:
+
+- File: `src/Shared/Azrng.AspNetCore.Inject/ServiceCollectionExtensions.cs`
+- Change:
+  - changed module dependency discovery from subclass-only filtering to `OfType<InjectModuleAttribute>()`
+- Reason:
+  - the newly added tests exposed that the non-generic `InjectModuleAttribute` was being ignored, which meant dependent modules were not registered and circular dependency checks did not run for those declarations.
 
 ## Solution File Changes
 
@@ -257,6 +307,8 @@ Confirmed entries added for:
 - `test/Azrng.EventBus.Core.Test/Azrng.EventBus.Core.Test.csproj`
 - `test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.csproj`
 - `test/Azrng.Core.Test/Azrng.Core.Test.csproj`
+- `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
+- `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
 
 ## Verification Commands Executed
 
@@ -283,6 +335,9 @@ dotnet test test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.cspro
 
 dotnet test test/Azrng.Core.Test/Azrng.Core.Test.csproj --framework net8.0
 dotnet test test/Azrng.Core.Test/Azrng.Core.Test.csproj --framework net9.0
+
+dotnet test test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj
+dotnet test test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj
 ```
 
 ## Important Notes
@@ -296,10 +351,10 @@ dotnet test test/Azrng.Core.Test/Azrng.Core.Test.csproj --framework net9.0
 If the repository continues this effort, the next reasonable batch is:
 
 1. `Azrng.Swashbuckle`
-2. `Azrng.AspNetCore.Inject`
-3. `Azrng.AspNetCore.DbEnvConfig`
-4. `Azrng.SqlMigration`
-5. `Common.Db.Core`
-6. `Common.QRCode`
+2. `Azrng.AspNetCore.DbEnvConfig`
+3. `Azrng.SqlMigration`
+4. `Common.Db.Core`
+5. `Common.QRCode`
+6. `Azrng.Cache.Core`
 
 These are likely to provide the best next step between value and testability.
