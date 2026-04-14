@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using Azrng.Core.CommonDto;
 
 namespace Azrng.Core.Helpers
 {
@@ -17,10 +18,16 @@ namespace Azrng.Core.Helpers
 
         public Expressionable<T> And(Expression<Func<T, bool>> exp)
         {
-            _exp = _exp != null
-                ? Expression.Lambda<Func<T, bool>>(Expression.AndAlso(_exp.Body, exp.Body),
-                    _exp.Parameters)
-                : exp;
+            if (_exp == null)
+            {
+                _exp = exp;
+                return this;
+            }
+
+            var parameter = _exp.Parameters[0];
+            var visitor = new PredicateExpressionVisitor(parameter);
+            var rightBody = visitor.Visit(exp.Body);
+            _exp = Expression.Lambda<Func<T, bool>>(Expression.AndAlso(_exp.Body, rightBody), parameter);
             return this;
         }
 
@@ -33,10 +40,16 @@ namespace Azrng.Core.Helpers
 
         public Expressionable<T> Or(Expression<Func<T, bool>> exp)
         {
-            _exp = _exp != null
-                ? Expression.Lambda<Func<T, bool>>(Expression.OrElse(_exp.Body, exp.Body),
-                    _exp.Parameters)
-                : exp;
+            if (_exp == null)
+            {
+                _exp = exp;
+                return this;
+            }
+
+            var parameter = _exp.Parameters[0];
+            var visitor = new PredicateExpressionVisitor(parameter);
+            var rightBody = visitor.Visit(exp.Body);
+            _exp = Expression.Lambda<Func<T, bool>>(Expression.OrElse(_exp.Body, rightBody), parameter);
             return this;
         }
 

@@ -75,7 +75,7 @@ namespace Azrng.Core.Helpers
             }
 
             // 记录此时距离起点的毫秒数以及开机嘀嗒数
-            if (_watch == null)
+            if (_msStart <= 0 || _watch == null)
             {
                 _msStart = (long)(DateTime.UtcNow - StartTimestamp).TotalMilliseconds;
                 _watch = Stopwatch.StartNew();

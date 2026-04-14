@@ -111,8 +111,12 @@
     <File Path="push-packer.sh" />
   </Folder>
   <Folder Name="/Test/">
+    <Project Path="test/Azrng.AspNetCore.Authentication.Basic.Test/Azrng.AspNetCore.Authentication.Basic.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Authentication.JwtBearer.Test/Azrng.AspNetCore.Authentication.JwtBearer.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Authorization.Default.Test/Azrng.AspNetCore.Authorization.Default.Test.csproj" />
     <Project Path="test/Azrng.AspNetCore.Job.Quartz.Test/Azrng.AspNetCore.Job.Quartz.Test.csproj" />
     <Project Path="test\APIStudy.Test\APIStudy.Test.csproj" />
+    <Project Path="test/Azrng.SettingConfig.BasicAuthorization.Test/Azrng.SettingConfig.BasicAuthorization.Test.csproj" />
     <Project Path="test\CommonCollect.Test\CommonCollect.Test.csproj" />
   </Folder>
   <Folder Name="/Test/Cache/">
@@ -136,11 +140,16 @@
     <Project Path="test\Azrng.DistributeLock.Pgsql.Test\Azrng.DistributeLock.Pgsql.Test.csproj" />
     <Project Path="test\Azrng.DistributeLock.Redis.Test\Azrng.DistributeLock.Redis.Test.csproj" />
   </Folder>
+  <Folder Name="/Test/EventBus/">
+    <Project Path="test/Azrng.EventBus.Core.Test/Azrng.EventBus.Core.Test.csproj" />
+    <Project Path="test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.csproj" />
+  </Folder>
   <Folder Name="/Test/FileStore/">
     <Project Path="test\Common.MinioStore.Test\Common.MinioStore.Test.csproj" />
     <Project Path="test\Common.S3Store.Test\Common.S3Store.Test.csproj" />
   </Folder>
   <Folder Name="/Test/Helper/">
+    <Project Path="test\Azrng.Core.Test\Azrng.Core.Test.csproj" />
     <Project Path="test\Azrng.Office.Npoi.Test\Azrng.Office.Npoi.Test.csproj" />
     <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
     <Project Path="test\Common.Security.Test\Common.Security.Test.csproj" />

@@ -100,8 +100,7 @@ public class BasicAuthAuthorizationFilter : IDashboardAuthorizationFilter
                 context.Request.Path)
                 .ToString();
 
-            context.Response.StatusCode = MovedPermanentlyStatusCode;
-            context.Response.Redirect(redirectUri);
+            context.Response.Redirect(redirectUri, permanent: true);
 
             _logger?.LogInformation(
                 "SSL 重定向: 从 {Scheme} 重定向到 HTTPS, IP: {RemoteIP}",
