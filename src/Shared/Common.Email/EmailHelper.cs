@@ -42,6 +42,8 @@ namespace Common.Email
                 throw new ArgumentNullException("标题不能为空");
             if (string.IsNullOrWhiteSpace(content))
                 throw new ArgumentNullException("内容不能为空");
+            if (toAccesses is null)
+                throw new ArgumentNullException("接收人不能为空");
             if (!toAccesses.Any())
                 throw new ArgumentNullException("接收人不能为空");
 
@@ -70,6 +72,8 @@ namespace Common.Email
                 throw new ArgumentNullException("标题不能为空");
             if (string.IsNullOrWhiteSpace(content))
                 throw new ArgumentNullException("内容不能为空");
+            if (toAccesses is null)
+                throw new ArgumentNullException("接收人不能为空");
             if (!toAccesses.Any())
                 throw new ArgumentNullException("接收人不能为空");
 
@@ -82,6 +86,8 @@ namespace Common.Email
         {
             if (string.IsNullOrWhiteSpace(subject))
                 throw new ArgumentNullException("标题不能为空");
+            if (builder is null)
+                throw new ArgumentNullException("内容不能为空");
             if (toAccess is null)
                 throw new ArgumentNullException("接收人不能为空");
 
@@ -94,6 +100,10 @@ namespace Common.Email
         {
             if (string.IsNullOrWhiteSpace(subject))
                 throw new ArgumentNullException("标题不能为空");
+            if (builder is null)
+                throw new ArgumentNullException("内容不能为空");
+            if (toAccesses is null)
+                throw new ArgumentNullException("接收人不能为空");
             if (!toAccesses.Any())
                 throw new ArgumentNullException("接收人不能为空");
 

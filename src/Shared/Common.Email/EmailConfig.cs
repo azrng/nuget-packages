@@ -20,12 +20,12 @@
         /// <summary>
         /// 发件人地址
         /// </summary>
-        public string FromAddress { get; set; }
+        public string FromAddress { get; set; } = default!;
 
         /// <summary>
         ///发件人
         /// </summary>
-        public string FromName { get; set; }
+        public string FromName { get; set; } = default!;
 
         ///// <summary>
         ///// 发件人用户名一般是邮箱地址
@@ -35,6 +35,6 @@
         /// <summary>
         /// 发件人密码（授权码）
         /// </summary>
-        public string FromPassword { get; set; }
+        public string FromPassword { get; set; } = default!;
     }
 }

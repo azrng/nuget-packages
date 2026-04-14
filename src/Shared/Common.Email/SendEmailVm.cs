@@ -8,11 +8,11 @@
         /// <summary>
         /// 接收人用户名
         /// </summary>
-        public string ToName { get; set; }
+        public string ToName { get; set; } = default!;
 
         /// <summary>
         /// 接收人地址
         /// </summary>
-        public string Address { get; set; }
+        public string Address { get; set; } = default!;
     }
 }

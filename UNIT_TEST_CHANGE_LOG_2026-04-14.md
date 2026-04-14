@@ -756,3 +756,95 @@ Based on testability after finishing `Azrng.Swashbuckle`, the next best candidat
 1. `Common.Email`
 2. `Azrng.Cache.FreeRedis`
 3. `Azrng.Cache.Core`
+
+## Continuation Round: Common.Email
+
+This continuation round focused on `src/Shared/Common.Email`, which previously had no dedicated corresponding test project.
+
+### New Test Project Added
+
+- `test/Common.Email.Test/Common.Email.Test.csproj`
+
+### Test Files Added
+
+- `test/Common.Email.Test/EmailHelperTests.cs`
+- `test/Common.Email.Test/ServiceCollectionExtensionsTests.cs`
+
+### Coverage Added For Common.Email
+
+Covered behaviors:
+
+- `EmailConfig` default values
+- DI registration through `AddEmail`
+- `EmailHelper` argument validation for blank subject, blank content, null recipient, null recipient collections, empty recipient collections, and null `BodyBuilder`
+- SMTP failure fallback returning `false` instead of throwing
+
+Test count:
+
+- `net8.0`: 11 passed
+- `net9.0`: 11 passed
+
+### Additional Production Fixes Made
+
+This round exposed and corrected several null-handling gaps:
+
+- File: `src/Shared/Common.Email/EmailHelper.cs`
+- Change:
+  - added explicit null checks for recipient collections and `BodyBuilder` inputs in multi-recipient and custom-body send methods
+- Reason:
+  - the new tests exposed that these paths could throw `NullReferenceException` instead of failing with the intended argument validation behavior
+
+Additional quality cleanup made during this round:
+
+- File: `src/Shared/Common.Email/EmailConfig.cs`
+- Change:
+  - initialized `FromAddress`, `FromName`, and `FromPassword` with `default!`
+- Reason:
+  - this removes nullable warnings while preserving the public API shape
+
+- File: `src/Shared/Common.Email/SendEmailVm.cs`
+- Change:
+  - initialized `ToName` and `Address` with `default!`
+- Reason:
+  - this removes nullable warnings for the request model
+
+### Solution File Changes
+
+Confirmed entry added to `NugetPackages.slnx`:
+
+- `test/Common.Email.Test/Common.Email.Test.csproj`
+
+### Verification Commands Executed
+
+The following command was executed successfully:
+
+```powershell
+dotnet test test/Common.Email.Test/Common.Email.Test.csproj
+```
+
+### Inventory Update After This Continuation
+
+Remaining projects without dedicated corresponding test coverage after adding `Common.Email`:
+
+- `Azrng.Cache.Core`
+- `Azrng.Cache.FreeRedis`
+- `Azrng.DistributeLock.Core`
+- `Azrng.YuntongxunSms`
+- `Common.Cache.CSRedis`
+- `Common.Dapper`
+- `Common.EFCore.InMemory`
+- `Common.EFCore.MySQL`
+- `Common.EFCore.SQLite`
+- `Common.EFCore.SQLServer`
+- `Common.EFCore`
+- `Common.YuQueSdk`
+- `Azrng.EventBus.RabbitMQ`
+- `StudyUse`
+
+### Recommended Next Batch
+
+Based on testability after finishing `Common.Email`, the next best candidates are:
+
+1. `Azrng.Cache.FreeRedis`
+2. `Azrng.Cache.Core`
+3. `Common.YuQueSdk`

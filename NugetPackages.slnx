@@ -169,6 +169,9 @@
     <Project Path="test\Common.HttpClients.Test\Common.HttpClients.Test.csproj" />
     <Project Path="test\Common.RestSharpClient.Test\Common.RestSharpClient.Test.csproj" />
   </Folder>
+  <Folder Name="/Test/Shared/">
+    <Project Path="test/Common.Email.Test/Common.Email.Test.csproj" />
+  </Folder>
   <Folder Name="/Test/Json/">
     <Project Path="test\Azrng.Core.DefaultJson.Test\Azrng.Core.DefaultJson.Test.csproj" />
     <Project Path="test\Azrng.Core.NewtonsoftJson.Test\Azrng.Core.NewtonsoftJson.Test.csproj" />
