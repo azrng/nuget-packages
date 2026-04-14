@@ -1,4 +1,4 @@
-﻿using Azrng.SqlMigration.Service;
+using Azrng.SqlMigration.Service;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data;
@@ -13,11 +13,6 @@ namespace Azrng.SqlMigration
         public static readonly List<string> DbNames = new List<string>();
 
         /// <summary>
-        /// 当前迁移名字
-        /// </summary>
-        internal static string CurrDbName = string.Empty;
-
-        /// <summary>
         /// 添加sql迁移服务
         /// </summary>
         /// <typeparam name="T">迁移步骤回调实现类</typeparam>
@@ -26,7 +21,7 @@ namespace Azrng.SqlMigration
         /// <param name="migrationDbName">迁移名字</param>
         /// <returns></returns>
         public static IServiceCollection AddSqlMigrationService<T>(this IServiceCollection services,
-                                                                   string migrationDbName, Action<SqlMigrationOption> action)
+            string migrationDbName, Action<SqlMigrationOption> action)
             where T : class, IMigrationHandler
         {
             services.AddKeyedScoped<IMigrationHandler, T>(migrationDbName);
@@ -41,8 +36,8 @@ namespace Azrng.SqlMigration
         /// <param name="migrationDbName">迁移名字</param>
         /// <returns></returns>
         public static IServiceCollection AddSqlMigrationService(this IServiceCollection services,
-                                                                string migrationDbName,
-                                                                Action<SqlMigrationOption> action)
+            string migrationDbName,
+            Action<SqlMigrationOption> action)
         {
             if (string.IsNullOrWhiteSpace(migrationDbName))
             {
@@ -61,12 +56,13 @@ namespace Azrng.SqlMigration
             var option = new SqlMigrationOption();
             action(option);
             if (option.InitVersionSetterType != null)
+            {
                 services.AddKeyedScoped(typeof(IInitVersionSetter), migrationDbName, option.InitVersionSetterType);
+            }
 
             services.AddKeyedScoped<IDbVersionService, PgSqlDbVersionService>(migrationDbName);
             services.AddKeyedScoped<ISqlMigrationService, SqlMigrationService>(migrationDbName);
-
-            services.AddKeyedSingleton<IDbConnection>(migrationDbName, (sp, _) => option.ConnectionBuilder(sp));
+            services.AddKeyedScoped<IDbConnection>(migrationDbName, (sp, _) => option.ConnectionBuilder(sp));
 
             return services;
         }
@@ -79,7 +75,9 @@ namespace Azrng.SqlMigration
         public static IServiceCollection AddAutoMigration(this IServiceCollection services)
         {
             if (DbNames.Count == 0)
+            {
                 throw new ArgumentException("请先添加迁移配置");
+            }
 
             services.AddTransient<IStartupFilter, SqlMigrationStartupFilter>();
             return services;

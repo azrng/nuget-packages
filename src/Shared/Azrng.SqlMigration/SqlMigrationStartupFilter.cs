@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,14 +13,11 @@ public class SqlMigrationStartupFilter : IStartupFilter
 {
     private readonly ILogger<SqlMigrationStartupFilter> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly Func<IServiceProvider, Task<IAsyncDisposable?>>? _lockProvider;
 
-    public SqlMigrationStartupFilter(ILogger<SqlMigrationStartupFilter> logger, IOptions<SqlMigrationOption> option,
-        IServiceProvider serviceProvider)
+    public SqlMigrationStartupFilter(ILogger<SqlMigrationStartupFilter> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _lockProvider = option.Value?.LockProvider;
     }
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
@@ -37,16 +34,17 @@ public class SqlMigrationStartupFilter : IStartupFilter
         _logger.LogInformation("版本升级开始");
 
         using var scope = _serviceProvider.CreateScope();
+        var optionsSnapshot = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SqlMigrationOption>>();
 
         // 循环执行迁移操作
         foreach (var migrationName in SqlMigrationServiceExtension.DbNames)
         {
-            SqlMigrationServiceExtension.CurrDbName = migrationName;
-
             var migrateService = scope.ServiceProvider.GetRequiredKeyedService<ISqlMigrationService>(migrationName);
-            if (_lockProvider != null)
+            var config = optionsSnapshot.Get(migrationName);
+
+            if (config.LockProvider != null)
             {
-                await using var _ = await _lockProvider(scope.ServiceProvider);
+                await using var _ = await config.LockProvider(scope.ServiceProvider);
                 await migrateService.MigrateAsync(migrationName);
             }
             else

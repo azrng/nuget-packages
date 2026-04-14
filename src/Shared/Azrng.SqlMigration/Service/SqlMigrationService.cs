@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,46 +12,57 @@ namespace Azrng.SqlMigration.Service
     internal class SqlMigrationService : ISqlMigrationService
     {
         private readonly ILogger<SqlMigrationService> _logger;
-        private readonly SqlMigrationOption _config;
+        private readonly IOptionsSnapshot<SqlMigrationOption> _options;
         private readonly IServiceProvider _serviceProvider;
 
-        public SqlMigrationService(ILogger<SqlMigrationService> logger, IOptionsSnapshot<SqlMigrationOption> option,
-                                   IServiceProvider serviceProvider)
+        public SqlMigrationService(ILogger<SqlMigrationService> logger,
+            IOptionsSnapshot<SqlMigrationOption> options,
+            IServiceProvider serviceProvider)
         {
             _logger = logger;
-            _config = option.Get(SqlMigrationServiceExtension.CurrDbName);
+            _options = options;
             _serviceProvider = serviceProvider;
         }
 
         public async Task<bool> MigrateAsync(string migrationName)
         {
+            var dbVersionService = _serviceProvider.GetRequiredKeyedService<IDbVersionService>(migrationName);
+            var config = _options.Get(migrationName);
+            var oldVersion = SqlMigrationConst.FirstVersionStr;
+            var latestVersion = SqlMigrationConst.FirstVersionStr;
+
             try
             {
-                // 获取组件创建的表中当前程序的版本
-                var dbVersionService = _serviceProvider.GetRequiredKeyedService<IDbVersionService>(migrationName);
-                var version = await dbVersionService.GetCurrentVersionAsync(migrationName);
+                oldVersion = await dbVersionService.GetCurrentVersionAsync(migrationName);
+                latestVersion = oldVersion;
 
                 // 只有在第一个版本的时候走自定义获取版本
-                if (version == SqlMigrationConst.FirstVersionStr && _config.InitVersionSetterType != null)
+                if (oldVersion == SqlMigrationConst.FirstVersionStr && config.InitVersionSetterType != null)
                 {
                     // 当获取不到版本的时候，调用初始化版本工人方法获取当前版本
-                    var sertter = _serviceProvider.GetRequiredKeyedService<IInitVersionSetter>(migrationName);
-                    version = await sertter.GetCurrentVersionAsync();
+                    var setter = _serviceProvider.GetRequiredKeyedService<IInitVersionSetter>(migrationName);
+                    oldVersion = await setter.GetCurrentVersionAsync();
+                    latestVersion = oldVersion;
                 }
 
-                await CallbackAsync(migrationName, SqlMigrationStep.Prepare, version, string.Empty);
+                if (!await CallbackAsync(migrationName, SqlMigrationStep.Prepare, oldVersion, oldVersion))
+                {
+                    _logger.LogInformation("{MigrationName} SQL迁移脚本被准备回调跳过", migrationName);
+                    return false;
+                }
 
-                await VersionUpAsync(migrationName, version);
+                latestVersion = await VersionUpAsync(migrationName, oldVersion, config);
 
-                await CallbackAsync(migrationName, SqlMigrationStep.Success, version, string.Empty);
+                await CallbackAsync(migrationName, SqlMigrationStep.Success, oldVersion, latestVersion);
+                return true;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                await CallbackAsync(migrationName, SqlMigrationStep.Failed, string.Empty, string.Empty);
-                _logger.LogError(e, $"异常：{e.Message}");
+                await CallbackAsync(migrationName, SqlMigrationStep.Failed, oldVersion, latestVersion);
+                _logger.LogError(ex, "{MigrationName} SQL迁移脚本执行失败，原版本：{OldVersion}，当前版本：{LatestVersion}",
+                    migrationName, oldVersion, latestVersion);
+                throw;
             }
-
-            return true;
         }
 
         /// <summary>
@@ -59,30 +70,33 @@ namespace Azrng.SqlMigration.Service
         /// </summary>
         /// <param name="migrationName"></param>
         /// <param name="oldVersion">原来的版本</param>
+        /// <param name="config">迁移配置</param>
         /// <returns></returns>
-        private async Task VersionUpAsync(string migrationName, string oldVersion)
+        private async Task<string> VersionUpAsync(string migrationName, string oldVersion, SqlMigrationOption config)
         {
-            _logger.LogInformation($"{migrationName} SQL迁移脚本执行开始----当前版本：{oldVersion}");
+            _logger.LogInformation("{MigrationName} SQL迁移脚本执行开始，当前版本：{OldVersion}", migrationName, oldVersion);
 
-            if (!Directory.Exists(_config.SqlRootPath))
+            if (!Directory.Exists(config.SqlRootPath))
             {
-                _logger.LogInformation($"{migrationName} SQL迁移脚本执行结束----未找到目录：{_config.SqlRootPath}");
-                return;
+                _logger.LogInformation("{MigrationName} SQL迁移脚本执行结束，未找到目录：{SqlRootPath}", migrationName,
+                    config.SqlRootPath);
+                return oldVersion;
             }
 
-            var oldVersionNum = GetVersionNum(migrationName, oldVersion);
+            var oldVersionNum = GetVersionNum(migrationName, oldVersion, config.VersionPrefix);
 
-            //获取需要升级的所有脚本
-            var fileVersionList = new DirectoryInfo(_config.SqlRootPath)
+            // 获取需要升级的所有脚本
+            var fileVersionList = new DirectoryInfo(config.SqlRootPath)
                                   .GetFileSystemInfos()
-                                  .Where(x => x.Name.StartsWith(_config.VersionPrefix) &&
-                                              (x.Name.EndsWith(".sql") || x.Name.EndsWith(".txt")))
+                                  .Where(x => x.Name.StartsWith(config.VersionPrefix) &&
+                                              (x.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) ||
+                                               x.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)))
                                   .Select(x => new
                                                {
-                                                   VersionNum = GetVersionNum(migrationName, x.Name),
-                                                   Version = x.Name.ReplaceIfNotNullOrWhiteSpace(_config.VersionPrefix, string.Empty)
-                                                              .Replace(".sql", string.Empty)
-                                                              .Replace(".txt", string.Empty),
+                                                   VersionNum = GetVersionNum(migrationName, x.Name, config.VersionPrefix),
+                                                   Version = x.Name.ReplaceIfNotNullOrWhiteSpace(config.VersionPrefix, string.Empty)
+                                                              .Replace(".sql", string.Empty, StringComparison.OrdinalIgnoreCase)
+                                                              .Replace(".txt", string.Empty, StringComparison.OrdinalIgnoreCase),
                                                    FilePath = x.FullName
                                                })
                                   .Where(x => x.VersionNum > oldVersionNum)
@@ -91,23 +105,23 @@ namespace Azrng.SqlMigration.Service
 
             var latestVersion = oldVersion;
 
-            //遍历执行脚本 每个版本的数据在一个事务里
             try
             {
                 foreach (var file in fileVersionList)
                 {
-                    latestVersion = file.Version;
                     await ExecuteFileAsync(migrationName, file.FilePath, oldVersion, file.Version);
-                    _logger.LogInformation($"迁移名：{migrationName} 版本：{latestVersion}迁移脚本执行成功");
+                    latestVersion = file.Version;
+                    _logger.LogInformation("迁移名：{MigrationName} 版本：{Version}迁移脚本执行成功", migrationName, latestVersion);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"迁移名：{migrationName} 版本：{latestVersion}迁移脚本执行失败");
+                _logger.LogError(ex, "迁移名：{MigrationName} 版本：{Version}迁移脚本执行失败", migrationName, latestVersion);
                 throw;
             }
 
-            _logger.LogInformation($"{migrationName} SQL迁移脚本执行结束----当前版本：{latestVersion}");
+            _logger.LogInformation("{MigrationName} SQL迁移脚本执行结束，当前版本：{LatestVersion}", migrationName, latestVersion);
+            return latestVersion;
         }
 
         /// <summary>
@@ -119,23 +133,37 @@ namespace Azrng.SqlMigration.Service
         /// <param name="version"></param>
         private async Task ExecuteFileAsync(string migrationName, string filePath, string oldVersion, string version)
         {
-            if (!await CallbackAsync(migrationName, SqlMigrationStep.VersionUpdatePrepare, oldVersion, version)) return;
+            if (!await CallbackAsync(migrationName, SqlMigrationStep.VersionUpdatePrepare, oldVersion, version))
+            {
+                _logger.LogInformation("迁移名：{MigrationName} 版本：{Version}被版本准备回调跳过", migrationName, version);
+                return;
+            }
 
             var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);
             if (conn.State == ConnectionState.Closed)
+            {
                 conn.Open();
-            using var uow = conn.BeginTransaction();
+            }
+
+            using var transaction = conn.BeginTransaction();
             try
             {
                 var dbVersionService = _serviceProvider.GetRequiredKeyedService<IDbVersionService>(migrationName);
-                await ExecuteSqlFromFile(migrationName, filePath);
-                await dbVersionService.WriteVersionLogAsync(migrationName, version);
-                uow.Commit();
+                await ExecuteSqlFromFile(filePath, conn, transaction);
+                if (dbVersionService is ITransactionalDbVersionService transactionalDbVersionService)
+                {
+                    await transactionalDbVersionService.WriteVersionLogAsync(migrationName, version, conn, transaction);
+                }
+                else
+                {
+                    await dbVersionService.WriteVersionLogAsync(migrationName, version);
+                }
+                transaction.Commit();
                 await CallbackAsync(migrationName, SqlMigrationStep.VersionUpdateSuccess, oldVersion, version);
             }
             catch (Exception)
             {
-                uow.Rollback();
+                transaction.Rollback();
                 await CallbackAsync(migrationName, SqlMigrationStep.VersionUpdateFailed, oldVersion, version);
                 throw;
             }
@@ -144,15 +172,18 @@ namespace Azrng.SqlMigration.Service
         /// <summary>
         /// 执行脚本文件
         /// </summary>
-        /// <param name="migrationName"></param>
         /// <param name="filePath"></param>
-        private async Task ExecuteSqlFromFile(string migrationName, string filePath)
+        /// <param name="connection"></param>
+        /// <param name="transaction"></param>
+        private static async Task ExecuteSqlFromFile(string filePath, IDbConnection connection, IDbTransaction transaction)
         {
             var fileText = await File.ReadAllTextAsync(filePath);
-            if (string.IsNullOrWhiteSpace(fileText)) return;
+            if (string.IsNullOrWhiteSpace(fileText))
+            {
+                return;
+            }
 
-            var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);
-            await conn.ExecuteAsync(fileText);
+            await connection.ExecuteAsync(fileText, transaction: transaction);
         }
 
         /// <summary>
@@ -160,13 +191,14 @@ namespace Azrng.SqlMigration.Service
         /// </summary>
         /// <param name="migrationName">迁移名称</param>
         /// <param name="versionNumber">版本</param>
+        /// <param name="versionPrefix">版本前缀</param>
         /// <returns></returns>
-        private long GetVersionNum(string migrationName, string versionNumber)
+        private long GetVersionNum(string migrationName, string versionNumber, string versionPrefix)
         {
-            versionNumber = versionNumber.ToLower()
-                                         .ReplaceIfNotNullOrWhiteSpace(_config.VersionPrefix, string.Empty)
-                                         .Replace(".sql", string.Empty)
-                                         .Replace(".txt", string.Empty);
+            versionNumber = versionNumber.ToLowerInvariant()
+                                         .ReplaceIfNotNullOrWhiteSpace(versionPrefix, string.Empty)
+                                         .Replace(".sql", string.Empty, StringComparison.OrdinalIgnoreCase)
+                                         .Replace(".txt", string.Empty, StringComparison.OrdinalIgnoreCase);
             var arr = versionNumber.Split('.').ToList();
 
             try
@@ -184,7 +216,8 @@ namespace Azrng.SqlMigration.Service
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    $"{migrationName} SQL迁移脚本-获取版本号异常-存在非法的版本信息,versionNumber:{versionNumber},message:{ex.Message}");
+                    "{MigrationName} SQL迁移脚本-获取版本号异常-存在非法的版本信息,versionNumber:{VersionNumber},message:{Message}",
+                    migrationName, versionNumber, ex.Message);
                 return 0;
             }
         }
@@ -200,7 +233,10 @@ namespace Azrng.SqlMigration.Service
         private async Task<bool> CallbackAsync(string migrationName, SqlMigrationStep step, string oldVersion, string version)
         {
             var migrationHandler = _serviceProvider.GetKeyedService<IMigrationHandler>(migrationName);
-            if (migrationHandler == null) return true;
+            if (migrationHandler == null)
+            {
+                return true;
+            }
 
             try
             {
@@ -215,8 +251,7 @@ namespace Azrng.SqlMigration.Service
                         await migrationHandler.MigrateFailedAsync(oldVersion, version);
                         break;
                     case SqlMigrationStep.VersionUpdatePrepare:
-                        await migrationHandler.VersionUpdateBeforeMigrateAsync(version);
-                        break;
+                        return await migrationHandler.VersionUpdateBeforeMigrateAsync(version);
                     case SqlMigrationStep.VersionUpdateSuccess:
                         await migrationHandler.VersionUpdateMigratedAsync(version);
                         break;
@@ -231,8 +266,12 @@ namespace Azrng.SqlMigration.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{migrationName} SQL迁移脚本回调异常,Step:{step},Version:{version}");
-                if (step == SqlMigrationStep.Prepare) throw;
+                _logger.LogError(ex, "{MigrationName} SQL迁移脚本回调异常,Step:{Step},Version:{Version}", migrationName, step,
+                    version);
+                if (step == SqlMigrationStep.Prepare || step == SqlMigrationStep.VersionUpdatePrepare)
+                {
+                    throw;
+                }
 
                 return false;
             }

@@ -1,4 +1,4 @@
-﻿namespace Azrng.SqlMigration
+namespace Azrng.SqlMigration
 {
     /// <summary>
     /// 执行数据库操作

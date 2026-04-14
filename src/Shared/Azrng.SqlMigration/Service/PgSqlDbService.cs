@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,7 +6,7 @@ using System.Data;
 
 namespace Azrng.SqlMigration.Service
 {
-    public class PgSqlDbVersionService : IDbVersionService
+    public class PgSqlDbVersionService : IDbVersionService, ITransactionalDbVersionService
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<PgSqlDbVersionService> _logger;
@@ -32,21 +32,29 @@ namespace Azrng.SqlMigration.Service
                                 AND a.relkind = 'r' and a.relname='app_version_log';";
 
                 if (await conn.ExecuteScalarAsync<int>(querySql) == 0)
+                {
                     return SqlMigrationConst.FirstVersionStr;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{migrationName} SQL迁移脚本-查询数据库是否存在异常");
+                _logger.LogError(ex, "{MigrationName} SQL迁移脚本-查询数据库是否存在异常", migrationName);
                 throw;
             }
 
-            var sql =
-                $"select version from {config.Schema}.app_version_log order by id desc limit 1";
+            var sql = $"select version from {config.Schema}.app_version_log order by id desc limit 1";
             var ret = await conn.ExecuteScalarAsync(sql);
             return ret?.ToString() ?? SqlMigrationConst.FirstVersionStr;
         }
 
         public Task WriteVersionLogAsync(string migrationName, string version)
+        {
+            var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);
+            return WriteVersionLogAsync(migrationName, version, conn, transaction: null);
+        }
+
+        public Task WriteVersionLogAsync(string migrationName, string version, IDbConnection connection,
+            IDbTransaction? transaction)
         {
             var optionsSnapshot = _serviceProvider.GetRequiredService<IOptionsSnapshot<SqlMigrationOption>>();
             var config = optionsSnapshot.Get(migrationName);
@@ -63,10 +71,10 @@ namespace Azrng.SqlMigration.Service
                 $"insert into {config.Schema}.app_version_log(version,created_time) values(@version,@time);";
             var param = new
             {
-                version, time = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified).AddHours(8)
+                version,
+                time = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified).AddHours(8)
             };
-            var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);
-            return conn.ExecuteAsync($"{initSql}{writeSql}", param);
+            return connection.ExecuteAsync($"{initSql}{writeSql}", param, transaction);
         }
     }
 }
