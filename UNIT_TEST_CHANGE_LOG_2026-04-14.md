@@ -9,14 +9,13 @@ The user also requested that any newly created unit test projects must be added 
 ## Inventory Summary
 
 - `src/Shared` project count at the time of execution: `57`
-- `test` project count after this round: `41`
-- Shared libraries that now have at least one corresponding test project: `35`
-- Shared libraries that still do not have a dedicated corresponding test project: `22`
+- `test` project count after this round: `42`
+- Shared libraries that now have at least one corresponding test project: `36`
+- Shared libraries that still do not have a dedicated corresponding test project: `21`
 
 Remaining projects without dedicated test coverage after this round:
 
 - `Azrng.AspNetCore.Core`
-- `Azrng.AspNetCore.DbEnvConfig`
 - `Azrng.Cache.Core`
 - `Azrng.Cache.FreeRedis`
 - `Azrng.DistributeLock.Core`
@@ -51,6 +50,7 @@ The following new unit test projects were created:
 7. `test/Azrng.Core.Test/Azrng.Core.Test.csproj`
 8. `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
 9. `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
+10. `test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj`
 
 ## Test Files Added
 
@@ -74,6 +74,7 @@ The following new unit test projects were created:
 18. `test/Azrng.Core.Test/Helpers/RandomArraySelectorTests.cs`
 19. `test/Azrng.AspNetCore.Inject.Test/ServiceCollectionExtensionsTests.cs`
 20. `test/Azrng.ConsoleApp.DependencyInjection.Test/ConsoleAppServerTests.cs`
+21. `test/Azrng.AspNetCore.DbEnvConfig.Test/DbConfigurationProviderTests.cs`
 
 ## Coverage Added By Area
 
@@ -249,6 +250,27 @@ Test count:
 - `net8.0`: 6 passed
 - `net9.0`: 6 passed
 
+### 10. Azrng.AspNetCore.DbEnvConfig
+
+This project did not have a dedicated corresponding test project before this continuation round.
+
+Covered behaviors:
+
+- `DBConfigOptions.ParamVerify` schema parsing and full table name normalization
+- validation failures for missing connection factory, invalid table name format, and blank key-field configuration
+- null-checks in `AddDbConfiguration`
+- schema-aware default table initialization script generation
+- loading plain database values into configuration
+- flattening JSON objects and arrays into configuration key paths
+- falling back to the raw string when JSON text is invalid
+- skipping rows with null keys or null values
+- executing table initialization and seed scripts when the target table is empty
+
+Test count:
+
+- `net8.0`: 6 passed
+- `net9.0`: 6 passed
+
 ## Source Code Fixes Made
 
 One production-code change was made while adding tests:
@@ -309,6 +331,7 @@ Confirmed entries added for:
 - `test/Azrng.Core.Test/Azrng.Core.Test.csproj`
 - `test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj`
 - `test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj`
+- `test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj`
 
 ## Verification Commands Executed
 
@@ -338,6 +361,7 @@ dotnet test test/Azrng.Core.Test/Azrng.Core.Test.csproj --framework net9.0
 
 dotnet test test/Azrng.AspNetCore.Inject.Test/Azrng.AspNetCore.Inject.Test.csproj
 dotnet test test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.DependencyInjection.Test.csproj
+dotnet test test/Azrng.AspNetCore.DbEnvConfig.Test/Azrng.AspNetCore.DbEnvConfig.Test.csproj
 ```
 
 ## Important Notes
@@ -351,10 +375,10 @@ dotnet test test/Azrng.ConsoleApp.DependencyInjection.Test/Azrng.ConsoleApp.Depe
 If the repository continues this effort, the next reasonable batch is:
 
 1. `Azrng.Swashbuckle`
-2. `Azrng.AspNetCore.DbEnvConfig`
-3. `Azrng.SqlMigration`
-4. `Common.Db.Core`
-5. `Common.QRCode`
-6. `Azrng.Cache.Core`
+2. `Azrng.SqlMigration`
+3. `Common.Db.Core`
+4. `Common.QRCode`
+5. `Azrng.Cache.Core`
+6. `Azrng.Cache.FreeRedis`
 
 These are likely to provide the best next step between value and testability.
