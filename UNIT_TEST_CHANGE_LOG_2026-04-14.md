@@ -673,3 +673,86 @@ Based on testability after finishing `Azrng.SettingConfig`, the next best candid
 2. `Azrng.Swashbuckle`
 3. `Common.Email`
 4. `Azrng.Cache.FreeRedis`
+
+## Continuation Round: Azrng.Swashbuckle
+
+This continuation round focused on `src/Shared/Azrng.Swashbuckle`, which previously had no dedicated corresponding test project.
+
+### New Test Project Added
+
+- `test/Azrng.Swashbuckle.Test/Azrng.Swashbuckle.Test.csproj`
+
+### Test Files Added
+
+- `test/Azrng.Swashbuckle.Test/ApplicationBuilderExtensionsTests.cs`
+- `test/Azrng.Swashbuckle.Test/ServiceCollectionExtensionsTests.cs`
+
+### Coverage Added For Azrng.Swashbuckle
+
+Covered behaviors:
+
+- `SetUrlEditable` script injection and preservation of existing `HeadContent`
+- `UseDefaultSwagger` behavior when the development-only switch is enabled and the environment variable is missing
+- `UseDefaultSwagger` production short-circuit behavior
+- `UseDefaultSwagger` custom swagger and swagger-ui setup callbacks
+- `AddDefaultSwaggerGen` default title overload
+- `AddDefaultSwaggerGen` explicit `OpenApiInfo` overload
+- JWT security definition and requirement registration
+- custom swagger document registration via the optional configuration callback
+
+Test count:
+
+- `net8.0`: 8 passed
+- `net9.0`: 8 passed
+
+### Additional Production Fixes Made
+
+One production-code defect was exposed and corrected while adding these tests:
+
+- File: `src/Shared/Azrng.Swashbuckle/IApplicationBuilderExtensions.cs`
+- Change:
+  - replaced the null-forgiving environment variable comparison with a null-safe `string.Equals` check
+- Reason:
+  - the new tests exposed that `UseDefaultSwagger(onlyDevelopmentEnabled: true)` threw `NullReferenceException` when `ASPNETCORE_ENVIRONMENT` was not set
+
+### Solution File Changes
+
+Confirmed entry added to `NugetPackages.slnx`:
+
+- `test/Azrng.Swashbuckle.Test/Azrng.Swashbuckle.Test.csproj`
+
+### Verification Commands Executed
+
+The following command was executed successfully:
+
+```powershell
+dotnet test test/Azrng.Swashbuckle.Test/Azrng.Swashbuckle.Test.csproj
+```
+
+### Inventory Update After This Continuation
+
+Remaining projects without dedicated corresponding test coverage after adding `Azrng.Swashbuckle`:
+
+- `Azrng.Cache.Core`
+- `Azrng.Cache.FreeRedis`
+- `Azrng.DistributeLock.Core`
+- `Azrng.YuntongxunSms`
+- `Common.Cache.CSRedis`
+- `Common.Dapper`
+- `Common.EFCore.InMemory`
+- `Common.EFCore.MySQL`
+- `Common.EFCore.SQLite`
+- `Common.EFCore.SQLServer`
+- `Common.EFCore`
+- `Common.Email`
+- `Common.YuQueSdk`
+- `Azrng.EventBus.RabbitMQ`
+- `StudyUse`
+
+### Recommended Next Batch
+
+Based on testability after finishing `Azrng.Swashbuckle`, the next best candidates are:
+
+1. `Common.Email`
+2. `Azrng.Cache.FreeRedis`
+3. `Azrng.Cache.Core`

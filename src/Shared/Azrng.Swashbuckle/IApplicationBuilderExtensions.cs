@@ -20,7 +20,7 @@ public static class ApplicationBuilderExtensions
     {
         // 开发环境下启用Swagger
         if (onlyDevelopmentEnabled &&
-            !Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")!.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            !string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase))
         {
             return app;
         }
