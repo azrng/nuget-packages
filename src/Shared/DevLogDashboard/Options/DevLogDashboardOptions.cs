@@ -31,13 +31,13 @@ public class DevLogDashboardOptions
     public LogLevel MinLogLevel { get; set; } = LogLevel.Trace;
 
     /// <summary>
-    /// 是否允许非本机请求在未配置授权过滤器时访问仪表板（默认：false）
+    /// Basic 认证配置
     /// </summary>
-    public bool AllowNonLocalAccess { get; set; } = false;
+    public DevLogDashboardBasicAuthenticationOptions? BasicAuthentication { get; set; }
 
     /// <summary>
     /// 访问授权过滤器
-    /// 默认会先执行本机访问校验；若需要远程访问，请同时开启 AllowNonLocalAccess
+    /// 为 null 时表示允许匿名访问；配置后返回 false 则拒绝访问
     /// </summary>
     public Func<HttpContext, Task<bool>>? AuthorizationFilter { get; set; }
 

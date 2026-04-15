@@ -1,8 +1,8 @@
-﻿using Azrng.DevLogDashboard.Options;
+using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net;
 using System.Reflection;
 
 namespace Azrng.DevLogDashboard.Middleware;
@@ -36,22 +36,10 @@ public class DevLogDashboardMiddleware
 
         var path = context.Request.Path.Value ?? string.Empty;
 
-        if (!options.AllowNonLocalAccess && !IsLocalRequest(context))
+        var authorized = await AuthorizeAsync(context, options);
+        if (!authorized)
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("Forbidden");
             return;
-        }
-
-        if (options.AuthorizationFilter != null)
-        {
-            var authorized = await options.AuthorizationFilter(context);
-            if (!authorized)
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsync("Forbidden");
-                return;
-            }
         }
 
         if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
@@ -105,35 +93,57 @@ public class DevLogDashboardMiddleware
         return reader.ReadToEnd();
     }
 
-    private static bool IsLocalRequest(HttpContext context)
+    private static async Task<bool> AuthorizeAsync(HttpContext context, DevLogDashboardOptions options)
     {
-        var remoteIp = context.Connection.RemoteIpAddress;
-        if (remoteIp == null)
+        if (options.BasicAuthentication != null)
+        {
+            var basicAuthentication = options.BasicAuthentication;
+            AuthenticateResult authenticateResult;
+
+            try
+            {
+                authenticateResult = await context.AuthenticateAsync(basicAuthentication.Scheme);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"DevLogDashboard 配置的认证方案“{basicAuthentication.Scheme}”未注册，请先在应用中完成认证方案注册。",
+                    ex);
+            }
+
+            if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
+            {
+                AppendBasicChallengeHeader(context, basicAuthentication.Realm);
+                await context.ChallengeAsync(basicAuthentication.Scheme);
+                return false;
+            }
+
+            context.User = authenticateResult.Principal;
+        }
+
+        if (options.AuthorizationFilter == null)
         {
             return true;
         }
 
-        if (remoteIp.IsIPv4MappedToIPv6)
-        {
-            remoteIp = remoteIp.MapToIPv4();
-        }
-
-        if (IPAddress.IsLoopback(remoteIp))
+        if (await options.AuthorizationFilter(context))
         {
             return true;
         }
 
-        var localIp = context.Connection.LocalIpAddress;
-        if (localIp == null)
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsync("Forbidden");
+        return false;
+    }
+
+    private static void AppendBasicChallengeHeader(HttpContext context, string realm)
+    {
+        const string headerName = "WWW-Authenticate";
+        if (context.Response.Headers.ContainsKey(headerName))
         {
-            return false;
+            return;
         }
 
-        if (localIp.IsIPv4MappedToIPv6)
-        {
-            localIp = localIp.MapToIPv4();
-        }
-
-        return remoteIp.Equals(localIp);
+        context.Response.Headers.Append(headerName, $"Basic realm=\"{realm}\"");
     }
 }

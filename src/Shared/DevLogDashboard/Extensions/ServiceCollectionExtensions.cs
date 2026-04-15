@@ -297,6 +297,7 @@ public static class ServiceCollectionExtensions
     private static void NormalizeOptions(DevLogDashboardOptions options)
     {
         options.EndpointPath = NormalizePath(options.EndpointPath, DefaultEndpointPath)!;
+        NormalizeBasicAuthentication(options.BasicAuthentication);
 
         var ignoredPaths = (options.IgnoredPaths ?? Array.Empty<string>())
             .Select(path => NormalizePath(path, null))
@@ -338,6 +339,32 @@ public static class ServiceCollectionExtensions
         if (options.ShutdownFlushTimeout <= TimeSpan.Zero)
         {
             options.ShutdownFlushTimeout = TimeSpan.FromSeconds(5);
+        }
+    }
+
+    private static void NormalizeBasicAuthentication(DevLogDashboardBasicAuthenticationOptions? options)
+    {
+        if (options == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Scheme))
+        {
+            options.Scheme = "Basic";
+        }
+        else
+        {
+            options.Scheme = options.Scheme.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Realm))
+        {
+            options.Realm = "DevLogDashboard";
+        }
+        else
+        {
+            options.Realm = options.Realm.Trim();
         }
     }
 
