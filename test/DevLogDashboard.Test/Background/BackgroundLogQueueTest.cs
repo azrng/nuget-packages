@@ -106,7 +106,7 @@ public class BackgroundLogQueueTest
 
         // Assert
         queue.GetQueuedCount().Should().Be(3);
-        // 注意：GetDroppedCount 是一个内部方法，我们需要通过行为来验证
+        queue.GetDroppedCount().Should().Be(2);
     }
 
     // ========== 基础出队测试 ==========

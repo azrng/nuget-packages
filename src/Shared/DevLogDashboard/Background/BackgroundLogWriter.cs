@@ -13,6 +13,9 @@ public class BackgroundLogWriter : BackgroundService
     private readonly ILogStore _logStore;
     private readonly ILogger<BackgroundLogWriter> _logger;
     private readonly BackgroundLogWriterOptions _options;
+    private readonly SemaphoreSlim _initializeLock = new(1, 1);
+
+    private volatile bool _initialized;
 
     public BackgroundLogWriter(
         IBackgroundLogQueue queue,
@@ -28,7 +31,7 @@ public class BackgroundLogWriter : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("后台日志写入服务已启动");
+        _logger.LogInformation("Background log writer started.");
 
         try
         {
@@ -36,17 +39,19 @@ public class BackgroundLogWriter : BackgroundService
             {
                 try
                 {
-                    // 批量从队列中读取日志
+                    if (!await EnsureInitializedAsync(stoppingToken))
+                    {
+                        await Task.Delay(_options.PollInterval, stoppingToken);
+                        continue;
+                    }
+
                     var batch = await _queue.DequeueBatchAsync(_options.BatchSize, stoppingToken);
 
                     if (batch.Count > 0)
                     {
-                        // 批量写入存储
                         await _logStore.AddBatchAsync(batch, stoppingToken);
+                        _logger.LogDebug("Persisted {Count} log entries.", batch.Count);
 
-                        _logger.LogDebug("已写入 {Count} 条日志", batch.Count);
-
-                        // 如果队列中还有日志，立即处理下一批
                         if (_queue.GetQueuedCount() >= _options.BatchSize)
                         {
                             continue;
@@ -55,23 +60,21 @@ public class BackgroundLogWriter : BackgroundService
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    // 正常关闭
                     break;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "后台日志写入失败");
+                    _logger.LogError(ex, "Failed to persist queued log entries.");
                 }
 
-                // 等待一段时间或直到有新日志
                 await Task.Delay(_options.PollInterval, stoppingToken);
             }
         }
         finally
         {
-            // 确保在关闭前处理剩余的日志
-            await FlushRemainingLogsAsync(CancellationToken.None);
-            _logger.LogInformation("后台日志写入服务已停止");
+            using var shutdownCts = new CancellationTokenSource(_options.ShutdownFlushTimeout);
+            await FlushRemainingLogsAsync(shutdownCts.Token);
+            _logger.LogInformation("Background log writer stopped.");
         }
     }
 
@@ -79,13 +82,18 @@ public class BackgroundLogWriter : BackgroundService
     {
         try
         {
+            if (!await EnsureInitializedAsync(cancellationToken))
+            {
+                return;
+            }
+
             var remainingCount = _queue.GetQueuedCount();
             if (remainingCount == 0)
             {
                 return;
             }
 
-            _logger.LogInformation("正在处理剩余的 {Count} 条日志...", remainingCount);
+            _logger.LogInformation("Flushing {Count} remaining log entries before shutdown.", remainingCount);
 
             while (_queue.GetQueuedCount() > 0 && !cancellationToken.IsCancellationRequested)
             {
@@ -99,29 +107,78 @@ public class BackgroundLogWriter : BackgroundService
                 }
 
                 await _logStore.AddBatchAsync(batch, cancellationToken);
-                _logger.LogInformation("已处理 {Count} 条日志，剩余 {Remaining} 条",
-                    batch.Count, _queue.GetQueuedCount());
+                _logger.LogInformation(
+                    "Flushed {Count} log entries, {Remaining} remaining.",
+                    batch.Count,
+                    _queue.GetQueuedCount());
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "处理剩余日志时发生错误");
+            _logger.LogError(ex, "Failed while flushing remaining log entries.");
+        }
+    }
+
+    private async Task<bool> EnsureInitializedAsync(CancellationToken cancellationToken)
+    {
+        if (_initialized)
+        {
+            return true;
+        }
+
+        try
+        {
+            await _initializeLock.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (_initialized)
+            {
+                return true;
+            }
+
+            await _logStore.InitializeAsync(cancellationToken);
+            _initialized = true;
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize the log store.");
+            return false;
+        }
+        finally
+        {
+            _initializeLock.Release();
         }
     }
 }
 
 /// <summary>
-/// 后台日志写入器配置选项
+/// Options for background batch persistence.
 /// </summary>
 public class BackgroundLogWriterOptions
 {
     /// <summary>
-    /// 批量写入大小，默认为 100
+    /// Maximum number of entries written per batch.
     /// </summary>
     public int BatchSize { get; set; } = 100;
 
     /// <summary>
-    /// 轮询间隔，默认为 1 秒
+    /// Delay between polling attempts when the queue is idle.
     /// </summary>
     public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Maximum time allowed for the shutdown flush before giving up.
+    /// </summary>
+    public TimeSpan ShutdownFlushTimeout { get; set; } = TimeSpan.FromSeconds(5);
 }

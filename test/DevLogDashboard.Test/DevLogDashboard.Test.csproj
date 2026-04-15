@@ -32,6 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shared\DevLogDashboard\DevLogDashboard.csproj" />
+    <ProjectReference Include="..\..\src\Shared\DevLogDashboard\DevLogDashboard.csproj"
+                      SetTargetFramework="TargetFramework=net8.0"
+                      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 </Project>

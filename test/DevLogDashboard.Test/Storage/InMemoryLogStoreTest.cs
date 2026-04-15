@@ -309,6 +309,35 @@ public class InMemoryLogStoreTest : IClassFixture<TestDataGenerator>
         result.Items[0].Message.Should().Contain("timeout");
     }
 
+    [Fact]
+    public async Task QueryAsync_WithQuotedLogicalWords_ShouldNotSplitInsideQuotes()
+    {
+        var store = new InMemoryLogStore();
+        var logs = new[]
+        {
+            _generator.CreateLogEntry(LogLevel.Information, "a or b"),
+            _generator.CreateLogEntry(LogLevel.Information, "a and b"),
+            _generator.CreateLogEntry(LogLevel.Information, "healthy")
+        };
+        await store.AddBatchAsync(logs);
+
+        var likeResult = await store.QueryAsync(new LogQuery
+        {
+            Keyword = "message like \"a or b\"",
+            PageSize = 10
+        });
+        var exactResult = await store.QueryAsync(new LogQuery
+        {
+            Keyword = "message = \"a and b\"",
+            PageSize = 10
+        });
+
+        likeResult.Total.Should().Be(1);
+        likeResult.Items[0].Message.Should().Be("a or b");
+        exactResult.Total.Should().Be(1);
+        exactResult.Items[0].Message.Should().Be("a and b");
+    }
+
     // ========== 级别过滤测试 ==========
 
     [Fact]
@@ -657,5 +686,46 @@ public class InMemoryLogStoreTest : IClassFixture<TestDataGenerator>
             () => store.QueryAsync(new LogQuery(), cts.Token)
         );
         exception.Should().BeAssignableTo<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task QueryAsync_WithDefaultParametersAcrossMultiplePages_ShouldKeepCorrectTotal()
+    {
+        var store = new InMemoryLogStore(maxLogCount: 200);
+        var logs = _generator.CreateLogEntries(120);
+        await store.AddBatchAsync(logs);
+
+        var page1 = await store.QueryAsync(new LogQuery { PageIndex = 1, PageSize = 50 });
+        var page2 = await store.QueryAsync(new LogQuery { PageIndex = 2, PageSize = 50 });
+        var page3 = await store.QueryAsync(new LogQuery { PageIndex = 3, PageSize = 50 });
+
+        page1.Total.Should().Be(120);
+        page1.Items.Should().HaveCount(50);
+        page2.Total.Should().Be(120);
+        page2.Items.Should().HaveCount(50);
+        page3.Total.Should().Be(120);
+        page3.Items.Should().HaveCount(20);
+    }
+
+    [Fact]
+    public async Task QueryAsync_WithOrKeyword_ShouldReturnEitherBranchMatches()
+    {
+        var store = new InMemoryLogStore();
+        var logs = new[]
+        {
+            _generator.CreateLogEntry(LogLevel.Error, "Database timeout"),
+            _generator.CreateLogEntry(LogLevel.Warning, "Disk pressure"),
+            _generator.CreateLogEntry(LogLevel.Information, "Healthy")
+        };
+        await store.AddBatchAsync(logs);
+
+        var result = await store.QueryAsync(new LogQuery
+        {
+            Keyword = "level=\"Error\" or level=\"Warning\"",
+            PageSize = 10
+        });
+
+        result.Total.Should().Be(2);
+        result.Items.Should().OnlyContain(x => x.Level == LogLevel.Error || x.Level == LogLevel.Warning);
     }
 }

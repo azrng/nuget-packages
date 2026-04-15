@@ -1,7 +1,9 @@
-﻿using Azrng.DevLogDashboard.Models;
+using Azrng.DevLogDashboard.Background;
+using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Azrng.DevLogDashboard.Middleware;
@@ -18,10 +20,12 @@ internal class DevLogDashboardApiHandler
     };
 
     private readonly ILogStore _logStore;
+    private readonly IBackgroundLogQueue _logQueue;
 
-    public DevLogDashboardApiHandler(ILogStore logStore)
+    public DevLogDashboardApiHandler(ILogStore logStore, IBackgroundLogQueue logQueue)
     {
         _logStore = logStore;
+        _logQueue = logQueue;
     }
 
     public async Task HandleApiRequestAsync(HttpContext context)
@@ -98,7 +102,7 @@ internal class DevLogDashboardApiHandler
             PageSize = pageSize
         };
 
-        var result = await _logStore.QueryAsync(query);
+        var result = await _logStore.QueryAsync(query, context.RequestAborted);
         await context.Response.WriteAsJsonAsync(result, JsonOptions);
     }
 
@@ -115,7 +119,6 @@ internal class DevLogDashboardApiHandler
             return;
         }
 
-        // 使用 QueryAsync 查询单条日志
         var query = new LogQuery
         {
             Id = id,
@@ -123,7 +126,7 @@ internal class DevLogDashboardApiHandler
             PageSize = 1
         };
 
-        var result = await _logStore.QueryAsync(query);
+        var result = await _logStore.QueryAsync(query, context.RequestAborted);
         var log = result.Items.FirstOrDefault();
 
         if (log == null)
@@ -141,7 +144,7 @@ internal class DevLogDashboardApiHandler
         var startTime = ParseDateTime(context.Request.Query["startTime"]);
         var endTime = ParseDateTime(context.Request.Query["endTime"]);
 
-        var traces = await _logStore.GetTraceSummariesAsync(startTime, endTime);
+        var traces = await _logStore.GetTraceSummariesAsync(startTime, endTime, context.RequestAborted);
         await context.Response.WriteAsJsonAsync(traces, JsonOptions);
     }
 
@@ -158,14 +161,19 @@ internal class DevLogDashboardApiHandler
             return;
         }
 
-        var logs = await _logStore.GetByRequestIdAsync(requestId);
+        var logs = await _logStore.GetByRequestIdAsync(requestId, context.RequestAborted);
         await context.Response.WriteAsJsonAsync(logs, JsonOptions);
     }
 
     private async Task HandleServerTimeAsync(HttpContext context)
     {
         var serverTime = DateTime.Now;
-        await context.Response.WriteAsJsonAsync(new { serverTime = serverTime.ToString("o") }, JsonOptions);
+        await context.Response.WriteAsJsonAsync(new
+        {
+            serverTime = serverTime.ToString("o"),
+            queuedCount = _logQueue.GetQueuedCount(),
+            droppedCount = _logQueue.GetDroppedCount()
+        }, JsonOptions);
     }
 
     private static LogLevel? ParseLogLevel(string? level)
@@ -194,7 +202,25 @@ internal class DevLogDashboardApiHandler
             return null;
         }
 
-        return DateTime.TryParse(value, out var result) ? result : null;
+        if (DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.AssumeUniversal,
+                out var offsetResult))
+        {
+            return offsetResult.LocalDateTime;
+        }
+
+        if (DateTime.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.AssumeLocal,
+                out var result))
+        {
+            return result;
+        }
+
+        return null;
     }
 
     private static bool ParseBool(string? value, bool defaultValue)

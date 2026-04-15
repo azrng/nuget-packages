@@ -188,6 +188,15 @@ body {
     flex-wrap: wrap;
 }
 
+.status-banner {
+    padding: 10px 16px;
+    background: #fff7e6;
+    border-bottom: 1px solid #f5c58a;
+    color: #8a4b08;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;

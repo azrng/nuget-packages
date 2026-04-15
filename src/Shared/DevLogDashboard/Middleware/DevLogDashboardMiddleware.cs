@@ -2,6 +2,7 @@
 using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using System.Reflection;
 
 namespace Azrng.DevLogDashboard.Middleware;
@@ -30,17 +31,25 @@ public class DevLogDashboardMiddleware
     {
         var options = context.RequestServices.GetRequiredService<DevLogDashboardOptions>();
         var logStore = context.RequestServices.GetRequiredService<ILogStore>();
-        var apiHandler = new DevLogDashboardApiHandler(logStore);
+        var logQueue = context.RequestServices.GetRequiredService<Background.IBackgroundLogQueue>();
+        var apiHandler = new DevLogDashboardApiHandler(logStore, logQueue);
 
         var path = context.Request.Path.Value ?? string.Empty;
+
+        if (!options.AllowNonLocalAccess && !IsLocalRequest(context))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsync("Forbidden");
+            return;
+        }
 
         if (options.AuthorizationFilter != null)
         {
             var authorized = await options.AuthorizationFilter(context);
             if (!authorized)
             {
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("Unauthorized");
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsync("Forbidden");
                 return;
             }
         }
@@ -94,5 +103,37 @@ public class DevLogDashboardMiddleware
 
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    private static bool IsLocalRequest(HttpContext context)
+    {
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp == null)
+        {
+            return true;
+        }
+
+        if (remoteIp.IsIPv4MappedToIPv6)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+
+        if (IPAddress.IsLoopback(remoteIp))
+        {
+            return true;
+        }
+
+        var localIp = context.Connection.LocalIpAddress;
+        if (localIp == null)
+        {
+            return false;
+        }
+
+        if (localIp.IsIPv4MappedToIPv6)
+        {
+            localIp = localIp.MapToIPv4();
+        }
+
+        return remoteIp.Equals(localIp);
     }
 }

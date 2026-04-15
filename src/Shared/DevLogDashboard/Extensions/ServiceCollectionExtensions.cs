@@ -28,38 +28,7 @@ public static class ServiceCollectionExtensions
         Action<DevLogDashboardOptions>? configureOptions = null)
         where TLogStore : class, ILogStore
     {
-        var options = new DevLogDashboardOptions();
-        configureOptions?.Invoke(options);
-        NormalizeOptions(options);
-
-        services.AddSingleton(options);
-
-        // 注册自定义 LogStore
-        services.AddSingleton<ILogStore, TLogStore>();
-
-        services.AddHttpContextAccessor();
-
-        // 注册后台队列服务
-        var backgroundOptions = new BackgroundLogWriterOptions();
-        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
-        services.AddSingleton(backgroundOptions);
-        services.AddHostedService<BackgroundLogWriter>();
-
-        services.AddSingleton<ILoggerProvider>(sp =>
-        {
-            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
-            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            var hostEnvironment = sp.GetService<IHostEnvironment>();
-            return new DevLogDashboardLoggerProvider(
-                () => sp.GetRequiredService<ILogStore>(),
-                opts,
-                httpContextAccessor,
-                logQueue,
-                hostEnvironment?.EnvironmentName);
-        });
-
-        return services;
+        return services.AddDevLogDashboard<TLogStore>(configureOptions, null);
     }
 
     /// <summary>
@@ -71,40 +40,12 @@ public static class ServiceCollectionExtensions
         Action<BackgroundLogWriterOptions>? configureBackgroundOptions = null)
         where TLogStore : class, ILogStore
     {
-        var options = new DevLogDashboardOptions();
-        configureOptions?.Invoke(options);
-        NormalizeOptions(options);
+        var options = CreateOptions(configureOptions);
+        var backgroundOptions = CreateBackgroundOptions(configureBackgroundOptions);
 
         services.AddSingleton(options);
-
-        // 注册自定义 LogStore
         services.AddSingleton<ILogStore, TLogStore>();
-
-        // 注册后台队列服务
-        var backgroundOptions = new BackgroundLogWriterOptions();
-        configureBackgroundOptions?.Invoke(backgroundOptions);
-
-        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
-        services.AddSingleton(backgroundOptions);
-        services.AddHostedService<BackgroundLogWriter>();
-
-        services.AddHttpContextAccessor();
-
-        services.AddSingleton<ILoggerProvider>(sp =>
-        {
-            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
-            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            var hostEnvironment = sp.GetService<IHostEnvironment>();
-            return new DevLogDashboardLoggerProvider(
-                () => sp.GetRequiredService<ILogStore>(),
-                opts,
-                httpContextAccessor,
-                logQueue,
-                hostEnvironment?.EnvironmentName);
-        });
-
-        return services;
+        return RegisterCommonServices(services, backgroundOptions);
     }
 
     /// <summary>
@@ -115,38 +56,12 @@ public static class ServiceCollectionExtensions
         Func<IServiceProvider, ILogStore> logStoreFactory,
         Action<DevLogDashboardOptions>? configureOptions = null)
     {
-        var options = new DevLogDashboardOptions();
-        configureOptions?.Invoke(options);
-        NormalizeOptions(options);
+        var options = CreateOptions(configureOptions);
+        var backgroundOptions = CreateBackgroundOptions(null);
 
         services.AddSingleton(options);
-
-        // 使用工厂函数注册 LogStore
         services.AddSingleton<ILogStore>(logStoreFactory);
-
-        // 注册后台队列服务
-        var backgroundOptions = new BackgroundLogWriterOptions();
-        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
-        services.AddSingleton(backgroundOptions);
-        services.AddHostedService<BackgroundLogWriter>();
-
-        services.AddHttpContextAccessor();
-
-        services.AddSingleton<ILoggerProvider>(sp =>
-        {
-            var opts = sp.GetRequiredService<DevLogDashboardOptions>();
-            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
-            var hostEnvironment = sp.GetService<IHostEnvironment>();
-            return new DevLogDashboardLoggerProvider(
-                () => sp.GetRequiredService<ILogStore>(),
-                opts,
-                httpContextAccessor,
-                logQueue,
-                hostEnvironment?.EnvironmentName);
-        });
-
-        return services;
+        return RegisterCommonServices(services, backgroundOptions);
     }
 
     /// <summary>
@@ -156,22 +71,38 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<DevLogDashboardOptions>? configureOptions = null)
     {
+        var options = CreateOptions(configureOptions);
+        var backgroundOptions = CreateBackgroundOptions(null);
+
+        services.AddSingleton(options);
+        services.AddSingleton<ILogStore>(sp =>
+            new InMemoryLogStore(options.MaxLogCount));
+        return RegisterCommonServices(services, backgroundOptions);
+    }
+
+    private static DevLogDashboardOptions CreateOptions(Action<DevLogDashboardOptions>? configureOptions)
+    {
         var options = new DevLogDashboardOptions();
         configureOptions?.Invoke(options);
         NormalizeOptions(options);
+        return options;
+    }
 
-        services.AddSingleton(options);
+    private static BackgroundLogWriterOptions CreateBackgroundOptions(Action<BackgroundLogWriterOptions>? configureBackgroundOptions)
+    {
+        var options = new BackgroundLogWriterOptions();
+        configureBackgroundOptions?.Invoke(options);
+        NormalizeBackgroundOptions(options);
+        return options;
+    }
 
-        services.AddSingleton<ILogStore>(sp =>
-            new InMemoryLogStore(options.MaxLogCount));
-
-        // 注册后台队列服务
-        var backgroundOptions = new BackgroundLogWriterOptions();
-        services.AddSingleton<IBackgroundLogQueue, BackgroundLogQueue>();
+    private static IServiceCollection RegisterCommonServices(IServiceCollection services, BackgroundLogWriterOptions backgroundOptions)
+    {
+        services.AddHttpContextAccessor();
+        services.AddSingleton<IBackgroundLogQueue>(sp =>
+            new BackgroundLogQueue(sp.GetRequiredService<DevLogDashboardOptions>().MaxLogCount));
         services.AddSingleton(backgroundOptions);
         services.AddHostedService<BackgroundLogWriter>();
-
-        services.AddHttpContextAccessor();
 
         services.AddSingleton<ILoggerProvider>(sp =>
         {
@@ -180,7 +111,6 @@ public static class ServiceCollectionExtensions
             var logQueue = sp.GetRequiredService<IBackgroundLogQueue>();
             var hostEnvironment = sp.GetService<IHostEnvironment>();
             return new DevLogDashboardLoggerProvider(
-                () => sp.GetRequiredService<ILogStore>(),
                 opts,
                 httpContextAccessor,
                 logQueue,
@@ -385,6 +315,29 @@ public static class ServiceCollectionExtensions
         if (options.MaxLogCount <= 0)
         {
             options.MaxLogCount = 10000;
+        }
+
+        if (options.MaxPropertySerializationLength <= 0)
+        {
+            options.MaxPropertySerializationLength = 2048;
+        }
+    }
+
+    private static void NormalizeBackgroundOptions(BackgroundLogWriterOptions options)
+    {
+        if (options.BatchSize <= 0)
+        {
+            options.BatchSize = 100;
+        }
+
+        if (options.PollInterval <= TimeSpan.Zero)
+        {
+            options.PollInterval = TimeSpan.FromSeconds(1);
+        }
+
+        if (options.ShutdownFlushTimeout <= TimeSpan.Zero)
+        {
+            options.ShutdownFlushTimeout = TimeSpan.FromSeconds(5);
         }
     }
 

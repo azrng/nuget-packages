@@ -17,13 +17,15 @@ let currentFilters = {
     endTime: null
 };
 let isLoading = false;
+let statusRefreshHandle = null;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
     initDateTimeRange(); // 先使用客户端时间初始化
     loadLogs();
-    fetchServerTime(); // 获取服务器时间并更新
+    refreshDashboardStatus(true);
+    statusRefreshHandle = window.setInterval(() => refreshDashboardStatus(false), 10000);
 });
 
 // 初始化事件监听
@@ -118,21 +120,42 @@ function initDateTimeRange() {
 }
 
 // 获取服务器时间并更新日期范围
-async function fetchServerTime() {
+async function refreshDashboardStatus(updateDateRange) {
     try {
         const response = await fetch(`${API_BASE}/serverTime`);
         if (!response.ok) return;
 
         const data = await response.json();
         const serverTime = new Date(data.serverTime);
-        const oneHourAgo = new Date(serverTime.getTime() - ONE_HOUR_MS);
 
-        document.getElementById('txtStartTime').value = formatDateTimeLocal(oneHourAgo);
-        document.getElementById('txtEndTime').value = formatDateTimeLocal(serverTime);
+        if (updateDateRange) {
+            const oneHourAgo = new Date(serverTime.getTime() - ONE_HOUR_MS);
+            document.getElementById('txtStartTime').value = formatDateTimeLocal(oneHourAgo);
+            document.getElementById('txtEndTime').value = formatDateTimeLocal(serverTime);
+        }
+
+        updateQueueAlert(data);
     } catch (error) {
         // 获取失败时使用客户端时间，不报错
         console.warn('获取服务器时间失败，使用客户端时间');
     }
+}
+
+function updateQueueAlert(status) {
+    const alertEl = document.getElementById('queueAlert');
+    if (!alertEl) return;
+
+    const droppedCount = Number(status?.droppedCount || 0);
+    const queuedCount = Number(status?.queuedCount || 0);
+
+    if (droppedCount <= 0) {
+        alertEl.hidden = true;
+        alertEl.textContent = '';
+        return;
+    }
+
+    alertEl.hidden = false;
+    alertEl.textContent = `后台日志队列已丢弃 ${droppedCount} 条日志，当前队列中还有 ${queuedCount} 条待处理，请尽快排查写入速度或容量配置。`;
 }
 
 // 切换标签

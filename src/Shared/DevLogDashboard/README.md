@@ -107,17 +107,26 @@ public class ValuesController : ControllerBase
 | `MaxLogCount` | int | 10000 | 最大存储日志条数（仅内存存储） |
 | `OnlyLogErrors` | bool | false | 是否只记录错误日志 |
 | `MinLogLevel` | LogLevel | Trace | 最低日志级别 |
+| `AllowNonLocalAccess` | bool | false | 是否允许非本机请求访问仪表板 |
 | `ApplicationName` | string | - | 应用名称 |
 | `ApplicationVersion` | string | - | 应用版本 |
 | `IgnoredPaths` | ICollection<string> | [/health, /healthz, /ready, /metrics, /dev-logs, /favicon.ico] | 忽略的路径 |
-| `BatchSize` | int | 100 | 批量写入大小（仅内存存储） |
-| `FlushInterval` | TimeSpan | 5 秒 | 批量写入间隔时间（仅内存存储） |
 
 ### 授权配置
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `AuthorizationFilter` | Func<HttpContext, Task<bool>> | null | 授权过滤器，返回 false 则拒绝访问 |
+| `AuthorizationFilter` | Func<HttpContext, Task<bool>> | null | 自定义授权过滤器，返回 false 则拒绝访问 |
+
+### 后台写入配置
+
+以下配置通过 `AddDevLogDashboard<TLogStore>(configureOptions, configureBackgroundOptions)` 重载设置：
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `BatchSize` | int | 100 | 每次批量写入的日志条数 |
+| `PollInterval` | TimeSpan | 1 秒 | 队列空闲时的轮询间隔 |
+| `ShutdownFlushTimeout` | TimeSpan | 5 秒 | 应用停止时允许 flush 剩余日志的最长时间 |
 
 ## 高级用法
 
@@ -154,14 +163,10 @@ builder.Services.AddDevLogDashboard(options =>
 ```csharp
 builder.Services.AddDevLogDashboard(options =>
 {
-    // 只允许本地访问
-    options.AuthorizationFilter = async context =>
-    {
-        var remoteIp = context.Connection.RemoteIpAddress;
-        return remoteIp != null &&
-               (System.Net.IPAddress.IsLoopback(remoteIp) ||
-                remoteIp.Equals(System.Net.IPAddress.Parse("::1")));
-    };
+    // 默认已只允许本机访问；若需要远程访问，请显式开启
+    options.AllowNonLocalAccess = true;
+    options.AuthorizationFilter = context =>
+        Task.FromResult(context.User.Identity?.IsAuthenticated == true);
 });
 ```
 
@@ -465,7 +470,7 @@ using (var scope = app.Services.CreateScope())
 2. **内存限制**: 使用 `InMemoryLogStore` 时，默认最大存储 10000 条日志，超出后自动清理最旧的日志
 3. **后台批量写入**: 日志默认通过后台队列批量写入，不阻塞业务线程，日志写入可能有轻微延迟
 4. **线程安全**: `InMemoryLogStore` 使用 ReaderWriterLockSlim 保证多线程并发安全
-5. **授权安全**: 建议配置授权过滤器保护敏感信息
+5. **授权安全**: 默认仅允许本机访问；若需要远程访问，请显式开启 `AllowNonLocalAccess` 并配置 `AuthorizationFilter`
 6. **自定义存储**: 使用自定义存储实现时，请确保 `InitializeAsync` 方法幂等性，避免重复初始化
 7. **时间倒序**: 日志列表默认按时间倒序显示（最新的在前）
 
@@ -475,7 +480,7 @@ using (var scope = app.Services.CreateScope())
 
 - **后台批量写入**
   - 新增后台日志队列，日志自动批量写入，不阻塞业务线程
-  - 添加 `BatchSize` 和 `FlushInterval` 配置选项
+  - 添加 `BatchSize`、`PollInterval` 和 `ShutdownFlushTimeout` 配置选项
   - 移除 `UseBackgroundQueue` 选项，默认开启批量写入
   - 简化 `ILogStore` 接口，统一为异步批量写入
   - 修复日志排序问题，默认时间倒序显示

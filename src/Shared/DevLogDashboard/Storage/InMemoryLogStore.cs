@@ -8,13 +8,17 @@ namespace Azrng.DevLogDashboard.Storage;
 /// </summary>
 public class InMemoryLogStore : LogStoreBase
 {
+    private const string OrOperator = "or";
+    private const string AndOperator = "and";
+
     private readonly Queue<LogEntry> _logs = new();
     private readonly Dictionary<string, LogEntry> _logsById = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<LogEntry>> _logsByRequestId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TraceInfo> _traceIndex = new(StringComparer.Ordinal);
     private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
     private readonly int _maxLogCount;
-    private const int MaxPageSize = 500; // 限制单次查询最大返回数量
+
+    private const int MaxPageSize = 500;
 
     public InMemoryLogStore(int maxLogCount = 10000)
     {
@@ -43,7 +47,10 @@ public class InMemoryLogStore : LogStoreBase
         {
             foreach (var entry in entries)
             {
-                if (entry == null) continue;
+                if (entry == null)
+                {
+                    continue;
+                }
 
                 _logs.Enqueue(entry);
 
@@ -52,7 +59,6 @@ public class InMemoryLogStore : LogStoreBase
                     _logsById[entry.Id] = entry;
                 }
 
-                // 增量更新 Trace 索引
                 if (!string.IsNullOrEmpty(entry.RequestId))
                 {
                     if (!_logsByRequestId.TryGetValue(entry.RequestId, out var requestLogs))
@@ -63,7 +69,6 @@ public class InMemoryLogStore : LogStoreBase
 
                     requestLogs.Add(entry);
 
-                    // 增量更新 Trace 汇总信息
                     if (!_traceIndex.TryGetValue(entry.RequestId, out var traceInfo))
                     {
                         traceInfo = new TraceInfo
@@ -78,23 +83,27 @@ public class InMemoryLogStore : LogStoreBase
                     {
                         traceInfo.FirstTimestamp = entry.Timestamp;
                     }
+
                     if (entry.Timestamp > traceInfo.LastTimestamp)
                     {
                         traceInfo.LastTimestamp = entry.Timestamp;
                     }
+
                     if (string.IsNullOrEmpty(traceInfo.RequestPath) && !string.IsNullOrEmpty(entry.RequestPath))
                     {
                         traceInfo.RequestPath = entry.RequestPath;
                     }
+
                     if (string.IsNullOrEmpty(traceInfo.RequestMethod) && !string.IsNullOrEmpty(entry.RequestMethod))
                     {
                         traceInfo.RequestMethod = entry.RequestMethod;
                     }
-                    // 更新状态码（使用最新的，覆盖之前的）
+
                     if (entry.ResponseStatusCode.HasValue)
                     {
                         traceInfo.ResponseStatusCode = entry.ResponseStatusCode.Value;
                     }
+
                     if (entry.Level >= LogLevel.Error)
                     {
                         traceInfo.HasError = true;
@@ -132,7 +141,6 @@ public class InMemoryLogStore : LogStoreBase
                 return Task.FromResult(new List<LogEntry>());
             }
 
-            // 已在 Add 时按时间顺序添加，直接返回副本
             return Task.FromResult(logs.ToList());
         }
         finally
@@ -148,6 +156,8 @@ public class InMemoryLogStore : LogStoreBase
             return Task.FromCanceled<PageResult<LogEntry>>(cancellationToken);
         }
 
+        query ??= new LogQuery();
+
         var pageIndex = query.PageIndex <= 0 ? 1 : query.PageIndex;
         var pageSize = Math.Min(query.PageSize <= 0 ? 50 : query.PageSize, MaxPageSize);
         var skip = (pageIndex - 1) * pageSize;
@@ -155,8 +165,7 @@ public class InMemoryLogStore : LogStoreBase
         _lock.EnterReadLock();
         try
         {
-            // 优化：如果只需要按时间倒序且无其他过滤条件，直接从队列尾部扫描
-            bool canFastPath = query.OrderByTimeAscending == false &&
+            var canFastPath = !query.OrderByTimeAscending &&
                               string.IsNullOrEmpty(query.Id) &&
                               string.IsNullOrEmpty(query.Keyword) &&
                               string.IsNullOrEmpty(query.RequestId) &&
@@ -166,41 +175,39 @@ public class InMemoryLogStore : LogStoreBase
                               !query.StartTime.HasValue &&
                               !query.EndTime.HasValue;
 
-            List<LogEntry> filtered;
-
             if (canFastPath)
             {
-                // 快速路径：从队列尾部倒序扫描，早停
-                filtered = new List<LogEntry>();
                 var array = _logs.ToArray();
-                int targetCount = skip + pageSize;
+                var items = new List<LogEntry>(pageSize);
+                var skipped = 0;
 
-                // 从最新开始扫描（队列尾部），得到的就是倒序结果（最新的在前）
-                for (int i = array.Length - 1; i >= 0 && filtered.Count < targetCount; i--)
+                for (var i = array.Length - 1; i >= 0 && items.Count < pageSize; i--)
                 {
-                    filtered.Add(array[i]);
+                    if (skipped < skip)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    items.Add(array[i]);
                 }
 
-                // 已经是倒序了，不需要再反转
+                return Task.FromResult(PageResult<LogEntry>.Create(items, array.Length, pageIndex, pageSize));
             }
-            else
-            {
-                // 正常路径：需要过滤
-                filtered = ApplyFilters(_logs, query).ToList();
 
-                // 排序
-                filtered.Sort((a, b) => query.OrderByTimeAscending
-                    ? a.Timestamp.CompareTo(b.Timestamp)
-                    : b.Timestamp.CompareTo(a.Timestamp));
-            }
+            var filtered = ApplyFilters(query).ToList();
+
+            filtered.Sort((a, b) => query.OrderByTimeAscending
+                ? a.Timestamp.CompareTo(b.Timestamp)
+                : b.Timestamp.CompareTo(a.Timestamp));
 
             var total = filtered.Count;
-            var items = filtered
+            var pagedItems = filtered
                 .Skip(skip)
                 .Take(pageSize)
                 .ToList();
 
-            return Task.FromResult(PageResult<LogEntry>.Create(items, total, pageIndex, pageSize));
+            return Task.FromResult(PageResult<LogEntry>.Create(pagedItems, total, pageIndex, pageSize));
         }
         finally
         {
@@ -208,7 +215,9 @@ public class InMemoryLogStore : LogStoreBase
         }
     }
 
-    public override Task<List<TraceLogSummary>> GetTraceSummariesAsync(DateTime? startTime, DateTime? endTime,
+    public override Task<List<TraceLogSummary>> GetTraceSummariesAsync(
+        DateTime? startTime,
+        DateTime? endTime,
         CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -221,7 +230,6 @@ public class InMemoryLogStore : LogStoreBase
         {
             var query = _traceIndex.Values.AsEnumerable();
 
-            // 时间范围过滤
             if (startTime.HasValue)
             {
                 query = query.Where(x => x.LastTimestamp >= startTime.Value);
@@ -256,13 +264,20 @@ public class InMemoryLogStore : LogStoreBase
         }
     }
 
-    private IEnumerable<LogEntry> ApplyFilters(IEnumerable<LogEntry> logs, LogQuery query)
+    private IEnumerable<LogEntry> ApplyFilters(LogQuery query)
     {
-        var filtered = logs;
+        IEnumerable<LogEntry> filtered = _logs;
 
         if (!string.IsNullOrEmpty(query.Id))
         {
-            filtered = filtered.Where(x => x.Id == query.Id);
+            if (_logsById.TryGetValue(query.Id, out var log))
+            {
+                filtered = new[] { log };
+            }
+            else
+            {
+                return Array.Empty<LogEntry>();
+            }
         }
 
         if (query.StartTime.HasValue)
@@ -282,7 +297,21 @@ public class InMemoryLogStore : LogStoreBase
 
         if (!string.IsNullOrEmpty(query.RequestId))
         {
-            filtered = filtered.Where(x => x.RequestId == query.RequestId);
+            if (string.IsNullOrEmpty(query.Id))
+            {
+                if (_logsByRequestId.TryGetValue(query.RequestId, out var requestLogs))
+                {
+                    filtered = requestLogs;
+                }
+                else
+                {
+                    return Array.Empty<LogEntry>();
+                }
+            }
+            else
+            {
+                filtered = filtered.Where(x => x.RequestId == query.RequestId);
+            }
         }
 
         if (!string.IsNullOrEmpty(query.Source))
@@ -305,65 +334,64 @@ public class InMemoryLogStore : LogStoreBase
 
     private IEnumerable<LogEntry> ApplyKeywordFilter(IEnumerable<LogEntry> logs, string keyword)
     {
-        var filtered = logs;
-
         keyword = keyword.Trim();
-
-        var andParts = keyword.Split(new[] { " and ", " AND " }, StringSplitOptions.None);
-
-        var conditions = new List<string>();
-        foreach (var part in andParts)
+        if (string.IsNullOrEmpty(keyword))
         {
-            var orParts = part.Split(new[] { " or ", " OR " }, StringSplitOptions.None);
-            conditions.AddRange(orParts);
+            return logs;
         }
 
-        foreach (var condition in conditions)
+        var groups = SplitByLogicalOperator(keyword, OrOperator)
+            .Select(group => SplitByLogicalOperator(group, AndOperator)
+                .Select(condition => condition.Trim())
+                .Where(condition => !string.IsNullOrEmpty(condition))
+                .ToArray())
+            .Where(group => group.Length > 0)
+            .ToArray();
+
+        if (groups.Length == 0)
         {
-            var cond = condition.Trim();
-            if (string.IsNullOrEmpty(cond))
-            {
-                continue;
-            }
-
-            if (cond.Contains('=') && !cond.Contains(" like ", StringComparison.OrdinalIgnoreCase))
-            {
-                var parts = cond.Split('=', 2);
-                if (parts.Length == 2)
-                {
-                    var field = parts[0].Trim().ToLowerInvariant();
-                    var value = parts[1].Trim().Trim('\"', '\'');
-
-                    filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: true));
-                }
-            }
-            else if (cond.Contains(" like ", StringComparison.OrdinalIgnoreCase))
-            {
-                const string likeToken = " like ";
-                var likeIndex = cond.IndexOf(likeToken, StringComparison.OrdinalIgnoreCase);
-                if (likeIndex > 0)
-                {
-                    var field = cond[..likeIndex].Trim().ToLowerInvariant();
-                    var value = cond[(likeIndex + likeToken.Length)..].Trim().Trim('\"', '\'');
-
-                    filtered = filtered.Where(x => MatchField(x, field, value, exactMatch: false));
-                }
-            }
-            else
-            {
-                filtered = filtered.Where(x =>
-                    !string.IsNullOrEmpty(x.Message) &&
-                    x.Message.Contains(cond));
-            }
+            return logs;
         }
 
-        return filtered;
+        return logs.Where(log => groups.Any(group => group.All(condition => MatchCondition(log, condition))));
+    }
+
+    private bool MatchCondition(LogEntry log, string condition)
+    {
+        if (condition.Contains('=') && !condition.Contains(" like ", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = condition.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var field = parts[0].Trim().ToLowerInvariant();
+                var value = parts[1].Trim().Trim('"', '\'');
+                return MatchField(log, field, value, exactMatch: true);
+            }
+
+            return false;
+        }
+
+        if (condition.Contains(" like ", StringComparison.OrdinalIgnoreCase))
+        {
+            const string likeToken = " like ";
+            var likeIndex = condition.IndexOf(likeToken, StringComparison.OrdinalIgnoreCase);
+            if (likeIndex > 0)
+            {
+                var field = condition[..likeIndex].Trim().ToLowerInvariant();
+                var value = condition[(likeIndex + likeToken.Length)..].Trim().Trim('"', '\'');
+                return MatchField(log, field, value, exactMatch: false);
+            }
+
+            return false;
+        }
+
+        return !string.IsNullOrEmpty(log.Message) &&
+               log.Message.Contains(condition, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool MatchField(LogEntry log, string field, string value, bool exactMatch)
     {
         var fieldValue = GetFieldValue(log, field);
-
         if (string.IsNullOrEmpty(fieldValue))
         {
             return false;
@@ -394,6 +422,91 @@ public class InMemoryLogStore : LogStoreBase
             "machinename" => log.MachineName,
             _ => log.Properties.TryGetValue(field, out var val) ? val?.ToString() : null
         };
+    }
+
+    private static IEnumerable<string> SplitByLogicalOperator(string input, string operatorToken)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            yield break;
+        }
+
+        var segmentStart = 0;
+        var inQuotes = false;
+        char quoteChar = default;
+
+        for (var i = 0; i < input.Length; i++)
+        {
+            var current = input[i];
+
+            if (inQuotes)
+            {
+                if (current == quoteChar && !IsEscaped(input, i))
+                {
+                    inQuotes = false;
+                }
+
+                continue;
+            }
+
+            if (current is '"' or '\'')
+            {
+                inQuotes = true;
+                quoteChar = current;
+                continue;
+            }
+
+            if (!IsLogicalOperatorAt(input, i, operatorToken))
+            {
+                continue;
+            }
+
+            var segment = input[segmentStart..i].Trim();
+            if (!string.IsNullOrEmpty(segment))
+            {
+                yield return segment;
+            }
+
+            i += operatorToken.Length - 1;
+            segmentStart = i + 1;
+        }
+
+        var trailingSegment = input[segmentStart..].Trim();
+        if (!string.IsNullOrEmpty(trailingSegment))
+        {
+            yield return trailingSegment;
+        }
+    }
+
+    private static bool IsLogicalOperatorAt(string input, int index, string operatorToken)
+    {
+        if (index < 0 || index + operatorToken.Length > input.Length)
+        {
+            return false;
+        }
+
+        if (!input.AsSpan(index, operatorToken.Length).Equals(operatorToken, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var beforeIndex = index - 1;
+        var afterIndex = index + operatorToken.Length;
+        var hasBoundaryBefore = beforeIndex >= 0 && char.IsWhiteSpace(input[beforeIndex]);
+        var hasBoundaryAfter = afterIndex < input.Length && char.IsWhiteSpace(input[afterIndex]);
+
+        return hasBoundaryBefore && hasBoundaryAfter;
+    }
+
+    private static bool IsEscaped(string input, int index)
+    {
+        var slashCount = 0;
+        for (var i = index - 1; i >= 0 && input[i] == '\\'; i--)
+        {
+            slashCount++;
+        }
+
+        return slashCount % 2 == 1;
     }
 
     private void TrimExcessLogs()
@@ -474,9 +587,6 @@ public class InMemoryLogStore : LogStoreBase
         }
     }
 
-    /// <summary>
-    /// Trace 汇总信息的增量索引
-    /// </summary>
     private class TraceInfo
     {
         public string RequestId { get; set; } = string.Empty;

@@ -4,33 +4,38 @@ using System.Threading.Channels;
 namespace Azrng.DevLogDashboard.Background;
 
 /// <summary>
-/// 鍚庡彴鏃ュ織闃熷垪锛岀敤浜庡紓姝ュ鐞嗘棩蹇楀啓鍏?
+/// 后台日志队列，用于异步处理日志写入。
 /// </summary>
 public interface IBackgroundLogQueue
 {
     /// <summary>
-    /// 灏嗘棩蹇楁潯鐩姞鍏ラ槦鍒?
+    /// 将日志条目加入队列。
     /// </summary>
     ValueTask QueueLogEntryAsync(LogEntry entry);
 
     /// <summary>
-    /// 灏濊瘯浠庨槦鍒椾腑璇诲彇鏃ュ織鏉＄洰锛堝甫瓒呮椂鍜屽彇娑堟敮鎸侊級
+    /// 尝试从队列中读取日志条目，支持超时和取消。
     /// </summary>
     ValueTask<LogEntry?> DequeueAsync(CancellationToken cancellationToken, TimeSpan timeout);
 
     /// <summary>
-    /// 鎵归噺浠庨槦鍒椾腑璇诲彇鏃ュ織鏉＄洰锛堝甫鍙栨秷鏀寔锛?
+    /// 批量从队列中读取日志条目，支持取消。
     /// </summary>
     ValueTask<List<LogEntry>> DequeueBatchAsync(int maxCount, CancellationToken cancellationToken);
 
     /// <summary>
-    /// 鑾峰彇闃熷垪涓緟澶勭悊鐨勬棩蹇楁暟閲?
+    /// 获取队列中待处理的日志数量。
     /// </summary>
     int GetQueuedCount();
+
+    /// <summary>
+    /// 获取被丢弃的日志数量。
+    /// </summary>
+    long GetDroppedCount();
 }
 
 /// <summary>
-/// 鍩轰簬 System.Threading.Channels 鐨勯珮鎬ц兘鍚庡彴鏃ュ織闃熷垪瀹炵幇
+/// 基于 System.Threading.Channels 的高性能后台日志队列实现。
 /// </summary>
 public class BackgroundLogQueue : IBackgroundLogQueue
 {
@@ -41,7 +46,7 @@ public class BackgroundLogQueue : IBackgroundLogQueue
     public BackgroundLogQueue(int capacity = 10000)
     {
         _capacity = capacity > 0 ? capacity : 10000;
-        // 鍒涘缓鏈夌晫闃熷垪锛岄槻姝㈠唴瀛樻棤闄愬闀?
+        // 创建有界队列，防止内存无限增长。
         var options = new BoundedChannelOptions(_capacity)
         {
             FullMode = BoundedChannelFullMode.DropOldest
@@ -91,11 +96,11 @@ public class BackgroundLogQueue : IBackgroundLogQueue
 
         try
         {
-            // 灏濊瘯璇诲彇绗竴鏉★紙浼氱瓑寰咃級
+            // 尝试读取第一条，会等待队列可读。
             var first = await _queue.Reader.ReadAsync(cancellationToken);
             batch.Add(first);
 
-            // 灏濊瘯璇诲彇鏇村锛堥潪绛夊緟妯″紡锛?
+            // 再尽量读取更多，但不额外等待。
             while (batch.Count < maxCount)
             {
                 if (_queue.Reader.TryRead(out var entry))
@@ -110,7 +115,7 @@ public class BackgroundLogQueue : IBackgroundLogQueue
         }
         catch (OperationCanceledException)
         {
-            // 鍙栨秷鎿嶄綔锛岃繑鍥炲凡璇诲彇鐨勬壒娆?
+            // 取消时返回已读取到的批次。
         }
 
         return batch;
@@ -122,7 +127,8 @@ public class BackgroundLogQueue : IBackgroundLogQueue
     }
 
     /// <summary>
-    /// 鑾峰彇琚涪寮冪殑鏃ュ織鏁伴噺锛堜粎鐢ㄤ簬璇婃柇锛?    /// </summary>
+    /// 获取被丢弃的日志数量，仅用于诊断。
+    /// </summary>
     public long GetDroppedCount()
     {
         return Interlocked.Read(ref _droppedCount);

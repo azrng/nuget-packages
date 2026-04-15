@@ -20,6 +20,24 @@ public class BackgroundLogWriterTest
         _generator = new TestDataGenerator();
     }
 
+    private static async Task RunWriterForAsync(BackgroundLogWriter writer, TimeSpan runDuration, CancellationToken stopToken = default)
+    {
+        await writer.StartAsync(CancellationToken.None);
+
+        try
+        {
+            await Task.Delay(runDuration, stopToken);
+        }
+        catch (OperationCanceledException) when (stopToken.IsCancellationRequested)
+        {
+            // 测试主动结束时允许中断等待
+        }
+        finally
+        {
+            await writer.StopAsync(CancellationToken.None);
+        }
+    }
+
     // ========== 构造函数测试 ==========
 
     [Fact]
@@ -111,12 +129,8 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(300); // 300ms 后取消
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(150));
 
         // Assert
         storeMock.Verify(x => x.AddBatchAsync(
@@ -166,14 +180,8 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(500);
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(300));
 
         // Assert - 应该至少处理两次
         storeMock.Verify(x => x.AddBatchAsync(
@@ -214,14 +222,10 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(500);
-
         // Act & Assert - 不应该抛出异常
         var act = async () =>
         {
-            var task = writer.StartAsync(cts.Token);
-            await task;
+            await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
         };
         await act.Should().NotThrowAsync();
 
@@ -260,14 +264,10 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(500);
-
         // Act & Assert - 不应该抛出异常
         var act = async () =>
         {
-            var task = writer.StartAsync(cts.Token);
-            await task;
+            await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
         };
         await act.Should().NotThrowAsync();
 
@@ -311,15 +311,8 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-
         // Act - 先启动服务
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(200); // 让服务处理一些日志
-
-        // 然后取消
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
 
         // Assert - 应该调用 AddBatchAsync 至少一次
         storeMock.Verify(x => x.AddBatchAsync(
@@ -353,21 +346,15 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(150));
 
         // Assert
         loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("启动")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("started")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -376,7 +363,7 @@ public class BackgroundLogWriterTest
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("停止")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("stopped")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -412,14 +399,8 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
 
         // Assert - 应该使用指定的批量大小
         queueMock.Verify(x => x.DequeueBatchAsync(batchSize, It.IsAny<CancellationToken>()), Times.AtLeastOnce());
@@ -454,16 +435,10 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(600); // 应该至少轮询 2-3 次
-
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(300));
 
         stopwatch.Stop();
 
@@ -498,14 +473,8 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(200);
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
 
         // Assert - 应该多次尝试读取（即使队列为空）
         queueMock.Verify(x => x.DequeueBatchAsync(10, It.IsAny<CancellationToken>()), Times.AtLeast(2));
@@ -540,21 +509,15 @@ public class BackgroundLogWriterTest
             options
         );
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(300);
-
         // Act
-        var task = writer.StartAsync(cts.Token);
-        await Task.Delay(300);
-        cts.Cancel();
-        await task;
+        await RunWriterForAsync(writer, TimeSpan.FromMilliseconds(200));
 
         // Assert - 应该记录调试信息
         loggerMock.Verify(
             x => x.Log(
                 LogLevel.Debug,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("写入")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Persisted")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
@@ -571,5 +534,47 @@ public class BackgroundLogWriterTest
         // Assert
         options.BatchSize.Should().Be(100);
         options.PollInterval.Should().Be(TimeSpan.FromSeconds(1));
+        options.ShutdownFlushTimeout.Should().Be(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldInitializeStoreBeforeWriting()
+    {
+        // Arrange
+        var queue = new BackgroundLogQueue(capacity: 10);
+        var storeMock = new Mock<ILogStore>();
+        var loggerMock = new Mock<ILogger<BackgroundLogWriter>>();
+
+        var logs = _generator.CreateLogEntries(2);
+        foreach (var log in logs)
+        {
+            await queue.QueueLogEntryAsync(log);
+        }
+
+        storeMock.Setup(x => x.InitializeAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        storeMock.Setup(x => x.AddBatchAsync(It.IsAny<IEnumerable<LogEntry>>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var writer = new BackgroundLogWriter(
+            queue,
+            storeMock.Object,
+            loggerMock.Object,
+            new BackgroundLogWriterOptions
+            {
+                BatchSize = 10,
+                PollInterval = TimeSpan.FromMilliseconds(20)
+            });
+
+        // Act
+        await writer.StartAsync(CancellationToken.None);
+        await Task.Delay(100);
+        await writer.StopAsync(CancellationToken.None);
+
+        // Assert
+        storeMock.Verify(x => x.InitializeAsync(It.IsAny<CancellationToken>()), Times.Once);
+        storeMock.Verify(x => x.AddBatchAsync(
+            It.Is<IEnumerable<LogEntry>>(items => items.Count() == 2),
+            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Azrng.DevLogDashboard.Background;
 using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
-using Azrng.DevLogDashboard.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -22,10 +21,9 @@ public class DevLogDashboardLogger : ILogger
     private static readonly JsonSerializerOptions PropertyValueSerializerOptions = new()
                                                                                    {
                                                                                        ReferenceHandler = ReferenceHandler.IgnoreCycles
-                                                                                   };
+    };
 
     private readonly string _category;
-    private readonly Func<ILogStore> _logStoreFactory;
     private readonly DevLogDashboardOptions _options;
     private readonly IHttpContextAccessor? _httpContextAccessor;
     private readonly IBackgroundLogQueue _logQueue;
@@ -34,14 +32,12 @@ public class DevLogDashboardLogger : ILogger
 
     public DevLogDashboardLogger(
         string category,
-        Func<ILogStore> logStoreFactory,
         DevLogDashboardOptions options,
         IHttpContextAccessor? httpContextAccessor = null,
         IBackgroundLogQueue? logQueue = null,
         string? environmentName = null)
     {
         _category = category;
-        _logStoreFactory = logStoreFactory ?? throw new ArgumentNullException(nameof(logStoreFactory));
         _options = options;
         _httpContextAccessor = httpContextAccessor;
         _logQueue = logQueue ?? throw new ArgumentNullException(nameof(logQueue), "后台队列必须启用");
@@ -60,7 +56,7 @@ public class DevLogDashboardLogger : ILogger
 
     IDisposable ILogger.BeginScope<TState>(TState state)
     {
-        return NullScope.Instance;
+        return _scopeProvider?.Push(state) ?? NullScope.Instance;
     }
 
     public void Log<TState>(
