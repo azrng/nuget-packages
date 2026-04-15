@@ -11,8 +11,8 @@
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <PackageId>Azrng.AspNetCore.Authorization.Default</PackageId>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Azrng.AspNetCore.Authorization.Default.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Default Authorization</Title>

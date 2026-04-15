@@ -9,8 +9,8 @@
         <Description>基本的公共核心类库</Description>
         <Version>0.1.0</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Azrng.Office.NPOI.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

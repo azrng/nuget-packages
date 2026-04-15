@@ -12,7 +12,9 @@
         <Version>1.6.0</Version>
         <PackageId>Common.EFCore.PostgresSql</PackageId>
         <RootNamespace>Azrng.EFCore.PostgresSql</RootNamespace>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
         <NoWarn>1701;1702;1591</NoWarn>

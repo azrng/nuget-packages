@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>net10.0;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Description>封装了一个通过HTTP调用MaxCompute接口的请求</Description>

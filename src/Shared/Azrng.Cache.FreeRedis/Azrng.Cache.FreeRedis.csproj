@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+
+    <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
     <Title>FreeRedis Cache Provider</Title>
     <Description>FreeRedis缓存提供者，支持依赖注入</Description>
     <PackageTags>cache;redis;freeRedis;dotnet</PackageTags>

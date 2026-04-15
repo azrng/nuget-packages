@@ -7,7 +7,7 @@
         <Authors>azrng</Authors>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Common.Notification.QYWeiXinRobot.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <PackageTags>wechat;notification;robot;message;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>

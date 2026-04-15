@@ -7,8 +7,8 @@
         <Description>学习使用的nuget包</Description>
         <Version>1.2.0</Version>
         <PackageId>StudyUse</PackageId>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)StudyUse.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>

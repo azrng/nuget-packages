@@ -9,7 +9,9 @@
         <Description>一个数据访问层框架，支持多种主流数据库</Description>
         <Version>1.0.0-beta3</Version>
         <ImplicitUsings>enable</ImplicitUsings>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

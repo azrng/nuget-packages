@@ -10,7 +10,9 @@
         <Description>基本的分布式锁核心类库</Description>
         <PackageId>Azrng.DistributeLock.Core</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

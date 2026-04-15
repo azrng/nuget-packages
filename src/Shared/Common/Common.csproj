@@ -11,8 +11,8 @@
         <Version>1.4.2</Version>
         <PackageId>AzrngCommon</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
-        <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Common.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <IsPackable>false</IsPackable>

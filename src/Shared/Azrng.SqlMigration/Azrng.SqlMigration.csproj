@@ -10,8 +10,8 @@
         <Description>基础的sql迁移库</Description>
         <PackageId>Azrng.SqlMigration</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Azrng.SqlMigration.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

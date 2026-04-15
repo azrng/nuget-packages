@@ -10,8 +10,8 @@
         <Description>内存分布式锁库</Description>
         <PackageId>Azrng.DistributeLock.InMemory</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Azrng.DistributeLock.InMemory.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <LangVersion>latest</LangVersion>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

@@ -7,7 +7,7 @@
         <Version>1.2.1</Version>
         <PackageId>AzrngCommon.Security</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>

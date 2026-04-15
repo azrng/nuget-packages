@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFrameworks>net10.0;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Nullable>enable</Nullable>
         <Description>简单封装了一些Dapper常用方法</Description>
         <Authors>Azrng</Authors>
@@ -12,7 +14,7 @@
         <Copyright>Azrng</Copyright>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <NoWarn>1701;1702;1591</NoWarn>
-        <DocumentationFile>$(OutputPath)Azrng.Dapper.xml</DocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Dapper Wrapper</Title>

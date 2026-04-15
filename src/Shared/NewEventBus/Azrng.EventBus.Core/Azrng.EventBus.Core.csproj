@@ -10,7 +10,9 @@
         <Description>一个学习eShop的自用事件总线</Description>
         <Version>1.1.0</Version>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>

@@ -7,8 +7,8 @@
         <Description>适用于.NetCore的语雀Sdk，与语雀官方保持一致。</Description>
         <Copyright>Azrng</Copyright>
         <Version>0.0.1-beta2</Version>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Common.YuQueSdk.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <PackageReleaseNotes>获取用户信息以及获取文档详情，逐步更新中</PackageReleaseNotes>
         <ApplicationIcon>yuque.ico</ApplicationIcon>
         <EnableNETAnalyzers>True</EnableNETAnalyzers>

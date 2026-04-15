@@ -10,8 +10,8 @@
         <Version>1.1.0</Version>
         <PackageId>Azrng.AspNetCore.Authentication.Basic</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)Azrng.AspNetCore.Authentication.Basic.xml</DocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
