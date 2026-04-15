@@ -8,7 +8,7 @@
         <PackageId>Azrng.DevLogDashboard</PackageId>
         <RootNamespace>Azrng.DevLogDashboard</RootNamespace>
         <Title>DevLogDashboard</Title>
-        <Version>1.0.0-preview.6</Version>
+        <Version>1.0.0-preview.5</Version>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>轻量级开发调试日志面板，无需数据库依赖，开箱即用</Description>

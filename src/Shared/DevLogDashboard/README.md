@@ -480,15 +480,12 @@ using (var scope = app.Services.CreateScope())
 
 ## 版本历史
 
-### 1.0.0-preview.6
+### 1.0.0-preview.5
 
 - **认证配置简化**
   - 移除 `AuthorizationFilter` 与外部认证方案依赖，统一改为内置 Basic 认证配置
   - `BasicAuthentication` 支持直接配置 `UserName`、`Password` 和 `Realm`
   - 未配置 `BasicAuthentication` 时保持匿名访问，配置后返回标准 Basic Challenge
-  - 补充中间件测试与 README 文档，确保对外说明和实际行为一致
-
-### 1.0.0-preview.5
 
 - **后台批量写入**
   - 新增后台日志队列，日志自动批量写入，不阻塞业务线程
