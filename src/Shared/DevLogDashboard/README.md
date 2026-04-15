@@ -107,16 +107,10 @@ public class ValuesController : ControllerBase
 | `MaxLogCount` | int | 10000 | 最大存储日志条数（仅内存存储） |
 | `OnlyLogErrors` | bool | false | 是否只记录错误日志 |
 | `MinLogLevel` | LogLevel | Trace | 最低日志级别 |
-| `BasicAuthentication` | DevLogDashboardBasicAuthenticationOptions | null | 可选的 Basic 认证配置，配置后会按指定 scheme 执行认证 |
+| `BasicAuthentication` | DevLogDashboardBasicAuthenticationOptions | null | 配置后启用内置 Basic 认证；未配置时允许匿名访问 |
 | `ApplicationName` | string | - | 应用名称 |
 | `ApplicationVersion` | string | - | 应用版本 |
 | `IgnoredPaths` | ICollection<string> | [/health, /healthz, /ready, /metrics, /dev-logs, /favicon.ico] | 忽略的路径 |
-
-### 授权配置
-
-| 选项 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `BasicAuthentication` | DevLogDashboardBasicAuthenticationOptions | null | 配置后启用内置 Basic 认证；未配置时允许匿名访问 |
 
 ### BasicAuthentication 配置
 
@@ -166,7 +160,7 @@ builder.Services.AddDevLogDashboard(options =>
 });
 ```
 
-### 添加访问授权
+### 配置 Basic 访问认证
 
 ```csharp
 builder.Services.AddDevLogDashboard(options =>
@@ -485,6 +479,14 @@ using (var scope = app.Services.CreateScope())
 7. **时间倒序**: 日志列表默认按时间倒序显示（最新的在前）
 
 ## 版本历史
+
+### 1.0.0-preview.6
+
+- **认证配置简化**
+  - 移除 `AuthorizationFilter` 与外部认证方案依赖，统一改为内置 Basic 认证配置
+  - `BasicAuthentication` 支持直接配置 `UserName`、`Password` 和 `Realm`
+  - 未配置 `BasicAuthentication` 时保持匿名访问，配置后返回标准 Basic Challenge
+  - 补充中间件测试与 README 文档，确保对外说明和实际行为一致
 
 ### 1.0.0-preview.5
 
