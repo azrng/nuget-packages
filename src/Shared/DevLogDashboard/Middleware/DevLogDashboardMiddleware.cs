@@ -1,9 +1,11 @@
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Reflection;
+using System.Text;
 
 namespace Azrng.DevLogDashboard.Middleware;
 
@@ -95,55 +97,99 @@ public class DevLogDashboardMiddleware
 
     private static async Task<bool> AuthorizeAsync(HttpContext context, DevLogDashboardOptions options)
     {
-        if (options.BasicAuthentication != null)
+        if (options.BasicAuthentication == null)
         {
-            var basicAuthentication = options.BasicAuthentication;
-            AuthenticateResult authenticateResult;
+            return true;
+        }
 
-            try
-            {
-                authenticateResult = await context.AuthenticateAsync(basicAuthentication.Scheme);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new InvalidOperationException(
-                    $"DevLogDashboard 配置的认证方案“{basicAuthentication.Scheme}”未注册，请先在应用中完成认证方案注册。",
-                    ex);
-            }
+        var authorizationHeader = context.Request.Headers.Authorization.ToString();
+        if (!TryReadBasicCredentials(authorizationHeader, out var userName, out var password))
+        {
+            await WriteUnauthorizedAsync(context, options.BasicAuthentication.Realm);
+            return false;
+        }
 
-            if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
+        if (!CredentialsMatch(options.BasicAuthentication, userName, password))
+        {
+            await WriteUnauthorizedAsync(context, options.BasicAuthentication.Realm);
+            return false;
+        }
+
+        context.User = CreatePrincipal(userName);
+        return true;
+    }
+
+    private static async Task WriteUnauthorizedAsync(HttpContext context, string realm)
+    {
+        const string headerName = "WWW-Authenticate";
+        if (!context.Response.Headers.ContainsKey(headerName))
+        {
+            context.Response.Headers.Append(headerName, $"Basic realm=\"{realm}\"");
+        }
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsync("Unauthorized");
+    }
+
+    private static bool TryReadBasicCredentials(string authorizationHeader, out string userName, out string password)
+    {
+        userName = string.Empty;
+        password = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(authorizationHeader)
+            || !authorizationHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var encodedCredential = authorizationHeader["Basic ".Length..].Trim();
+        if (string.IsNullOrWhiteSpace(encodedCredential))
+        {
+            return false;
+        }
+
+        try
+        {
+            var rawCredential = Encoding.UTF8.GetString(Convert.FromBase64String(encodedCredential));
+            var separatorIndex = rawCredential.IndexOf(':');
+            if (separatorIndex <= 0)
             {
-                AppendBasicChallengeHeader(context, basicAuthentication.Realm);
-                await context.ChallengeAsync(basicAuthentication.Scheme);
                 return false;
             }
 
-            context.User = authenticateResult.Principal;
-        }
-
-        if (options.AuthorizationFilter == null)
-        {
+            userName = rawCredential[..separatorIndex];
+            password = rawCredential[(separatorIndex + 1)..];
             return true;
         }
-
-        if (await options.AuthorizationFilter(context))
+        catch (FormatException)
         {
-            return true;
+            return false;
         }
-
-        context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        await context.Response.WriteAsync("Forbidden");
-        return false;
     }
 
-    private static void AppendBasicChallengeHeader(HttpContext context, string realm)
+    private static bool CredentialsMatch(DevLogDashboardBasicAuthenticationOptions options, string userName, string password)
     {
-        const string headerName = "WWW-Authenticate";
-        if (context.Response.Headers.ContainsKey(headerName))
-        {
-            return;
-        }
+        return FixedTimeEquals(options.UserName, userName)
+               && FixedTimeEquals(options.Password, password);
+    }
 
-        context.Response.Headers.Append(headerName, $"Basic realm=\"{realm}\"");
+    private static bool FixedTimeEquals(string expected, string actual)
+    {
+        var expectedBytes = Encoding.UTF8.GetBytes(expected);
+        var actualBytes = Encoding.UTF8.GetBytes(actual);
+
+        return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
+    }
+
+    private static ClaimsPrincipal CreatePrincipal(string userName)
+    {
+        var identity = new ClaimsIdentity(
+            new[]
+            {
+                new Claim(ClaimTypes.Name, userName)
+            },
+            "Basic");
+
+        return new ClaimsPrincipal(identity);
     }
 }

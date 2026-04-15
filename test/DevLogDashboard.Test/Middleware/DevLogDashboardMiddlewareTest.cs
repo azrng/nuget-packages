@@ -3,13 +3,9 @@ using Azrng.DevLogDashboard.Middleware;
 using Azrng.DevLogDashboard.Models;
 using Azrng.DevLogDashboard.Options;
 using Azrng.DevLogDashboard.Storage;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
+using System.Text;
 using System.Text.Json;
 
 namespace DevLogDashboard.Test.Middleware;
@@ -20,7 +16,7 @@ namespace DevLogDashboard.Test.Middleware;
 public class DevLogDashboardMiddlewareTest
 {
     [Fact]
-    public async Task InvokeAsync_WhenAuthorizationFilterIsNull_ShouldAllowAnonymousRemoteAccess()
+    public async Task InvokeAsync_WhenBasicAuthenticationIsNotConfigured_ShouldAllowAnonymousRemoteAccess()
     {
         var queue = new BackgroundLogQueue(2);
         await queue.QueueLogEntryAsync(new LogEntry { Message = "1" });
@@ -43,13 +39,18 @@ public class DevLogDashboardMiddlewareTest
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenAuthorizationFilterReturnsFalse_ShouldReturnForbidden()
+    public async Task InvokeAsync_WhenBasicAuthenticationIsConfiguredWithoutHeader_ShouldReturnUnauthorized()
     {
         var context = CreateContext(
             CreateServices(
                 new DevLogDashboardOptions
                 {
-                    AuthorizationFilter = _ => Task.FromResult(false)
+                    BasicAuthentication = new DevLogDashboardBasicAuthenticationOptions
+                    {
+                        UserName = "admin",
+                        Password = "123456",
+                        Realm = "Dashboard"
+                    }
                 },
                 Mock.Of<ILogStore>(),
                 new BackgroundLogQueue(10)),
@@ -59,8 +60,9 @@ public class DevLogDashboardMiddlewareTest
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        (await ReadBodyAsync(context)).Should().Be("Forbidden");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        context.Response.Headers.WWWAuthenticate.ToString().Should().Be("Basic realm=\"Dashboard\"");
+        (await ReadBodyAsync(context)).Should().Be("Unauthorized");
     }
 
     [Fact]
@@ -93,7 +95,7 @@ public class DevLogDashboardMiddlewareTest
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenBasicAuthenticationSchemeIsConfiguredWithoutHeader_ShouldChallenge()
+    public async Task InvokeAsync_WhenBasicAuthenticationIsConfiguredWithInvalidHeader_ShouldReturnUnauthorized()
     {
         var context = CreateContext(
             CreateServices(
@@ -101,20 +103,15 @@ public class DevLogDashboardMiddlewareTest
                 {
                     BasicAuthentication = new DevLogDashboardBasicAuthenticationOptions
                     {
-                        Scheme = TestBasicAuthenticationHandler.SchemeName,
+                        UserName = "admin",
+                        Password = "123456",
                         Realm = "Dashboard"
                     }
                 },
                 Mock.Of<ILogStore>(),
-                new BackgroundLogQueue(10),
-                services =>
-                {
-                    services.AddAuthentication()
-                        .AddScheme<AuthenticationSchemeOptions, TestBasicAuthenticationHandler>(
-                            TestBasicAuthenticationHandler.SchemeName,
-                            _ => { });
-                }),
-            "/api/serverTime");
+                new BackgroundLogQueue(10)),
+            "/api/serverTime",
+            authorizationHeader: CreateBasicHeader("admin", "wrong-password"));
 
         var middleware = new DevLogDashboardMiddleware(_ => Task.CompletedTask);
 
@@ -122,10 +119,11 @@ public class DevLogDashboardMiddlewareTest
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         context.Response.Headers.WWWAuthenticate.ToString().Should().Be("Basic realm=\"Dashboard\"");
+        (await ReadBodyAsync(context)).Should().Be("Unauthorized");
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenBasicAuthenticationSchemeIsConfiguredWithValidHeader_ShouldAuthenticateAndReturnQueueStats()
+    public async Task InvokeAsync_WhenBasicAuthenticationIsConfiguredWithValidHeader_ShouldAuthenticateAndReturnQueueStats()
     {
         var queue = new BackgroundLogQueue(2);
         await queue.QueueLogEntryAsync(new LogEntry { Message = "1" });
@@ -138,21 +136,15 @@ public class DevLogDashboardMiddlewareTest
                 {
                     BasicAuthentication = new DevLogDashboardBasicAuthenticationOptions
                     {
-                        Scheme = TestBasicAuthenticationHandler.SchemeName,
+                        UserName = "admin",
+                        Password = "123456",
                         Realm = "Dashboard"
                     }
                 },
                 Mock.Of<ILogStore>(),
-                queue,
-                services =>
-                {
-                    services.AddAuthentication()
-                        .AddScheme<AuthenticationSchemeOptions, TestBasicAuthenticationHandler>(
-                            TestBasicAuthenticationHandler.SchemeName,
-                            _ => { });
-                }),
+                queue),
             "/api/serverTime",
-            authorizationHeader: TestBasicAuthenticationHandler.ValidAuthorizationHeader);
+            authorizationHeader: CreateBasicHeader("admin", "123456"));
 
         var middleware = new DevLogDashboardMiddleware(_ => Task.CompletedTask);
 
@@ -160,7 +152,7 @@ public class DevLogDashboardMiddlewareTest
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
         context.User.Identity?.IsAuthenticated.Should().BeTrue();
-        context.User.Identity?.AuthenticationType.Should().Be(TestBasicAuthenticationHandler.SchemeName);
+        context.User.Identity?.AuthenticationType.Should().Be("Basic");
 
         using var document = JsonDocument.Parse(await ReadBodyAsync(context));
         document.RootElement.GetProperty("queuedCount").GetInt32().Should().Be(2);
@@ -170,12 +162,9 @@ public class DevLogDashboardMiddlewareTest
     private static ServiceProvider CreateServices(
         DevLogDashboardOptions options,
         ILogStore logStore,
-        IBackgroundLogQueue queue,
-        Action<IServiceCollection>? configureAuthentication = null)
+        IBackgroundLogQueue queue)
     {
         var services = new ServiceCollection();
-        services.AddLogging();
-        configureAuthentication?.Invoke(services);
         services.AddSingleton(options);
         services.AddSingleton(logStore);
         services.AddSingleton(queue);
@@ -212,46 +201,9 @@ public class DevLogDashboardMiddlewareTest
         return await reader.ReadToEndAsync();
     }
 
-    private sealed class TestBasicAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    private static string CreateBasicHeader(string userName, string password)
     {
-        public const string SchemeName = "DashboardBasic";
-        public const string ValidAuthorizationHeader = "Basic dXNlcjpwYXNz";
-
-        public TestBasicAuthenticationHandler(
-            IOptionsMonitor<AuthenticationSchemeOptions> options,
-            ILoggerFactory logger,
-            UrlEncoder encoder)
-            : base(options, logger, encoder)
-        {
-        }
-
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-        {
-            if (!Request.Headers.TryGetValue("Authorization", out var authorization))
-            {
-                return Task.FromResult(AuthenticateResult.Fail("Missing authorization header"));
-            }
-
-            if (!string.Equals(authorization.ToString(), ValidAuthorizationHeader, StringComparison.Ordinal))
-            {
-                return Task.FromResult(AuthenticateResult.Fail("Invalid authorization header"));
-            }
-
-            var identity = new ClaimsIdentity(
-                new[]
-                {
-                    new Claim(ClaimTypes.Name, "user")
-                },
-                SchemeName);
-
-            return Task.FromResult(AuthenticateResult.Success(
-                new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
-        }
-
-        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
-        {
-            Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        }
+        var bytes = Encoding.UTF8.GetBytes($"{userName}:{password}");
+        return $"Basic {Convert.ToBase64String(bytes)}";
     }
 }

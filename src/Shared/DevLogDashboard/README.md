@@ -116,13 +116,14 @@ public class ValuesController : ControllerBase
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `AuthorizationFilter` | Func<HttpContext, Task<bool>> | null | 自定义授权过滤器，返回 false 则拒绝访问 |
+| `BasicAuthentication` | DevLogDashboardBasicAuthenticationOptions | null | 配置后启用内置 Basic 认证；未配置时允许匿名访问 |
 
 ### BasicAuthentication 配置
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `Scheme` | string | `Basic` | 认证方案名称 |
+| `UserName` | string | 空 | Basic 认证用户名 |
+| `Password` | string | 空 | Basic 认证密码 |
 | `Realm` | string | `DevLogDashboard` | 未认证时返回的 Basic realm |
 
 ### 后台写入配置
@@ -170,29 +171,10 @@ builder.Services.AddDevLogDashboard(options =>
 ```csharp
 builder.Services.AddDevLogDashboard(options =>
 {
-    options.AuthorizationFilter = context =>
-        Task.FromResult(context.User.Identity?.IsAuthenticated == true);
-});
-```
-
-### 配置 Basic 认证方案
-
-```csharp
-using Azrng.AspNetCore.Authentication.Basic;
-using Azrng.DevLogDashboard.Options;
-
-builder.Services.AddAuthentication(BasicAuthentication.AuthenticationSchema)
-    .AddBasicAuthentication(options =>
-    {
-        options.UserName = "admin";
-        options.Password = "123456";
-    });
-
-builder.Services.AddDevLogDashboard(options =>
-{
     options.BasicAuthentication = new DevLogDashboardBasicAuthenticationOptions
     {
-        Scheme = BasicAuthentication.AuthenticationSchema,
+        UserName = "admin",
+        Password = "123456",
         Realm = "DevLogDashboard"
     };
 });
@@ -498,7 +480,7 @@ using (var scope = app.Services.CreateScope())
 2. **内存限制**: 使用 `InMemoryLogStore` 时，默认最大存储 10000 条日志，超出后自动清理最旧的日志
 3. **后台批量写入**: 日志默认通过后台队列批量写入，不阻塞业务线程，日志写入可能有轻微延迟
 4. **线程安全**: `InMemoryLogStore` 使用 ReaderWriterLockSlim 保证多线程并发安全
-5. **授权安全**: 默认允许匿名访问；如需保护仪表板，请配置 `BasicAuthentication` 或自定义 `AuthorizationFilter`
+5. **授权安全**: 默认允许匿名访问；如需保护仪表板，请配置 `BasicAuthentication`
 6. **自定义存储**: 使用自定义存储实现时，请确保 `InitializeAsync` 方法幂等性，避免重复初始化
 7. **时间倒序**: 日志列表默认按时间倒序显示（最新的在前）
 

@@ -36,12 +36,6 @@ public class DevLogDashboardOptions
     public DevLogDashboardBasicAuthenticationOptions? BasicAuthentication { get; set; }
 
     /// <summary>
-    /// 访问授权过滤器
-    /// 为 null 时表示允许匿名访问；配置后返回 false 则拒绝访问
-    /// </summary>
-    public Func<HttpContext, Task<bool>>? AuthorizationFilter { get; set; }
-
-    /// <summary>
     /// 忽略的路径（不记录日志）
     /// </summary>
     public ICollection<string> IgnoredPaths { get; set; } = new[]

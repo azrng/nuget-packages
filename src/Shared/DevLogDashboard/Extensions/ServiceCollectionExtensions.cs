@@ -349,14 +349,17 @@ public static class ServiceCollectionExtensions
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(options.Scheme))
+        if (string.IsNullOrWhiteSpace(options.UserName))
         {
-            options.Scheme = "Basic";
+            throw new InvalidOperationException("DevLogDashboard BasicAuthentication.UserName 不能为空。");
         }
-        else
+
+        if (string.IsNullOrWhiteSpace(options.Password))
         {
-            options.Scheme = options.Scheme.Trim();
+            throw new InvalidOperationException("DevLogDashboard BasicAuthentication.Password 不能为空。");
         }
+
+        options.UserName = options.UserName.Trim();
 
         if (string.IsNullOrWhiteSpace(options.Realm))
         {

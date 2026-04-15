@@ -6,9 +6,14 @@ namespace Azrng.DevLogDashboard.Options;
 public class DevLogDashboardBasicAuthenticationOptions
 {
     /// <summary>
-    /// 认证方案名称
+    /// Basic 认证用户名
     /// </summary>
-    public string Scheme { get; set; } = "Basic";
+    public string UserName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Basic 认证密码
+    /// </summary>
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// 浏览器弹窗显示的 Realm
