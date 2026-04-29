@@ -377,16 +377,13 @@ public class Service
 | 图文 | 不限 | 支持图文链接 |
 | 模板卡片 | 不限 | JSON 格式 |
 
-## 🤝 贡献指南
+## 版本更新记录
 
-欢迎提交 Issue 和 Pull Request！
+### 1.1.0
 
-## 📄 许可证
+- 支持.Net7、.Net8、.Net9、.Net10
 
-[MIT License](LICENSE)
+### 1.0.0
 
-## 🔗 相关链接
+- 基础调用
 
-- [企业微信机器人 API 文档](https://developer.work.weixin.qq.com/document/path/91770)
-- [项目文档](https://azrng.github.io/nuget-docs)
-- [GitHub 仓库](https://github.com/azrng/nuget-packages)
