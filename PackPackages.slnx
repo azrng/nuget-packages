@@ -81,6 +81,7 @@
   </Folder>
   <Folder Name="/Shared/ThirdParty/">
     <Project Path="src\Shared\Azrng.AliyunSms\Azrng.AliyunSms.csproj" />
+    <Project Path="src\Shared\Azrng.NmcWeather\Azrng.NmcWeather.csproj" />
     <Project Path="src\Shared\Azrng.Notification.QYWeiXinRobot\Azrng.Notification.QYWeiXinRobot.csproj" />
     <Project Path="src\Shared\Azrng.YuntongxunSms\Azrng.YuntongxunSms.csproj" />
     <Project Path="src\Shared\Common.YuQueSdk\Common.YuQueSdk.csproj" />
