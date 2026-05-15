@@ -67,12 +67,13 @@ public class RepositoryAndUnitOfWork
         var content = Guid.NewGuid().ToString();
         await testRep.AddAsync(new TestEntity(content, "Test User", "test@example.com", "Specify context test"));
 
-        // 当使用IBaseRepository<TestEntity, TestDbContext>指定上下文的时候，就不能使用IUnitOfWork，应该使用IUnitOfWork<TestDbContext>
+        // IBaseRepository<TEntity, TDbContext> 和 IUnitOfWork 现在共享同一个 DbContext 实例
         var flag = await unitOfWork.SaveChangesAsync();
-        Assert.True(flag == 0);
+        Assert.True(flag > 0);
 
+        // 同一 DbContext 已提交，二次提交无待保存变更
         var flag2 = await unitOfWork2.SaveChangesAsync();
-        Assert.True(flag2 > 0);
+        Assert.True(flag2 == 0);
 
         await testRep.DeleteAsync(t => t.Content == content);
     }

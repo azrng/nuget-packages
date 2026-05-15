@@ -71,10 +71,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
             new IdHelperBootstrapper().SetWorkderId(config.WorkId).Boot();
 
-            services.AddScoped<DbContext, T>();
+            // 转发到 AddDbContext<T>() 注册的同一实例，确保 DbContext 和 T 在同一 Scope 内是同一个对象
+            services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());
             services.AddScoped(typeof(IBaseRepository<>), typeof(SqliteRepository<>));
             services.AddScoped(typeof(IBaseRepository<,>), typeof(SqliteRepository<,>));
-            services.AddScoped<IUnitOfWork, UnitOfWork<DbContext>>();
+            services.AddScoped<IUnitOfWork>(sp => new UnitOfWork<T>(sp.GetRequiredService<T>(), sp.GetRequiredService<ILogger<UnitOfWork<T>>>()));
 
             return services;
         }
@@ -118,10 +119,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
             new IdHelperBootstrapper().SetWorkderId(config.WorkId).Boot();
 
-            services.AddScoped<DbContext, T>();
+            // 转发到 AddDbContextFactory<T>() 注册的同一实例
+            services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());
             services.AddScoped(typeof(IBaseRepository<>), typeof(SqliteRepository<>));
             services.AddScoped(typeof(IBaseRepository<,>), typeof(SqliteRepository<,>));
-            services.AddScoped<IUnitOfWork, UnitOfWork<DbContext>>();
+            services.AddScoped<IUnitOfWork>(sp => new UnitOfWork<T>(sp.GetRequiredService<T>(), sp.GetRequiredService<ILogger<UnitOfWork<T>>>()));
 
             return services;
         }

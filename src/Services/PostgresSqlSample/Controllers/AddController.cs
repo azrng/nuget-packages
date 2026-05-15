@@ -16,18 +16,15 @@ public class AddController : ControllerBase
     private readonly ILogger<AddController> _logger;
     private readonly DbContext _db;
     private readonly IUnitOfWork<OpenDbContext> _unitOfWork;
-    private readonly IUnitOfWork _unitOfWork2;
 
     public AddController(IBaseRepository<User> userRep,
-                         OpenDbContext dbContext, ILogger<AddController> logger, DbContext db, IUnitOfWork<OpenDbContext> unitOfWork,
-                         IUnitOfWork unitOfWork2)
+                         OpenDbContext dbContext, ILogger<AddController> logger, DbContext db, IUnitOfWork<OpenDbContext> unitOfWork)
     {
         _userRep = userRep;
         _dbContext = dbContext;
         _logger = logger;
         _db = db;
         _unitOfWork = unitOfWork;
-        _unitOfWork2 = unitOfWork2;
     }
 
     [HttpGet]
@@ -43,14 +40,8 @@ public class AddController : ControllerBase
                        new User("admin6", "123456", true)
                    };
 
-        // var flag = await _userRep.AddAsync(list, true);
-
-        // 这组合使用的不是同一个上下文，所以保存失败
-        // await _userRep.AddAsync(list);
-        // var flag = await _unitOfWork.SaveChangesAsync();
-
         await _userRep.AddAsync(list);
-        var flag = await _unitOfWork2.SaveChangesAsync();
+        var flag = await _unitOfWork.SaveChangesAsync();
 
         // var flag = await _db.SaveChangesAsync();
         return flag;

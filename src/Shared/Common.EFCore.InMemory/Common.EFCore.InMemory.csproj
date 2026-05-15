@@ -9,7 +9,7 @@
         <Authors>Azrng</Authors>
         <Copyright>Azrng</Copyright>
         <Description>封装基本的EFCore操作内存数据库的方法</Description>
-        <Version>1.5.0</Version>
+        <Version>1.6.0</Version>
         <PackageId>Common.EFCore.InMemory</PackageId>
         <RootNamespace>Azrng.EFCore.InMemory</RootNamespace>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
