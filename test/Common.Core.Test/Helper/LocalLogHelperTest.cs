@@ -1,5 +1,6 @@
 ﻿using Azrng.Core;
 using Azrng.Core.Enums;
+using FluentAssertions;
 using System.Diagnostics;
 using Xunit.Abstractions;
 
@@ -18,130 +19,142 @@ public class LocalLogHelperTest
     /// 测试写入日志级别
     /// </summary>
     [Fact]
-    public void WriteLogLevel_ReturnOk()
+    public async Task WriteLogLevel_ReturnOk()
     {
-        try
-        {
-            LocalLogHelper.WriteMyLogs("Test", "开始");
+        LocalLogHelper.WriteMyLogs("Test", "开始");
 
-            CoreGlobalConfig.MinimumLevel = LogLevel.Information;
-            LocalLogHelper.LogTrace("我是trace日志级别日志");
-            LocalLogHelper.LogDebug("我是debug日志级别日志");
-            LocalLogHelper.LogInformation("我是information日志级别日志");
-            LocalLogHelper.LogWarning("我是warning日志级别日志");
-            LocalLogHelper.LogError("我是error日志级别日志");
-            LocalLogHelper.LogCritical("我是critical日志级别日志");
+        CoreGlobalConfig.MinimumLevel = LogLevel.Information;
+        LocalLogHelper.LogTrace("我是trace日志级别日志");
+        LocalLogHelper.LogDebug("我是debug日志级别日志");
+        LocalLogHelper.LogInformation("我是information日志级别日志");
+        LocalLogHelper.LogWarning("我是warning日志级别日志");
+        LocalLogHelper.LogError("我是error日志级别日志");
+        LocalLogHelper.LogCritical("我是critical日志级别日志");
 
-            LocalLogHelper.WriteMyLogs("Test", "更新日志级别");
+        LocalLogHelper.WriteMyLogs("Test", "更新日志级别");
 
-            CoreGlobalConfig.MinimumLevel = LogLevel.Warning;
-            LocalLogHelper.LogTrace("我是trace日志级别日志");
-            LocalLogHelper.LogDebug("我是debug日志级别日志");
-            LocalLogHelper.LogInformation("我是information日志级别日志");
-            LocalLogHelper.LogWarning("我是warning日志级别日志");
-            LocalLogHelper.LogError("我是error日志级别日志");
-            LocalLogHelper.LogCritical("我是critical日志级别日志");
-        }
-        catch (Exception ex)
-        {
-            _testOutputHelper.WriteLine(ex.Message);
-        }
+        CoreGlobalConfig.MinimumLevel = LogLevel.Warning;
+        LocalLogHelper.LogTrace("我是trace日志级别日志");
+        LocalLogHelper.LogDebug("我是debug日志级别日志");
+        LocalLogHelper.LogInformation("我是information日志级别日志");
+        LocalLogHelper.LogWarning("我是warning日志级别日志");
+        LocalLogHelper.LogError("我是error日志级别日志");
+        LocalLogHelper.LogCritical("我是critical日志级别日志");
+
+        await LocalLogHelper.FlushAsync();
     }
 
     /// <summary>
     /// 测试多线程写入日志
     /// </summary>
     [Fact]
-    public void MultiTaskWrite_ReturnOk()
+    public async Task MultiTaskWrite_ReturnOk()
     {
-        try
+        Parallel.For(1, 10, i =>
         {
-            Parallel.For(1, 10, i =>
+            _testOutputHelper.WriteLine(i.ToString());
+            LocalLogHelper.WriteMyLogs("Test", $"测试写入{i} {Environment.CurrentManagedThreadId}");
+        });
+
+        await LocalLogHelper.FlushAsync();
+    }
+
+    /// <summary>
+    /// 测试多线程写入日志
+    /// </summary>
+    [Fact]
+    public async Task ThreadWrite_ReturnOk()
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        // 创建多个线程来测试多线程写入日志
+        var threads = new Thread[5];
+        for (var i = 0; i < threads.Length; i++)
+        {
+            threads[i] = new Thread(() =>
             {
-                _testOutputHelper.WriteLine(i.ToString());
-                LocalLogHelper.WriteMyLogs("Test", $"测试写入{i} {Environment.CurrentManagedThreadId}");
+                for (var j = 0; j < 10; j++)
+                {
+                    Thread.Sleep(1000);
+                    LocalLogHelper.WriteMyLogs("ERROR", $"线程 {Environment.CurrentManagedThreadId} 的日志消息 {j}");
+                }
             });
+            threads[i].Start();
         }
-        catch (Exception ex)
+
+        // 等待所有线程完成
+        foreach (var thread in threads)
         {
-            _testOutputHelper.WriteLine(ex.Message);
+            thread.Join();
         }
-    }
 
-    /// <summary>
-    /// 测试多线程写入日志
-    /// </summary>
-    [Fact]
-    public void ThreadWrite_ReturnOk()
-    {
-        try
-        {
-            var stopwatch = Stopwatch.StartNew();
+        await LocalLogHelper.FlushAsync();
 
-            // 创建多个线程来测试多线程写入日志
-            var threads = new Thread[5];
-            for (var i = 0; i < threads.Length; i++)
-            {
-                threads[i] = new Thread(() =>
-                {
-                    for (var j = 0; j < 10; j++)
-                    {
-                        Thread.Sleep(1000);
-                        LocalLogHelper.WriteMyLogs("ERROR", $"线程 {Environment.CurrentManagedThreadId} 的日志消息 {j}");
-                    }
-                });
-                threads[i].Start();
-            }
-
-            // 等待所有线程完成
-            foreach (var thread in threads)
-            {
-                thread.Join();
-            }
-
-            var s = stopwatch.ElapsedMilliseconds;
-            _testOutputHelper.WriteLine($"当前方法耗时：{s}");
-        }
-        catch (Exception ex)
-        {
-            _testOutputHelper.WriteLine(ex.Message);
-        }
+        var s = stopwatch.ElapsedMilliseconds;
+        _testOutputHelper.WriteLine($"当前方法耗时：{s}");
     }
 
     [Fact]
-    public void ThreadWrite2_ReturnOk()
+    public async Task ThreadWrite2_ReturnOk()
     {
+        var stopwatch = Stopwatch.StartNew();
+
+        // 创建多个线程来测试多线程写入日志
+        var threads = new Thread[5];
+        for (var i = 0; i < threads.Length; i++)
+        {
+            threads[i] = new Thread(() =>
+            {
+                for (var j = 0; j < 10; j++)
+                {
+                    Thread.Sleep(1000);
+                    LocalLogHelper.WriteMyLogs("ERROR", $"线程 {Environment.CurrentManagedThreadId} 的日志消息 {j}");
+                }
+            });
+            threads[i].Start();
+        }
+
+        // 等待所有线程完成
+        foreach (var thread in threads)
+        {
+            thread.Join();
+        }
+
+        await LocalLogHelper.FlushAsync();
+
+        var s = stopwatch.ElapsedMilliseconds;
+        _testOutputHelper.WriteLine($"当前方法耗时：{s}");
+    }
+
+    [Fact]
+    public async Task FlushAsync_WritesQueuedLogsToFile()
+    {
+        var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+        var logFilePath = Path.Combine(logPath, DateTime.Now.ToString("yyyyMMdd") + ".log");
+        var message = $"flush-test-{Guid.NewGuid():N}";
+
+        await LocalLogHelper.WriteMyLogsAsync("Test", message);
+        await LocalLogHelper.FlushAsync();
+
+        File.Exists(logFilePath).Should().BeTrue();
+        var logContent = await File.ReadAllTextAsync(logFilePath);
+        logContent.Should().Contain(message);
+    }
+
+    [Fact]
+    public void CoreGlobalConfig_ExposesLogRetentionDays()
+    {
+        var originalRetentionDays = CoreGlobalConfig.LogRetentionDays;
+
         try
         {
-            var stopwatch = Stopwatch.StartNew();
+            CoreGlobalConfig.LogRetentionDays = 3;
 
-            // 创建多个线程来测试多线程写入日志
-            var threads = new Thread[5];
-            for (var i = 0; i < threads.Length; i++)
-            {
-                threads[i] = new Thread(() =>
-                {
-                    for (var j = 0; j < 10; j++)
-                    {
-                        Thread.Sleep(1000);
-                        LocalLogHelper.WriteMyLogs("ERROR", $"线程 {Environment.CurrentManagedThreadId} 的日志消息 {j}");
-                    }
-                });
-                threads[i].Start();
-            }
-
-            // 等待所有线程完成
-            foreach (var thread in threads)
-            {
-                thread.Join();
-            }
-
-            var s = stopwatch.ElapsedMilliseconds;
-            _testOutputHelper.WriteLine($"当前方法耗时：{s}");
+            CoreGlobalConfig.LogRetentionDays.Should().Be(3);
         }
-        catch (Exception ex)
+        finally
         {
-            _testOutputHelper.WriteLine(ex.Message);
+            CoreGlobalConfig.LogRetentionDays = originalRetentionDays;
         }
     }
 }

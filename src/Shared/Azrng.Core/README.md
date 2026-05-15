@@ -518,6 +518,7 @@ void LogError(string message)                                    // 记录错误
 
 // 异步方法
 Task WriteMyLogsAsync(string level, string message)              // 异步记录日志
+Task FlushAsync()                                                // 立即写入当前队列中的日志
 
 // 配置
 CoreGlobalConfig.MinimumLevel = LogLevel.Warning;                // 设置最小日志级别
@@ -533,6 +534,7 @@ LocalLogHelper.LogError("这是一条错误日志");
 
 // 异步使用
 await LocalLogHelper.WriteMyLogsAsync("Info", "这是一条测试日志");
+await LocalLogHelper.FlushAsync();
 
 // 配置日志级别（只输出Warning及以上级别）
 CoreGlobalConfig.MinimumLevel = LogLevel.Warning;

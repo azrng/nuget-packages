@@ -18,5 +18,10 @@ namespace Azrng.Core
         /// 日志清理间隔
         /// </summary>
         public static int CleanupInterval { get; set; } = 7;
+
+        /// <summary>
+        /// 日志保留天数
+        /// </summary>
+        public static int LogRetentionDays { get; set; } = 7;
     }
 }

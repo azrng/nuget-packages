@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Azrng.Core.Enums;
 
@@ -28,25 +29,26 @@ namespace Azrng.Core.Helpers
         private static readonly TimeSpan _flushInterval = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// 是否正在处理日志
+        /// 当前队列中的日志数量
         /// </summary>
-        private static volatile bool _isProcessing;
+        private static int _queuedLogCount;
 
         /// <summary>
-        /// 日志保留天数
+        /// 刷盘互斥锁
         /// </summary>
-        private static readonly int _logRetentionDays = 7;
+        private static readonly SemaphoreSlim _processSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// 清理日志的时间间隔（默认7天）
         /// </summary>
-        private static readonly TimeSpan _cleanupInterval =
+        private static TimeSpan CleanupInterval =>
             TimeSpan.FromDays(CoreGlobalConfig.CleanupInterval <= 0 ? 7 : CoreGlobalConfig.CleanupInterval);
 
         // 使用静态构造函数启动后台处理任务
         static LocalLogHelper()
         {
             StartBackgroundProcessor();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => FlushOnExit();
 
             if (CoreGlobalConfig.IsClearLocalLog)
                 StartCleanupProcessor();
@@ -61,8 +63,8 @@ namespace Azrng.Core.Helpers
             {
                 while (true)
                 {
-                    await ProcessLogQueueAsync();
                     await Task.Delay(_flushInterval);
+                    await ProcessLogQueueAsync();
                 }
             });
         }
@@ -89,7 +91,7 @@ namespace Azrng.Core.Helpers
                     catch (Exception ex)
                     {
                         await LogErrorAsync(ex);
-                        await Task.Delay(_cleanupInterval);
+                        await Task.Delay(CleanupInterval);
                     }
                 }
             });
@@ -233,12 +235,21 @@ namespace Azrng.Core.Helpers
             var logEntry = new LogEntry { Timestamp = DateTime.Now, Type = type, Message = logInfo };
 
             _logQueue.Enqueue(logEntry);
+            Interlocked.Increment(ref _queuedLogCount);
 
             // 如果队列超过最大大小，触发立即处理
-            if (_logQueue.Count >= _maxQueueSize)
+            if (Volatile.Read(ref _queuedLogCount) >= _maxQueueSize)
             {
                 await ProcessLogQueueAsync();
             }
+        }
+
+        /// <summary>
+        /// 将当前队列中的日志立即写入文件
+        /// </summary>
+        public static Task FlushAsync()
+        {
+            return ProcessLogQueueAsync(true);
         }
 
         /// <summary>
@@ -255,27 +266,53 @@ namespace Azrng.Core.Helpers
         /// <summary>
         /// 处理日志队列
         /// </summary>
-        private static async Task ProcessLogQueueAsync()
+        private static async Task ProcessLogQueueAsync(bool waitForCompletion = false)
         {
-            if (_isProcessing) return;
+            var entered = waitForCompletion
+                ? await WaitForProcessingAsync()
+                : await _processSemaphore.WaitAsync(0);
+
+            if (!entered)
+            {
+                return;
+            }
 
             try
             {
-                _isProcessing = true;
+                if (Volatile.Read(ref _queuedLogCount) <= 0)
+                {
+                    return;
+                }
+
                 var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
                 Directory.CreateDirectory(logPath);
 
-                var currentDate = DateTime.Now;
-                var logFilePath = GetLogFilePath(logPath, currentDate);
+                StreamWriter? sw = null;
+                var currentLogFilePath = string.Empty;
 
-                await using var sw = new StreamWriter(logFilePath, true, Encoding.UTF8, 8192);
-                while (_logQueue.TryDequeue(out var logEntry))
+                try
                 {
-                    var logMessage = FormatLogMessage(logEntry);
-                    await sw.WriteLineAsync(logMessage);
-                }
+                    while (_logQueue.TryDequeue(out var logEntry))
+                    {
+                        Interlocked.Decrement(ref _queuedLogCount);
 
-                await sw.FlushAsync();
+                        var logFilePath = GetLogFilePath(logPath, logEntry.Timestamp);
+                        if (sw == null ||
+                            !string.Equals(currentLogFilePath, logFilePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            await FlushAndDisposeAsync(sw);
+                            sw = new StreamWriter(logFilePath, true, Encoding.UTF8, 8192);
+                            currentLogFilePath = logFilePath;
+                        }
+
+                        var logMessage = FormatLogMessage(logEntry);
+                        await sw.WriteLineAsync(logMessage);
+                    }
+                }
+                finally
+                {
+                    await FlushAndDisposeAsync(sw);
+                }
             }
             catch (Exception ex)
             {
@@ -283,8 +320,25 @@ namespace Azrng.Core.Helpers
             }
             finally
             {
-                _isProcessing = false;
+                _processSemaphore.Release();
             }
+        }
+
+        private static async Task<bool> WaitForProcessingAsync()
+        {
+            await _processSemaphore.WaitAsync();
+            return true;
+        }
+
+        private static async Task FlushAndDisposeAsync(StreamWriter? writer)
+        {
+            if (writer == null)
+            {
+                return;
+            }
+
+            await writer.FlushAsync();
+            await writer.DisposeAsync();
         }
 
         private static string FormatLogMessage(LogEntry entry)
@@ -299,7 +353,10 @@ namespace Azrng.Core.Helpers
         {
             try
             {
-                var errorLogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "error.log");
+                var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                Directory.CreateDirectory(logPath);
+
+                var errorLogPath = Path.Combine(logPath, "error.log");
                 await using var sw = new StreamWriter(errorLogPath, true, Encoding.UTF8);
                 await sw.WriteLineAsync($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} ==> Error: {ex.Message}");
                 await sw.WriteLineAsync($"StackTrace: {ex.StackTrace}");
@@ -323,7 +380,8 @@ namespace Azrng.Core.Helpers
                     return;
                 }
 
-                var cutoffDate = DateTime.Now.AddDays(-_logRetentionDays);
+                var retentionDays = CoreGlobalConfig.LogRetentionDays <= 0 ? 7 : CoreGlobalConfig.LogRetentionDays;
+                var cutoffDate = DateTime.Now.AddDays(-retentionDays);
                 var directory = new DirectoryInfo(logPath);
                 var logFiles = directory.GetFiles("*.log");
 
@@ -371,6 +429,18 @@ namespace Azrng.Core.Helpers
             catch (IOException)
             {
                 return true;
+            }
+        }
+
+        private static void FlushOnExit()
+        {
+            try
+            {
+                FlushAsync().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // 进程退出阶段不再向外抛出日志刷盘异常
             }
         }
 
