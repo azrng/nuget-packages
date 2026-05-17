@@ -5,6 +5,7 @@ using Azrng.EFCore.InMemory.Repository;
 using Coldairarrow.Util;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace Microsoft.Extensions.DependencyInjection
