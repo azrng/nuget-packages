@@ -896,6 +896,10 @@ public IResultModel<IEnumerable<WeatherForecast>> Get()
 
 ## 📝 版本更新记录
 
+### 1.17.0
+
+- 优化写入本地日志的操作
+
 ### 1.16.0
 - 完善 DatabaseType 枚举的 XML 文档注释，为所有数据库类型添加详细的中文说明
 
