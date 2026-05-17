@@ -8,8 +8,6 @@
         <Company>Azrng</Company>
         <Title>Cache Core Interface</Title>
         <Description>缓存的基础接口定义</Description>
-        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <PackageTags>cache;core;interface</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>

@@ -1,0 +1,8 @@
+<Project>
+
+    <!-- Release 配置下生成 XML 文档文件（用于 NuGet 包） -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+</Project>

@@ -6,8 +6,6 @@
         <Title>企业微信推送机器人包</Title>
         <Authors>azrng</Authors>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <PackageTags>wechat;notification;robot;message;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>

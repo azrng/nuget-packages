@@ -11,8 +11,6 @@
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <PackageId>Azrng.Swashbuckle</PackageId>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Swagger Extensions</Title>

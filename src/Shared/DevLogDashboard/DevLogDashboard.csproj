@@ -16,9 +16,7 @@
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
         <!-- Embed static files -->

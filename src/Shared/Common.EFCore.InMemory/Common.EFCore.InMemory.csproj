@@ -12,9 +12,7 @@
         <Version>1.6.0</Version>
         <PackageId>Common.EFCore.InMemory</PackageId>
         <RootNamespace>Azrng.EFCore.InMemory</RootNamespace>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-        <DocumentationFile>$(OutputPath)$(AssemblyName).$(TargetFramework).xml</DocumentationFile>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
