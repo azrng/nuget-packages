@@ -10,7 +10,7 @@
 
 | 任务 ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 任务状态 | 优先级 | 最近更新时间 |
 | ------- | -------- | -------- | -------- | --------- | -------- | ------ | ------------ |
-| T008 | 修复 Common.HttpClients 日志脱敏结构问题 | 将 HTTP 日志脱敏抽象为可替换策略，修复默认脱敏破坏 JSON 格式的问题，并补充测试、文档与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-25 15:13 |
+| T008 | 修复 Common.HttpClients 日志脱敏结构问题 | 将 HTTP 日志脱敏抽象为可替换策略，修复默认脱敏破坏 JSON 格式的问题，并补充测试、文档与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-25 15:25 |
 | T007 | 修复 LocalLogHelper 日志可靠性问题 | 修复 `Azrng.Core` 本地日志写入的并发保护、显式 flush、错误日志目录与保留天数配置问题，并补充回归测试与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-15 |
 | T006 | 新增 Azrng.NmcWeather 天气包 | 在 `src/Shared` 下新增 `Azrng.NmcWeather`，基于 `Common.HttpClients` 封装中央气象台省份、城市与天气查询能力，并接入 `ThirdNugetStudy.slnx` 与基础测试 | 开发 | Codex | REVIEW | P1 | 2026-04-30 23:45 |
 | T005 | 统一 Shared 类库 XML 文档输出配置 | 批量补齐 src/Shared 下类库项目的 XML 文档生成配置，并统一使用按目标框架区分的输出文件格式，避免并行构建写入冲突 | 收口 | Codex | REVIEW | P1 | 2026-04-15 17:31 |

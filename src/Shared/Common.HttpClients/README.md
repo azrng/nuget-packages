@@ -35,6 +35,7 @@ services.AddHttpClientService();
 services.AddHttpClientService(options =>
 {
     options.AuditLog = true;                        // 启用审计日志
+    options.EnableLogRedaction = true;              // 启用日志脱敏
     options.FailThrowException = false;              // 失败时不抛出异常，返回 null
     options.Timeout = 30;                            // 自定义超时时间（秒），范围：1-3600
     options.MaxRetryAttempts = 3;                    // 最大重试次数，范围：0-10
