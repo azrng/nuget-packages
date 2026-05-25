@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -82,6 +83,9 @@ namespace Common.HttpClients
 
             // 注册 HttpContextAccessor（如果还没有注册）
             services.AddHttpContextAccessor();
+
+            // 注册默认日志脱敏器，调用方可提前注册 IHttpLogRedactor 覆盖默认实现
+            services.TryAddSingleton<IHttpLogRedactor, DefaultHttpLogRedactor>();
 
             // 注册日志处理器
             services.AddTransient<LoggingHandler>();

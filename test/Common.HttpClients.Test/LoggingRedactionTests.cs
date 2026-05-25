@@ -1,8 +1,10 @@
 using Common.HttpClients.Test.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace Common.HttpClients.Test
@@ -165,6 +167,88 @@ namespace Common.HttpClients.Test
         }
 
         [Fact]
+        public async Task Logging_DefaultRedaction_ShouldKeepJsonContentValid()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var requestBody =
+                "{\"password\":\"a\\\"b\",\"name\":\"az\",\"secret\":{\"inner\":\"hidden\"},\"nested\":{\"access_token\":\"nested-token\",\"count\":1},\"items\":[{\"api_key\":\"item-key\"}]}";
+            var responseBody = "{\"access_token\":\"resp-secret-token\",\"message\":\"line\\nnext\"}";
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: true, responseBody: responseBody);
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://unit.test/json-redaction")
+                                {
+                                    Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
+                                };
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+            var requestContent = ExtractLogValue(logs, "RequestContent:", "ResponseHeader:");
+            var responseContent = ExtractLogValue(logs, "ResponseContent:", null);
+
+            using var requestJson = JsonDocument.Parse(requestContent);
+            using var responseJson = JsonDocument.Parse(responseContent);
+
+            Assert.Equal("***", requestJson.RootElement.GetProperty("password").GetString());
+            Assert.Equal("***", requestJson.RootElement.GetProperty("secret").GetString());
+            Assert.Equal("***", requestJson.RootElement.GetProperty("nested").GetProperty("access_token").GetString());
+            Assert.Equal("***", requestJson.RootElement.GetProperty("items")[0].GetProperty("api_key").GetString());
+            Assert.Equal("az", requestJson.RootElement.GetProperty("name").GetString());
+            Assert.Equal("***", responseJson.RootElement.GetProperty("access_token").GetString());
+            Assert.Equal("line\nnext", responseJson.RootElement.GetProperty("message").GetString());
+            Assert.DoesNotContain("nested-token", logs);
+            Assert.DoesNotContain("item-key", logs);
+            Assert.DoesNotContain("hidden", logs);
+        }
+
+        [Fact]
+        public async Task Logging_WhenRedactionDisabled_ShouldNotCallCustomRedactor()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var redactor = new TrackingLogRedactor();
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: false, logRedactor: redactor);
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://unit.test/no-redaction")
+                                {
+                                    Content = new StringContent("{\"password\":\"abc123\"}", Encoding.UTF8, "application/json")
+                                };
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+
+            Assert.False(redactor.ContentCalled);
+            Assert.False(redactor.HeadersCalled);
+            Assert.Contains("abc123", logs);
+            Assert.Contains("resp-secret-token", logs);
+        }
+
+        [Fact]
+        public async Task Logging_ShouldUseCustomRedactor_WhenRegistered()
+        {
+            var logger = new ListLogger<LoggingHandler>();
+            var redactor = new TrackingLogRedactor();
+            var handler = CreateLoggingClientHandler(logger, enableLogRedaction: true, logRedactor: redactor);
+
+            using var client = new HttpClient(handler);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://unit.test/custom-redactor")
+                                {
+                                    Content = new StringContent("{\"password\":\"abc123\"}", Encoding.UTF8, "application/json")
+                                };
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer request-secret-token");
+
+            await client.SendAsync(request);
+            var logs = string.Join(Environment.NewLine, logger.Messages.ToArray());
+
+            Assert.True(redactor.ContentCalled);
+            Assert.True(redactor.HeadersCalled);
+            Assert.Contains("custom-redacted-content", logs);
+            Assert.Contains("custom-redacted-header", logs);
+            Assert.DoesNotContain("abc123", logs);
+            Assert.DoesNotContain("request-secret-token", logs);
+        }
+
+        [Fact]
         public async Task Logging_ShouldRedact_CustomSensitiveHeader()
         {
             var logger = new ListLogger<LoggingHandler>();
@@ -202,7 +286,7 @@ namespace Common.HttpClients.Test
         private static LoggingHandler CreateLoggingClientHandler(ListLogger<LoggingHandler> logger, bool enableLogRedaction,
             bool auditLog = true, int maxOutputLength = 0, string responseBody = "{\"access_token\":\"resp-secret-token\",\"message\":\"ok\"}",
             string responseContentType = "application/json", IHttpContextAccessor? accessor = null, Action<HttpRequestMessage>? onRequest = null,
-            string[]? additionalSensitiveFields = null, string[]? additionalSensitiveHeaders = null)
+            string[]? additionalSensitiveFields = null, string[]? additionalSensitiveHeaders = null, IHttpLogRedactor? logRedactor = null)
         {
             var options = Options.Create(new HttpClientOptions
                                          {
@@ -213,7 +297,7 @@ namespace Common.HttpClients.Test
                                              AdditionalSensitiveHeaders = additionalSensitiveHeaders ?? Array.Empty<string>()
                                          });
 
-            var loggingHandler = new LoggingHandler(logger, options, accessor);
+            var loggingHandler = new LoggingHandler(logger, options, accessor, logRedactor);
             loggingHandler.InnerHandler = new DelegateHttpMessageHandler((request, _) =>
             {
                 onRequest?.Invoke(request);
@@ -224,6 +308,40 @@ namespace Common.HttpClients.Test
                                        });
             });
             return loggingHandler;
+        }
+
+        private static string ExtractLogValue(string logs, string startMarker, string? endMarker)
+        {
+            var start = logs.IndexOf(startMarker, StringComparison.Ordinal);
+            Assert.True(start >= 0, $"Missing marker: {startMarker}");
+
+            start += startMarker.Length;
+            var end = endMarker == null ? logs.Length : logs.IndexOf(endMarker, start, StringComparison.Ordinal);
+            Assert.True(end >= 0, $"Missing marker: {endMarker}");
+
+            return logs.Substring(start, end - start).Trim();
+        }
+
+        private sealed class TrackingLogRedactor : IHttpLogRedactor
+        {
+            public bool ContentCalled { get; private set; }
+
+            public bool HeadersCalled { get; private set; }
+
+            public string RedactContent(string content)
+            {
+                ContentCalled = true;
+                return "custom-redacted-content";
+            }
+
+            public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+            {
+                HeadersCalled = true;
+                return new Dictionary<string, string>
+                       {
+                           ["Authorization"] = "custom-redacted-header"
+                       };
+            }
         }
     }
 }

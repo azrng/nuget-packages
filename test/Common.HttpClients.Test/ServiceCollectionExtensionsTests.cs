@@ -138,5 +138,45 @@ namespace Common.HttpClients.Test
             Assert.Equal(5, options.MaxRetryAttempts);
             Assert.Equal(2, options.RetryDelaySeconds);
         }
+
+        [Fact]
+        public void AddHttpClientService_ShouldRegisterDefaultLogRedactor()
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddHttpClientService();
+
+            using var provider = services.BuildServiceProvider();
+            var redactor = provider.GetRequiredService<IHttpLogRedactor>();
+
+            Assert.IsType<DefaultHttpLogRedactor>(redactor);
+        }
+
+        [Fact]
+        public void AddHttpClientService_ShouldKeepCustomLogRedactor()
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<IHttpLogRedactor, CustomHttpLogRedactor>();
+            services.AddHttpClientService();
+
+            using var provider = services.BuildServiceProvider();
+            var redactor = provider.GetRequiredService<IHttpLogRedactor>();
+
+            Assert.IsType<CustomHttpLogRedactor>(redactor);
+        }
+
+        private sealed class CustomHttpLogRedactor : IHttpLogRedactor
+        {
+            public string RedactContent(string content)
+            {
+                return content;
+            }
+
+            public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+            {
+                return headers;
+            }
+        }
     }
 }

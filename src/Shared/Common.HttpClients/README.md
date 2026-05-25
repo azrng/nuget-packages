@@ -173,9 +173,33 @@ var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
 - 默认脱敏字段包含：`password`、`token`、`access_token`、`refresh_token`、`api_key` 等常见字段
 - 默认脱敏请求头包含：`Authorization`、`Cookie`、`X-Api-Key` 等
 - 可通过 `AdditionalSensitiveFields`、`AdditionalSensitiveHeaders` 扩展脱敏范围
-- 当前脱敏主要覆盖 JSON 和 `key=value` 文本，不保证覆盖所有嵌套/编码场景（例如复杂嵌套 JSON、base64 token）
+- JSON 内容会优先按结构化 JSON 解析并递归脱敏，未触发截断时可保持 JSON 格式
+- 非 JSON 内容会回退到 `key=value` 文本和 Bearer Token 脱敏
+- 如需完全自定义脱敏逻辑，可提前注册 `IHttpLogRedactor` 覆盖默认实现
 
 > `GetStreamAsync` 会自动跳过响应体审计，避免流式读取场景下日志提前消费响应流。
+
+#### 自定义日志脱敏器
+
+```csharp
+public sealed class CustomHttpLogRedactor : IHttpLogRedactor
+{
+    public string RedactContent(string content)
+    {
+        // 返回自定义脱敏后的内容
+        return content;
+    }
+
+    public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+    {
+        // 返回自定义脱敏后的请求头/响应头
+        return headers;
+    }
+}
+
+services.AddSingleton<IHttpLogRedactor, CustomHttpLogRedactor>();
+services.AddHttpClientService();
+```
 
 ## 弹性策略
 
@@ -345,6 +369,8 @@ options.AdditionalSensitiveHeaders = new[] { "X-Custom-Auth" };
 ## 版本更新记录
 
 * 2.1.0
+  * 新增 `IHttpLogRedactor`，支持调用方自定义 HTTP 日志脱敏逻辑
+  * 默认日志脱敏改为优先按 JSON 结构递归处理，避免未截断 JSON 在脱敏后格式损坏
   * 新增 `MaxRequestBodyLength` 配置项，用于限制请求体日志输出长度
   * `MaxOutputResponseLength` 用于限制响应体日志输出长度
   * 审计日志默认仅保留请求体和响应体前 4096 个字符

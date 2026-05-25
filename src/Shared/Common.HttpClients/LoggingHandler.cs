@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,41 +16,10 @@ namespace Common.HttpClients
     /// </summary>
     public class LoggingHandler : DelegatingHandler
     {
-        private static readonly string[] DefaultSensitiveHeaderNames =
-        {
-            "Authorization",
-            "Proxy-Authorization",
-            "Cookie",
-            "Set-Cookie",
-            "X-Api-Key",
-            "Api-Key",
-            "X-Auth-Token"
-        };
-
-        private static readonly string[] DefaultSensitiveFieldNames =
-        {
-            "password",
-            "passwd",
-            "pwd",
-            "secret",
-            "token",
-            "access_token",
-            "refresh_token",
-            "client_secret",
-            "api_key",
-            "api-key"
-        };
-
-        private static readonly Regex BearerValuePattern = new(
-            "(Bearer\\s+)[A-Za-z0-9\\-._~+/]+=*",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private readonly ILogger<LoggingHandler> _logger;
         private readonly HttpClientOptions _httpConfig;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly HashSet<string> _sensitiveHeaderNames;
-        private readonly Regex _jsonSensitiveValuePattern;
-        private readonly Regex _kvSensitiveValuePattern;
+        private readonly IHttpLogRedactor _logRedactor;
 
         /// <summary>
         /// 初始化 <see cref="LoggingHandler"/> 的新实例
@@ -59,21 +27,14 @@ namespace Common.HttpClients
         /// <param name="logger">日志记录器</param>
         /// <param name="options">HTTP配置选项</param>
         /// <param name="httpContextAccessor">HTTP上下文访问器（可选）</param>
+        /// <param name="logRedactor">HTTP日志脱敏器（可选）</param>
         public LoggingHandler(ILogger<LoggingHandler> logger, IOptions<HttpClientOptions> options,
-                              IHttpContextAccessor httpContextAccessor = null)
+                              IHttpContextAccessor httpContextAccessor = null, IHttpLogRedactor logRedactor = null)
         {
             _logger = logger;
             _httpConfig = options.Value;
             _httpContextAccessor = httpContextAccessor;
-
-            _sensitiveHeaderNames = BuildSensitiveHeaders(_httpConfig.AdditionalSensitiveHeaders);
-            var sensitiveFieldPattern = BuildSensitiveFieldPattern(_httpConfig.AdditionalSensitiveFields);
-            _jsonSensitiveValuePattern = new Regex(
-                "(\"(?:" + sensitiveFieldPattern + ")\"\\s*:\\s*\")([^\"]*)(\")",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-            _kvSensitiveValuePattern = new Regex(
-                "\\b(" + sensitiveFieldPattern + ")=([^&\\s]+)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            _logRedactor = logRedactor ?? new DefaultHttpLogRedactor(options);
         }
 
         /// <summary>
@@ -307,16 +268,7 @@ namespace Common.HttpClients
                 }
 
                 var str = await content.ReadAsStringAsync().ConfigureAwait(false);
-                str = ApplyRedaction(str);
-
-                try
-                {
-                    return Regex.Unescape(str);
-                }
-                catch (Exception)
-                {
-                    return str;
-                }
+                return ApplyRedaction(str);
             }
             catch (Exception)
             {
@@ -403,16 +355,7 @@ namespace Common.HttpClients
                 return headers;
             }
 
-            var redacted = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
-            foreach (var key in redacted.Keys.ToList())
-            {
-                if (_sensitiveHeaderNames.Contains(key))
-                {
-                    redacted[key] = "***";
-                }
-            }
-
-            return redacted;
+            return _logRedactor.RedactHeaders(headers);
         }
 
         /// <summary>
@@ -427,61 +370,7 @@ namespace Common.HttpClients
                 return content;
             }
 
-            var redacted = _jsonSensitiveValuePattern.Replace(content, "$1***$3");
-            redacted = _kvSensitiveValuePattern.Replace(redacted, "$1=***");
-            redacted = BearerValuePattern.Replace(redacted, "$1***");
-            return redacted;
-        }
-
-        /// <summary>
-        /// 构建敏感请求头集合
-        /// </summary>
-        /// <param name="additionalHeaders">额外的敏感请求头</param>
-        /// <returns>包含默认和自定义敏感请求头的集合</returns>
-        private static HashSet<string> BuildSensitiveHeaders(ICollection<string> additionalHeaders)
-        {
-            var result = new HashSet<string>(DefaultSensitiveHeaderNames, StringComparer.OrdinalIgnoreCase);
-            if (additionalHeaders == null)
-            {
-                return result;
-            }
-
-            foreach (var header in additionalHeaders)
-            {
-                if (string.IsNullOrWhiteSpace(header))
-                {
-                    continue;
-                }
-
-                result.Add(header.Trim());
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// 构建敏感字段正则表达式模式
-        /// </summary>
-        /// <param name="additionalFields">额外的敏感字段名</param>
-        /// <returns>用于匹配敏感字段的正则表达式模式</returns>
-        private static string BuildSensitiveFieldPattern(ICollection<string> additionalFields)
-        {
-            var allFields = new HashSet<string>(DefaultSensitiveFieldNames, StringComparer.OrdinalIgnoreCase);
-            if (additionalFields != null)
-            {
-                foreach (var field in additionalFields)
-                {
-                    if (string.IsNullOrWhiteSpace(field))
-                    {
-                        continue;
-                    }
-
-                    allFields.Add(field.Trim());
-                }
-            }
-
-            var escaped = allFields.Select(Regex.Escape).ToArray();
-            return escaped.Length == 0 ? "a^" : string.Join("|", escaped);
+            return _logRedactor.RedactContent(content);
         }
 
         /// <summary>
