@@ -8,6 +8,7 @@
 
 - 修复 `ShowAllServicesMiddleware` 输出服务类型名未 HTML 编码的问题。
 - 修复 `AuditLogMiddleware` 共享 `Stopwatch`、异常时未恢复响应流的问题。
+- 修复 `AuditLogMiddleware` 异常路径下 `EndTime` 未刷新导致耗时区间不准确的问题。
 - 修正 `UseShowAllServicesMiddleware` 过时提示，改用框架内置 `Options.Create`。
 - 将异常日志改为结构化日志模板。
 - `CustomResultPackFilter` 改为按 `IResultModel` 判断是否已包装。
@@ -23,7 +24,7 @@
 
 ## 校验情况
 
-- `dotnet test test\Azrng.AspNetCore.Core.Test\Azrng.AspNetCore.Core.Test.csproj` 通过，net8.0/net9.0 共 16 条测试通过。
+- `dotnet test test\Azrng.AspNetCore.Core.Test\Azrng.AspNetCore.Core.Test.csproj` 通过，net8.0/net9.0 共 16 条测试通过，覆盖异常路径响应流恢复与 `EndTime` 刷新。
 - `dotnet build src\Shared\Azrng.AspNetCore.Core\Azrng.AspNetCore.Core.csproj` 通过，net6.0/net7.0/net8.0/net9.0/net10.0 均构建成功。
 
 ## 风险或遗留项
