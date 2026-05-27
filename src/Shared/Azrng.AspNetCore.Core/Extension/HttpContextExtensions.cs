@@ -75,11 +75,17 @@ namespace Azrng.AspNetCore.Core.Extension
         /// <returns></returns>
         public static string GetBaseUrl(this HttpRequest httpRequest)
         {
-            var url = $"{httpRequest.Scheme}://{httpRequest.Host.Host}";
-
-            if (httpRequest.Host.Port != null)
+            var host = httpRequest.Host;
+            if (!host.HasValue)
             {
-                url += $":{httpRequest.Host.Port}";
+                return httpRequest.Scheme;
+            }
+
+            var url = $"{httpRequest.Scheme}://{host.Host}";
+
+            if (host.Port != null)
+            {
+                url += $":{host.Port}";
             }
 
             return url;

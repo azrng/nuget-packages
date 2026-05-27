@@ -2,6 +2,7 @@
 
 namespace Azrng.AspNetCore.Core.Helper
 {
+    [Obsolete("建议通过构造函数依赖注入获取服务")]
     public static class ServiceProviderHelper
     {
         /// <summary>

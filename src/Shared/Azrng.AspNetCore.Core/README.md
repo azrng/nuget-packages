@@ -13,18 +13,20 @@
 ```c#
 var iPv4 = HttpContext.GetLocalIpAddressToIPv4();
 var ipv6 = HttpContext.GetLocalIpAddressToIPv6();
-var requestInfo = HttpContext.Request.GetRequestUrlAddress();
+var requestInfo = HttpContext.Request.GetUrl();
 ```
 
 ### 帮助类
 
-#### MyHttpContext帮助类
+#### HttpContextManager帮助类
 
-需要提前注册：MyHttpContext.ServiceProvider=xxxServiceProvider
+> 已过时，建议通过依赖注入使用 `IHttpContextAccessor`。
+
+需要提前注册：HttpContextManager.Init(httpContextAccessor)
 
 ```c#
 //获取HttpContext
-MyHttpContext.Current
+HttpContextManager.Current
 ```
 
 ### 公共返回类
@@ -127,7 +129,7 @@ services.AddControllers(options =>
 
 // 或者使用该简便的方案
 
-services.AddMvcResultPackFilterFilter();
+services.AddMvcResultPackFilter();
 ```
 
 若是有些Action不想包装一层，只需要标注特性即可在返回的时候不显示包装的一层
@@ -139,8 +141,7 @@ services.AddMvcResultPackFilterFilter();
 或者通过传入忽略的前缀来忽略指定接口的返回值包装
 
 ```csharp
-builder.Services.AddSwaggerGen()
-    .AddMvcResultPackFilterFilter("/api/configDashboard");
+builder.Services.AddMvcResultPackFilter("/api/configDashboard");
 ```
 
 ### 自定义模型验证
@@ -587,7 +588,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // 使用异常中间件
-app.UseCustomExceptionMiddleware();
+app.UseGlobalException();
 
 app.UseAuthorization();
 

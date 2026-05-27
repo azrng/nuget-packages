@@ -59,8 +59,9 @@ namespace Azrng.AspNetCore.Core.Middleware
         {
             var xRequested = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier;
 
-            _logger.LogError($@"统一日志记录异常-{context.Request.GetUrl()} request had an exception, xRequestId:{xRequested},
-                message:{exception.Message}{exception.InnerException?.Message},stackTrace:{exception.StackTrace},time:{DateTime.Now}");
+            _logger.LogError(exception,
+                "统一日志记录异常-{Url} request had an exception, xRequestId:{TraceId}, time:{Time}",
+                context.Request.GetUrl(), xRequested, DateTime.Now);
 
             var result = new ResultModel { Message = "系统异常,请联系管理员", IsSuccess = false };
 

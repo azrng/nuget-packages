@@ -19,18 +19,31 @@ namespace Azrng.AspNetCore.Core.Middleware
 
         public async Task Invoke(HttpContext context)
         {
+            var requestId = GetRequestId(context);
             var requestIdFeature = context.Features.Get<IHttpRequestIdentifierFeature>();
-            if (requestIdFeature?.TraceIdentifier != null)
+            if (requestIdFeature != null)
             {
-                if (context.Request.Headers.TryGetValue(_requestIdHeader, out var header))
-                {
-                    requestIdFeature.TraceIdentifier = header.ToString();
-                }
-
-                context.Response.Headers[_requestIdHeader] = requestIdFeature.TraceIdentifier;
+                requestIdFeature.TraceIdentifier = requestId;
             }
 
+            context.TraceIdentifier = requestId;
+            context.Response.Headers[_requestIdHeader] = requestId;
+
             await _next(context);
+        }
+
+        private static string GetRequestId(HttpContext context)
+        {
+            if (context.Request.Headers.TryGetValue(_requestIdHeader, out var header))
+            {
+                var requestId = header.ToString();
+                if (!string.IsNullOrWhiteSpace(requestId))
+                {
+                    return requestId;
+                }
+            }
+
+            return Guid.NewGuid().ToString("N");
         }
     }
 }

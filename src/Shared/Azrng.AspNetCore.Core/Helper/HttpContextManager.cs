@@ -5,6 +5,7 @@ namespace Azrng.AspNetCore.Core.Helper
     /// <summary>
     /// http上下文
     /// </summary>
+    [Obsolete("建议通过依赖注入使用 IHttpContextAccessor")]
     public static class HttpContextManager
     {
         private static Lazy<IHttpContextAccessor>? _httpContextAccessor;

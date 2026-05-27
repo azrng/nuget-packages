@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
     /// <param name="action"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
+    [Obsolete("建议按需组合 AddControllers、AddMvcResultPackFilter 和 AddMvcModelVerifyFilter")]
     public static IMvcBuilder AddDefaultControllers(this IServiceCollection services,
                                                     Action<CommonMvcConfig>? action = null)
     {

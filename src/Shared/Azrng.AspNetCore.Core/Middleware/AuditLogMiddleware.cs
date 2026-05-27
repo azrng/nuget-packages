@@ -17,14 +17,12 @@ namespace Azrng.AspNetCore.Core.Middleware;
 public class AuditLogMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly Stopwatch _stopwatch;
     private readonly AuditLogOptions _options;
 
     public AuditLogMiddleware(RequestDelegate next, IOptions<AuditLogOptions>? options = null)
     {
         _next = next;
         _options = options?.Value ?? new AuditLogOptions();
-        _stopwatch = new Stopwatch();
     }
 
     public async Task Invoke(HttpContext context)
@@ -56,29 +54,19 @@ public class AuditLogMiddleware
 
         #region 记录请求日志相关信息
 
-        _stopwatch.Restart();
+        var stopwatch = Stopwatch.StartNew();
         var startTime = DateTime.Now;
+        var endTime = startTime;
+        var respBody = string.Empty;
 
         var reqHeaders = request.Headers
             .ToDictionary(x => x.Key, v => string.Join(";", v.Value.ToList()));
 
         var reqBody = await GetRequestBodyAsync(request);
 
-        var originalBodyStream = context.Response.Body;
-        using var responseBody = new MemoryStream();
-        context.Response.Body = responseBody;
-
-        await _next(context);
-
-        var respBody = await GetResponseBodyAsync(context.Response, responseBody);
-
-        await responseBody.CopyToAsync(originalBodyStream);
-
-        var endTime = DateTime.Now;
-
         context.Response.OnCompleted(() =>
         {
-            _stopwatch.Stop();
+            stopwatch.Stop();
             var serviceName = configuration.GetValue<string>("ServiceName") ?? "CommonService";
 
             // 获取日志服务
@@ -94,7 +82,7 @@ public class AuditLogMiddleware
             {
                 ServiceName = serviceName,
                 TraceId = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier,
-                ElapsedMilliseconds = _stopwatch.ElapsedMilliseconds,
+                ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
                 StartTime = startTime,
                 EndTime = endTime,
                 LogLevel = context.Response.StatusCode == 200 ? LogLevel.Information : LogLevel.Error,
@@ -112,6 +100,23 @@ public class AuditLogMiddleware
             });
             return Task.CompletedTask;
         });
+
+        var originalBodyStream = context.Response.Body;
+        using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+
+        try
+        {
+            await _next(context);
+
+            respBody = await GetResponseBodyAsync(context.Response, responseBody);
+            await responseBody.CopyToAsync(originalBodyStream);
+        }
+        finally
+        {
+            endTime = DateTime.Now;
+            context.Response.Body = originalBodyStream;
+        }
 
         #endregion
     }

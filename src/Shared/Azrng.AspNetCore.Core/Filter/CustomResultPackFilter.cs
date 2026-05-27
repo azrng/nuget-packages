@@ -52,8 +52,8 @@ public class CustomResultPackFilter : Attribute, IResultFilter
         // 不处理已包装的 ResultModel
         if (context.Result is ObjectResult objectResult)
         {
-            // 如果值已经是 ResultModel 类型，不重复包装
-            if (objectResult.Value is ResultModel)
+            // 如果值已经实现统一返回接口，不重复包装
+            if (objectResult.Value is IResultModel)
             {
                 return;
             }

@@ -37,7 +37,7 @@ public static class MiddlewareExtensions
     /// <summary>
     /// 显示所有服务中间件  需要先注册服务：services.AddShowAllServices();
     /// </summary>
-    [Obsolete("改为使用UseGlobalException")]
+    [Obsolete("改为使用UseShowAllServices")]
     public static IApplicationBuilder UseShowAllServicesMiddleware(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<ShowAllServicesMiddleware>();
@@ -63,7 +63,7 @@ public static class MiddlewareExtensions
         if (ignoreFilterRoutes != null && ignoreFilterRoutes.Count > 0)
         {
             var options = new AuditLogOptions { IgnoreRoutePrefix = ignoreFilterRoutes };
-            return app.UseMiddleware<AuditLogMiddleware>(new OptionsWrapper<AuditLogOptions>(options));
+            return app.UseMiddleware<AuditLogMiddleware>(Options.Create(options));
         }
 
         return app.UseMiddleware<AuditLogMiddleware>();
@@ -79,19 +79,6 @@ public static class MiddlewareExtensions
     {
         var options = new AuditLogOptions();
         configureOptions?.Invoke(options);
-        return app.UseMiddleware<AuditLogMiddleware>(new OptionsWrapper<AuditLogOptions>(options));
+        return app.UseMiddleware<AuditLogMiddleware>(Options.Create(options));
     }
-}
-
-/// <summary>
-/// OptionsWrapper 用于包装单个选项实例
-/// </summary>
-internal class OptionsWrapper<TOptions> : IOptions<TOptions> where TOptions : class, new()
-{
-    public OptionsWrapper(TOptions value)
-    {
-        Value = value ?? new TOptions();
-    }
-
-    public TOptions Value { get; }
 }

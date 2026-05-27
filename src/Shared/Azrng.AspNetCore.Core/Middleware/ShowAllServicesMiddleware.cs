@@ -1,6 +1,7 @@
 ﻿using Azrng.AspNetCore.Core.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using System.Net;
 using System.Text;
 
 namespace Azrng.AspNetCore.Core.Middleware
@@ -31,9 +32,9 @@ namespace Azrng.AspNetCore.Core.Middleware
                 foreach (var service in _config.Services)
                 {
                     stringBuilder.Append("<tr>");
-                    stringBuilder.Append("<td>" + service.ServiceType.FullName + "</td>");
+                    stringBuilder.Append("<td>" + WebUtility.HtmlEncode(service.ServiceType.FullName) + "</td>");
                     stringBuilder.Append($"<td>{service.Lifetime}</td>");
-                    stringBuilder.Append("<td>" + service.ImplementationType?.FullName + "</td>");
+                    stringBuilder.Append("<td>" + WebUtility.HtmlEncode(service.ImplementationType?.FullName) + "</td>");
                     stringBuilder.Append("</tr>");
                 }
 

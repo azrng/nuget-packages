@@ -25,17 +25,12 @@ namespace Azrng.AspNetCore.Core.Helper
         /// <returns></returns>
         public static string? GetValue(params string[] sections)
         {
-            try
+            if (sections.Length == 0)
             {
-                if (sections.Length > 0)
-                    return Configuration[string.Join(":", sections)];
-            }
-            catch (Exception)
-            {
-                // ignored
+                return string.Empty;
             }
 
-            return string.Empty;
+            return Configuration[string.Join(":", sections)] ?? string.Empty;
         }
 
         public static string? GetValue(string key)
