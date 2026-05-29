@@ -17,6 +17,56 @@
 
 ---
 
+## 修复状态（2026-05-29）
+
+**修复提交：** `4909838 fix(ntika): address parser review issues`
+
+| 编号 | 状态 | 说明 |
+| --- | --- | --- |
+| C1 | 已修复 | ArchiveParser 增加嵌入条目大小检查和有界复制 |
+| C2 | 已修复 | ArchiveParser 移除裸 catch，仅捕获格式和 IO 相关异常 |
+| C3 | 已修复 | EmlParser 附件解码写入 `LimitedMemoryStream`，执行字节上限 |
+| C4 | 已修复 | OfficeParser 自动识别改为事件缓冲，成功后才回放输出 |
+| C5 | 已修复 | ODF XML 读取改用禁用 DTD/Resolver 的安全 `XmlReader` |
+| C6 | 已修复 | `EmbeddedDocumentUtil.PushDepth` 执行深度限制 |
+| C7 | 已修复 | ToHtml/ToMarkdown 接入 `LimitedContentHandler` 输出限制 |
+| H1 | 已修复 | 压缩比检查改为浮点除法 |
+| H2 | 已修复 | HTML/Markdown suppress 状态改为嵌套计数 |
+| H3 | 未处理 | 路径字符串重载安全责任/根目录白名单尚未设计 |
+| H4 | 已修复 | HTML charset 检测增加安全白名单 |
+| H5 | 部分修复 | Office/Odf/Email 相关裸 catch 已处理，YamlParser 等仍待后续收敛 |
+| H6 | 已修复 | Email HTML-only body 改为剥离标签后输出文本 |
+| H7 | 已修复 | RTF 负 Unicode 值按 unsigned 16-bit 转换 |
+| H8 | 已修复 | RTF 十六进制转义按 ANSI 代码页解码 |
+| H9 | 已修复 | Markdown 链接 href 转义括号和方括号 |
+| H10 | 已修复 | HTML 属性值补充单引号转义 |
+| H11 | 已修复 | EmbeddedLimits 默认资源数和字节数改为有限值 |
+| H12 | 未处理 | TimeoutLimits 仍未接入解析管道，需独立设计 |
+| M1 | 未处理 | Tika.MaxStringLength 线程安全未调整 |
+| M2 | 已修复 | ParseContext 改为 ConcurrentDictionary |
+| M3 | 已修复 | Metadata 改为 ConcurrentDictionary |
+| M4 | 已修复 | MediaTypeRegistry 继承表改为 ConcurrentDictionary |
+| M5 | 已修复 | HTML/Markdown 分支统一应用输出限制 |
+| M6 | 未处理 | XHTMLContentHandler `new`/`override` 设计未调整 |
+| M7 | 已修复 | OfficeParser 处理 Formula Error 单元格 |
+| M8 | 已修复 | CsvConfig 使用防御性副本，避免修改共享实例 |
+| M9 | 已修复 | ArchiveParser 增加条目数量限制 |
+| M10 | 未处理 | Archive entry.Key 仅空值兜底，未做路径规范化 |
+| M11 | 未处理 | 语言检测词匹配性能优化未处理 |
+| M12 | 未处理 | Html/Json/Rtf 流式解析改造未处理 |
+| M13 | 未处理 | ODF 重复文本风险未处理 |
+| L1 | 未处理 | ContentHandlerDecorator.Handler readonly 未调整 |
+| L2 | 未处理 | NameDetector 裸 catch 未处理 |
+| L3 | 未处理 | TextDetector 裸 catch 未处理 |
+| L4 | 未处理 | TemporaryResources 清理异常策略未处理 |
+| L5 | 已修复 | EmbeddedLimits 哈希改为 `HashCode.Combine` |
+| L6 | 未处理 | Property 静态注册表增长风险未处理 |
+| L7 | 未处理 | CompositeEncodingDetector 提前退出位置恢复未处理 |
+
+**验证状态：** 已顺序执行全部 `Azrng.NTika*.Test` 项目的 `net8.0` 测试，全部通过。`ThirdNugetStudy.slnx --framework net8.0` 构建未通过，原因是 solution 中既有项目未包含 `net8.0` 目标，不属于本次 NTika 修复。
+
+---
+
 ## 二、Critical 级别问题
 
 ### C1. ArchiveParser 无解压炸弹保护
