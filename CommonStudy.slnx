@@ -17,6 +17,25 @@
     <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
     <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
   </Folder>
+  <Folder Name="/Shared/Tika/">
+    <Project Path="src\Shared\Tika\Azrng.NTika.Core\Azrng.NTika.Core.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Text\Azrng.NTika.Parsers.Text.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Xml\Azrng.NTika.Parsers.Xml.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Csv\Azrng.NTika.Parsers.Csv.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Html\Azrng.NTika.Parsers.Html.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Pdf\Azrng.NTika.Parsers.Pdf.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Office\Azrng.NTika.Parsers.Office.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.EncodingDetectors\Azrng.NTika.EncodingDetectors.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.LanguageDetect\Azrng.NTika.LanguageDetect.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.PowerPoint\Azrng.NTika.Parsers.PowerPoint.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Data\Azrng.NTika.Parsers.Data.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Email\Azrng.NTika.Parsers.Email.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Image\Azrng.NTika.Parsers.Image.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Media\Azrng.NTika.Parsers.Media.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Archive\Azrng.NTika.Parsers.Archive.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Odf\Azrng.NTika.Parsers.Odf.csproj" />
+    <Project Path="src\Shared\Tika\Azrng.NTika.Parsers.Rtf\Azrng.NTika.Parsers.Rtf.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
@@ -31,5 +50,24 @@
   <Folder Name="/Test/Http/">
     <Project Path="test\Common.HttpClients.Test\Common.HttpClients.Test.csproj" />
     <Project Path="test\Common.RestSharpClient.Test\Common.RestSharpClient.Test.csproj" />
+  </Folder>
+  <Folder Name="/Test/Tika/">
+    <Project Path="test\Azrng.NTika.Core.Test\Azrng.NTika.Core.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Text.Test\Azrng.NTika.Parsers.Text.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Xml.Test\Azrng.NTika.Parsers.Xml.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Csv.Test\Azrng.NTika.Parsers.Csv.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Html.Test\Azrng.NTika.Parsers.Html.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Pdf.Test\Azrng.NTika.Parsers.Pdf.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Office.Test\Azrng.NTika.Parsers.Office.Test.csproj" />
+    <Project Path="test\Azrng.NTika.EncodingDetectors.Test\Azrng.NTika.EncodingDetectors.Test.csproj" />
+    <Project Path="test\Azrng.NTika.LanguageDetect.Test\Azrng.NTika.LanguageDetect.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.PowerPoint.Test\Azrng.NTika.Parsers.PowerPoint.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Data.Test\Azrng.NTika.Parsers.Data.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Email.Test\Azrng.NTika.Parsers.Email.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Image.Test\Azrng.NTika.Parsers.Image.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Media.Test\Azrng.NTika.Parsers.Media.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Archive.Test\Azrng.NTika.Parsers.Archive.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Odf.Test\Azrng.NTika.Parsers.Odf.Test.csproj" />
+    <Project Path="test\Azrng.NTika.Parsers.Rtf.Test\Azrng.NTika.Parsers.Rtf.Test.csproj" />
   </Folder>
 </Solution>
