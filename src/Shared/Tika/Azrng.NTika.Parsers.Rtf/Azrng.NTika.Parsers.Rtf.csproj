@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <Authors>Azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <Description>Apache Tika RTF Parser for .NET - extract text from Rich Text Format files</Description>
+        <Version>1.0.0</Version>
+        <PackageId>Azrng.NTika.Parsers.Rtf</PackageId>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Title>Azrng NTika RTF Parser</Title>
+        <PackageTags>tika;parser;rtf;richtext</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Azrng.NTika.Core\Azrng.NTika.Core.csproj" />
+    </ItemGroup>
+
+</Project>

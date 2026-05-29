@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <Authors>Azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <Description>Apache Tika ODF Parser for .NET - extract text from OpenDocument files (odt, ods, odp)</Description>
+        <Version>1.0.0</Version>
+        <PackageId>Azrng.NTika.Parsers.Odf</PackageId>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Title>Azrng NTika ODF Parser</Title>
+        <PackageTags>tika;parser;odf;opendocument;odt;ods;odp</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Azrng.NTika.Core\Azrng.NTika.Core.csproj" />
+    </ItemGroup>
+
+</Project>
