@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Description>原生 .NET SQL 解析器 — 从JSqlParser移植而来，基于 ANTLR4 驱动。</Description>
+        <Authors>Azrng</Authors>
+        <Company>Azrng</Company>
+        <Version>1.0.0-beta1</Version>
+        <PackageId>Azrng.JSqlParser.Net</PackageId>
+        <Copyright>Azrng</Copyright>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
+        <NoWarn>1701;1702;1591</NoWarn>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>Sql Parser</Title>
+        <PackageTags>sql;database;parser;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1"/>
+        <PackageReference Include="Antlr4BuildTasks" Version="12.14.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Antlr4 Include="Parser\ANTLR4\JSqlParserGrammarLexer.g4">
+            <Generator>MSBuild:Compile</Generator>
+            <CustomToolNamespace>JSqlParser.Net.Parser.ANTLR4</CustomToolNamespace>
+            <Listener>false</Listener>
+            <Visitor>true</Visitor>
+        </Antlr4>
+        <Antlr4 Include="Parser\ANTLR4\JSqlParserGrammar.g4">
+            <Generator>MSBuild:Compile</Generator>
+            <CustomToolNamespace>JSqlParser.Net.Parser.ANTLR4</CustomToolNamespace>
+            <Listener>false</Listener>
+            <Visitor>true</Visitor>
+        </Antlr4>
+    </ItemGroup>
+
+</Project>
