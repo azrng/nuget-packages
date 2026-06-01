@@ -11,7 +11,7 @@
         <PackageId>Azrng.JSqlParser.Net</PackageId>
         <Copyright>Azrng</Copyright>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
-        <NoWarn>1701;1702;1591</NoWarn>
+        <NoWarn>1701;1702;1591;CA1716</NoWarn>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>Sql Parser</Title>

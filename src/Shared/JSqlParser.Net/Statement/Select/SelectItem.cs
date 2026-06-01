@@ -24,6 +24,6 @@ public class SelectItem : ASTNodeAccessImpl
     {
         if (Alias != null)
             return $"{Expression} {Alias}";
-        return Expression.ToString();
+        return Expression.ToString() ?? string.Empty;
     }
 }

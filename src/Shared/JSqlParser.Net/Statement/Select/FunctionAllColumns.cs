@@ -19,7 +19,7 @@ public class FunctionAllColumns : AllColumns
 
     public new T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public StringBuilder AppendTo(StringBuilder builder)
+    public override StringBuilder AppendTo(StringBuilder builder)
     {
         return builder.Append('(').Append(Function).Append(").*");
     }

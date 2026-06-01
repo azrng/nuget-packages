@@ -32,7 +32,7 @@ public class SelectStatementTest
     public void Select_Star_ShouldHaveOneItem()
     {
         var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
-        Assert.Equal(1, select.SelectItems!.Count);
+        Assert.Single(select.SelectItems!);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class SelectStatementTest
     {
         var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY id ASC")!;
         Assert.NotNull(select.OrderByElements);
-        Assert.Equal(1, select.OrderByElements!.Count);
+        Assert.Single(select.OrderByElements!);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class SelectStatementTest
         var select = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         Assert.NotNull(select.Joins);
-        Assert.Equal(1, select.Joins.Count);
+        Assert.Single(select.Joins);
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class SelectStatementTest
         var select = (Select)CCJSqlParserUtil.Parse(
             "WITH active_users AS (SELECT id, name FROM users WHERE status = 'active') SELECT * FROM active_users")!;
         Assert.NotNull(select.WithItemsList);
-        Assert.Equal(1, select.WithItemsList!.Count);
+        Assert.Single(select.WithItemsList!);
     }
 
     [Fact]

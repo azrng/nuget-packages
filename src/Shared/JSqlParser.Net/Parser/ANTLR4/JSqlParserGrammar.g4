@@ -135,7 +135,7 @@ joinClause
     ;
 
 joinType
-    : INNER?
+    : INNER
     | LEFT OUTER?
     | RIGHT OUTER?
     | FULL OUTER?
@@ -325,7 +325,7 @@ createTableDefinition
     ;
 
 columnDefinition
-    : identifier dataType columnConstraint* columnOptions?
+    : identifier dataType columnConstraint* columnOptions
     ;
 
 dataType
@@ -454,7 +454,7 @@ commitStatement
     ;
 
 rollbackStatement
-    : ROLLBACK (WORK? (TO SAVEPOINT? identifier)?)?
+    : ROLLBACK WORK? (TO SAVEPOINT? identifier)?
     ;
 
 savepointStatement
@@ -752,7 +752,7 @@ nonReservedKeyword
     | CONFLICT | CONSTRAINTS | CONVERT | COSTS | COUNT | CREATED | CYCLE
     | DATABASE | DATA | DECLARE | DEFAULTS | DELAYED | DESCRIBE
     | DISABLE | DISCARD | DISCONNECT | DIV | DDL | DML | DO | DOMAIN | DRIVER | DUPLICATE
-    | ELEMENTS | EMPTY | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE
+    | ELEMENTS | EMPTY_KW | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE
     | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
     | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXPORT | EXTERNAL
     | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | FUNCTION | GENERATED
@@ -793,7 +793,7 @@ pipeOperator
     | PIPE_GT AGGREGATE selectColumnList (GROUP BY expression (COMMA expression)*)? (HAVING expression)?        #aggregatePipeOp
     | PIPE_GT ORDER BY orderByItem (COMMA orderByItem)*                                                        #orderByPipeOp
     | PIPE_GT LIMIT expression (OFFSET expression)?                                                            #limitPipeOp
-    | PIPE_GT joinType? JOIN tableOrSubquery joinCondition?                                                    #joinPipeOp
+    | PIPE_GT (joinType JOIN | JOIN) tableOrSubquery joinCondition?                                            #joinPipeOp
     | PIPE_GT AS alias                                                                                         #asPipeOp
     | PIPE_GT CALL identifier (OPENING_PAREN expressionList? CLOSING_PAREN)?                                   #callPipeOp
     | PIPE_GT DROP identifier (COMMA identifier)*                                                              #dropPipeOp

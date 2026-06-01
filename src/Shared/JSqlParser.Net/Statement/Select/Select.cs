@@ -26,7 +26,7 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
 
     public abstract StringBuilder AppendSelectBodyTo(StringBuilder builder);
 
-    public new StringBuilder AppendTo(StringBuilder builder)
+    public override StringBuilder AppendTo(StringBuilder builder)
     {
         if (WithItemsList != null && WithItemsList.Count > 0)
         {

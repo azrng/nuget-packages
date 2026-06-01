@@ -32,7 +32,10 @@ public class Validation
         try
         {
             _parsedStatements = CCJSqlParserUtil.ParseStatements(_sql);
-            ValidateStatements(_parsedStatements);
+            if (_parsedStatements != null)
+            {
+                ValidateStatements(_parsedStatements);
+            }
         }
         catch (JSqlParserException ex)
         {
@@ -108,6 +111,8 @@ public class Validation
         if (expression == null) return;
         // Basic subquery detection - if expression contains a ParenthesedSelect
         var text = expression.ToString();
+        if (text == null) return;
+
         if (text.Contains("SELECT", StringComparison.OrdinalIgnoreCase))
         {
             RequireFeature(FeaturesAllowed.SUBQUERY);

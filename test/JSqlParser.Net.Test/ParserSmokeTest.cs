@@ -51,7 +51,7 @@ public class ParserSmokeTest
 
         var select = (PlainSelect)statement;
         Assert.NotNull(select.Joins);
-        Assert.Equal(1, select.Joins.Count);
+        Assert.Single(select.Joins);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class ParserSmokeTest
         Assert.NotNull(statement);
         var select = (PlainSelect)statement;
         Assert.NotNull(select.OrderByElements);
-        Assert.Equal(1, select.OrderByElements!.Count);
+        Assert.Single(select.OrderByElements!);
     }
 
     [Fact]

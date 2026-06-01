@@ -17,7 +17,7 @@ public class ASTNodeAccessImpl : ASTNodeAccess
         _node = node;
     }
 
-    public StringBuilder AppendTo(StringBuilder builder)
+    public virtual StringBuilder AppendTo(StringBuilder builder)
     {
         var simpleNode = GetASTNode();
         if (simpleNode == null) return builder;

@@ -64,7 +64,7 @@ public class DmlStatementTest
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
         Assert.NotNull(stmt.UpdateSets);
-        Assert.Equal(1, stmt.UpdateSets!.Count);
+        Assert.Single(stmt.UpdateSets!);
     }
 
     [Fact]

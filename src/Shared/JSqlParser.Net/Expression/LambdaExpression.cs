@@ -27,7 +27,7 @@ public class LambdaExpression : ASTNodeAccessImpl, Expression
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public StringBuilder AppendTo(StringBuilder builder)
+    public override StringBuilder AppendTo(StringBuilder builder)
     {
         if (Identifiers.Count == 1)
         {

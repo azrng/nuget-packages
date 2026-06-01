@@ -20,7 +20,7 @@ public class PreferringClause : ASTNodeAccessImpl
         Preferring = preferring;
     }
 
-    public StringBuilder AppendTo(StringBuilder builder)
+    public override StringBuilder AppendTo(StringBuilder builder)
     {
         builder.Append("PREFERRING ").Append(Preferring);
         if (PartitionBy != null)

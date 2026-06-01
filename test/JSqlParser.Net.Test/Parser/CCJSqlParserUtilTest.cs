@@ -37,7 +37,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT u.id, u.name FROM users u");
         Assert.NotNull(stmt);
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.FromItem);
     }
 
@@ -45,7 +45,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithMultipleColumns_ShouldHaveCorrectItemCount()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT a, b, c, d FROM t");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.Equal(4, select.SelectItems!.Count);
     }
 
@@ -53,7 +53,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithWhereEquals_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE id = 1");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -61,7 +61,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithWhereAnd_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE id = 1 AND name = 'test'");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -69,7 +69,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithWhereOr_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE id = 1 OR id = 2");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -77,7 +77,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithIn_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE id IN (1, 2, 3)");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -85,7 +85,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithBetween_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE age BETWEEN 18 AND 60");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -93,7 +93,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithLike_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE name LIKE '%test%'");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -101,7 +101,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithIsNull_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE deleted_at IS NULL");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -109,7 +109,7 @@ public class CCJSqlParserUtilTest
     public void Parse_SelectWithIsNotNull_ShouldHaveWhere()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE deleted_at IS NOT NULL");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -122,9 +122,9 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a INNER JOIN orders b ON a.id = b.user_id");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
-        Assert.Equal(1, select.Joins.Count);
+        Assert.Single(select.Joins);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a LEFT JOIN orders b ON a.id = b.user_id");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
     }
 
@@ -141,7 +141,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a RIGHT JOIN orders b ON a.id = b.user_id");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
     }
 
@@ -150,7 +150,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a FULL JOIN orders b ON a.id = b.user_id");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
     }
 
@@ -159,7 +159,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a CROSS JOIN orders b");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
     }
 
@@ -168,7 +168,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM a INNER JOIN b ON a.id = b.aid INNER JOIN c ON b.id = c.bid");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Joins);
         Assert.Equal(2, select.Joins.Count);
     }
@@ -190,7 +190,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -199,7 +199,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Where);
     }
 
@@ -241,7 +241,7 @@ public class CCJSqlParserUtilTest
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT id FROM a UNION SELECT id FROM b UNION SELECT id FROM c");
         Assert.IsType<SetOperationList>(stmt);
-        var setOp = (SetOperationList)stmt;
+        var setOp = (SetOperationList)stmt!;
         Assert.Equal(3, setOp.Selects.Count);
     }
 
@@ -253,7 +253,7 @@ public class CCJSqlParserUtilTest
     public void Parse_OrderBy_ShouldHaveOrderBy()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY name");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.OrderByElements);
     }
 
@@ -261,7 +261,7 @@ public class CCJSqlParserUtilTest
     public void Parse_OrderByDesc_ShouldHaveOrderBy()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY name DESC");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.OrderByElements);
     }
 
@@ -269,7 +269,7 @@ public class CCJSqlParserUtilTest
     public void Parse_OrderByMultiple_ShouldHaveMultipleElements()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY name ASC, id DESC");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.Equal(2, select.OrderByElements!.Count);
     }
 
@@ -277,7 +277,7 @@ public class CCJSqlParserUtilTest
     public void Parse_GroupBy_ShouldHaveGroupBy()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT dept, COUNT(*) FROM users GROUP BY dept");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.GroupBy);
     }
 
@@ -286,7 +286,7 @@ public class CCJSqlParserUtilTest
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 5");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Having);
     }
 
@@ -294,7 +294,7 @@ public class CCJSqlParserUtilTest
     public void Parse_Limit_ShouldHaveLimit()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users LIMIT 10");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Limit);
     }
 
@@ -302,7 +302,7 @@ public class CCJSqlParserUtilTest
     public void Parse_LimitOffset_ShouldHaveLimitAndOffset()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users LIMIT 10 OFFSET 20");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Limit);
         Assert.NotNull(select.Offset);
     }
@@ -315,7 +315,7 @@ public class CCJSqlParserUtilTest
     public void Parse_Distinct_ShouldHaveDistinct()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT DISTINCT name FROM users");
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.Distinct);
     }
 
@@ -402,7 +402,7 @@ public class CCJSqlParserUtilTest
         var stmt = CCJSqlParserUtil.Parse(
             "WITH cte AS (SELECT id FROM users) SELECT * FROM cte");
         Assert.IsType<PlainSelect>(stmt);
-        var select = (PlainSelect)stmt;
+        var select = (PlainSelect)stmt!;
         Assert.NotNull(select.WithItemsList);
     }
 

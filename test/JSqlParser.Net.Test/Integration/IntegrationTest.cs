@@ -29,7 +29,7 @@ public class IntegrationTest
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Joins);
-        Assert.Equal(1, select.Joins.Count);
+        Assert.Single(select.Joins);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class IntegrationTest
             "WITH active_users AS (SELECT id, name FROM users WHERE status = 'active') SELECT * FROM active_users")!;
         var select = (Select)stmt;
         Assert.NotNull(select.WithItemsList);
-        Assert.Equal(1, select.WithItemsList!.Count);
+        Assert.Single(select.WithItemsList!);
     }
 
     [Fact]
