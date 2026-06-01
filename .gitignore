@@ -337,7 +337,7 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
-# BeatPulse healthcheck temp database 
+# BeatPulse healthcheck temp database
 healthchecksdb
 
 # 忽略xml文件
@@ -355,3 +355,4 @@ NUL
 .codex
 .cursor
 .codegraph
+.learnings
