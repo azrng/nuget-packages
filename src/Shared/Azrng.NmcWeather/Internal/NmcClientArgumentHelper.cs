@@ -1,29 +1,61 @@
 namespace Azrng.NmcWeather.Internal;
 
+/// <summary>
+/// 客户端参数校验与标准化工具。
+/// </summary>
 internal static class NmcClientArgumentHelper
 {
+    /// <summary>
+    /// 标准化接口基地址，去除首尾空白和末尾斜杠。
+    /// </summary>
+    /// <param name="baseUrl">基地址字符串。</param>
+    /// <returns>标准化后的基地址。</returns>
     public static string NormalizeBaseUrl(string baseUrl)
     {
         var normalized = NormalizeRequiredText(baseUrl, nameof(baseUrl));
         return normalized.TrimEnd('/');
     }
 
+    /// <summary>
+    /// 标准化接口路径，确保以斜杠开头。
+    /// </summary>
+    /// <param name="path">路径字符串。</param>
+    /// <returns>标准化后的路径。</returns>
     public static string NormalizePath(string path)
     {
         var normalized = NormalizeRequiredText(path, nameof(path));
         return normalized.StartsWith("/", StringComparison.Ordinal) ? normalized : $"/{normalized}";
     }
 
+    /// <summary>
+    /// 校验并标准化省份编码（转为大写）。
+    /// </summary>
+    /// <param name="value">省份编码。</param>
+    /// <param name="paramName">参数名称，用于异常消息。</param>
+    /// <returns>大写省份编码。</returns>
     public static string NormalizeRequiredProvinceCode(string value, string paramName)
     {
         return NormalizeRequiredText(value, paramName).ToUpperInvariant();
     }
 
+    /// <summary>
+    /// 校验并标准化城市编码。
+    /// </summary>
+    /// <param name="value">城市编码。</param>
+    /// <param name="paramName">参数名称，用于异常消息。</param>
+    /// <returns>标准化后的城市编码。</returns>
     public static string NormalizeRequiredCityCode(string value, string paramName)
     {
         return NormalizeRequiredText(value, paramName);
     }
 
+    /// <summary>
+    /// 校验文本参数非空并去除首尾空白。
+    /// </summary>
+    /// <param name="value">待校验文本。</param>
+    /// <param name="paramName">参数名称，用于异常消息。</param>
+    /// <returns>去除空白后的文本。</returns>
+    /// <exception cref="ArgumentException">参数为空或仅包含空白时抛出。</exception>
     public static string NormalizeRequiredText(string value, string paramName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -34,11 +66,19 @@ internal static class NmcClientArgumentHelper
         return value.Trim();
     }
 
+    /// <summary>
+    /// 判断输入值是否看起来像城市编码（由字母、数字、连字符或下划线组成且长度不少于 4）。
+    /// </summary>
+    /// <param name="value">待判断的值。</param>
+    /// <returns>看起来像编码返回 <c>true</c>，否则返回 <c>false</c>。</returns>
     public static bool LooksLikeCityCode(string value)
     {
         return value.Length >= 4 && value.All(static c => IsAsciiLetterOrDigit(c) || c == '-' || c == '_');
     }
 
+    /// <summary>
+    /// 判断字符是否为 ASCII 字母或数字。
+    /// </summary>
     private static bool IsAsciiLetterOrDigit(char value)
     {
         return value is >= '0' and <= '9'

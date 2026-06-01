@@ -10,12 +10,18 @@ public class NmcWeatherQueryClient : INmcWeatherQueryClient
     private readonly INmcLocationClient _locationClient;
     private readonly INmcWeatherClient _weatherClient;
 
+    /// <summary>
+    /// 初始化天气便捷查询客户端实例。
+    /// </summary>
+    /// <param name="locationClient">地区与编码查询客户端。</param>
+    /// <param name="weatherClient">天气数据查询客户端。</param>
     public NmcWeatherQueryClient(INmcLocationClient locationClient, INmcWeatherClient weatherClient)
     {
         _locationClient = locationClient ?? throw new ArgumentNullException(nameof(locationClient));
         _weatherClient = weatherClient ?? throw new ArgumentNullException(nameof(weatherClient));
     }
 
+    /// <inheritdoc />
     public async Task<NmcWeatherEnvelope?> GetWeatherByCityNameAsync(
         string cityName,
         string? provinceCode = null,
@@ -31,6 +37,7 @@ public class NmcWeatherQueryClient : INmcWeatherQueryClient
             : await _weatherClient.GetWeatherByCityCodeAsync(cityCode, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<NmcWeatherEnvelope?> GetWeatherByCityAsync(
         string cityNameOrCode,
         string? provinceCode = null,

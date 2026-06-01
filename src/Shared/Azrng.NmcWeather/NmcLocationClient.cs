@@ -13,12 +13,18 @@ public class NmcLocationClient : INmcLocationClient
     private readonly IHttpHelper _httpHelper;
     private readonly NmcWeatherOptions _options;
 
+    /// <summary>
+    /// 初始化地区与编码查询客户端实例。
+    /// </summary>
+    /// <param name="httpHelper">HTTP 请求辅助工具。</param>
+    /// <param name="options">天气客户端配置。</param>
     public NmcLocationClient(IHttpHelper httpHelper, IOptions<NmcWeatherOptions> options)
     {
         _httpHelper = httpHelper ?? throw new ArgumentNullException(nameof(httpHelper));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NmcProvince>> GetProvincesAsync(CancellationToken cancellationToken = default)
     {
         var provinces = await _httpHelper
@@ -28,6 +34,7 @@ public class NmcLocationClient : INmcLocationClient
         return provinces ?? new List<NmcProvince>();
     }
 
+    /// <inheritdoc />
     public async Task<NmcProvince?> GetProvinceByCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var normalizedCode = NmcClientArgumentHelper.NormalizeRequiredProvinceCode(provinceCode, nameof(provinceCode));
@@ -36,6 +43,7 @@ public class NmcLocationClient : INmcLocationClient
             LocationNameNormalizer.IsCodeMatch(province.Code, normalizedCode));
     }
 
+    /// <inheritdoc />
     public async Task<NmcProvince?> GetProvinceByNameAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var normalizedName = NmcClientArgumentHelper.NormalizeRequiredText(provinceName, nameof(provinceName));
@@ -44,6 +52,7 @@ public class NmcLocationClient : INmcLocationClient
             LocationNameNormalizer.IsProvinceNameMatch(province.Name, normalizedName));
     }
 
+    /// <inheritdoc />
     public async Task<NmcProvince?> GetProvinceAsync(string provinceNameOrCode, CancellationToken cancellationToken = default)
     {
         var normalizedText = NmcClientArgumentHelper.NormalizeRequiredText(provinceNameOrCode, nameof(provinceNameOrCode));
@@ -54,18 +63,21 @@ public class NmcLocationClient : INmcLocationClient
                    LocationNameNormalizer.IsProvinceNameMatch(province.Name, normalizedText));
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetProvinceCodeAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var province = await GetProvinceByNameAsync(provinceName, cancellationToken).ConfigureAwait(false);
         return province?.Code;
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetProvinceNameAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var province = await GetProvinceByCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return province?.Name;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<string, string>> GetProvinceCodeMapAsync(CancellationToken cancellationToken = default)
     {
         var provinces = await GetProvincesAsync(cancellationToken).ConfigureAwait(false);
@@ -75,6 +87,7 @@ public class NmcLocationClient : INmcLocationClient
             .ToDictionary(static group => group.Key, static group => group.First().Code);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NmcCity>> GetCitiesByProvinceCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var normalizedCode = NmcClientArgumentHelper.NormalizeRequiredProvinceCode(provinceCode, nameof(provinceCode));
@@ -85,6 +98,7 @@ public class NmcLocationClient : INmcLocationClient
         return cities ?? new List<NmcCity>();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NmcCity>> GetCitiesByProvinceNameAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var province = await GetProvinceByNameAsync(provinceName, cancellationToken).ConfigureAwait(false);
@@ -93,6 +107,7 @@ public class NmcLocationClient : INmcLocationClient
             : await GetCitiesByProvinceCodeAsync(province.Code, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NmcCity>> GetCitiesByProvinceAsync(string provinceNameOrCode, CancellationToken cancellationToken = default)
     {
         var province = await GetProvinceAsync(provinceNameOrCode, cancellationToken).ConfigureAwait(false);
@@ -101,60 +116,70 @@ public class NmcLocationClient : INmcLocationClient
             : await GetCitiesByProvinceCodeAsync(province.Code, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityNamesByProvinceCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityNames(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityNamesByProvinceNameAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceNameAsync(provinceName, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityNames(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityNamesByProvinceAsync(string provinceNameOrCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceAsync(provinceNameOrCode, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityNames(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityCodesByProvinceCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityCodes(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityCodesByProvinceNameAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceNameAsync(provinceName, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityCodes(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetCityCodesByProvinceAsync(string provinceNameOrCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceAsync(provinceNameOrCode, cancellationToken).ConfigureAwait(false);
         return ExtractDistinctCityCodes(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<string, string>> GetCityCodeMapByProvinceCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return ExtractCityCodeMap(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<string, string>> GetCityCodeMapByProvinceNameAsync(string provinceName, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceNameAsync(provinceName, cancellationToken).ConfigureAwait(false);
         return ExtractCityCodeMap(cities);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<string, string>> GetCityCodeMapByProvinceAsync(string provinceNameOrCode, CancellationToken cancellationToken = default)
     {
         var cities = await GetCitiesByProvinceAsync(provinceNameOrCode, cancellationToken).ConfigureAwait(false);
         return ExtractCityCodeMap(cities);
     }
 
+    /// <inheritdoc />
     public async Task<NmcCity?> GetCityByCodeAsync(string cityCode, CancellationToken cancellationToken = default)
     {
         var normalizedCode = NmcClientArgumentHelper.NormalizeRequiredCityCode(cityCode, nameof(cityCode));
@@ -172,6 +197,7 @@ public class NmcLocationClient : INmcLocationClient
         return null;
     }
 
+    /// <inheritdoc />
     public async Task<NmcCity?> GetCityByNameAsync(
         string cityName,
         string? provinceCode = null,
@@ -197,6 +223,7 @@ public class NmcLocationClient : INmcLocationClient
         return matchedCities.FirstOrDefault();
     }
 
+    /// <inheritdoc />
     public async Task<NmcCity?> GetCityAsync(
         string cityNameOrCode,
         string? provinceCode = null,
@@ -214,6 +241,7 @@ public class NmcLocationClient : INmcLocationClient
         return await GetCityByNameAsync(normalizedText, provinceCode, provinceName, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetCityCodeByNameAsync(
         string cityName,
         string? provinceCode = null,
@@ -224,12 +252,14 @@ public class NmcLocationClient : INmcLocationClient
         return city?.Code;
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetCityNameByCodeAsync(string cityCode, CancellationToken cancellationToken = default)
     {
         var city = await GetCityByCodeAsync(cityCode, cancellationToken).ConfigureAwait(false);
         return city?.City;
     }
 
+    /// <inheritdoc />
     public async Task<string?> GetCityCodeAsync(
         string cityNameOrCode,
         string? provinceCode = null,
@@ -240,6 +270,7 @@ public class NmcLocationClient : INmcLocationClient
         return city?.Code;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<NmcCity>> SearchCitiesByNameAsync(string cityName, CancellationToken cancellationToken = default)
     {
         var normalizedCityName = NmcClientArgumentHelper.NormalizeRequiredText(cityName, nameof(cityName));
@@ -256,18 +287,27 @@ public class NmcLocationClient : INmcLocationClient
         return matchedCities;
     }
 
+    /// <summary>
+    /// 在指定省份内根据编码查找城市。
+    /// </summary>
     private async Task<NmcCity?> FindCityByCodeAsync(string provinceCode, string cityCode, CancellationToken cancellationToken)
     {
         var cities = await GetCitiesByProvinceCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return cities.FirstOrDefault(city => LocationNameNormalizer.IsCodeMatch(city.Code, cityCode));
     }
 
+    /// <summary>
+    /// 在指定省份内根据名称查找城市。
+    /// </summary>
     private async Task<NmcCity?> FindCityByNameAsync(string provinceCode, string cityName, CancellationToken cancellationToken)
     {
         var cities = await GetCitiesByProvinceCodeAsync(provinceCode, cancellationToken).ConfigureAwait(false);
         return cities.FirstOrDefault(city => LocationNameNormalizer.IsCityNameMatch(city.City, cityName));
     }
 
+    /// <summary>
+    /// 构建省份接口的完整 URL。
+    /// </summary>
     private string BuildProvinceUrl(string? provinceCode = null)
     {
         var baseUrl = NmcClientArgumentHelper.NormalizeBaseUrl(_options.BaseUrl);
@@ -277,6 +317,9 @@ public class NmcLocationClient : INmcLocationClient
             : $"{baseUrl}{provincePath}/{NmcClientArgumentHelper.NormalizeRequiredProvinceCode(provinceCode, nameof(provinceCode))}";
     }
 
+    /// <summary>
+    /// 从城市列表中提取去重后的城市名称列表。
+    /// </summary>
     private static IReadOnlyList<string> ExtractDistinctCityNames(IEnumerable<NmcCity> cities)
     {
         return cities
@@ -286,6 +329,9 @@ public class NmcLocationClient : INmcLocationClient
             .ToList();
     }
 
+    /// <summary>
+    /// 从城市列表中提取去重后的城市编码列表。
+    /// </summary>
     private static IReadOnlyList<string> ExtractDistinctCityCodes(IEnumerable<NmcCity> cities)
     {
         return cities
@@ -295,6 +341,9 @@ public class NmcLocationClient : INmcLocationClient
             .ToList();
     }
 
+    /// <summary>
+    /// 从城市列表中提取城市名称与编码的映射字典。
+    /// </summary>
     private static IReadOnlyDictionary<string, string> ExtractCityCodeMap(IEnumerable<NmcCity> cities)
     {
         return cities
