@@ -1,43 +1,60 @@
 # Azrng.NmcWeather
 
-`Azrng.NmcWeather` 是一个基于 `Common.HttpClients` 的中央气象台天气接口客户端。
+> 中央气象台（NMC）天气接口 .NET 客户端 —— 一行代码接入中国气象数据
 
-当前接口按职责拆分为三类：
-- `INmcLocationClient`：省份、城市、编码查询
-- `INmcWeatherClient`：只负责按城市 `code/stationid` 获取天气
-- `INmcWeatherQueryClient`：面向业务的便捷天气查询，支持按城市名等方式获取天气
+![NuGet](https://img.shields.io/nuget/v/Azrng.NmcWeather.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Target](https://img.shields.io/badge/target-.NET%206%20%7C%207%20%7C%208%20%7C%209%20%7C%2010-lightgrey.svg)
 
-## 功能
+📖 项目简介
 
-- 获取全部省份列表
-- 根据省份名称或编码获取省份信息
-- 根据省份名称或编码获取城市列表
-- 根据指定省份获取城市编码列表、城市名称列表、城市名称与编码映射
-- 根据省份名称快速获取省份编码
-- 根据城市名称快速获取城市编码
-- 根据城市名称或编码获取城市信息
-- 根据城市名称或编码获取天气信息
+`Azrng.NmcWeather` 封装了中央气象台（www.nmc.cn）的省份、城市与天气查询接口，为 .NET 应用提供开箱即用的气象数据访问能力。客户端按职责拆分为三类接口：位置查询、天气数据获取、业务级便捷查询，支持按城市名称或编码灵活获取实时天气与预报信息。
 
-## 安装
+目标用户：需要在中国境内应用中集成气象数据的 .NET 开发者。
+
+✨ 特性
+
+*   **三类职责清晰的客户端接口**：`INmcLocationClient`（位置查询）、`INmcWeatherClient`（天气数据）、`INmcWeatherQueryClient`（业务级便捷查询）
+*   **城市名称宽松匹配**：支持常见行政后缀容错，如 `北京` 与 `北京市` 均可匹配
+*   **多目标框架支持**：同时支持 `net6.0` / `net7.0` / `net8.0` / `net9.0` / `net10.0`
+*   **自动依赖注册**：一行 `AddNmcWeather()` 完成 DI 注册，自动补全 `Common.HttpClients` 依赖
+*   **异步优先**：全部 API 采用 `async/await`，支持 `CancellationToken` 取消操作
+
+🛠️ 技术栈
+
+*   运行时：.NET 6.0 ~ 10.0（多目标框架）
+*   HTTP 客户端：Common.HttpClients（基于 `IHttpClientFactory`）
+*   测试框架：xUnit v3 + Moq + Coverlet
+*   包管理：NuGet
+
+🚀 快速开始
+
+### 先决条件
+
+确保你的开发环境满足以下要求：
+
+*   .NET SDK 6.0+（推荐 8.0+）
+
+### 安装
 
 ```bash
 dotnet add package Azrng.NmcWeather
 ```
 
-## 注册
+### 注册服务
 
 ```csharp
 using Azrng.NmcWeather;
 
 builder.Services.AddNmcWeather(options =>
 {
-    options.BaseUrl = "http://www.nmc.cn";
+    options.BaseUrl = "http://www.nmc.cn"; // 默认值，可省略
 });
 ```
 
-如果容器里还没有注册 `Common.HttpClients`，`AddNmcWeather` 会自动补注册默认的 `IHttpHelper`。
+> 若容器中尚未注册 `Common.HttpClients`，`AddNmcWeather` 会自动补注册默认的 `IHttpHelper`。
 
-## 使用
+### 使用示例
 
 ```csharp
 using Azrng.NmcWeather;
@@ -58,36 +75,62 @@ public class WeatherAppService
         _weatherQueryClient = weatherQueryClient;
     }
 
-    public async Task DemoAsync()
+    public async Task DemoAsync(CancellationToken cancellationToken = default)
     {
-        var province = await _locationClient.GetProvinceAsync("北京");
-        var provinceCode = await _locationClient.GetProvinceCodeAsync("北京");
-        var cities = await _locationClient.GetCitiesByProvinceAsync("ABJ");
-        var cityCodes = await _locationClient.GetCityCodesByProvinceAsync("北京");
-        var cityCodeMap = await _locationClient.GetCityCodeMapByProvinceAsync("北京");
-        var city = await _locationClient.GetCityAsync("朝阳");
-        var cityCode = await _locationClient.GetCityCodeAsync("朝阳", provinceName: "北京");
+        // 1. 查询省份信息
+        var province = await _locationClient.GetProvinceAsync("北京", cancellationToken);
+        var provinceCode = await _locationClient.GetProvinceCodeAsync("北京", cancellationToken);
 
-        var weatherByCode = await _weatherClient.GetWeatherByCityCodeAsync(cityCode!);
-        var weatherByName = await _weatherQueryClient.GetWeatherByCityNameAsync("朝阳", provinceName: "北京");
+        // 2. 查询城市列表与编码
+        var cities = await _locationClient.GetCitiesByProvinceAsync("ABJ", cancellationToken);
+        var cityCode = await _locationClient.GetCityCodeAsync("朝阳", provinceName: "北京", cancellationToken);
+
+        // 3. 按城市编码获取天气
+        var weatherByCode = await _weatherClient.GetWeatherByCityCodeAsync(cityCode!, cancellationToken);
+
+        // 4. 按城市名称便捷获取天气（自动解析编码）
+        var weatherByName = await _weatherQueryClient.GetWeatherByCityNameAsync("朝阳", provinceName: "北京", cancellationToken);
     }
 }
 ```
 
-## 说明
+## 接口说明
 
-- 默认接口地址使用 `http://www.nmc.cn`
-- 当前版本依赖 `Common.HttpClients`，因此目标框架与它保持一致，为 `net6.0` 到 `net10.0`
-- 城市名称查询支持常见行政后缀的宽松匹配，例如 `北京` 与 `北京市`
-- 真实联调时发现当前线上城市站点编码为区分大小写的混合字符串，例如 `Wqsps`，因此天气查询会保留原始 `stationid` 大小写
+| 接口 | 职责 | 典型方法 |
+|---|---|---|
+| `INmcLocationClient` | 省份、城市、编码查询 | `GetProvinceAsync`、`GetCityCodeAsync`、`GetCitiesByProvinceAsync` |
+| `INmcWeatherClient` | 按城市编码获取天气 | `GetWeatherByCityCodeAsync` |
+| `INmcWeatherQueryClient` | 业务级便捷天气查询 | `GetWeatherByCityNameAsync`、`GetWeatherByCityAsync` |
+
+## 配置项
+
+`NmcWeatherOptions` 支持以下配置：
+
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `BaseUrl` | `http://www.nmc.cn` | 中央气象台接口基地址 |
+| `ProvincePath` | `/rest/province` | 省份接口路径 |
+| `WeatherPath` | `/rest/weather` | 天气接口路径 |
+
+## 注意事项
+
+*   城市站点编码为区分大小写的混合字符串（如 `Wqsps`），天气查询会保留原始大小写
+*   城市名称查询支持常见行政后缀的宽松匹配
+
+## 运行测试
+
+```bash
+dotnet test test/Azrng.NmcWeather.Test/Azrng.NmcWeather.Test.csproj
+```
 
 ## 版本更新记录
 
 ### 1.0.0
 
-- 首次发布 `Azrng.NmcWeather`
-- 提供 `INmcLocationClient`、`INmcWeatherClient`、`INmcWeatherQueryClient` 三类接口
-- 支持省份、城市、编码查询，以及按城市编码获取天气
-- 支持按城市名称进行便捷天气查询
-- 基于真实联调修正站点编码大小写保留逻辑，兼容当前线上混合大小写 `stationid`
-- 补充并验证 `net6.0` 到 `net10.0` 多目标框架构建，其中测试覆盖 `net6.0` 与 `net8.0`
+*   首次发布
+*   提供 `INmcLocationClient`、`INmcWeatherClient`、`INmcWeatherQueryClient` 三类接口
+*   支持省份、城市、编码查询，以及按城市编码获取天气
+*   支持按城市名称进行便捷天气查询
+*   兼容 `net6.0` ~ `net10.0` 多目标框架
+
+> 文档版本：v1.0

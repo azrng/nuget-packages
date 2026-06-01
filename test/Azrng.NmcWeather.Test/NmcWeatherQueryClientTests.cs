@@ -48,14 +48,14 @@ public class NmcWeatherQueryClientTests
         var weatherClient = new Mock<INmcWeatherClient>(MockBehavior.Strict);
         var expected = CreateWeatherEnvelope();
 
-        locationClient.Setup(client => client.GetCityCodeAsync("朝阳市", null, "北京", It.IsAny<CancellationToken>()))
+        locationClient.Setup(client => client.GetCityCodeAsync("朝阳", null, "北京", It.IsAny<CancellationToken>()))
             .ReturnsAsync("54433");
         weatherClient.Setup(client => client.GetWeatherByCityCodeAsync("54433", It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var queryClient = new NmcWeatherQueryClient(locationClient.Object, weatherClient.Object);
 
-        var weather = await queryClient.GetWeatherByCityAsync("朝阳市", provinceName: "北京");
+        var weather = await queryClient.GetWeatherByCityAsync("朝阳", provinceName: "北京");
 
         Assert.Same(expected, weather);
     }
