@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 
 namespace Azrng.NmcWeather.Test
 {
@@ -12,10 +12,24 @@ namespace Azrng.NmcWeather.Test
         }
 
         [Fact]
-        public async Task QueryCity_ReturnOk()
+        public async Task GetWeatherByCityNameAsync_上海_ReturnOk()
         {
             var result = await _queryClient.GetWeatherByCityNameAsync("上海");
-            Assert.True(result is not null);
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public async Task GetWeatherByCityAsync_按名称_ReturnOk()
+        {
+            var result = await _queryClient.GetWeatherByCityAsync("上海", provinceName: "上海");
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public async Task GetWeatherByCityAsync_按名称_北京_ReturnOk()
+        {
+            var result = await _queryClient.GetWeatherByCityAsync("海淀", provinceName: "北京");
+            Assert.NotNull(result);
         }
     }
 }
