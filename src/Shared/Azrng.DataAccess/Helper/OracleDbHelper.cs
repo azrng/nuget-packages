@@ -1,3 +1,4 @@
+using Azrng.Core.Model;
 using Azrng.DataAccess.Validation;
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
@@ -7,20 +8,11 @@ namespace Azrng.DataAccess.Helper
 {
     public class OracleDbHelper : DbHelperBase
     {
-        private const string ConnectionStringFormat =
-            "Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={0})(PORT={1}))(CONNECT_DATA=(SERVICE_NAME={2})));User Id={3};Password={4};";
-
         public OracleDbHelper(string connectionString) : base(connectionString) { }
 
         public OracleDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(
-                ConnectionStringFormat,
-                dataSourceConfig.Host,
-                dataSourceConfig.Port,
-                dataSourceConfig.DbName,
-                dataSourceConfig.UserId.IsNotNullOrWhiteSpace() ? dataSourceConfig.UserId : dataSourceConfig.User,
-                dataSourceConfig.Password);
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.Oracle, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

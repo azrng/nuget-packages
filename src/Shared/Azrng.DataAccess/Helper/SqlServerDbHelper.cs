@@ -1,3 +1,4 @@
+using Azrng.Core.Model;
 using Azrng.DataAccess.Validation;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -7,19 +8,11 @@ namespace Azrng.DataAccess.Helper
 {
     public class SqlServerDbHelper : DbHelperBase
     {
-        private static string ConnectionStringFormat => "Server={0},{1};Database={2};Uid={3};Pwd={4};Encrypt=no;";
-
         public SqlServerDbHelper(string connectionString) : base(connectionString) { }
 
         public SqlServerDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(
-                ConnectionStringFormat,
-                dataSourceConfig.Host,
-                dataSourceConfig.Port,
-                dataSourceConfig.DbName,
-                dataSourceConfig.User,
-                dataSourceConfig.Password);
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.SqlServer, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

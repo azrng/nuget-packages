@@ -1,4 +1,5 @@
-﻿using Dapper;
+using Azrng.Core.Model;
+using Dapper;
 using Microsoft.Data.Sqlite;
 using System.Data.Common;
 
@@ -6,13 +7,11 @@ namespace Azrng.DataAccess.Helper
 {
     public class SqliteDbHelper : DbHelperBase
     {
-        private static string ConnectionStringFormat = "Data Source={0};";
-
         public SqliteDbHelper(string connectionString) : base(connectionString) { }
 
         public SqliteDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(ConnectionStringFormat, dataSourceConfig.DbName);
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.Sqlite, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

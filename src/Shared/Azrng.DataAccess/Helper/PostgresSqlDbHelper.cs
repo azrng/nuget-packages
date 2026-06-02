@@ -1,6 +1,6 @@
+using Azrng.Core.Model;
 using Dapper;
 using Npgsql;
-using System;
 using System.Data.Common;
 
 namespace Azrng.DataAccess.Helper
@@ -11,22 +11,7 @@ namespace Azrng.DataAccess.Helper
 
         public PostgresSqlDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            var builder = new NpgsqlConnectionStringBuilder
-            {
-                Host = dataSourceConfig.Host,
-                Port = dataSourceConfig.Port,
-                Database = dataSourceConfig.DbName,
-                Username = dataSourceConfig.User,
-                Password = dataSourceConfig.Password,
-                PersistSecurityInfo = true,
-                Pooling = dataSourceConfig.Pooling,
-                MinPoolSize = Math.Max(0, dataSourceConfig.MinPoolSize),
-                MaxPoolSize = Math.Max(dataSourceConfig.MinPoolSize, dataSourceConfig.MaxPoolSize),
-                ConnectionIdleLifetime = 5,
-                ConnectionPruningInterval = 5
-            };
-
-            ConnectionString = builder.ConnectionString;
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.PostgresSql, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

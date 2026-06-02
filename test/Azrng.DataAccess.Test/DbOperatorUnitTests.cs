@@ -2,8 +2,11 @@ using Azrng.Core.Model;
 using Azrng.DataAccess;
 using Azrng.DataAccess.DbBridge;
 using Azrng.DataAccess.Helper;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 using System.Data.Common;
 
 namespace Azrng.DataAccess.Test;
@@ -169,6 +172,81 @@ public class DbOperatorUnitTests
         Assert.True(builder.Pooling);
         Assert.Equal(4, builder.MinPoolSize);
         Assert.Equal(11, builder.MaxPoolSize);
+        Assert.False(builder.PersistSecurityInfo);
+    }
+
+    [Fact]
+    public void DataSourceConnectionStringBuilder_ShouldBuildProviderConnectionStrings()
+    {
+        var mysql = new MySqlConnectionStringBuilder(
+            DataSourceConnectionStringBuilder.Build(CreateConfig(DatabaseType.MySql)));
+        Assert.Equal("localhost", mysql.Server);
+        Assert.Equal("sample", mysql.Database);
+        Assert.Equal("pwd", mysql.Password);
+
+        var sqlServer = new SqlConnectionStringBuilder(
+            DataSourceConnectionStringBuilder.Build(CreateConfig(DatabaseType.SqlServer)));
+        Assert.Equal("localhost,1433", sqlServer.DataSource);
+        Assert.Equal("sample", sqlServer.InitialCatalog);
+        Assert.Equal("pwd", sqlServer.Password);
+        Assert.False(sqlServer.Encrypt);
+
+        var oracle = new OracleConnectionStringBuilder(
+            DataSourceConnectionStringBuilder.Build(CreateConfig(DatabaseType.Oracle)));
+        Assert.Equal("user", oracle.UserID);
+        Assert.Equal("pwd", oracle.Password);
+
+        var postgres = new NpgsqlConnectionStringBuilder(
+            DataSourceConnectionStringBuilder.Build(CreateConfig(DatabaseType.PostgresSql)));
+        Assert.Equal("localhost", postgres.Host);
+        Assert.Equal("sample", postgres.Database);
+        Assert.Equal("pwd", postgres.Password);
+
+        var sqlite = new SqliteConnectionStringBuilder(
+            DataSourceConnectionStringBuilder.Build(CreateConfig(DatabaseType.Sqlite)));
+        Assert.Equal(":memory:", sqlite.DataSource);
+    }
+
+    [Fact]
+    public void MaskConnectionString_ShouldRedactSensitiveKeys()
+    {
+        var connectionString =
+            "Server=localhost;Database=sample;User Id=sa;Username=postgres;User=click;Password=secret;Pwd=secret2;";
+
+        var masked = DataSourceConnectionStringBuilder.MaskConnectionString(connectionString);
+
+        var maskedBuilder = new DbConnectionStringBuilder { ConnectionString = masked };
+        Assert.Equal("***", maskedBuilder["User Id"]);
+        Assert.Equal("***", maskedBuilder["Username"]);
+        Assert.Equal("***", maskedBuilder["User"]);
+        Assert.Equal("***", maskedBuilder["Password"]);
+        Assert.Equal("***", maskedBuilder["Pwd"]);
+        Assert.DoesNotContain("secret", masked);
+        Assert.DoesNotContain("secret2", masked);
+        Assert.Contains("***", masked);
+    }
+
+    [Fact]
+    public void DbHelper_ShouldExposeMaskedConnectionString()
+    {
+        var helper = new SqlServerDbHelper(new DataSourceConfig
+        {
+            Type = DatabaseType.SqlServer,
+            Host = "localhost",
+            Port = 1433,
+            DbName = "sample",
+            User = "sa",
+            Password = "secret"
+        });
+
+        Assert.Contains("Password=secret", helper.ConnectionString);
+        IDbHelper dbHelper = helper;
+        var maskedConnectionString = dbHelper.GetMaskedConnectionString();
+        var maskedBuilder = new DbConnectionStringBuilder { ConnectionString = maskedConnectionString };
+        Assert.Equal("***", maskedBuilder["User ID"]);
+        Assert.Equal("***", maskedBuilder["Password"]);
+        Assert.DoesNotContain("secret", helper.MaskedConnectionString);
+        Assert.DoesNotContain("secret", maskedConnectionString);
     }
 
     [Fact]

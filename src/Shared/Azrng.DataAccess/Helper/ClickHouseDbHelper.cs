@@ -1,4 +1,5 @@
-﻿using ClickHouse.Client.ADO;
+using Azrng.Core.Model;
+using ClickHouse.Client.ADO;
 using ClickHouse.Client.ADO.Parameters;
 using ClickHouse.Client.Numerics;
 using Dapper;
@@ -9,15 +10,11 @@ namespace Azrng.DataAccess.Helper
 {
     public class ClickHouseDbHelper : DbHelperBase
     {
-        private static string ConnectionStringFormat =>
-            "Host={0};Port={1};Database={2};User={3};Password={4};Compress=True;CheckCompressedHash=False;Compressor=lz4;";
-
         public ClickHouseDbHelper(string connectionString) : base(connectionString) { }
 
         public ClickHouseDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            ConnectionString = string.Format(ConnectionStringFormat, dataSourceConfig.Host, dataSourceConfig.Port,
-                dataSourceConfig.DbName, dataSourceConfig.User, dataSourceConfig.Password);
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.ClickHouse, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

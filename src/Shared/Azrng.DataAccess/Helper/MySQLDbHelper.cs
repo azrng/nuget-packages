@@ -1,7 +1,7 @@
+using Azrng.Core.Model;
 using Azrng.DataAccess.Validation;
 using Dapper;
 using MySqlConnector;
-using System;
 using System.Data.Common;
 
 namespace Azrng.DataAccess.Helper
@@ -12,20 +12,7 @@ namespace Azrng.DataAccess.Helper
 
         public MySqlDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig)
         {
-            var builder = new MySqlConnectionStringBuilder
-            {
-                Server = dataSourceConfig.Host,
-                Port = (uint)dataSourceConfig.Port,
-                Database = dataSourceConfig.DbName,
-                UserID = dataSourceConfig.User,
-                Password = dataSourceConfig.Password,
-                Pooling = dataSourceConfig.Pooling,
-                MinimumPoolSize = (uint)Math.Max(0, dataSourceConfig.MinPoolSize),
-                MaximumPoolSize = (uint)Math.Max(dataSourceConfig.MinPoolSize, dataSourceConfig.MaxPoolSize),
-                CharacterSet = "utf8"
-            };
-
-            ConnectionString = builder.ConnectionString;
+            ConnectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.MySql, dataSourceConfig);
         }
 
         protected override DbConnection GetConnection()

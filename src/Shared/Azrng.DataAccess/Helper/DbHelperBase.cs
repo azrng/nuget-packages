@@ -30,6 +30,11 @@ namespace Azrng.DataAccess.Helper
         public string ConnectionString { get; protected set; } = string.Empty;
 
         /// <summary>
+        /// 脱敏后的连接字符串
+        /// </summary>
+        public string MaskedConnectionString => DataSourceConnectionStringBuilder.MaskConnectionString(ConnectionString);
+
+        /// <summary>
         /// 获取数据库连接（由子类实现）
         /// </summary>
         protected abstract DbConnection GetConnection();
