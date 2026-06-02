@@ -56,6 +56,13 @@ namespace Azrng.Core.Results
         public static IResultModel Success() => new ResultModel(true);
 
         /// <summary>
+        /// 成功
+        /// </summary>
+        /// <param name="message">成功消息</param>
+        /// <returns></returns>
+        public static IResultModel Success(string message) => new ResultModel(true, message);
+
+        /// <summary>
         /// 返回错误
         /// </summary>
         /// <param name="message">错误信息</param>
@@ -111,6 +118,17 @@ namespace Azrng.Core.Results
         public static IResultModel<T> Success(T data)
         {
             return new ResultModel<T>(data, true, "success", "200");
+        }
+
+        /// <summary>
+        /// 成功
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="message">成功消息</param>
+        /// <returns></returns>
+        public static IResultModel<T> Success(T data, string message)
+        {
+            return new ResultModel<T>(data, true, message, "200");
         }
 
         /// <summary>

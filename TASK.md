@@ -17,6 +17,7 @@
 | T007 | 修复 LocalLogHelper 日志可靠性问题 | 修复 `Azrng.Core` 本地日志写入的并发保护、显式 flush、错误日志目录与保留天数配置问题，并补充回归测试与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-15 |
 | T012 | 完善 Azrng.NmcWeather 文档与测试 | 生成 README、补充全量中文 XML 注释、补全集成测试（13 个） | 收口 | Codex | REVIEW | P1 | 2026-06-01 14:30 |
 | T013 | 改进 Azrng.DataAccess 连接安全 | 根据连接安全建议核查改动合理性，统一 DataSourceConfig 连接字符串构造并补充脱敏能力与测试 | 收口 | Codex | REVIEW | P1 | 2026-06-02 |
+| T014 | 优化 Azrng.Core 结果与异常工具 | 根据结果包装与异常体系建议新增通用 ResultModel 工厂、扩展和异常转换能力并补充测试 | 收口 | Codex | REVIEW | P1 | 2026-06-02 |
 | T006 | 新增 Azrng.NmcWeather 天气包 | 在 `src/Shared` 下新增 `Azrng.NmcWeather`，基于 `Common.HttpClients` 封装中央气象台省份、城市与天气查询能力，并接入 `ThirdNugetStudy.slnx` 与基础测试 | 收口 | Codex | DONE | P1 | 2026-06-01 14:30 |
 | T005 | 统一 Shared 类库 XML 文档输出配置 | 批量补齐 src/Shared 下类库项目的 XML 文档生成配置，并统一使用按目标框架区分的输出文件格式，避免并行构建写入冲突 | 收口 | Codex | REVIEW | P1 | 2026-04-15 17:31 |
 | T004 | 修复待提交内容乱码 | 排查当前待提交改动中的乱码内容并修复文件编码或文本异常，确保提交内容可正常评审 | 收口 | Codex | DONE | P1 | 2026-04-15 |
