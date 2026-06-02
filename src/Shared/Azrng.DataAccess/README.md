@@ -10,6 +10,7 @@
 - ✅ **分页支持** - 开箱即用的分页查询
 - ✅ **Dapper ORM** - 轻量级、高性能
 - ✅ **连接池** - 支持 MySQL/PostgreSQL 连接池管理
+- ✅ **连接字符串安全** - 统一构建连接字符串，内置敏感信息脱敏
 - ✅ **.NET 8.0/9.0/10.0** - 支持最新的 .NET 版本
 
 ## 安装
@@ -97,7 +98,7 @@ var user = await dbHelper.QueryFirstOrDefaultAsync<User>(
 | MySQL | `DatabaseType.MySql` | 最流行的开源数据库 |
 | SQL Server | `DatabaseType.SqlServer` | 微软官方数据库 |
 | PostgreSQL | `DatabaseType.PostgresSql` | 功能强大的开源数据库 |
-| SQLite | `DatabaseType.SqLite` | 轻量级嵌入式数据库 |
+| SQLite | `DatabaseType.Sqlite` | 轻量级嵌入式数据库 |
 | ClickHouse | `DatabaseType.ClickHouse` | 大数据分析列式数据库 |
 | Oracle | `DatabaseType.Oracle` | 企业级数据库 |
 
@@ -156,7 +157,37 @@ catch
 }
 ```
 
+### 连接字符串安全
+
+`DataSourceConnectionStringBuilder` 统一负责连接字符串的构建与脱敏，避免各 DbHelper 分散拼接带来的安全隐患。
+
+```csharp
+// 使用 DataSourceConfig 构建连接字符串（推荐）
+var connectionString = DataSourceConnectionStringBuilder.Build(DatabaseType.MySql, config);
+
+// 脱敏连接字符串（用于日志输出等场景）
+var masked = DataSourceConnectionStringBuilder.MaskConnectionString(connectionString);
+// 输出示例: "Server=localhost;Database=mydb;User Id=***;Password=***;..."
+
+// 通过 IDbHelper 扩展方法获取脱敏连接字符串
+var maskedFromHelper = dbHelper.GetMaskedConnectionString();
+
+// DbHelperBase 派生类也暴露了 MaskedConnectionString 属性
+var maskedProperty = dbHelper.MaskedConnectionString;
+```
+
+**支持脱敏的字段**：`Password`、`Pwd`、`User Id`、`UserID`、`Username`、`User`、`UID`。
+
+> 注意：直接传入明文连接字符串的构造方式（`new MySqlDbHelper(connectionString)`）仍然保留用于兼容，但运行时会持有完整连接字符串。推荐使用 `DataSourceConfig` 构造方式。
+
 ## 版本历史
+
+### 1.0.0-beta4
+
+- 新增 `DataSourceConnectionStringBuilder`，统一 6 种数据库的连接字符串构建逻辑
+- 新增 `MaskConnectionString` 脱敏方法，支持日志安全输出
+- 新增 `GetMaskedConnectionString()` 扩展方法与 `DbHelperBase.MaskedConnectionString` 属性
+- 修正 `PostgresSql` 构建器 `PersistSecurityInfo` 为 `false`（增强安全性）
 
 ### 1.0.0-beta3
 
