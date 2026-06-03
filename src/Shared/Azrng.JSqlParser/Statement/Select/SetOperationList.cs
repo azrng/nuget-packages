@@ -1,0 +1,57 @@
+using System.Text;
+
+namespace Azrng.JSqlParser.Statement.Select;
+
+/// <summary>
+/// Represents a list of SELECT statements combined with UNION, INTERSECT, or EXCEPT.
+/// </summary>
+public class SetOperationList : Select
+{
+    public List<Select> Selects { get; set; } = new();
+    public List<SetOperation> Operations { get; set; } = new();
+
+    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    {
+        return selectVisitor.Visit(this, context);
+    }
+
+    public override StringBuilder AppendSelectBodyTo(StringBuilder builder)
+    {
+        for (int i = 0; i < Selects.Count; i++)
+        {
+            if (i > 0) builder.Append(' ').Append(Operations[i - 1]).Append(' ');
+            builder.Append(Selects[i]);
+        }
+        return builder;
+    }
+}
+
+/// <summary>
+/// Represents a set operation (UNION, INTERSECT, EXCEPT).
+/// </summary>
+public class SetOperation
+{
+    public enum OperationType
+    {
+        UNION,
+        INTERSECT,
+        EXCEPT
+    }
+
+    public OperationType Type { get; set; }
+    public bool All { get; set; }
+    public bool Distinct { get; set; }
+
+    public SetOperation() { }
+
+    public SetOperation(OperationType type, bool all = false)
+    {
+        Type = type;
+        All = all;
+    }
+
+    public override string ToString()
+    {
+        return Type.ToString() + (All ? " ALL" : "");
+    }
+}

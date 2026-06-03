@@ -117,12 +117,6 @@ public class WeatherAppService
 *   城市站点编码为区分大小写的混合字符串（如 `Wqsps`），天气查询会保留原始大小写
 *   城市名称查询支持常见行政后缀的宽松匹配
 
-## 运行测试
-
-```bash
-dotnet test test/Azrng.NmcWeather.Test/Azrng.NmcWeather.Test.csproj
-```
-
 ## 版本更新记录
 
 ### 1.0.0
@@ -132,5 +126,3 @@ dotnet test test/Azrng.NmcWeather.Test/Azrng.NmcWeather.Test.csproj
 *   支持省份、城市、编码查询，以及按城市编码获取天气
 *   支持按城市名称进行便捷天气查询
 *   兼容 `net6.0` ~ `net10.0` 多目标框架
-
-> 文档版本：v1.0

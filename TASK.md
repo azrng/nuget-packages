@@ -12,7 +12,7 @@
 | ------- | -------- | -------- | -------- | --------- | -------- | ------ | ------------ |
 | T009 | 核查 Azrng.AspNetCore.Core 代码审查 | 核查 `Azrng.AspNetCore.Core-review-2026-05-26.md` 中未提交审查意见的合理性，修复成立问题并补充验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-27 |
 | T010 | 修复 Azrng.NTika 代码审查问题 | 根据 `Azrng.NTika-review-2026-05-29.md` 修复 NTika 安全与解析正确性问题，并补充测试、验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-29 12:57 |
-| T011 | 修复 JSqlParser.Net 构建警告 | 核查 `JSqlParser.Net` 类库构建警告，修复可低风险处理的问题并补充验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-06-01 10:26 |
+| T011 | 修复 Azrng.JSqlParser 构建警告 | 核查 `Azrng.JSqlParser` 类库构建警告，修复可低风险处理的问题并补充验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-06-01 10:26 |
 | T008 | 修复 Common.HttpClients 日志脱敏结构问题 | 将 HTTP 日志脱敏抽象为可替换策略，修复默认脱敏破坏 JSON 格式的问题，并补充测试、文档与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-25 15:25 |
 | T007 | 修复 LocalLogHelper 日志可靠性问题 | 修复 `Azrng.Core` 本地日志写入的并发保护、显式 flush、错误日志目录与保留天数配置问题，并补充回归测试与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-15 |
 | T012 | 完善 Azrng.NmcWeather 文档与测试 | 生成 README、补充全量中文 XML 注释、补全集成测试（13 个） | 收口 | Codex | REVIEW | P1 | 2026-06-01 14:30 |

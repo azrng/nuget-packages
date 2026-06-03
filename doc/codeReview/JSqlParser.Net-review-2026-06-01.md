@@ -1,4 +1,4 @@
-# JSqlParser.Net 代码审查
+# Azrng.JSqlParser 代码审查
 
 - 审查范围：`6ea1d8f` fix(jsqlparser): clear build warnings
 - 审查时间：2026-06-01
