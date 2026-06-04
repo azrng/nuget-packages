@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -35,6 +36,11 @@ namespace Common.HttpClients
             "client_secret",
             "api_key",
             "api-key"
+        };
+
+        private static readonly JsonSerializerOptions RelaxedJsonOptions = new()
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         private static readonly Regex BearerValuePattern = new(
@@ -117,7 +123,7 @@ namespace Common.HttpClients
             {
                 using var document = JsonDocument.Parse(content);
                 var redactedValue = RedactJsonElement(document.RootElement, null);
-                redacted = JsonSerializer.Serialize(redactedValue);
+                redacted = JsonSerializer.Serialize(redactedValue, RelaxedJsonOptions);
                 return true;
             }
             catch (JsonException)

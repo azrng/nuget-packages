@@ -369,6 +369,9 @@ options.AdditionalSensitiveHeaders = new[] { "X-Custom-Auth" };
 
 ## 版本更新记录
 
+* 2.1.1
+  * 修复日志脱敏层将中文等非 ASCII 字符转义为 `\uXXXX` 的问题
+  * 脱敏序列化改用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`，保留原始字符可读性
 * 2.1.0
   * 新增 `IHttpLogRedactor`，支持调用方自定义 HTTP 日志脱敏逻辑
   * 默认日志脱敏改为优先按 JSON 结构递归处理，避免未截断 JSON 在脱敏后格式损坏
