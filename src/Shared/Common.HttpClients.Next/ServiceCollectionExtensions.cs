@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -20,11 +21,169 @@ namespace Common.HttpClients
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// 添加HTTP客户端服务
+        /// 添加命名 HTTP 客户端服务，返回 IHttpClientBuilder 支持链式添加 DelegatingHandler
         /// </summary>
         /// <param name="services">服务集合</param>
+        /// <param name="name">客户端名称</param>
         /// <param name="configure">配置委托</param>
-        /// <returns>服务集合</returns>
+        /// <returns>IHttpClientBuilder，支持链式调用 AddHttpMessageHandler 等</returns>
+        public static IHttpClientBuilder AddHttpClientService(this IServiceCollection services, string name, Action<HttpClientOptions> configure)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
+            var opt = new HttpClientOptions();
+            configure.Invoke(opt);
+
+            ValidateOptions(opt);
+
+            // 注册该名称的 HttpClientOptions
+            services.Configure(name, configure);
+
+            // 首次注册时添加公共依赖
+            services.TryAddSingleton<IHttpHelperFactory, HttpHelperFactory>();
+            services.AddHttpContextAccessor();
+            services.TryAddSingleton<IHttpLogRedactor, DefaultHttpLogRedactor>();
+            services.TryAddTransient<LoggingHandler>();
+
+            // 配置命名 HttpClient
+            var clientBuilder = services.AddHttpClient(name)
+
+                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                {
+                    var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
+                    var handler = new HttpClientHandler();
+
+                    if (config.IgnoreUntrustedCertificate)
+                    {
+                        handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+                    }
+
+                    return handler;
+                })
+
+                .ConfigureHttpClient((serviceProvider, client) =>
+                {
+                    client.Timeout = Timeout.InfiniteTimeSpan;
+
+                    var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
+                    if (!string.IsNullOrWhiteSpace(config.BaseAddress))
+                    {
+                        client.BaseAddress = new Uri(config.BaseAddress);
+                    }
+                })
+
+                .AddHttpMessageHandler<LoggingHandler>();
+
+            // 添加弹性策略处理器
+            clientBuilder.AddResilienceHandler($"{name}_handler", (builder, handler) =>
+            {
+                var httpOptions = handler.ServiceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
+
+                // 1. 降级处理策略
+                builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>()
+                {
+                    ShouldHandle = args =>
+                    {
+                        if (args.Context.CancellationToken.IsCancellationRequested)
+                        {
+                            return ValueTask.FromResult(false);
+                        }
+
+                        var ex = args.Outcome.Exception;
+                        if (ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
+                        {
+                            return ValueTask.FromResult(true);
+                        }
+
+                        var response = args.Outcome.Result;
+                        if (response != null && !response.IsSuccessStatusCode)
+                        {
+                            return ValueTask.FromResult(true);
+                        }
+
+                        return ValueTask.FromResult(false);
+                    },
+                    FallbackAction = args =>
+                    {
+                        if (!httpOptions.FailThrowException)
+                        {
+                            return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                            {
+                                Content = new StringContent("Fallback: request failed."),
+                                Headers = { { "X-Fallback-Response", "true" } }
+                            });
+                        }
+
+                        return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(args.Outcome.Exception!);
+                    }
+                })
+
+                // 2. 并发限制策略
+                .AddConcurrencyLimiter(httpOptions.ConcurrencyLimit)
+
+                // 3. 重试策略
+                .AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = httpOptions.MaxRetryAttempts,
+                    Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
+                    BackoffType = DelayBackoffType.Exponential,
+                    ShouldHandle = args =>
+                    {
+                        if (args.Context.CancellationToken.IsCancellationRequested)
+                        {
+                            return ValueTask.FromResult(false);
+                        }
+
+                        if (args.Outcome.Exception != null)
+                        {
+                            var shouldRetryException =
+                                args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
+                            return ValueTask.FromResult(shouldRetryException);
+                        }
+
+                        var response = args.Outcome.Result;
+                        if (response == null)
+                        {
+                            return ValueTask.FromResult(false);
+                        }
+
+                        if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
+                        {
+                            return ValueTask.FromResult(true);
+                        }
+
+                        var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
+                                                    response.StatusCode == HttpStatusCode.RequestTimeout;
+                        return ValueTask.FromResult(shouldRetryStatusCode);
+                    }
+                })
+
+                // 4. 熔断器策略
+                .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions())
+
+                // 5. 超时策略
+                .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
+            });
+
+            return clientBuilder;
+        }
+
+        /// <summary>
+        /// 添加 HTTP 客户端服务（使用指定配置，注册为 "default"）
+        /// </summary>
         public static IServiceCollection AddHttpClientService(this IServiceCollection services, Action<HttpClientOptions> configure)
         {
             if (services == null)
@@ -37,9 +196,44 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            var opt = new HttpClientOptions();
-            configure.Invoke(opt);
+            services.AddHttpClientService("default", configure);
 
+            // 向后兼容：注册 IHttpHelper 单例指向 "default"
+            services.AddSingleton<IHttpHelper>(sp =>
+            {
+                var factory = sp.GetRequiredService<IHttpHelperFactory>();
+                return factory.CreateClient("default");
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// 添加 HTTP 客户端服务（使用默认配置）
+        /// </summary>
+        public static IServiceCollection AddHttpClientService(this IServiceCollection services)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            return services.AddHttpClientService(config =>
+            {
+                config.AuditLog = true;
+                config.EnableLogRedaction = true;
+                config.FailThrowException = false;
+                config.Timeout = 100;
+                config.MaxRequestBodyLength = 4096;
+                config.MaxOutputResponseLength = 4096;
+                config.ConcurrencyLimit = 100;
+                config.MaxRetryAttempts = 3;
+                config.RetryDelaySeconds = 1;
+            });
+        }
+
+        private static void ValidateOptions(HttpClientOptions opt)
+        {
             opt.AdditionalSensitiveHeaders ??= new List<string>();
             opt.AdditionalSensitiveFields ??= new List<string>();
 
@@ -77,193 +271,6 @@ namespace Common.HttpClients
                 throw new ArgumentOutOfRangeException(nameof(opt.RetryDelaySeconds), opt.RetryDelaySeconds,
                     "RetryDelaySeconds必须在1-300之间");
             }
-
-            // 配置HttpClient选项
-            services.Configure(configure);
-
-            // 注册 HttpContextAccessor（如果还没有注册）
-            services.AddHttpContextAccessor();
-
-            // 注册默认日志脱敏器，调用方可提前注册 IHttpLogRedactor 覆盖默认实现
-            services.TryAddSingleton<IHttpLogRedactor, DefaultHttpLogRedactor>();
-
-            // 注册日志处理器
-            services.AddTransient<LoggingHandler>();
-
-            // 配置HttpClient，包含处理器和弹性策略
-            var clientBuilder = services.AddHttpClient<IHttpHelper, HttpClientHelper>("default")
-
-                                        // 配置主要的消息处理器，处理SSL证书验证
-                                         .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
-                                         {
-                                             var config = serviceProvider.GetRequiredService<IOptions<HttpClientOptions>>().Value;
-                                             var handler = new HttpClientHandler();
-
-                                            // 根据配置决定是否忽略不安全证书
-                                            if (config.IgnoreUntrustedCertificate)
-                                            {
-                                                handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-                                            }
-
-                                            return handler;
-                                        })
-
-                                        // 配置 HttpClient，将 Timeout 设置为无限，让 Polly 的超时策略完全控制超时行为
-                                        .ConfigureHttpClient(client =>
-                                        {
-                                            client.Timeout = Timeout.InfiniteTimeSpan;
-                                        })
-
-                                        // 添加日志处理器在内层，每次请求（包括重试）都会记录
-                                        .AddHttpMessageHandler<LoggingHandler>();
-
-            // 添加弹性策略处理器，按照依赖注入顺序：从外层到内层执行
-            clientBuilder.AddResilienceHandler("defaultHandler", (builder, handler) =>
-            {
-                // 获取HTTP配置选项
-                var httpOptions = handler.ServiceProvider.GetRequiredService<IOptions<HttpClientOptions>>().Value;
-
-                // 添加弹性策略链，按以下顺序执行（从外层到内层）：
-
-                // 1. 降级处理策略 - 当所有策略都失败时的最后保障
-                builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>()
-                                    {
-                                        ShouldHandle = args =>
-                                        {
-                                            if (args.Context.CancellationToken.IsCancellationRequested)
-                                            {
-                                                return ValueTask.FromResult(false);
-                                            }
-
-                                            var ex = args.Outcome.Exception;
-                                            if (ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
-                                            {
-                                                return ValueTask.FromResult(true);
-                                            }
-
-                                            // 重试耗尽后仍为非成功响应（如 5xx/408），也纳入降级处理
-                                            var response = args.Outcome.Result;
-                                            if (response != null && !response.IsSuccessStatusCode)
-                                            {
-                                                return ValueTask.FromResult(true);
-                                            }
-
-                                            return ValueTask.FromResult(false);
-                                        },
-                                        FallbackAction = args =>
-                                        {
-                                            // 如果配置了不抛出异常,返回一个服务不可用响应,添加标识头以区分真实服务端响应
-                                            // 否则保持原始异常,让它向上传播
-                                             if (!httpOptions.FailThrowException)
-                                             {
-                                                 return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                                                                                      {
-                                                                                          Content = new StringContent("Fallback: request failed."),
-                                                                                          Headers = { { "X-Fallback-Response", "true" } }
-                                                                                      });
-                                             }
-
-                                            // 如果配置要抛出异常,则重新抛出原始异常
-                                            return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(args.Outcome.Exception!);
-                                        }
-                                    })
-
-                       // 2. 并发限制策略 - 限制同时进行的HTTP请求数量，防止资源耗尽
-                       .AddConcurrencyLimiter(httpOptions.ConcurrencyLimit)
-
-                       // 3. 重试策略 - 根据配置决定是否重试，最多重试3次，使用指数退避
-                       // 注意：重试策略放在超时策略之前（外层），这样超时异常会被重试策略捕获并触发重试
-                        .AddRetry(new HttpRetryStrategyOptions
-                                  {
-                                      // 最大重试次数由配置控制
-                                      MaxRetryAttempts = httpOptions.MaxRetryAttempts,
-
-                                      // 初始延迟时间由配置控制
-                                      Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
-
-                                      // 指数退避策略，避免对服务器造成过大压力
-                                      BackoffType = DelayBackoffType.Exponential,
-
-                                      // 自定义判断是否需要重试的条件
-                                      ShouldHandle = args =>
-                                      {
-                                          if (args.Context.CancellationToken.IsCancellationRequested)
-                                          {
-                                              return ValueTask.FromResult(false);
-                                          }
-
-                                          if (args.Outcome.Exception != null)
-                                          {
-                                              var shouldRetryException =
-                                                  args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
-                                              return ValueTask.FromResult(shouldRetryException);
-                                          }
-
-                                          var response = args.Outcome.Result;
-                                          if (response == null)
-                                          {
-                                              return ValueTask.FromResult(false);
-                                          }
-
-                                          if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
-                                          {
-                                              return ValueTask.FromResult(true);
-                                          }
-
-                                          // 默认的重试条件（5xx服务器错误和408请求超时）
-                                          var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
-                                                                      response.StatusCode == HttpStatusCode.RequestTimeout;
-                                          return ValueTask.FromResult(shouldRetryStatusCode);
-                                      }
-                                  })
-
-                       // 4. 熔断器策略 - 当错误率达到阈值时暂时停止请求，保护系统
-                       .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions())
-
-                       // 5. 超时策略 - 防止请求长时间阻塞,使用配置的超时时间
-                       // 注意：超时策略放在最内层，这样每次重试都会应用超时限制
-                       .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
-            });
-
-            return services;
-        }
-
-        /// <summary>
-        /// 添加HTTP客户端服务（使用默认配置）
-        /// </summary>
-        /// <param name="services">服务集合</param>
-        /// <returns>服务集合</returns>
-        /// <remarks>
-        /// 默认配置：
-        /// - AuditLog = true
-        /// - EnableLogRedaction = true
-        /// - FailThrowException = false
-        /// - Timeout = 100 秒
-        /// - MaxRequestBodyLength = 4096
-        /// - MaxOutputResponseLength = 4096
-        /// - ConcurrencyLimit = 100
-        /// - MaxRetryAttempts = 3
-        /// - RetryDelaySeconds = 1
-        /// </remarks>
-        public static IServiceCollection AddHttpClientService(this IServiceCollection services)
-        {
-            if (services == null)
-            {
-                throw new ArgumentNullException(nameof(services));
-            }
-
-            return services.AddHttpClientService(config =>
-            {
-                config.AuditLog = true;
-                config.EnableLogRedaction = true;
-                config.FailThrowException = false;
-                config.Timeout = 100;
-                config.MaxRequestBodyLength = 4096;
-                config.MaxOutputResponseLength = 4096;
-                config.ConcurrencyLimit = 100;
-                config.MaxRetryAttempts = 3;
-                config.RetryDelaySeconds = 1;
-            });
         }
     }
 }

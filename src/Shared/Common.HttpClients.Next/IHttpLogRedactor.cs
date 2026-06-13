@@ -19,6 +19,6 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="headers">原始请求头或响应头。</param>
         /// <returns>脱敏后的请求头或响应头。</returns>
-        IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers);
+        IDictionary<string, string> RedactHeaders(IDictionary<string, string>? headers);
     }
 }

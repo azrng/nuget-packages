@@ -18,7 +18,7 @@ namespace Common.HttpClients
     {
         private readonly ILogger<LoggingHandler> _logger;
         private readonly HttpClientOptions _httpConfig;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHttpContextAccessor? _httpContextAccessor;
         private readonly IHttpLogRedactor _logRedactor;
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Common.HttpClients
         /// <param name="httpContextAccessor">HTTP上下文访问器（可选）</param>
         /// <param name="logRedactor">HTTP日志脱敏器（可选）</param>
         public LoggingHandler(ILogger<LoggingHandler> logger, IOptions<HttpClientOptions> options,
-                              IHttpContextAccessor httpContextAccessor = null, IHttpLogRedactor logRedactor = null)
+                              IHttpContextAccessor? httpContextAccessor = null, IHttpLogRedactor? logRedactor = null)
         {
             _logger = logger;
             _httpConfig = options.Value;
@@ -59,7 +59,7 @@ namespace Common.HttpClients
         /// </summary>
         private string AddOrGetTraceId(HttpRequestMessage request)
         {
-            string traceId = null;
+            string? traceId = null;
 
             // 1. 首先尝试从请求头中获取
             if (request.Headers.TryGetValues("X-Trace-Id", out var traceIds))
@@ -193,7 +193,7 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="content">原始内容</param>
         /// <returns>截断后的内容或原始内容</returns>
-        private static string TruncateContent(string content, int limit)
+        private static string? TruncateContent(string? content, int limit)
         {
             if (string.IsNullOrEmpty(content))
             {
@@ -214,7 +214,7 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="context">HTTP请求消息</param>
         /// <returns>脱敏后的请求内容</returns>
-        private async Task<string> ReadRequestContentAsync(HttpRequestMessage context)
+        private async Task<string?> ReadRequestContentAsync(HttpRequestMessage context)
         {
             try
             {
@@ -244,7 +244,7 @@ namespace Common.HttpClients
         /// <param name="request">HTTP请求消息（用于检查跳过标志）</param>
         /// <param name="context">HTTP响应消息</param>
         /// <returns>脱敏后的响应内容</returns>
-        private async Task<string> ReadResponseContentAsync(HttpRequestMessage request, HttpResponseMessage context)
+        private async Task<string?> ReadResponseContentAsync(HttpRequestMessage request, HttpResponseMessage context)
         {
             try
             {
@@ -348,7 +348,7 @@ namespace Common.HttpClients
         /// </summary>
         /// <param name="headers">原始请求头字典</param>
         /// <returns>脱敏后的请求头字典</returns>
-        private IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+        private IDictionary<string, string>? RedactHeaders(IDictionary<string, string>? headers)
         {
             if (!_httpConfig.EnableLogRedaction || headers == null || headers.Count == 0)
             {

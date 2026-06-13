@@ -1,4 +1,3 @@
-#nullable enable
 using System.Net;
 
 namespace Common.HttpClients

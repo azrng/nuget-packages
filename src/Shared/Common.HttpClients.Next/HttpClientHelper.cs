@@ -1,4 +1,3 @@
-#nullable enable
 using Common.HttpClients.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -353,6 +352,24 @@ namespace Common.HttpClients
             ValidateUrl(url);
 
             var request = new HttpRequestMessage(method, url) { Content = content };
+
+            // 添加 User-Agent
+            if (!string.IsNullOrWhiteSpace(_httpConfig.UserAgent))
+            {
+                request.Headers.TryAddWithoutValidation("User-Agent", _httpConfig.UserAgent);
+            }
+
+            // 添加默认请求头（per-request headers 优先覆盖）
+            if (_httpConfig.DefaultHeaders != null)
+            {
+                foreach (var (key, value) in _httpConfig.DefaultHeaders)
+                {
+                    if (!string.IsNullOrWhiteSpace(key))
+                    {
+                        request.Headers.TryAddWithoutValidation(key, value);
+                    }
+                }
+            }
 
             if (headers == null || headers.Count == 0)
             {

@@ -1,9 +1,7 @@
-#nullable enable
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -16,11 +14,13 @@ namespace Common.HttpClients.Utils
     internal static class QueryStringBuilder
     {
         /// <summary>
+        /// DateTime/DateTimeOffset 格式化字符串，可在注册时覆盖
+        /// </summary>
+        internal static string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+
+        /// <summary>
         /// 将查询参数附加到 URL
         /// </summary>
-        /// <param name="url">原始 URL</param>
-        /// <param name="queryParameters">查询参数对象（匿名对象、IDictionary&lt;string, string&gt;、NameValueCollection）</param>
-        /// <returns>附加了查询参数的 URL</returns>
         public static string AppendQuery(string url, object? queryParameters)
         {
             if (queryParameters == null)
@@ -76,6 +76,13 @@ namespace Common.HttpClients.Utils
                         }
                     }
                     return pairs;
+
+                case IEnumerable<KeyValuePair<string, object?>> kvps:
+                    foreach (var kvp in kvps)
+                    {
+                        AddValue(pairs, kvp.Key, kvp.Value);
+                    }
+                    return pairs;
             }
 
             // 匿名对象或其他类型：通过反射读取属性
@@ -121,9 +128,10 @@ namespace Common.HttpClients.Utils
         {
             return value switch
             {
-                DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
-                DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm:ss"),
+                DateTime dt => dt.ToString(DateTimeFormat),
+                DateTimeOffset dto => dto.ToString(DateTimeFormat),
                 bool b => b ? "true" : "false",
+                Enum e => e.ToString(),
                 _ => value.ToString()
             };
         }

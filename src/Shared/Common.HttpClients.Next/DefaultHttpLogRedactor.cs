@@ -86,7 +86,7 @@ namespace Common.HttpClients
 
             if (TryRedactJson(content, out var json))
             {
-                return json;
+                return json!;
             }
 
             var redacted = _jsonSensitiveValuePattern.Replace(content, "$1***$3");
@@ -96,11 +96,11 @@ namespace Common.HttpClients
         }
 
         /// <inheritdoc />
-        public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
+        public IDictionary<string, string> RedactHeaders(IDictionary<string, string>? headers)
         {
             if (headers == null || headers.Count == 0)
             {
-                return headers;
+                return headers ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
             var redacted = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
@@ -115,7 +115,7 @@ namespace Common.HttpClients
             return redacted;
         }
 
-        private bool TryRedactJson(string content, out string redacted)
+        private bool TryRedactJson(string content, out string? redacted)
         {
             redacted = null;
 
@@ -132,7 +132,7 @@ namespace Common.HttpClients
             }
         }
 
-        private object RedactJsonElement(JsonElement element, string propertyName)
+        private object? RedactJsonElement(JsonElement element, string? propertyName)
         {
             if (IsSensitiveField(propertyName))
             {
@@ -166,12 +166,12 @@ namespace Common.HttpClients
             }
         }
 
-        private static object CloneJsonElement(JsonElement element)
+        private static object? CloneJsonElement(JsonElement element)
         {
             return JsonSerializer.Deserialize<object>(element.GetRawText());
         }
 
-        private bool IsSensitiveField(string fieldName)
+        private bool IsSensitiveField(string? fieldName)
         {
             return !string.IsNullOrWhiteSpace(fieldName) && _sensitiveFieldNames.Contains(fieldName);
         }

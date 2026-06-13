@@ -8,6 +8,21 @@ namespace Common.HttpClients
     public class HttpClientOptions
     {
         /// <summary>
+        /// 基础地址，请求 URL 为相对路径时自动拼接
+        /// </summary>
+        public string? BaseAddress { get; set; }
+
+        /// <summary>
+        /// 默认请求头，每个请求自动携带（per-request headers 优先覆盖）
+        /// </summary>
+        public IDictionary<string, string>? DefaultHeaders { get; set; }
+
+        /// <summary>
+        /// 自定义 User-Agent
+        /// </summary>
+        public string? UserAgent { get; set; }
+
+        /// <summary>
         /// 失败是否抛出异常
         /// </summary>
         public bool FailThrowException { get; set; }
