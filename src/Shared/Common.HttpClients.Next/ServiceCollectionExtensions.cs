@@ -136,8 +136,19 @@ namespace Common.HttpClients
                                             }
 
                                             var ex = args.Outcome.Exception;
-                                            var shouldHandle = ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
-                                            return ValueTask.FromResult(shouldHandle);
+                                            if (ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
+                                            {
+                                                return ValueTask.FromResult(true);
+                                            }
+
+                                            // 重试耗尽后仍为非成功响应（如 5xx/408），也纳入降级处理
+                                            var response = args.Outcome.Result;
+                                            if (response != null && !response.IsSuccessStatusCode)
+                                            {
+                                                return ValueTask.FromResult(true);
+                                            }
+
+                                            return ValueTask.FromResult(false);
                                         },
                                         FallbackAction = args =>
                                         {
