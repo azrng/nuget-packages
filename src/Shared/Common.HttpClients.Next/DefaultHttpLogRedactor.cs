@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Encodings.Web;
@@ -9,9 +10,10 @@ using System.Text.RegularExpressions;
 namespace Common.HttpClients
 {
     /// <summary>
-    /// 默认HTTP日志脱敏器。
+    /// 默认 HTTP 日志脱敏器。按 <see cref="HttpClientOptions"/> 快照构造，
+    /// 由 <see cref="LoggingHandler"/> 在请求处理时根据命名客户端配置创建。
     /// </summary>
-    public class DefaultHttpLogRedactor : IHttpLogRedactor
+    internal sealed class DefaultHttpLogRedactor : IHttpLogRedactor
     {
         private static readonly string[] DefaultSensitiveHeaderNames =
         {
@@ -43,9 +45,22 @@ namespace Common.HttpClients
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        /// <summary>
+        /// Bearer Token 脱敏正则，所有实例共享
+        /// </summary>
         private static readonly Regex BearerValuePattern = new(
             "(Bearer\\s+)[A-Za-z0-9\\-._~+/]+=*",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>
+        /// JSON 字段脱敏正则缓存（按敏感字段 pattern 字符串索引，避免重复编译）
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, Regex> JsonPatternCache = new();
+
+        /// <summary>
+        /// key=value 形式脱敏正则缓存
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, Regex> KvPatternCache = new();
 
         private readonly HashSet<string> _sensitiveHeaderNames;
         private readonly HashSet<string> _sensitiveFieldNames;
@@ -53,27 +68,26 @@ namespace Common.HttpClients
         private readonly Regex _kvSensitiveValuePattern;
 
         /// <summary>
-        /// 初始化 <see cref="DefaultHttpLogRedactor"/> 的新实例。
+        /// 初始化 <see cref="DefaultHttpLogRedactor"/> 的新实例
         /// </summary>
-        /// <param name="options">HTTP配置选项。</param>
-        public DefaultHttpLogRedactor(IOptions<HttpClientOptions> options)
+        /// <param name="httpConfig">HTTP 配置快照</param>
+        public DefaultHttpLogRedactor(HttpClientOptions httpConfig)
         {
-            if (options == null)
+            if (httpConfig == null)
             {
-                throw new ArgumentNullException(nameof(options));
+                throw new ArgumentNullException(nameof(httpConfig));
             }
 
-            var httpConfig = options.Value;
             _sensitiveHeaderNames = BuildSensitiveHeaders(httpConfig.AdditionalSensitiveHeaders);
             _sensitiveFieldNames = BuildSensitiveFields(httpConfig.AdditionalSensitiveFields);
 
             var sensitiveFieldPattern = BuildSensitiveFieldPattern(_sensitiveFieldNames);
-            _jsonSensitiveValuePattern = new Regex(
-                "(\"(?:" + sensitiveFieldPattern + ")\"\\s*:\\s*\")([^\"]*)(\")",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-            _kvSensitiveValuePattern = new Regex(
-                "\\b(" + sensitiveFieldPattern + ")=([^&\\s]+)",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            _jsonSensitiveValuePattern = JsonPatternCache.GetOrAdd(sensitiveFieldPattern,
+                p => new Regex("(\"(?:" + p + ")\"\\s*:\\s*\")([^\"]*)(\")",
+                    RegexOptions.IgnoreCase | RegexOptions.Compiled));
+            _kvSensitiveValuePattern = KvPatternCache.GetOrAdd(sensitiveFieldPattern,
+                p => new Regex("\\b(" + p + ")=([^&\\s]+)",
+                    RegexOptions.IgnoreCase | RegexOptions.Compiled));
         }
 
         /// <inheritdoc />
@@ -103,13 +117,13 @@ namespace Common.HttpClients
                 return headers ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
 
-            var redacted = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
-            foreach (var key in redacted.Keys.ToList())
+            // HTTP header 名称大小写不敏感：直接构造 case-insensitive 目标字典，
+            // 同名（忽略大小写）条目按写入顺序覆盖，敏感头最终统一为 "***"。
+            var redacted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in headers)
             {
-                if (_sensitiveHeaderNames.Contains(key))
-                {
-                    redacted[key] = "***";
-                }
+                var value = _sensitiveHeaderNames.Contains(pair.Key) ? "***" : pair.Value;
+                redacted[pair.Key] = value;
             }
 
             return redacted;
@@ -176,7 +190,7 @@ namespace Common.HttpClients
             return !string.IsNullOrWhiteSpace(fieldName) && _sensitiveFieldNames.Contains(fieldName);
         }
 
-        private static HashSet<string> BuildSensitiveHeaders(ICollection<string> additionalHeaders)
+        private static HashSet<string> BuildSensitiveHeaders(ICollection<string>? additionalHeaders)
         {
             var result = new HashSet<string>(DefaultSensitiveHeaderNames, StringComparer.OrdinalIgnoreCase);
             if (additionalHeaders == null)
@@ -197,7 +211,7 @@ namespace Common.HttpClients
             return result;
         }
 
-        private static HashSet<string> BuildSensitiveFields(ICollection<string> additionalFields)
+        private static HashSet<string> BuildSensitiveFields(ICollection<string>? additionalFields)
         {
             var result = new HashSet<string>(DefaultSensitiveFieldNames, StringComparer.OrdinalIgnoreCase);
             if (additionalFields == null)

@@ -44,18 +44,16 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            var opt = new HttpClientOptions();
-            configure.Invoke(opt);
+            // 命名 options：configure 只会由 OptionsFactory 触发一次，验证由 IValidateOptions 承担
+            services.AddOptions<HttpClientOptions>(name)
+                    .Configure(configure);
 
-            ValidateOptions(opt);
-
-            // 注册该名称的 HttpClientOptions
-            services.Configure(name, configure);
+            // 单次注册全局 IValidateOptions（对所有命名 options 生效）
+            services.TryAddSingleton<IValidateOptions<HttpClientOptions>, HttpClientOptionsValidator>();
 
             // 首次注册时添加公共依赖
             services.TryAddSingleton<IHttpHelperFactory, HttpHelperFactory>();
             services.AddHttpContextAccessor();
-            services.TryAddSingleton<IHttpLogRedactor, DefaultHttpLogRedactor>();
             services.TryAddTransient<LoggingHandler>();
 
             // 配置命名 HttpClient
@@ -83,99 +81,74 @@ namespace Common.HttpClients
                     {
                         client.BaseAddress = new Uri(config.BaseAddress);
                     }
+
+                    ApplyDefaultHeaders(client, config);
                 })
 
-                .AddHttpMessageHandler<LoggingHandler>();
+                .AddHttpMessageHandler(sp => ActivatorUtilities.CreateInstance<LoggingHandler>(sp, name));
 
-            // 添加弹性策略处理器
+            // 添加弹性策略处理器（外 -> 内：Fallback -> Timeout -> ConcurrencyLimiter -> CircuitBreaker -> Retry）
             clientBuilder.AddResilienceHandler($"{name}_handler", (builder, handler) =>
             {
                 var httpOptions = handler.ServiceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
 
-                // 1. 降级处理策略
-                builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>()
+                // 1. 降级策略（最外层兜底）
+                builder.AddFallback(BuildFallbackOptions(httpOptions))
+
+                // 2. 总超时策略（涵盖整条重试链）
+                       .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
+
+                // 3. 并发限制策略（0 表示禁用）。permitLimit 决定最大并发，超出部分进入队列等待
+                //    （由外层 Timeout 兜底，等待时间不会超过 Timeout）。
+                if (httpOptions.ConcurrencyLimit > 0)
                 {
-                    ShouldHandle = args =>
-                    {
-                        if (args.Context.CancellationToken.IsCancellationRequested)
-                        {
-                            return ValueTask.FromResult(false);
-                        }
-
-                        var ex = args.Outcome.Exception;
-                        if (ex is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
-                        {
-                            return ValueTask.FromResult(true);
-                        }
-
-                        var response = args.Outcome.Result;
-                        if (response != null && !response.IsSuccessStatusCode)
-                        {
-                            return ValueTask.FromResult(true);
-                        }
-
-                        return ValueTask.FromResult(false);
-                    },
-                    FallbackAction = args =>
-                    {
-                        if (!httpOptions.FailThrowException)
-                        {
-                            return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                            {
-                                Content = new StringContent("Fallback: request failed."),
-                                Headers = { { "X-Fallback-Response", "true" } }
-                            });
-                        }
-
-                        return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(args.Outcome.Exception!);
-                    }
-                })
-
-                // 2. 并发限制策略
-                .AddConcurrencyLimiter(httpOptions.ConcurrencyLimit)
-
-                // 3. 重试策略
-                .AddRetry(new HttpRetryStrategyOptions
-                {
-                    MaxRetryAttempts = httpOptions.MaxRetryAttempts,
-                    Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
-                    BackoffType = DelayBackoffType.Exponential,
-                    ShouldHandle = args =>
-                    {
-                        if (args.Context.CancellationToken.IsCancellationRequested)
-                        {
-                            return ValueTask.FromResult(false);
-                        }
-
-                        if (args.Outcome.Exception != null)
-                        {
-                            var shouldRetryException =
-                                args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
-                            return ValueTask.FromResult(shouldRetryException);
-                        }
-
-                        var response = args.Outcome.Result;
-                        if (response == null)
-                        {
-                            return ValueTask.FromResult(false);
-                        }
-
-                        if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
-                        {
-                            return ValueTask.FromResult(true);
-                        }
-
-                        var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
-                                                    response.StatusCode == HttpStatusCode.RequestTimeout;
-                        return ValueTask.FromResult(shouldRetryStatusCode);
-                    }
-                })
+                    builder.AddConcurrencyLimiter(
+                        permitLimit: httpOptions.ConcurrencyLimit,
+                        queueLimit: Math.Max(httpOptions.ConcurrencyLimit * 10, 100));
+                }
 
                 // 4. 熔断器策略
-                .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions())
+                builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions());
 
-                // 5. 超时策略
-                .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
+                // 5. 重试策略（最内层，每次重试由 CircuitBreaker / Timeout 监督；MaxRetryAttempts=0 表示禁用）
+                if (httpOptions.MaxRetryAttempts > 0)
+                {
+                    builder.AddRetry(new HttpRetryStrategyOptions
+                    {
+                        MaxRetryAttempts = httpOptions.MaxRetryAttempts,
+                        Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
+                        BackoffType = DelayBackoffType.Exponential,
+                        ShouldHandle = args =>
+                        {
+                            if (args.Context.CancellationToken.IsCancellationRequested)
+                            {
+                                return ValueTask.FromResult(false);
+                            }
+
+                            if (args.Outcome.Exception != null)
+                            {
+                                var shouldRetryException =
+                                    args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
+                                return ValueTask.FromResult(shouldRetryException);
+                            }
+
+                            var response = args.Outcome.Result;
+                            if (response == null)
+                            {
+                                return ValueTask.FromResult(false);
+                            }
+
+                            if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
+                            {
+                                return ValueTask.FromResult(true);
+                            }
+
+                            var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
+                                                        response.StatusCode == HttpStatusCode.RequestTimeout;
+                            return ValueTask.FromResult(shouldRetryStatusCode);
+                        }
+                    });
+                }
             });
 
             return clientBuilder;
@@ -232,45 +205,124 @@ namespace Common.HttpClients
             });
         }
 
-        private static void ValidateOptions(HttpClientOptions opt)
+        private static FallbackStrategyOptions<HttpResponseMessage> BuildFallbackOptions(HttpClientOptions httpOptions)
+        {
+            return new FallbackStrategyOptions<HttpResponseMessage>()
+            {
+                ShouldHandle = args =>
+                {
+                    if (args.Context.CancellationToken.IsCancellationRequested)
+                    {
+                        return ValueTask.FromResult(false);
+                    }
+
+                    // 仅在“无法得到真实响应”的异常路径上兜底；
+                    // HTTP 5xx 是真实响应，应原样返回（由调用方按 StatusCode 判断）。
+                    if (args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
+                    {
+                        return ValueTask.FromResult(true);
+                    }
+
+                    return ValueTask.FromResult(false);
+                },
+                FallbackAction = args =>
+                {
+                    if (!httpOptions.FailThrowException)
+                    {
+                        return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                        {
+                            Content = new StringContent("Fallback: request failed."),
+                            Headers = { { HttpClientHeaderNames.FallbackResponse, "true" } }
+                        });
+                    }
+
+                    var exception = args.Outcome.Exception ?? WrapFailedResponseAsException(args.Outcome.Result);
+                    return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(exception);
+                }
+            };
+        }
+
+        private static HttpRequestException WrapFailedResponseAsException(HttpResponseMessage? response)
+        {
+            var statusCode = response?.StatusCode ?? HttpStatusCode.ServiceUnavailable;
+            return new HttpRequestException($"Request failed with status code {(int)statusCode} ({statusCode}).", null, statusCode);
+        }
+
+        private static void ApplyDefaultHeaders(HttpClient client, HttpClientOptions options)
+        {
+            if (!string.IsNullOrWhiteSpace(options.UserAgent))
+            {
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", options.UserAgent);
+            }
+
+            if (options.DefaultHeaders == null)
+            {
+                return;
+            }
+
+            foreach (var (key, value) in options.DefaultHeaders)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
+                }
+            }
+        }
+
+        private static bool ValidateOptionsCore(HttpClientOptions opt)
+        {
+            return HttpClientOptionsValidator.ValidateInstance(opt).Succeeded;
+        }
+    }
+
+    /// <summary>
+    /// 在 OptionsFactory 创建实例时（含 reload）触发的验证器
+    /// </summary>
+    internal sealed class HttpClientOptionsValidator : IValidateOptions<HttpClientOptions>
+    {
+        public ValidateOptionsResult Validate(string? name, HttpClientOptions options)
+        {
+            return ValidateInstance(options);
+        }
+
+        public static ValidateOptionsResult ValidateInstance(HttpClientOptions opt)
         {
             opt.AdditionalSensitiveHeaders ??= new List<string>();
             opt.AdditionalSensitiveFields ??= new List<string>();
 
+            var failures = new List<string>();
+
             if (opt.Timeout < 1 || opt.Timeout > 3600)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.Timeout), opt.Timeout, "Timeout必须在1-3600秒之间");
+                failures.Add("Timeout必须在1-3600秒之间");
             }
 
             if (opt.MaxOutputResponseLength < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.MaxOutputResponseLength), opt.MaxOutputResponseLength,
-                    "MaxOutputResponseLength不能小于0");
+                failures.Add("MaxOutputResponseLength不能小于0");
             }
 
             if (opt.MaxRequestBodyLength < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.MaxRequestBodyLength), opt.MaxRequestBodyLength,
-                    "MaxRequestBodyLength不能小于0");
+                failures.Add("MaxRequestBodyLength不能小于0");
             }
 
-            if (opt.ConcurrencyLimit < 1 || opt.ConcurrencyLimit > 10000)
+            if (opt.ConcurrencyLimit < 0 || opt.ConcurrencyLimit > 10000)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.ConcurrencyLimit), opt.ConcurrencyLimit,
-                    "ConcurrencyLimit必须在1-10000之间");
+                failures.Add("ConcurrencyLimit必须在0-10000之间（0 表示禁用）");
             }
 
             if (opt.MaxRetryAttempts < 0 || opt.MaxRetryAttempts > 10)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.MaxRetryAttempts), opt.MaxRetryAttempts,
-                    "MaxRetryAttempts必须在0-10之间");
+                failures.Add("MaxRetryAttempts必须在0-10之间");
             }
 
             if (opt.RetryDelaySeconds < 1 || opt.RetryDelaySeconds > 300)
             {
-                throw new ArgumentOutOfRangeException(nameof(opt.RetryDelaySeconds), opt.RetryDelaySeconds,
-                    "RetryDelaySeconds必须在1-300之间");
+                failures.Add("RetryDelaySeconds必须在1-300之间");
             }
+
+            return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
         }
     }
 }

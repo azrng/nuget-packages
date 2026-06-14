@@ -92,14 +92,14 @@ namespace Common.HttpClients
         {
             if (_disposed)
             {
-                await base.DisposeAsync().ConfigureAwait(false);
                 return;
             }
 
             _disposed = true;
             await _innerStream.DisposeAsync().ConfigureAwait(false);
-            await base.DisposeAsync().ConfigureAwait(false);
+            // HttpResponseMessage 仅提供同步 Dispose，此处不会真正阻塞
             _response.Dispose();
+            await base.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

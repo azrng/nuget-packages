@@ -14,7 +14,7 @@ namespace Common.HttpClients.Utils
     internal static class QueryStringBuilder
     {
         /// <summary>
-        /// DateTime/DateTimeOffset 格式化字符串，可在注册时覆盖
+        /// DateTime/DateTimeOffset 默认格式化字符串（内部测试可覆盖）
         /// </summary>
         internal static string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
@@ -50,9 +50,10 @@ namespace Common.HttpClients.Utils
 
             switch (parameters)
             {
-                case IDictionary<string, string?> dict:
+                case IDictionary<string, string> dict:
                     foreach (var kvp in dict)
                     {
+                        // 静态类型为非空 string，但运行时可能来自 IDictionary<string, string?> 的 null value
                         if (kvp.Value != null)
                         {
                             pairs.Add(new KeyValuePair<string, string?>(kvp.Key, kvp.Value));

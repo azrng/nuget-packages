@@ -15,8 +15,13 @@ namespace Common.HttpClients
         /// <returns>包含 Authorization 头的字典</returns>
         public static IDictionary<string, string> CreateBearerHeaders(string token)
         {
-            var t = token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? token : "Bearer " + token;
-            return new Dictionary<string, string> { ["Authorization"] = t };
+            if (token == null)
+            {
+                throw new ArgumentNullException(nameof(token));
+            }
+
+            var value = token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? token : "Bearer " + token;
+            return new Dictionary<string, string> { ["Authorization"] = value };
         }
     }
 }

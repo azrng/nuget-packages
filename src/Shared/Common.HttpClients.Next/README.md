@@ -307,7 +307,7 @@ var result = await _httpHelper.PostAsync<User>(url, data, "your-token-here");
 var result = await _httpHelper.DownloadFileAsync(url, filePath, "your-token-here");
 ```
 
-扩展方法覆盖了所有 HTTP 方法（GET、POST、PUT、PATCH、DELETE、PATCH、GetStream、PostFormData、PostSoap、DownloadFile）。
+扩展方法覆盖了所有 HTTP 方法（GET、POST、PUT、PATCH、DELETE、GetStream、PostFormData、PostSoap、DownloadFile）。
 
 ## 请求头
 
@@ -331,8 +331,8 @@ var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 | `AuditLog` | bool | true | 是否启用审计日志 |
 | `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 IHttpResult（IsSuccess=false），true 时抛出 HttpRequestException |
 | `EnableLogRedaction` | bool | true | 是否启用日志脱敏 |
-| `Timeout` | int | 100 | 超时时间（秒），范围：1-3600 |
-| `ConcurrencyLimit` | int | 100 | 并发限制，范围：1-10000 |
+| `Timeout` | int | 100 | 总超时（秒），覆盖整条重试链；范围：1-3600 |
+| `ConcurrencyLimit` | int | 100 | 并发限制，范围：0-10000；`0` 表示禁用限制 |
 | `MaxRetryAttempts` | int | 3 | 最大重试次数，范围：0-10 |
 | `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避，范围：1-300 |
 | `MaxRequestBodyLength` | int | 4096 | 请求体日志最大输出长度，≥0。0 表示不限制 |
@@ -377,12 +377,12 @@ catch (HttpRequestException ex)
 本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
 
 1. **降级处理（Fallback）** - 所有策略失败时返回 503 响应（`IsFallbackResponse = true`）或重新抛出异常
-2. **并发限制（Concurrency Limiter）** - 限制同时进行的 HTTP 请求数量
-3. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求
+2. **总超时（Timeout）** - 覆盖整条重试链的总耗时上限
+3. **并发限制（Concurrency Limiter）** - 限制同时进行的 HTTP 请求数量（`ConcurrencyLimit = 0` 时跳过）
 4. **熔断器（Circuit Breaker）** - 错误率达到阈值时暂时停止请求
-5. **超时策略（Timeout）** - 防止请求长时间阻塞
+5. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求
 
-> 总超时上界约为：`Timeout × (MaxRetryAttempts + 1) + 重试延迟总和`
+> 整个请求链（含所有重试）受单次 `Timeout` 上限约束；超时后由 Fallback 兜底。
 
 ## 日志
 

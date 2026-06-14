@@ -23,6 +23,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Common.HttpClients.Next.Test"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
     </ItemGroup>
 

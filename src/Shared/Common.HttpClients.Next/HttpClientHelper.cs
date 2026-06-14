@@ -319,7 +319,7 @@ namespace Common.HttpClients
 
             if (typeof(T) == typeof(string))
             {
-                return HttpResult<T>.Success((T)Convert.ChangeType(rawBody, typeof(string)), statusCode, rawBody);
+                return HttpResult<T>.Success((T)(object)rawBody, statusCode, rawBody);
             }
 
             var data = JsonHelper.ToObject<T>(rawBody);
@@ -352,24 +352,6 @@ namespace Common.HttpClients
             ValidateUrl(url);
 
             var request = new HttpRequestMessage(method, url) { Content = content };
-
-            // 添加 User-Agent
-            if (!string.IsNullOrWhiteSpace(_httpConfig.UserAgent))
-            {
-                request.Headers.TryAddWithoutValidation("User-Agent", _httpConfig.UserAgent);
-            }
-
-            // 添加默认请求头（per-request headers 优先覆盖）
-            if (_httpConfig.DefaultHeaders != null)
-            {
-                foreach (var (key, value) in _httpConfig.DefaultHeaders)
-                {
-                    if (!string.IsNullOrWhiteSpace(key))
-                    {
-                        request.Headers.TryAddWithoutValidation(key, value);
-                    }
-                }
-            }
 
             if (headers == null || headers.Count == 0)
             {
@@ -406,7 +388,7 @@ namespace Common.HttpClients
 
         private static bool IsFallbackResponse(HttpResponseMessage response)
         {
-            return response.Headers.Contains("X-Fallback-Response");
+            return response.Headers.Contains(HttpClientHeaderNames.FallbackResponse);
         }
 
         private static void ValidateUrl(string url)
