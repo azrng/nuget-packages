@@ -8,7 +8,7 @@ namespace Azrng.Core.Helpers
     /// <summary>
     /// 雪花ID
     /// </summary>
-    public class Snowflake
+    public static class Snowflake
     {
         /*
          使用一个 64 bit 的 long 型的数字作为全局唯一 id。在分布式系统中的应用十分广泛，且ID 引入了时间戳，基本上保持自增。
@@ -33,6 +33,7 @@ namespace Azrng.Core.Helpers
         private const int TimestampShift = WorkerIdBits + SequenceBits;
         private const int WorkerIdMask = (1 << WorkerIdBits) - 1;
         private const int SequenceMask = (1 << SequenceBits) - 1;
+        private const long MaxTimestamp = (1L << 41) - 1;
         private static readonly object SyncRoot = new object();
 
         /// <summary>
@@ -49,15 +50,6 @@ namespace Azrng.Core.Helpers
         /// 当前序列
         /// </summary>
         private static int _sequence;
-
-        /// <summary>
-        /// 获取或者设置序列号，取12位
-        /// </summary>
-        public static int Sequence
-        {
-            get => Volatile.Read(ref _sequence);
-            set => Volatile.Write(ref _sequence, value);
-        }
 
         /// <summary>
         /// 距离开始时间的毫秒数
@@ -137,26 +129,22 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="time">时间</param>
         /// <returns></returns>
-        public long NewId(DateTime time)
+        public static long NewId(DateTime time)
         {
             Init();
 
-            var ms = (long)(time - StartTimestamp).TotalMilliseconds;
+            var utcTime = ToUtc(time);
+            if (utcTime < StartTimestamp)
+                throw new ArgumentOutOfRangeException(nameof(time), "时间不能早于雪花ID起始时间。");
+
+            var ms = (long)(utcTime - StartTimestamp).TotalMilliseconds;
+            if (ms > MaxTimestamp)
+                throw new ArgumentOutOfRangeException(nameof(time), "时间超出雪花ID时间戳可表示范围。");
+
             var wid = WorkerId & WorkerIdMask;
             var seq = Interlocked.Increment(ref _sequence) & SequenceMask;
 
             return CreateId(ms, wid, seq);
-        }
-
-        /// <summary>
-        /// 时间转为Id，不带节点和序列号。可用于构建时间片段查询
-        /// </summary>
-        /// <param name="time">时间</param>
-        /// <returns></returns>
-        public long GetId(DateTime time)
-        {
-            var t = (long)(time - StartTimestamp).TotalMilliseconds;
-            return t << TimestampShift;
         }
 
         /// <summary>
@@ -167,13 +155,39 @@ namespace Azrng.Core.Helpers
         /// <param name="workerId">节点</param>
         /// <param name="sequence">序列号</param>
         /// <returns></returns>
-        public bool TryParse(long id, out DateTime time, out int workerId, out int sequence)
+        public static bool TryParse(long id, out DateTime time, out int workerId, out int sequence)
         {
-            time = StartTimestamp.AddMilliseconds(id >> TimestampShift);
+            time = default;
+            workerId = default;
+            sequence = default;
+
+            if (id <= 0)
+                return false;
+
+            var milliseconds = id >> TimestampShift;
+            if (milliseconds <= 0 || milliseconds > MaxTimestamp)
+                return false;
+
+            time = StartTimestamp.AddMilliseconds(milliseconds);
+            if (time < StartTimestamp)
+            {
+                time = default;
+                return false;
+            }
+
             workerId = (int)((id >> WorkerIdShift) & WorkerIdMask);
             sequence = (int)(id & SequenceMask);
 
             return true;
+        }
+
+        private static DateTime ToUtc(DateTime time)
+        {
+            return time.Kind switch
+            {
+                DateTimeKind.Local => time.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(time, DateTimeKind.Utc)
+            };
         }
 
         private static long CreateId(long milliseconds, int workerId, int sequence)
