@@ -141,10 +141,13 @@ namespace Azrng.Core.Helpers
             if (ms > MaxTimestamp)
                 throw new ArgumentOutOfRangeException(nameof(time), "时间超出雪花ID时间戳可表示范围。");
 
-            var wid = WorkerId & WorkerIdMask;
-            var seq = Interlocked.Increment(ref _sequence) & SequenceMask;
+            lock (SyncRoot)
+            {
+                var wid = WorkerId & WorkerIdMask;
+                var seq = Interlocked.Increment(ref _sequence) & SequenceMask;
 
-            return CreateId(ms, wid, seq);
+                return CreateId(ms, wid, seq);
+            }
         }
 
         /// <summary>
@@ -169,12 +172,6 @@ namespace Azrng.Core.Helpers
                 return false;
 
             time = StartTimestamp.AddMilliseconds(milliseconds);
-            if (time < StartTimestamp)
-            {
-                time = default;
-                return false;
-            }
-
             workerId = (int)((id >> WorkerIdShift) & WorkerIdMask);
             sequence = (int)(id & SequenceMask);
 

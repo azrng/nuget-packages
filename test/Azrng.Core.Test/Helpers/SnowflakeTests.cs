@@ -64,6 +64,24 @@ public class SnowflakeTests
     }
 
     [Fact]
+    public void NewId_WithSpecifiedTime_ShouldGenerateUniqueValuesConcurrently()
+    {
+        var time = new DateTime(2024, 1, 1, 0, 0, 0, 123, DateTimeKind.Utc);
+
+        var ids = Enumerable.Range(0, 1000)
+            .AsParallel()
+            .Select(_ => Snowflake.NewId(time))
+            .ToArray();
+
+        ids.Distinct().Should().HaveCount(ids.Length);
+        foreach (var id in ids)
+        {
+            Snowflake.TryParse(id, out var parsedTime, out _, out _).Should().BeTrue();
+            parsedTime.Should().Be(time);
+        }
+    }
+
+    [Fact]
     public void NewId_WithSpecifiedTime_ShouldRejectTimeBeforeStartTimestamp()
     {
         var time = new DateTime(2018, 3, 14, 23, 59, 59, DateTimeKind.Utc);
