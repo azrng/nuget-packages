@@ -16,6 +16,20 @@ public class SnowflakeTests
     }
 
     [Fact]
+    public void NewId_ShouldIncludeTimestampBits()
+    {
+        var snowflake = new Snowflake();
+        var before = DateTime.UtcNow.AddSeconds(-1);
+
+        var id = Snowflake.NewId();
+
+        id.Should().BeGreaterOrEqualTo(1L << 22);
+        snowflake.TryParse(id, out var time, out _, out _).Should().BeTrue();
+        time.Should().BeOnOrAfter(before);
+        time.Should().BeOnOrBefore(DateTime.UtcNow.AddSeconds(1));
+    }
+
+    [Fact]
     public void TryParse_ShouldReturnReasonableParts()
     {
         var id = Snowflake.NewId();
@@ -39,5 +53,18 @@ public class SnowflakeTests
         var fullId = snowflake.NewId(time);
 
         fullId.Should().BeGreaterThanOrEqualTo(baseId);
+    }
+
+    [Fact]
+    public void NewId_WithSpecifiedTime_ShouldRoundTripTimestamp()
+    {
+        var snowflake = new Snowflake();
+        var time = new DateTime(2024, 1, 1, 0, 0, 0, 123, DateTimeKind.Utc);
+
+        var id = snowflake.NewId(time);
+        var result = snowflake.TryParse(id, out var parsedTime, out _, out _);
+
+        result.Should().BeTrue();
+        parsedTime.Should().Be(time);
     }
 }
