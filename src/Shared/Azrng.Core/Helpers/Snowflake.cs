@@ -101,7 +101,7 @@ namespace Azrng.Core.Helpers
             {
                 var ms = _watch.ElapsedMilliseconds + _msStart;
                 var wid = WorkerId & WorkerIdMask;
-                var seq = Interlocked.Increment(ref _sequence) & SequenceMask;
+                var seq = ++_sequence & SequenceMask;
 
                 // 避免时间倒退
                 if (ms < _lastTime) ms = _lastTime;
@@ -144,7 +144,7 @@ namespace Azrng.Core.Helpers
             lock (SyncRoot)
             {
                 var wid = WorkerId & WorkerIdMask;
-                var seq = Interlocked.Increment(ref _sequence) & SequenceMask;
+                var seq = ++_sequence & SequenceMask;
 
                 return CreateId(ms, wid, seq);
             }
