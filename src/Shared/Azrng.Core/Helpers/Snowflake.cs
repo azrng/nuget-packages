@@ -8,7 +8,7 @@ namespace Azrng.Core.Helpers
     /// <summary>
     /// 雪花ID
     /// </summary>
-    public class Snowflake
+    public static class Snowflake
     {
         /*
          使用一个 64 bit 的 long 型的数字作为全局唯一 id。在分布式系统中的应用十分广泛，且ID 引入了时间戳，基本上保持自增。
@@ -27,10 +27,19 @@ namespace Azrng.Core.Helpers
         /// </summary>
         private static readonly RandomNumberGenerator Rnd = RandomNumberGenerator.Create();
 
+        private const int WorkerIdBits = 10;
+        private const int SequenceBits = 12;
+        private const int WorkerIdShift = SequenceBits;
+        private const int TimestampShift = WorkerIdBits + SequenceBits;
+        private const int WorkerIdMask = (1 << WorkerIdBits) - 1;
+        private const int SequenceMask = (1 << SequenceBits) - 1;
+        private const long MaxTimestamp = (1L << 41) - 1;
+        private static readonly object SyncRoot = new object();
+
         /// <summary>
         /// 开始时间戳 首次使用前设置，否则无效，默认2018-3-15
         /// </summary>
-        private static DateTime StartTimestamp { get; } = new DateTime(2018, 3, 15);
+        private static DateTime StartTimestamp { get; } = new DateTime(2018, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
         /// <summary>
         /// 机器Id，取10位
@@ -41,11 +50,6 @@ namespace Azrng.Core.Helpers
         /// 当前序列
         /// </summary>
         private static int _sequence;
-
-        /// <summary>
-        /// 获取或者设置序列号，取12位
-        /// </summary>
-        public static int Sequence { get; set; }
 
         /// <summary>
         /// 距离开始时间的毫秒数
@@ -65,20 +69,23 @@ namespace Azrng.Core.Helpers
 
         private static void Init()
         {
-            // 初始化WorkerId，取5位实例加上5位进程，确保同一台机器的WorkerId不同
-            if (WorkerId <= 0)
+            lock (SyncRoot)
             {
-                var nodeId = Next(1, 1024);
-                var pid = Process.GetCurrentProcess().Id;
-                var tid = Thread.CurrentThread.ManagedThreadId;
-                WorkerId = (nodeId & 0x1F) << 5 | (pid ^ tid) & 0x1F;
-            }
+                // 初始化WorkerId，取5位实例加上5位进程，确保同一台机器的WorkerId不同
+                if (WorkerId <= 0)
+                {
+                    var nodeId = Next(1, 1024);
+                    var pid = Process.GetCurrentProcess().Id;
+                    var tid = Thread.CurrentThread.ManagedThreadId;
+                    WorkerId = (nodeId & 0x1F) << 5 | (pid ^ tid) & 0x1F;
+                }
 
-            // 记录此时距离起点的毫秒数以及开机嘀嗒数
-            if (_msStart <= 0 || _watch == null)
-            {
-                _msStart = (long)(DateTime.UtcNow - StartTimestamp).TotalMilliseconds;
-                _watch = Stopwatch.StartNew();
+                // 记录此时距离起点的毫秒数以及开机嘀嗒数
+                if (_msStart <= 0 || _watch == null)
+                {
+                    _msStart = (long)(DateTime.UtcNow - StartTimestamp).TotalMilliseconds;
+                    _watch = Stopwatch.StartNew();
+                }
             }
         }
 
@@ -90,29 +97,31 @@ namespace Azrng.Core.Helpers
         {
             Init();
 
-            // 此时计时器的嘀嗒数，加上起点毫秒数
-            var ms = _watch.ElapsedMilliseconds + _msStart;
-            var wid = WorkerId & 0x3FF;
-            var seq = Interlocked.Increment(ref _sequence) & 0x0FFF;
-
-            // 避免时间倒退
-            if (ms < _lastTime) ms = _lastTime;
-
-            // 相同毫秒内，如果序列号用尽，则可能超过4096，导致生成重复Id
-            if (_lastTime == ms && seq == 0)
+            lock (SyncRoot)
             {
-                while (_lastTime == ms)
-                    ms = _watch.ElapsedMilliseconds + _msStart;
+                var ms = _watch.ElapsedMilliseconds + _msStart;
+                var wid = WorkerId & WorkerIdMask;
+                var seq = ++_sequence & SequenceMask;
+
+                // 避免时间倒退
+                if (ms < _lastTime) ms = _lastTime;
+
+                // 相同毫秒内，如果序列号用尽，则等待到下一毫秒，避免生成重复Id
+                if (_lastTime == ms && seq == 0)
+                {
+                    while (_lastTime == ms)
+                        ms = _watch.ElapsedMilliseconds + _msStart;
+                }
+
+                _lastTime = ms;
+
+                /*
+                    * 每个毫秒内_Sequence没有归零，主要是为了安全，避免被人猜测得到前后Id。
+                    * 而毫秒内的顺序，重要性不大。
+                    */
+
+                return CreateId(ms, wid, seq);
             }
-
-            _lastTime = ms;
-
-            /*
-                * 每个毫秒内_Sequence没有归零，主要是为了安全，避免被人猜测得到前后Id。
-                * 而毫秒内的顺序，重要性不大。
-                */
-
-            return ms << 10 + 12 | (uint)(wid << 12) | (uint)seq;
         }
 
         /// <summary>
@@ -120,26 +129,25 @@ namespace Azrng.Core.Helpers
         /// </summary>
         /// <param name="time">时间</param>
         /// <returns></returns>
-        public long NewId(DateTime time)
+        public static long NewId(DateTime time)
         {
             Init();
 
-            var ms = (long)(time - StartTimestamp).TotalMilliseconds;
-            var wid = WorkerId & 0x3FF;
-            var seq = Interlocked.Increment(ref _sequence) & 0x0FFF;
+            var utcTime = ToUtc(time);
+            if (utcTime < StartTimestamp)
+                throw new ArgumentOutOfRangeException(nameof(time), "时间不能早于雪花ID起始时间。");
 
-            return ms << 10 + 12 | (uint)(wid << 12) | (uint)seq;
-        }
+            var ms = (long)(utcTime - StartTimestamp).TotalMilliseconds;
+            if (ms > MaxTimestamp)
+                throw new ArgumentOutOfRangeException(nameof(time), "时间超出雪花ID时间戳可表示范围。");
 
-        /// <summary>
-        /// 时间转为Id，不带节点和序列号。可用于构建时间片段查询
-        /// </summary>
-        /// <param name="time">时间</param>
-        /// <returns></returns>
-        public long GetId(DateTime time)
-        {
-            var t = (long)(time - StartTimestamp).TotalMilliseconds;
-            return t << 10 + 12;
+            lock (SyncRoot)
+            {
+                var wid = WorkerId & WorkerIdMask;
+                var seq = ++_sequence & SequenceMask;
+
+                return CreateId(ms, wid, seq);
+            }
         }
 
         /// <summary>
@@ -150,13 +158,40 @@ namespace Azrng.Core.Helpers
         /// <param name="workerId">节点</param>
         /// <param name="sequence">序列号</param>
         /// <returns></returns>
-        public bool TryParse(long id, out DateTime time, out int workerId, out int sequence)
+        public static bool TryParse(long id, out DateTime time, out int workerId, out int sequence)
         {
-            time = StartTimestamp.AddMilliseconds(id >> 10 + 12);
-            workerId = (int)(id >> 12 & 0x3FF);
-            sequence = (int)(id & 0x0FFF);
+            time = default;
+            workerId = default;
+            sequence = default;
+
+            if (id <= 0)
+                return false;
+
+            var milliseconds = id >> TimestampShift;
+            if (milliseconds <= 0 || milliseconds > MaxTimestamp)
+                return false;
+
+            time = StartTimestamp.AddMilliseconds(milliseconds);
+            workerId = (int)((id >> WorkerIdShift) & WorkerIdMask);
+            sequence = (int)(id & SequenceMask);
 
             return true;
+        }
+
+        private static DateTime ToUtc(DateTime time)
+        {
+            return time.Kind switch
+            {
+                DateTimeKind.Local => time.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(time, DateTimeKind.Utc)
+            };
+        }
+
+        private static long CreateId(long milliseconds, int workerId, int sequence)
+        {
+            return (milliseconds << TimestampShift)
+                   | ((long)(workerId & WorkerIdMask) << WorkerIdShift)
+                   | (long)(sequence & SequenceMask);
         }
 
         /// <summary>
