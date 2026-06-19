@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Azrng.NMaxCompute.Rest;
+using Azrng.NMaxCompute.Tunnel.Types;
 
 namespace Azrng.NMaxCompute.Tunnel;
 
@@ -35,6 +36,8 @@ public sealed class InstanceDownloadSession
     private readonly OdpsRestClient _client;
     private readonly string _project;
     private readonly string _instanceId;
+    private string? _quotaName;
+    private List<string>? _tags;
 
     /// <summary>
     /// 构造函数仅赋值，不发起请求；真实初始化由 <see cref="CreateAsync"/> 完成。
@@ -97,12 +100,14 @@ public sealed class InstanceDownloadSession
         {
             Id = downloadId
         };
-        await session.ReloadAsync(quotaName, tags, cancellationToken).ConfigureAwait(false);
+        await session.ReloadSessionAsync(quotaName, tags, cancellationToken).ConfigureAwait(false);
         return session;
     }
 
     private async Task InitAsync(string? quotaName, IEnumerable<string>? tags, CancellationToken cancellationToken)
     {
+        _quotaName = quotaName;
+        _tags = NormalizeTags(tags);
         var request = BuildSessionRequest("POST", quotaName, tags);
         request.WithQuery("downloads", string.Empty);
 
@@ -110,13 +115,73 @@ public sealed class InstanceDownloadSession
         ParseResponse(response.BodyText ?? string.Empty);
     }
 
-    private async Task ReloadAsync(string? quotaName, IEnumerable<string>? tags, CancellationToken cancellationToken)
+    private async Task ReloadSessionAsync(string? quotaName, IEnumerable<string>? tags, CancellationToken cancellationToken)
     {
+        _quotaName = quotaName;
+        _tags = NormalizeTags(tags);
         var request = BuildSessionRequest("GET", quotaName, tags);
         request.WithQuery("downloadid", Id);
 
         var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         ParseResponse(response.BodyText ?? string.Empty);
+    }
+
+    private static List<string>? NormalizeTags(IEnumerable<string>? tags)
+    {
+        var list = tags?.Where(t => !string.IsNullOrEmpty(t)).ToList();
+        return list is { Count: > 0 } ? list : null;
+    }
+
+    /// <summary>
+    /// 打开记录读取器，拉取 <paramref name="start"/> 起的 <paramref name="count"/> 行。
+    /// <para>对应 PyODPS <c>InstanceDownloadSession._build_input_stream</c> + <c>open_record_reader</c>。</para>
+    /// <para>返回的 <see cref="TunnelRecordReader"/> 持有底层流，调用方负责 dispose。</para>
+    /// </summary>
+    /// <param name="start">起始行下标（0-based）</param>
+    /// <param name="count">拉取行数</param>
+    /// <param name="columns">只拉取指定列名（null = 全部）</param>
+    public async Task<TunnelRecordReader> OpenRecordReaderAsync(
+        long start,
+        long count,
+        IEnumerable<string>? columns = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(Id))
+            throw new InvalidOperationException("Session has no DownloadID; create or reload first.");
+        if (Schema is null || Schema.Columns.Count == 0)
+            throw new InvalidOperationException("Session schema is empty; cannot build decoders.");
+
+        var request = new OdpsRequest
+        {
+            Method = "GET",
+            Path = $"/projects/{Uri.EscapeDataString(_project)}/instances/{Uri.EscapeDataString(_instanceId)}"
+        };
+        request.WithQuery("data", string.Empty);
+        request.WithQuery("downloadid", Id);
+        request.WithQuery("rowrange", $"({start},{count})");
+        request.WithHeader("x-odps-tunnel-version", TunnelVersion.ToString());
+        request.WithHeader("Content-Length", "0");
+
+        if (!string.IsNullOrEmpty(_quotaName))
+            request.WithQuery("quotaName", _quotaName);
+        if (_tags is { Count: > 0 })
+            request.WithHeader("odps-tunnel-tags", string.Join(",", _tags));
+
+        if (columns != null)
+        {
+            var cols = columns.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            if (cols.Count > 0)
+                request.WithQuery("columns", string.Join(",", cols));
+        }
+
+        var streamResponse = await _client.SendStreamingAsync(request, cancellationToken).ConfigureAwait(false);
+
+        var decoders = new ITypeDecoder[Schema.Columns.Count];
+        for (var i = 0; i < Schema.Columns.Count; i++)
+            decoders[i] = TypeDecoderFactory.GetDecoder(Schema.Columns[i].Type);
+
+        // TunnelRecordReader 接管 streamResponse.Stream 的读取；streamResponse 本身由调用方 dispose
+        return new TunnelRecordReader(streamResponse.Stream, decoders, streamResponse);
     }
 
     private OdpsRequest BuildSessionRequest(string method, string? quotaName, IEnumerable<string>? tags)

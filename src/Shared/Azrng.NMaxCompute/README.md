@@ -44,7 +44,7 @@ while (await reader.ReadAsync())
 
 ## 能力范围与实现进度
 
-> 当前版本：**1.0.1**（S2 阶段交付，尚未接入端到端 Tunnel 调用链）
+> 当前版本：**1.0.1**（S2 + S1 收尾交付，Tunnel 已接入运行时调用链）
 
 ### 已完成能力
 
@@ -53,24 +53,21 @@ while (await reader.ReadAsync())
 | V1 / V4 签名（默认 V4，失败降级 V1） | S0 | `Accounts/CloudAccount` + `Signers/V1Signer` + `Signers/V4Signer` |
 | REST 客户端（4 次重试 + 指数退避 + 错误解析） | S0 | `Rest/OdpsRestClient` |
 | SQL 提交（XML 协议）+ 状态轮询 | S0 | `Core/Odps` + `Core/Instance` + `Core/JobXmlBuilder` |
-| Result API 取结果（CSV，10000 行限制） | S0 | `Core/CsvResultParser`，**当前用户实际可用的取数路径** |
+| Result API 取结果（CSV，10000 行限制） | S0 | `Core/CsvResultParser`，Tunnel 不可用时的回退路径 |
 | ADO.NET Provider | S0 | `MaxComputeConnection` / `MaxComputeCommand` / `MaxComputeDataReader` |
 | Dapper 扩展（`QueryAsync<T>` 等） | S0 | `MaxComputeDapperExtensions` |
-| Tunnel wire 解码（CRC32 / CRC32C / ProtobufWireReader） | S1 | `Tunnel/Wire/*`，已通过 fixture 字节级单测 |
+| Tunnel wire 解码（CRC32 / CRC32C / ProtobufWireReader） | S1 | `Tunnel/Wire/*` |
 | Tunnel Session（创建/重载 + JSON schema 解析） | S1 | `Tunnel/InstanceDownloadSession` + `Tunnel/TableSchema` |
 | Tunnel 基础类型 decoder | S1 | `Tunnel/Types/*`：bigint/int/double/float/bool/string/binary/decimal/datetime/date |
-| Tunnel 单条记录解码 + CRC32C 校验 | S1 | `Tunnel/TunnelRecordReader` |
+| Tunnel 单条记录解码 + CRC32C 校验 | S1 | `Tunnel/TunnelRecordReader`（可 dispose） |
 | DataReader 类型化返回（`GetFieldType` / `GetDataTypeName`） | S1 | `QueryResult.ColumnTypes` 透传 |
-| TIMESTAMP / TIMESTAMP_NTZ / JSON decoder | S2 | `Tunnel/Types/TimestampJsonDecoder`（TIMESTAMP 秒+纳秒，本地时区；NTZ 用 UTC；JSON 原样字符串） |
-| ARRAY / MAP / STRUCT 递归 decoder | S2 | `Tunnel/Types/CompositeDecoders`，size/null marker 不计入 CRC（对齐 PyODPS） |
-| 复合类型字符串解析 | S2 | `Tunnel/Types/TypeStringParser`，支持 `array<...>` / `map<...>` / `struct<...>` 嵌套 + 反引号字段名 |
-| NULL 处理 | S2 | record 级：缺失 field index 即 NULL（已在 S1 实现）；array/map/struct 内部：前置 null marker |
-
-### 已就绪但尚未接入主调用链
-
-| 能力 | 缺口 | 影响 |
-|---|---|---|
-| Instance Tunnel 端到端取数 | `OdpsRestClient` 尚未提供 streaming read API；`InstanceDownloadSession.OpenDataReaderAsync` 未实现 | 用户当前拉数据仍走 Result API（CSV，10000 行限制），S1/S2 的 wire 解码能力暂时没有运行时入口 |
+| TIMESTAMP / TIMESTAMP_NTZ / JSON decoder | S2 | `Tunnel/Types/TimestampJsonDecoder` |
+| ARRAY / MAP / STRUCT 递归 decoder | S2 | `Tunnel/Types/CompositeDecoders`，size/null marker 不计入 CRC |
+| 复合类型字符串解析 | S2 | `Tunnel/Types/TypeStringParser`，支持 `array/map/struct` 嵌套 + 反引号字段名 |
+| NULL 处理 | S2 | record 级缺失 field index 即 NULL；复合类型内部前置 null marker |
+| **Tunnel 运行时接入（默认取数路径）** | S1收尾 | `DirectOdpsQueryExecutor` 默认走 Tunnel：`RunSql → 等待 → CreateSession → OpenRecordReader → Materialize`，无行数限制 |
+| **流式 HTTP 读取** | S1收尾 | `OdpsRestClient.SendStreamingAsync`（`ResponseHeadersRead`）+ `OdpsStreamResponse` |
+| **Tunnel → Result API 自动回退** | S1收尾 | 命中 `InvalidProjectTable/InvalidArgument/NoSuchProject/InstanceTypeNotSupported/NoDownload` 时回退 Result API |
 
 ### 未开始（S3-S5 计划范围）
 
@@ -79,9 +76,14 @@ while (await reader.ReadAsync())
 | `MaxComputeCommand.Hints` 注入 SQLTask settings + 连接字符串新键 | S3 |
 | `StsAccount`（SecurityToken 头注入） | S4 |
 | zlib raw deflate 压缩传输 | S4 |
-| Tunnel → Result API 自动回退（错误码触发） | S4 |
 | 自定义 `TunnelEndpoint` | S4 |
-| PyODPS 对照基准测试套件 + 完整集成测试 | S5 |
+| PyODPS 对照基准测试套件 + 完整集成测试（真实集群） | S5 |
+
+### 待真实集群验证
+
+S0-S2 的代码已全部通过 fixture 单元测试（171 项），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
+接入后建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列与超 1 万行场景。
+
 
 
 ### 后续接手要点

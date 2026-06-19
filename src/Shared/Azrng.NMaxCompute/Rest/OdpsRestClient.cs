@@ -57,6 +57,69 @@ public sealed class OdpsRestClient
         return await SendInternalAsync(request, allowV4Downgrade: true, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 流式发送请求：成功（2xx）时返回未读完的响应体流，供 Tunnel 等大块二进制场景按需读取。
+    /// <para>
+    /// 不做重试与 V4→V1 自动降级（流式响应消费语义复杂）；失败时读完整 body 抛 <see cref="OdpsException"/>。
+    /// 上层如需重试/降级，应自行在捕获后重发。
+    /// </para>
+    /// </summary>
+    public async Task<OdpsStreamResponse> SendStreamingAsync(OdpsRequest request, CancellationToken cancellationToken = default)
+    {
+        _account.Sign(request);
+
+        using var httpMessage = new HttpRequestMessage(new HttpMethod(request.Method), BuildUrl(request));
+        ApplyHeaders(httpMessage, request);
+
+        if (request.Body is { Length: > 0 } body)
+        {
+            httpMessage.Content = new ByteArrayContent(body);
+        }
+
+        // 注意：不 using httpResponse —— 成功时交给 OdpsStreamResponse 持有并最终释放
+        var httpResponse = await _httpClient.SendAsync(httpMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            var headers = CollectHeaders(httpResponse);
+            var stream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return new OdpsStreamResponse((int)httpResponse.StatusCode, headers, stream, httpResponse);
+        }
+
+        // 失败：读完整 body 后抛异常
+        var bodyBytes = await httpResponse.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        var bodyText = bodyBytes.Length > 0 ? Encoding.UTF8.GetString(bodyBytes) : string.Empty;
+        httpResponse.Dispose();
+        throw BuildException((int)httpResponse.StatusCode, bodyText);
+    }
+
+    private static void ApplyHeaders(HttpRequestMessage httpMessage, OdpsRequest request)
+    {
+        foreach (var (key, value) in request.Headers)
+        {
+            if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+            {
+                httpMessage.Content ??= new ByteArrayContent(Array.Empty<byte>());
+                httpMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(value);
+            }
+            else if (!httpMessage.Headers.TryAddWithoutValidation(key, value))
+            {
+                httpMessage.Content ??= new ByteArrayContent(Array.Empty<byte>());
+                httpMessage.Content?.Headers.TryAddWithoutValidation(key, value);
+            }
+        }
+    }
+
+    private static Dictionary<string, string> CollectHeaders(HttpResponseMessage httpResponse)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var h in httpResponse.Headers)
+            headers[h.Key] = string.Join(",", h.Value);
+        foreach (var h in httpResponse.Content.Headers)
+            headers[h.Key] = string.Join(",", h.Value);
+        return headers;
+    }
+
     private async Task<OdpsResponse> SendInternalAsync(OdpsRequest request, bool allowV4Downgrade, CancellationToken cancellationToken)
     {
         var attempts = Math.Max(1, _retryTimes);

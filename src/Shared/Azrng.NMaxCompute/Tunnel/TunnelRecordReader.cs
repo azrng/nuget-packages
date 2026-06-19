@@ -15,24 +15,34 @@ namespace Azrng.NMaxCompute.Tunnel;
 /// 流首部可能携带批量元数据（count + checksum），由 <c>TUNNEL_META_*</c> 标记。
 /// </para>
 /// </summary>
-public sealed class TunnelRecordReader
+public sealed class TunnelRecordReader : IDisposable
 {
     private readonly Stream _stream;
     private readonly ProtobufWireReader _wire;
     private readonly ITypeDecoder[] _decoders;
+    private readonly IDisposable? _owner;
     private readonly Checksum _crc = new();
     private readonly Checksum _crccrc = new();
+    private bool _disposed;
 
     /// <summary>
     /// 构造函数。
     /// </summary>
     /// <param name="stream">已解压的 wire 字节流</param>
     /// <param name="decoders">每列对应的解码器（1-based → index-1）</param>
-    public TunnelRecordReader(Stream stream, ITypeDecoder[] decoders)
+    public TunnelRecordReader(Stream stream, ITypeDecoder[] decoders) : this(stream, decoders, owner: null)
+    {
+    }
+
+    /// <summary>
+    /// 构造函数（带 owner）：dispose reader 时连带释放 owner（如 <see cref="OdpsStreamResponse"/>）。
+    /// </summary>
+    internal TunnelRecordReader(Stream stream, ITypeDecoder[] decoders, IDisposable? owner)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _wire = new ProtobufWireReader(stream);
         _decoders = decoders ?? throw new ArgumentNullException(nameof(decoders));
+        _owner = owner;
     }
 
     /// <summary>
@@ -116,5 +126,17 @@ public sealed class TunnelRecordReader
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// 释放底层流（及关联的 owner，如 OdpsStreamResponse）。
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        _owner?.Dispose();
+        _stream.Dispose();
     }
 }
