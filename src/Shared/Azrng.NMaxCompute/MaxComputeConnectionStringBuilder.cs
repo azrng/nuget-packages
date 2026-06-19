@@ -1,124 +1,150 @@
 using System.Data.Common;
 using System.Text;
+using Azrng.NMaxCompute.Models;
 
 namespace Azrng.NMaxCompute;
 
 /// <summary>
-/// MaxCompute 连接字符串构建器
+/// MaxCompute 连接字符串构建器（直连格式）
+/// <para>
+/// 连接字符串示例：
+/// <code>
+/// Endpoint=http://service.cn-hangzhou.maxcompute.aliyun.com/api;
+/// AccessId=...;SecretAccessKey=...;Project=my_proj;
+/// Region=cn-hangzhou;Schema=...;MaxRows=10000
+/// </code>
+/// </para>
 /// </summary>
 public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
 {
-    private const string UrlKey = "Url";
+    private const string EndpointKey = "Endpoint";
     private const string AccessIdKey = "AccessId";
-    private const string SecretKeyKey = "SecretKey";
-    private const string JdbcUrlKey = "JdbcUrl";
+    private const string SecretAccessKeyKey = "SecretAccessKey";
+    private const string ProjectKey = "Project";
+    private const string SchemaKey = "Schema";
+    private const string RegionKey = "Region";
+    private const string SecurityTokenKey = "SecurityToken";
+    private const string TunnelEndpointKey = "TunnelEndpoint";
     private const string MaxRowsKey = "MaxRows";
+    private const string UseV4SignatureKey = "UseV4Signature";
 
-    public MaxComputeConnectionStringBuilder()
-    {
-    }
+    public MaxComputeConnectionStringBuilder() { }
 
     public MaxComputeConnectionStringBuilder(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new ArgumentNullException(nameof(connectionString));
-
         ConnectionString = connectionString;
     }
 
-    /// <summary>
-    /// 接口地址
-    /// </summary>
-    public string Url
+    public string Endpoint
     {
-        get => TryGetValue(UrlKey, out var value) ? value.ToString()! : string.Empty;
-        set => this[UrlKey] = value;
+        get => GetStringValue(EndpointKey);
+        set => this[EndpointKey] = value;
     }
 
-    /// <summary>
-    /// Access ID
-    /// </summary>
     public string AccessId
     {
-        get => TryGetValue(AccessIdKey, out var value) ? value.ToString()! : string.Empty;
+        get => GetStringValue(AccessIdKey);
         set => this[AccessIdKey] = value;
     }
 
-    /// <summary>
-    /// Secret Key
-    /// </summary>
-    public string SecretKey
+    public string SecretAccessKey
     {
-        get => TryGetValue(SecretKeyKey, out var value) ? value.ToString()! : string.Empty;
-        set => this[SecretKeyKey] = value;
+        get => GetStringValue(SecretAccessKeyKey);
+        set => this[SecretAccessKeyKey] = value;
     }
 
-    /// <summary>
-    /// JDBC URL
-    /// </summary>
-    public string JdbcUrl
+    public string Project
     {
-        get => TryGetValue(JdbcUrlKey, out var value) ? value.ToString()! : string.Empty;
-        set => this[JdbcUrlKey] = value;
+        get => GetStringValue(ProjectKey);
+        set => this[ProjectKey] = value;
     }
 
-    /// <summary>
-    /// 最大返回行数
-    /// </summary>
+    public string? Schema
+    {
+        get => GetStringValue(SchemaKey);
+        set => this[SchemaKey] = value;
+    }
+
+    public string? Region
+    {
+        get => GetStringValue(RegionKey);
+        set => this[RegionKey] = value;
+    }
+
+    public string? SecurityToken
+    {
+        get => GetStringValue(SecurityTokenKey);
+        set => this[SecurityTokenKey] = value;
+    }
+
+    public string? TunnelEndpoint
+    {
+        get => GetStringValue(TunnelEndpointKey);
+        set => this[TunnelEndpointKey] = value;
+    }
+
     public int MaxRows
     {
-        get => TryGetValue(MaxRowsKey, out var value) ? Convert.ToInt32(value) : 1000;
+        get => TryGetValue(MaxRowsKey, out var value) ? Convert.ToInt32(value) : 10000;
         set => this[MaxRowsKey] = value;
     }
 
-    /// <summary>
-    /// 验证连接字符串是否有效
-    /// </summary>
-    public bool IsValid()
+    public bool UseV4Signature
     {
-        return !string.IsNullOrWhiteSpace(Url) &&
-               !string.IsNullOrWhiteSpace(AccessId) &&
-               !string.IsNullOrWhiteSpace(SecretKey) &&
-               !string.IsNullOrWhiteSpace(JdbcUrl);
+        get => TryGetValue(UseV4SignatureKey, out var value) ? Convert.ToBoolean(value) : true;
+        set => this[UseV4SignatureKey] = value;
     }
 
+    public bool IsValid() =>
+        !string.IsNullOrWhiteSpace(Endpoint)
+        && !string.IsNullOrWhiteSpace(AccessId)
+        && !string.IsNullOrWhiteSpace(SecretAccessKey)
+        && !string.IsNullOrWhiteSpace(Project);
+
     /// <summary>
-    /// 获取连接字符串
+    /// 转换为 <see cref="MaxComputeConfig"/>
     /// </summary>
+    public MaxComputeConfig ToConfig()
+    {
+        return new MaxComputeConfig
+        {
+            Endpoint = Endpoint,
+            AccessId = AccessId,
+            SecretAccessKey = SecretAccessKey,
+            Project = Project,
+            Schema = string.IsNullOrEmpty(Schema) ? null : Schema,
+            Region = string.IsNullOrEmpty(Region) ? null : Region,
+            SecurityToken = string.IsNullOrEmpty(SecurityToken) ? null : SecurityToken,
+            TunnelEndpoint = string.IsNullOrEmpty(TunnelEndpoint) ? null : TunnelEndpoint,
+            MaxRows = MaxRows,
+            UseV4Signature = UseV4Signature
+        };
+    }
+
     public override string ToString()
     {
         var sb = new StringBuilder();
-
-        if (!string.IsNullOrEmpty(Url))
-            sb.Append($"{UrlKey}={Url};");
-
-        if (!string.IsNullOrEmpty(AccessId))
-            sb.Append($"{AccessIdKey}={AccessId};");
-
-        if (!string.IsNullOrEmpty(SecretKey))
-            sb.Append($"{SecretKeyKey}={SecretKey};");
-
-        if (!string.IsNullOrEmpty(JdbcUrl))
-            sb.Append($"{JdbcUrlKey}={JdbcUrl};");
-
-        if (MaxRows > 0)
-            sb.Append($"{MaxRowsKey}={MaxRows};");
-
+        AppendIfNotEmpty(sb, EndpointKey, Endpoint);
+        AppendIfNotEmpty(sb, AccessIdKey, AccessId);
+        AppendIfNotEmpty(sb, SecretAccessKeyKey, SecretAccessKey);
+        AppendIfNotEmpty(sb, ProjectKey, Project);
+        AppendIfNotEmpty(sb, SchemaKey, Schema);
+        AppendIfNotEmpty(sb, RegionKey, Region);
+        AppendIfNotEmpty(sb, SecurityTokenKey, SecurityToken);
+        AppendIfNotEmpty(sb, TunnelEndpointKey, TunnelEndpoint);
+        if (MaxRows > 0) sb.Append($"{MaxRowsKey}={MaxRows};");
+        if (!UseV4Signature) sb.Append($"{UseV4SignatureKey}=false;");
         return sb.ToString().TrimEnd(';');
     }
 
-    /// <summary>
-    /// 尝试获取值
-    /// </summary>
-    private bool TryGetValue(string key, out object? value)
+    private void AppendIfNotEmpty(StringBuilder sb, string key, string? value)
     {
-        if (base.TryGetValue(key, out var obj))
-        {
-            value = obj;
-            return true;
-        }
-
-        value = null;
-        return false;
+        if (!string.IsNullOrEmpty(value))
+            sb.Append($"{key}={value};");
     }
+
+    private string GetStringValue(string key) =>
+        TryGetValue(key, out var value) ? value?.ToString() ?? string.Empty : string.Empty;
 }

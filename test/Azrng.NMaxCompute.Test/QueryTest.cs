@@ -1,4 +1,4 @@
-﻿using Azrng.NMaxCompute.Adapter;
+using Azrng.NMaxCompute.Adapter;
 using Azrng.NMaxCompute.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -16,18 +16,20 @@ namespace Azrng.NMaxCompute.Test
 
             var queryExecutor = provider.GetRequiredService<IQueryExecutor>();
             var config = new MaxComputeConfig
-                         {
-                             ServerUrl = "http://mc-job-5426-main.sy",
-                             AccessId = "xxx",
-                             SecretKey = "xxx",
-                             JdbcUrl =
-                                 "jdbc:odps:https://service.cn-shanghai.maxcompute.aliyun.com/api?project=test&tunnelEndpoint=https://dt.cn-shanghai.maxcompute.aliyun.com",
-                             Project = "sample",
-                             MaxRows = 10000
-                         };
+            {
+                Endpoint = "http://service.cn-hangzhou.maxcompute.aliyun.com/api",
+                AccessId = "test_ak",
+                SecretAccessKey = "test_sk",
+                Project = "sample",
+                Region = "cn-hangzhou",
+                MaxRows = 10000
+            };
             var connection = MaxComputeConnectionFactory.CreateConnection(queryExecutor, config);
 
             await connection.OpenAsync();
+            Assert.Equal(System.Data.ConnectionState.Open, connection.State);
+            Assert.Equal("sample", connection.Database);
+            Assert.Equal(config.Endpoint, connection.DataSource);
         }
     }
 }

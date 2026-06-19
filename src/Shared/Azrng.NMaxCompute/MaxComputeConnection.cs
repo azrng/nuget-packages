@@ -62,7 +62,7 @@ public class MaxComputeConnection : DbConnection
 
     public override string Database => _config.Project ?? string.Empty;
 
-    public override string DataSource => _config.ServerUrl;
+    public override string DataSource => _config.Endpoint;
 
     public override string ServerVersion => "1.0";
 
@@ -148,11 +148,16 @@ public class MaxComputeConnection : DbConnection
     {
         var parts = new List<string>
         {
-            $"Url={config.ServerUrl}",
+            $"Endpoint={config.Endpoint}",
             $"AccessId={config.AccessId}",
-            $"SecretKey={config.SecretKey}",
-            $"JdbcUrl={config.JdbcUrl}"
+            $"SecretAccessKey={config.SecretAccessKey}",
+            $"Project={config.Project}"
         };
+
+        if (!string.IsNullOrWhiteSpace(config.Region))
+            parts.Add($"Region={config.Region}");
+        if (!string.IsNullOrWhiteSpace(config.Schema))
+            parts.Add($"Schema={config.Schema}");
 
         if (!string.IsNullOrWhiteSpace(config.Project))
             parts.Add($"Project={config.Project}");
@@ -182,23 +187,37 @@ public class MaxComputeConnection : DbConnection
 
             switch (key)
             {
+                case "Endpoint":
                 case "Url":
-                    config.ServerUrl = value;
+                    config.Endpoint = value;
                     break;
                 case "AccessId":
                     config.AccessId = value;
                     break;
+                case "SecretAccessKey":
                 case "SecretKey":
-                    config.SecretKey = value;
-                    break;
-                case "JdbcUrl":
-                    config.JdbcUrl = value;
+                    config.SecretAccessKey = value;
                     break;
                 case "Project":
                     config.Project = value;
                     break;
+                case "Region":
+                    config.Region = value;
+                    break;
+                case "Schema":
+                    config.Schema = value;
+                    break;
+                case "SecurityToken":
+                    config.SecurityToken = value;
+                    break;
+                case "TunnelEndpoint":
+                    config.TunnelEndpoint = value;
+                    break;
                 case "MaxRows" when int.TryParse(value, out var maxRows):
                     config.MaxRows = maxRows;
+                    break;
+                case "UseV4Signature" when bool.TryParse(value, out var v4):
+                    config.UseV4Signature = v4;
                     break;
             }
         }

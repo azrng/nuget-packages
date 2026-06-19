@@ -10,6 +10,7 @@
 
 | 任务 ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 任务状态 | 优先级 | 最近更新时间 |
 | ------- | -------- | -------- | -------- | --------- | -------- | ------ | ------------ |
+| T016 | Azrng.NMaxCompute 直连实现（去 Python 中转，S0 MVP） | 在 `Azrng.NMaxCompute` 包内直接实现阿里云 MaxCompute 直连（V1/V4 签名、REST 客户端、SQL 执行链路、Result API 取数），破坏性重命名 Config 字段，版本升至 2.0.0 | 收口 | Claude | REVIEW | P1 | 2026-06-19 |
 | T009 | 核查 Azrng.AspNetCore.Core 代码审查 | 核查 `Azrng.AspNetCore.Core-review-2026-05-26.md` 中未提交审查意见的合理性，修复成立问题并补充验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-27 |
 | T010 | 修复 Azrng.NTika 代码审查问题 | 根据 `Azrng.NTika-review-2026-05-29.md` 修复 NTika 安全与解析正确性问题，并补充测试、验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-05-29 12:57 |
 | T011 | 修复 Azrng.JSqlParser 构建警告 | 核查 `Azrng.JSqlParser` 类库构建警告，修复可低风险处理的问题并补充验证与开发记录 | 收口 | Codex | REVIEW | P1 | 2026-06-01 10:26 |

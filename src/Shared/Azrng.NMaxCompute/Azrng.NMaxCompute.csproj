@@ -3,18 +3,19 @@
     <PropertyGroup>
         <TargetFrameworks>net10.0;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
-        <Description>封装了一个通过HTTP调用MaxCompute接口的请求</Description>
+        <Description>阿里云 MaxCompute（ODPS）C# 直连客户端：内置 V1/V4 签名、REST 客户端、SQL 执行链路，提供 ADO.NET Provider 能力，无需 Python 中转。</Description>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
-        <Version>1.0.1</Version>
+        <Version>2.0.0</Version>
         <PackageId>Azrng.NMaxCompute</PackageId>
         <Copyright>Azrng</Copyright>
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <Title>MaxCompute Client</Title>
-        <PackageTags>maxcompute;alibaba;bigdata;dotnet</PackageTags>
+        <Title>MaxCompute Direct Client</Title>
+        <PackageTags>maxcompute;odps;alibaba;bigdata;dotnet;direct</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
@@ -22,28 +23,29 @@
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
-    </ItemGroup>
-
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
         <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
         <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
         <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0"/>
     </ItemGroup>
 
 </Project>
