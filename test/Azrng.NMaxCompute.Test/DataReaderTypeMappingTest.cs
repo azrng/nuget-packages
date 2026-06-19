@@ -58,9 +58,14 @@ public class DataReaderTypeMappingTest
     [InlineData("decimal", typeof(decimal))]
     [InlineData("datetime", typeof(DateTime))]
     [InlineData("date", typeof(DateOnly))]
+    [InlineData("timestamp", typeof(DateTimeOffset))]
+    [InlineData("timestamp_ntz", typeof(DateTimeOffset))]
     [InlineData("varchar", typeof(string))]
     [InlineData("json", typeof(string))]
     [InlineData("binary", typeof(string))]
+    [InlineData("array<bigint>", typeof(object[]))]
+    [InlineData("map<string,bigint>", typeof(System.Collections.IDictionary))]
+    [InlineData("struct<a:string,b:bigint>", typeof(object[]))]
     public void GetFieldType_MapsOdpsTypes(string odpsType, Type expected)
     {
         var result = new QueryResult

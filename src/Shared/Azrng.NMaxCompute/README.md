@@ -44,7 +44,7 @@ while (await reader.ReadAsync())
 
 ## 能力范围与实现进度
 
-> 当前版本：**1.0.1**（S1 阶段交付，尚未接入端到端 Tunnel 调用链）
+> 当前版本：**1.0.1**（S2 阶段交付，尚未接入端到端 Tunnel 调用链）
 
 ### 已完成能力
 
@@ -61,26 +61,28 @@ while (await reader.ReadAsync())
 | Tunnel 基础类型 decoder | S1 | `Tunnel/Types/*`：bigint/int/double/float/bool/string/binary/decimal/datetime/date |
 | Tunnel 单条记录解码 + CRC32C 校验 | S1 | `Tunnel/TunnelRecordReader` |
 | DataReader 类型化返回（`GetFieldType` / `GetDataTypeName`） | S1 | `QueryResult.ColumnTypes` 透传 |
+| TIMESTAMP / TIMESTAMP_NTZ / JSON decoder | S2 | `Tunnel/Types/TimestampJsonDecoder`（TIMESTAMP 秒+纳秒，本地时区；NTZ 用 UTC；JSON 原样字符串） |
+| ARRAY / MAP / STRUCT 递归 decoder | S2 | `Tunnel/Types/CompositeDecoders`，size/null marker 不计入 CRC（对齐 PyODPS） |
+| 复合类型字符串解析 | S2 | `Tunnel/Types/TypeStringParser`，支持 `array<...>` / `map<...>` / `struct<...>` 嵌套 + 反引号字段名 |
+| NULL 处理 | S2 | record 级：缺失 field index 即 NULL（已在 S1 实现）；array/map/struct 内部：前置 null marker |
 
 ### 已就绪但尚未接入主调用链
 
 | 能力 | 缺口 | 影响 |
 |---|---|---|
-| Instance Tunnel 端到端取数 | `OdpsRestClient` 尚未提供 streaming read API；`InstanceDownloadSession.OpenDataReaderAsync` 未实现 | 用户当前拉数据仍走 Result API（CSV，10000 行限制），S1 的 wire 解码能力暂时没有运行时入口 |
+| Instance Tunnel 端到端取数 | `OdpsRestClient` 尚未提供 streaming read API；`InstanceDownloadSession.OpenDataReaderAsync` 未实现 | 用户当前拉数据仍走 Result API（CSV，10000 行限制），S1/S2 的 wire 解码能力暂时没有运行时入口 |
 
-### 未开始（S2-S5 计划范围）
+### 未开始（S3-S5 计划范围）
 
 | 能力 | 阶段 |
 |---|---|
-| TIMESTAMP / TIMESTAMP_NTZ 类型 decoder | S2 |
-| ARRAY / MAP / STRUCT 递归 decoder + 类型字符串解析 | S2 |
-| NULL bitmap 完整处理 | S2 |
 | `MaxComputeCommand.Hints` 注入 SQLTask settings + 连接字符串新键 | S3 |
 | `StsAccount`（SecurityToken 头注入） | S4 |
 | zlib raw deflate 压缩传输 | S4 |
 | Tunnel → Result API 自动回退（错误码触发） | S4 |
 | 自定义 `TunnelEndpoint` | S4 |
 | PyODPS 对照基准测试套件 + 完整集成测试 | S5 |
+
 
 ### 后续接手要点
 

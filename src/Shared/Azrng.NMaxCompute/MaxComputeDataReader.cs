@@ -53,15 +53,25 @@ public class MaxComputeDataReader : DbDataReader
         if (key.StartsWith("decimal(", StringComparison.Ordinal))
             key = "decimal";
 
+        // 复合类型：array/map/struct 返回对象数组 / 字典 / 对象数组
+        if (key.StartsWith("array<", StringComparison.Ordinal))
+            return typeof(object[]);
+        if (key.StartsWith("map<", StringComparison.Ordinal))
+            return typeof(System.Collections.IDictionary);
+        if (key.StartsWith("struct<", StringComparison.Ordinal))
+            return typeof(object[]);
+
         return key switch
         {
             "tinyint" or "smallint" or "int" or "int_" or "integer" or "bigint" or "long" => typeof(long),
             "float" or "float_" => typeof(float),
             "double" => typeof(double),
             "boolean" or "bool" => typeof(bool),
-            "string" or "varchar" or "char" or "json" or "binary" => typeof(string),
+            "string" or "varchar" or "char" or "binary" => typeof(string),
+            "json" => typeof(string),   // JSON 默认按字符串暴露，调用方可按需解析
             "datetime" => typeof(DateTime),
             "date" => typeof(DateOnly),
+            "timestamp" or "timestamp_ntz" => typeof(DateTimeOffset),
             "decimal" => typeof(decimal),
             _ => typeof(string)
         };

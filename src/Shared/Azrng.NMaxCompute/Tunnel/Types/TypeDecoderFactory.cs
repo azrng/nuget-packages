@@ -4,7 +4,7 @@ namespace Azrng.NMaxCompute.Tunnel.Types;
 /// 类型字符串 → <see cref="ITypeDecoder"/> 注册中心。
 /// <para>
 /// 对应 PyODPS <c>validate_data_type</c> 与 <c>_read_field</c> 中的分支选择。
-/// 当前仅注册 6 种基础类型（S1 范围）；复杂类型留待 S2 阶段。
+/// 基础类型走查表，复合类型（<c>array</c>/<c>map</c>/<c>struct</c>）经 <see cref="TypeStringParser"/> 递归解析。
 /// </para>
 /// </summary>
 public static class TypeDecoderFactory
@@ -27,14 +27,16 @@ public static class TypeDecoderFactory
         { "binary", StringDecoder.Instance },
         { "varchar", StringDecoder.Instance },
         { "char", StringDecoder.Instance },
-        { "json", StringDecoder.Instance },
+        { "json", JsonDecoder.Instance },
         { "datetime", DateTimeDecoder.Instance },
         { "date", DateDecoder.Instance },
+        { "timestamp", TimestampDecoder.LocalInstance },
+        { "timestamp_ntz", TimestampDecoder.UtcInstance },
         { "decimal", DecimalDecoder.Instance }
     };
 
     /// <summary>
-    /// 根据 MaxCompute 类型字符串获取 decoder。
+    /// 根据 MaxCompute 类型字符串获取 decoder。支持基础类型与复合类型。
     /// </summary>
     /// <exception cref="NotSupportedException">类型暂不支持</exception>
     public static ITypeDecoder GetDecoder(string typeString)
@@ -42,7 +44,27 @@ public static class TypeDecoderFactory
         if (string.IsNullOrWhiteSpace(typeString))
             throw new ArgumentException("Type string is empty.", nameof(typeString));
 
-        // 简单类型直接查表；复合类型（带 &lt;&gt;）暂不支持，留待 S2
+        var trimmed = typeString.Trim();
+
+        // decimal(p,s) 是带精度的简单类型，不是复合类型，优先短路
+        if (trimmed.StartsWith("decimal(", StringComparison.OrdinalIgnoreCase))
+            return DecimalDecoder.Instance;
+
+        // 含尖括号的视为复合类型，交给 parser
+        if (trimmed.IndexOfAny(new[] { '<', '>' }) >= 0)
+            return TypeStringParser.Parse(trimmed);
+
+        return GetPrimitiveDecoder(trimmed);
+    }
+
+    /// <summary>
+    /// 仅查表获取基础类型 decoder（不做复合解析）。
+    /// </summary>
+    public static ITypeDecoder GetPrimitiveDecoder(string typeString)
+    {
+        if (string.IsNullOrWhiteSpace(typeString))
+            throw new ArgumentException("Type string is empty.", nameof(typeString));
+
         var key = typeString.Trim().ToLowerInvariant();
         if (Decoders.TryGetValue(key, out var decoder))
             return decoder;
