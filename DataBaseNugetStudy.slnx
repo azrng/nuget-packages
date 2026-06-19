@@ -1,9 +1,10 @@
-﻿<Solution>
+<Solution>
   <Folder Name="/Services/" />
   <Folder Name="/Shared/" />
   <Folder Name="/Shared/Db/">
     <Project Path="src/Shared/Azrng.Database.DynamicSqlBuilder/Azrng.Database.DynamicSqlBuilder.csproj" />
     <Project Path="src/Shared/Azrng.JSqlParser/Azrng.JSqlParser.csproj" />
+    <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
     <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
     <Project Path="src\Shared\Azrng.DataAccess\Azrng.DataAccess.csproj" />
@@ -13,6 +14,7 @@
     <Project Path="test/Azrng.Dapper.Test/Azrng.Dapper.Test.csproj" />
     <Project Path="test/Azrng.Database.DynamicSqlBuilder.Test/Azrng.Database.DynamicSqlBuilder.Test.csproj" />
     <Project Path="test/Azrng.JSqlParser.Test/Azrng.JSqlParser.Test.csproj" />
+    <Project Path="test/Azrng.NMaxCompute.Test/Azrng.NMaxCompute.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.MySql.Test\Common.DbSystemOperator.MySql.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.Pgsql.Test\Common.DbSystemOperator.Pgsql.Test.csproj" />
