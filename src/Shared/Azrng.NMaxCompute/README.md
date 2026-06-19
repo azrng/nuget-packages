@@ -42,20 +42,54 @@ while (await reader.ReadAsync())
 }
 ```
 
-## 能力范围（v2.0.0 / S0 MVP）
+## 能力范围与实现进度
 
-| 能力 | 状态 |
+> 当前版本：**1.0.1**（S1 阶段交付，尚未接入端到端 Tunnel 调用链）
+
+### 已完成能力
+
+| 能力 | 阶段 | 说明 |
+|---|---|---|
+| V1 / V4 签名（默认 V4，失败降级 V1） | S0 | `Accounts/CloudAccount` + `Signers/V1Signer` + `Signers/V4Signer` |
+| REST 客户端（4 次重试 + 指数退避 + 错误解析） | S0 | `Rest/OdpsRestClient` |
+| SQL 提交（XML 协议）+ 状态轮询 | S0 | `Core/Odps` + `Core/Instance` + `Core/JobXmlBuilder` |
+| Result API 取结果（CSV，10000 行限制） | S0 | `Core/CsvResultParser`，**当前用户实际可用的取数路径** |
+| ADO.NET Provider | S0 | `MaxComputeConnection` / `MaxComputeCommand` / `MaxComputeDataReader` |
+| Dapper 扩展（`QueryAsync<T>` 等） | S0 | `MaxComputeDapperExtensions` |
+| Tunnel wire 解码（CRC32 / CRC32C / ProtobufWireReader） | S1 | `Tunnel/Wire/*`，已通过 fixture 字节级单测 |
+| Tunnel Session（创建/重载 + JSON schema 解析） | S1 | `Tunnel/InstanceDownloadSession` + `Tunnel/TableSchema` |
+| Tunnel 基础类型 decoder | S1 | `Tunnel/Types/*`：bigint/int/double/float/bool/string/binary/decimal/datetime/date |
+| Tunnel 单条记录解码 + CRC32C 校验 | S1 | `Tunnel/TunnelRecordReader` |
+| DataReader 类型化返回（`GetFieldType` / `GetDataTypeName`） | S1 | `QueryResult.ColumnTypes` 透传 |
+
+### 已就绪但尚未接入主调用链
+
+| 能力 | 缺口 | 影响 |
+|---|---|---|
+| Instance Tunnel 端到端取数 | `OdpsRestClient` 尚未提供 streaming read API；`InstanceDownloadSession.OpenDataReaderAsync` 未实现 | 用户当前拉数据仍走 Result API（CSV，10000 行限制），S1 的 wire 解码能力暂时没有运行时入口 |
+
+### 未开始（S2-S5 计划范围）
+
+| 能力 | 阶段 |
 |---|---|
-| V1 / V4 签名（默认 V4，失败降级 V1） | ✅ |
-| REST 客户端（4 次重试 + 指数退避 + 错误解析） | ✅ |
-| SQL 提交（XML 协议）+ 状态轮询 | ✅ |
-| Result API 取结果（CSV，10000 行限制） | ✅ |
-| ADO.NET Provider（`DbConnection` / `DbCommand` / `DbDataReader`） | ✅ |
-| Dapper 扩展（`QueryAsync<T>` 等） | ✅ |
-| Instance Tunnel（解除 1 万行限制） | 🔜 后续版本 |
-| 复杂类型（ARRAY/MAP/STRUCT） | 🔜 后续版本 |
-| STS Token | 🔜 后续版本 |
-| 压缩传输 | 🔜 后续版本 |
+| TIMESTAMP / TIMESTAMP_NTZ 类型 decoder | S2 |
+| ARRAY / MAP / STRUCT 递归 decoder + 类型字符串解析 | S2 |
+| NULL bitmap 完整处理 | S2 |
+| `MaxComputeCommand.Hints` 注入 SQLTask settings + 连接字符串新键 | S3 |
+| `StsAccount`（SecurityToken 头注入） | S4 |
+| zlib raw deflate 压缩传输 | S4 |
+| Tunnel → Result API 自动回退（错误码触发） | S4 |
+| 自定义 `TunnelEndpoint` | S4 |
+| PyODPS 对照基准测试套件 + 完整集成测试 | S5 |
+
+### 后续接手要点
+
+- S1 wire 解码层已完成并通过 fixture 单测，但**未在 `DirectOdpsQueryExecutor` 中接入**，下一步要：
+  1. 给 `OdpsRestClient` 增加 `SendStreamingAsync`（返回 `Stream`，不走 `ReadAsByteArrayAsync`）
+  2. 在 `InstanceDownloadSession` 上实现 `OpenDataReaderAsync(start, count, columns?, ct)`：拼 `?data&downloadid=...&rowrange=(start,count)` 请求
+  3. 在 `DirectOdpsQueryExecutor` 中：默认走 Tunnel；遇到 `InvalidProjectTable / InvalidArgument / NoSuchProject / InstanceTypeNotSupported` 时回退 Result API
+- 多目标框架：`net6.0;net7.0;net8.0;net9.0;net10.0`，每个 TFM 单独引用对应版本的 `Microsoft.Extensions.Http` 与 `Microsoft.Extensions.Logging.Abstractions`
+- 测试覆盖：`test/Azrng.NMaxCompute.Test/` 共 136 个测试，全部通过
 
 ## 鉴权
 
