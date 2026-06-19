@@ -6,5 +6,8 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T017 | S1：Instance Tunnel + 基础类型 decoder | DONE | 2026-06-20 |
+| T016 | S0：Azrng.NMaxCompute 直连实现（合并 Direct 回主包） | DONE | 2026-06-19 |
 | T003 | 同步 dotnetLayered 规则治理优化 | DONE | 2026-05-19 |
 | T002 | 合并 dotnetLayered 规则优化 | DONE | 2026-04-15 |
+

@@ -11,6 +11,12 @@ public class QueryResult
     public string[] Columns { get; set; } = Array.Empty<string>();
 
     /// <summary>
+    /// 列类型集合（与 <see cref="Columns"/> 等长，S1+ 路径填入，CSV 路径可能为空）
+    /// <para>使用 MaxCompute 类型字符串，如 <c>bigint</c>、<c>double</c>。</para>
+    /// </summary>
+    public string[]? ColumnTypes { get; set; }
+
+    /// <summary>
     /// 行数据集合
     /// </summary>
     public object[][] Rows { get; set; } = Array.Empty<object[]>();

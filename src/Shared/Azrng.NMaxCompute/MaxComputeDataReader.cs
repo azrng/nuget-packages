@@ -1,4 +1,5 @@
 using Azrng.NMaxCompute.Models;
+using Azrng.NMaxCompute.Tunnel.Types;
 using Microsoft.Extensions.Logging;
 using System.Data.Common;
 
@@ -14,11 +15,56 @@ public class MaxComputeDataReader : DbDataReader
     private bool _isClosed = false;
     private bool _disposed = false;
     private readonly ILogger? _logger;
+    private readonly Type?[] _resolvedTypes;
 
     public MaxComputeDataReader(QueryResult result, ILogger? logger = null)
     {
         _result = result ?? throw new ArgumentNullException(nameof(result));
         _logger = logger;
+        _resolvedTypes = ResolveColumnTypes();
+    }
+
+    /// <summary>
+    /// 根据 <see cref="QueryResult.ColumnTypes"/> 推断每列的 CLR 类型。
+    /// 未提供类型信息时回退到 <c>typeof(string)</c>，保持 S0 路径行为不变。
+    /// </summary>
+    private Type?[] ResolveColumnTypes()
+    {
+        var count = _result.Columns?.Length ?? 0;
+        var types = new Type?[count];
+        var columnTypes = _result.ColumnTypes;
+        if (columnTypes == null)
+            return types;
+
+        for (var i = 0; i < count && i < columnTypes.Length; i++)
+        {
+            types[i] = ResolveType(columnTypes[i]);
+        }
+        return types;
+    }
+
+    private static Type? ResolveType(string? odpsType)
+    {
+        if (string.IsNullOrWhiteSpace(odpsType))
+            return typeof(string);
+
+        var key = odpsType.Trim().ToLowerInvariant();
+        // decimal(p,s) 归一
+        if (key.StartsWith("decimal(", StringComparison.Ordinal))
+            key = "decimal";
+
+        return key switch
+        {
+            "tinyint" or "smallint" or "int" or "int_" or "integer" or "bigint" or "long" => typeof(long),
+            "float" or "float_" => typeof(float),
+            "double" => typeof(double),
+            "boolean" or "bool" => typeof(bool),
+            "string" or "varchar" or "char" or "json" or "binary" => typeof(string),
+            "datetime" => typeof(DateTime),
+            "date" => typeof(DateOnly),
+            "decimal" => typeof(decimal),
+            _ => typeof(string)
+        };
     }
 
     public override int Depth => 0;
@@ -71,7 +117,16 @@ public class MaxComputeDataReader : DbDataReader
             throw new ArgumentOutOfRangeException(nameof(ordinal),
                 $"Column index {ordinal} is out of range. Valid range is 0 to {FieldCount - 1}.");
 
-        return "STRING"; // MaxCompute 默认返回字符串
+        // 若底层携带了 ODPS 类型字符串，原样返回
+        if (_result.ColumnTypes != null
+            && ordinal < _result.ColumnTypes.Length
+            && !string.IsNullOrWhiteSpace(_result.ColumnTypes[ordinal]))
+        {
+            return _result.ColumnTypes[ordinal]!;
+        }
+
+        // 回退到 CLR 类型名
+        return _resolvedTypes[ordinal]?.Name ?? "String";
     }
 
     public override DateTime GetDateTime(int ordinal)
@@ -95,7 +150,8 @@ public class MaxComputeDataReader : DbDataReader
             throw new ArgumentOutOfRangeException(nameof(ordinal),
                 $"Column index {ordinal} is out of range. Valid range is 0 to {FieldCount - 1}.");
 
-        return typeof(string);
+        // 优先返回解析出来的真实 CLR 类型，缺失时回退到 string（保持 S0 行为）
+        return _resolvedTypes[ordinal] ?? typeof(string);
     }
 
     public override float GetFloat(int ordinal)
