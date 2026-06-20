@@ -9,8 +9,7 @@
   </Folder>
   <Folder Name="/Shared/Helper/">
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
-    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
-    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Azrng.Security\Azrng.Security.csproj" />
     <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
   </Folder>
   <Folder Name="/Shared/Http/">
@@ -24,7 +23,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Test/">
-    <Project Path="test/Common.Security.Test/Common.Security.Test.csproj" />
+    <Project Path="test/Azrng.Security.Test/Azrng.Security.Test.csproj" />
     <Project Path="test/DevLogDashboard.PerformanceTest/DevLogDashboard.PerformanceTest.csproj" />
     <Project Path="test/DevLogDashboard.Test/DevLogDashboard.Test.csproj" />
     <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
