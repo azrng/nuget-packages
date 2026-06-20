@@ -1,4 +1,5 @@
-﻿using Azrng.YuntongxunSms.Model;
+﻿using Azrng.Security;
+using Azrng.YuntongxunSms.Model;
 using Common.Results;
 using Common.Service;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ namespace Azrng.YuntongxunSms
 
                 string date = DateTime.Now.ToString("yyyyMMddhhmmss");
                 // 构建URL内容
-                string sigstr = (config.SmsAccountSid + config.SmsAccountToken + date).Md5Hash();
+                string sigstr = Md5Helper.GetMd5Hash(config.SmsAccountSid + config.SmsAccountToken + date);
                 string uriStr = string.Format("https://{0}:{1}/{2}/Accounts/{3}/SMS/TemplateSMS?sig={4}", config.SmsAddress, config.SmsPort, _softVer, config.SmsAccountSid, sigstr);
                 Uri address = new Uri(uriStr);
                 //记录日志

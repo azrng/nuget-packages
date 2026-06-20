@@ -2,14 +2,12 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-
-
-
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="AzrngCommon" Version="1.1.5"/>
+        <ProjectReference Include="..\Azrng.Security\Azrng.Security.csproj" />
     </ItemGroup>
 
 </Project>
