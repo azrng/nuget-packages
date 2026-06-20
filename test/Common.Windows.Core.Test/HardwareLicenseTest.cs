@@ -1,5 +1,5 @@
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 using System.Security.Cryptography;
 using Xunit.Abstractions;
 

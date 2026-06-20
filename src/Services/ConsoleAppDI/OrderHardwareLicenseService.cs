@@ -1,6 +1,6 @@
 ﻿using Azrng.ConsoleApp.DependencyInjection;
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 using Microsoft.Extensions.Logging;
 using StudyUse;
 using System.Security.Cryptography;

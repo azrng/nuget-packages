@@ -1,6 +1,5 @@
 ﻿using Azrng.YuntongxunSms.Model;
 using Common.Results;
-using Common.Security;
 using Common.Service;
 using Microsoft.Extensions.Options;
 using System;
