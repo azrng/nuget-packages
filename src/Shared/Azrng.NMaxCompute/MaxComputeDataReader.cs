@@ -60,6 +60,9 @@ public class MaxComputeDataReader : DbDataReader
             return typeof(System.Collections.IDictionary);
         if (key.StartsWith("struct<", StringComparison.Ordinal))
             return typeof(object[]);
+        // vector(elem,dim) → double[]（decoder 统一返回 double[]）
+        if (key.StartsWith("vector", StringComparison.Ordinal))
+            return typeof(double[]);
 
         return key switch
         {
@@ -73,6 +76,8 @@ public class MaxComputeDataReader : DbDataReader
             "date" => typeof(DateOnly),
             "timestamp" or "timestamp_ntz" => typeof(DateTimeOffset),
             "decimal" => typeof(decimal),
+            "interval_day_time" => typeof(TimeSpan),
+            "interval_year_month" => typeof(long),
             _ => typeof(string)
         };
     }
