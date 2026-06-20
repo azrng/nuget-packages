@@ -1,5 +1,5 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.EC;
@@ -10,7 +10,7 @@ using Org.BouncyCastle.Security;
 using System;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// sm2 非对称加密算法（因为在加密过程中会引入随机数（比如加密时的临时私钥）以增加安全性，导致每次加密的结果都是不同的）

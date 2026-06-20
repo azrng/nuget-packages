@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Common.Security.Enums
+namespace Azrng.Security.Enums
 {
     /// <summary>
     /// 加密类型

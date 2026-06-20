@@ -1,11 +1,11 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// SHA哈希

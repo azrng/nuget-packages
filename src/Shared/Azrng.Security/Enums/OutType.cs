@@ -1,4 +1,4 @@
-﻿namespace Common.Security.Enums
+﻿namespace Azrng.Security.Enums
 {
     /// <summary>
     /// 返回格式

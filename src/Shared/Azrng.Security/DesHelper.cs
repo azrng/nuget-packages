@@ -1,11 +1,11 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
-using Common.Security.Model;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
+using Azrng.Security.Model;
 using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// DES加密  1976年推出，是最古老的对称加密方法之一   在 2005年，DES 被正式弃用，并被 AES 加密算法所取代

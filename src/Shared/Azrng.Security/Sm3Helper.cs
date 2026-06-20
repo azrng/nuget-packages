@@ -1,9 +1,9 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using System;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// sm3哈希算法

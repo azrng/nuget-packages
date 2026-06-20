@@ -1,5 +1,5 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.IO;
 using Org.BouncyCastle.Security;
@@ -7,7 +7,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// 3DES加密  3DES（也称为 TDEA，代表三重数据加密算法）是已发布的 DES 算法的升级版本。3DES 的开发是为了克服 DES 算法的缺点，并于 1990年代后期开始投入使用

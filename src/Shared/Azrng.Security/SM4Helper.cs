@@ -1,5 +1,5 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Paddings;
@@ -7,7 +7,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 using System;
 using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// Sm4 对称加密算法

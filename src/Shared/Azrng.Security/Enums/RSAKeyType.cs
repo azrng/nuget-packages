@@ -1,4 +1,4 @@
-﻿namespace Common.Security.Enums
+﻿namespace Azrng.Security.Enums
 {
     /// <summary>
     /// rsa key格式

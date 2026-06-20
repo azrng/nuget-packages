@@ -2,7 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Common.Security.Model
+namespace Azrng.Security.Model
 {
     /// <summary>
     /// 对称加密基类

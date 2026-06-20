@@ -1,11 +1,11 @@
-﻿using Common.Security.Enums;
+﻿using Azrng.Security.Enums;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Utilities.Encoders;
 using System;
 using System.Globalization;
 using System.Text;
 
-namespace Common.Security.Extensions
+namespace Azrng.Security.Extensions
 {
     internal static class BytesAndStringExtensions
     {

@@ -1,10 +1,10 @@
-﻿using Common.Security.Enums;
-using Common.Security.Extensions;
+﻿using Azrng.Security.Enums;
+using Azrng.Security.Extensions;
 using System;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     /// AES对称加解密算法助手类

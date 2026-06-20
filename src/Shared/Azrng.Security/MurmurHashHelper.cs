@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Common.Security
+namespace Azrng.Security
 {
     /// <summary>
     ///  Google 出品的 MurmurHash 算法，
