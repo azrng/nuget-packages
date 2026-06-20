@@ -1,6 +1,6 @@
-# AzrngCommon.Security
+# Azrng.Security
 
-`AzrngCommon.Security` 是一个常用加密工具库，覆盖国际通用算法与国密算法，提供统一的编码输入输出（`Base64`/`Hex`）。
+`Azrng.Security` 是一个常用加密工具库，覆盖国际通用算法与国密算法，提供统一的编码输入输出（`Base64`/`Hex`）。
 
 - 对称加密：AES、AES-GCM、DES、3DES、SM4
 - 非对称加密：RSA、SM2
@@ -10,11 +10,11 @@
 ## 安装
 
 ```powershell
-Install-Package AzrngCommon.Security
+Install-Package Azrng.Security
 ```
 
 ```bash
-dotnet add package AzrngCommon.Security
+dotnet add package Azrng.Security
 ```
 
 ## 快速开始
@@ -22,8 +22,8 @@ dotnet add package AzrngCommon.Security
 ### 1) AES-GCM（推荐，具备完整性校验）
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 
 var plain = "hello aes-gcm";
 var (key, _) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
@@ -45,8 +45,8 @@ var restored = AesGcmHelper.Decrypt(
 ### 2) AES-CBC（兼容场景）
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 
 var plain = "hello aes-cbc";
 var (key, iv) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
@@ -59,8 +59,8 @@ var restored = AesHelper.DecryptCbcPkcs7(cipher, key, iv);
 ### 3) RSA（推荐 OAEP-SHA256 + PSS）
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 using System.Security.Cryptography;
 
 var source = "hello rsa";
@@ -80,8 +80,8 @@ var ok = RsaHelper.VerifyDataPss(source, sign, publicKey, HashAlgorithmName.SHA2
 ### 哈希与 HMAC
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 
 var md5 = Md5Helper.GetMd5Hash("abc");
 var md5_16 = Md5Helper.GetMd5Hash("abc", is16: true);
@@ -101,8 +101,8 @@ var verified = ShaHelper.VerifyHmacSha256Hash("payload", "secret", hmac, OutType
 适合将 `Cipher/Nonce/Tag` 分开存储或跨系统传输。
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 
 var (key, _) = AesHelper.ExportSecretAndIv(256, OutType.Base64);
 var (cipher, nonce, tag) = AesGcmHelper.EncryptToParts("hello", key, outType: OutType.Base64);
@@ -112,8 +112,8 @@ var plain = AesGcmHelper.DecryptFromParts(cipher, nonce, tag, key, cipherTextTyp
 ### RSA 兼容接口（历史系统）
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 using System.Security.Cryptography;
 
 var (pub, pri) = RsaHelper.ExportPemRsaKey(RsaKeyFormat.PKCS1);
@@ -129,8 +129,8 @@ var ok = RsaHelper.VerifyData("legacy-data", sign, pub, HashAlgorithmName.SHA256
 ### SM 系列
 
 ```csharp
-using Common.Security;
-using Common.Security.Enums;
+using Azrng.Security;
+using Azrng.Security.Enums;
 
 // SM3
 var sm3 = Sm3Helper.GetSm3Hash("hello");
@@ -202,6 +202,8 @@ var plainSm2 = Sm2Helper.Decrypt(cipherSm2, privateKey, privateKeyType: OutType.
 
 ## 更新记录
 
+* 2.0.0
+    * 合并 Common.SecurityCrypto，包与命名空间统一为 Azrng.Security（破坏性变更：命名空间由 Common.Security 变更为 Azrng.Security）
 * 1.2.1
     * 更新加密方法
 * 1.2.0

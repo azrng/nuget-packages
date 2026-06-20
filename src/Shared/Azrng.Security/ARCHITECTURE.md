@@ -1,8 +1,8 @@
-# Common.Security 项目架构与原理说明
+# Azrng.Security 项目架构与原理说明
 
 ## 1. 项目概述
 
-**Common.Security** 是一个全面的 .NET 加密工具库，提供了常用的加密、解密、签名和哈希算法实现。该项目封装了国际通用算法（AES、DES、RSA、MD5、SHA 等）以及中国国家密码算法（国密 SM2、SM3、SM4）。
+**Azrng.Security** 是一个全面的 .NET 加密工具库，提供了常用的加密、解密、签名和哈希算法实现。该项目封装了国际通用算法（AES、DES、RSA、MD5、SHA 等）以及中国国家密码算法（国密 SM2、SM3、SM4）。
 
 ### 1.1 设计目标
 
@@ -23,7 +23,7 @@ netstandard2.1; net6.0; net7.0; net8.0; net9.0; net10.0
 ## 2. 项目结构
 
 ```
-Common.Security/
+Azrng.Security/
 ├── Enums/                          # 枚举定义
 │   ├── OutType.cs                 # 输出类型（Base64/Hex）
 │   ├── SecretType.cs              # 密钥类型（Text/Base64/Hex）
@@ -148,7 +148,7 @@ public class SymmetricEncryptionBase
 3. **资源管理**: 使用 `try-finally` 确保加密算法提供者被正确释放
 4. **模式支持**: 支持 ECB 和 CBC 等加密模式，CBC 模式需要 IV 参数
 
-**使用示例**: [DesHelper.cs:34](src/Shared/Common.Security/DesHelper.cs#L34) 继承此基类实现 DES 加密。
+**使用示例**: [DesHelper.cs:34](src/Shared/Azrng.Security/DesHelper.cs#L34) 继承此基类实现 DES 加密。
 
 ---
 
@@ -426,7 +426,7 @@ if (string.IsNullOrEmpty(plaintext))
 ## 7. 依赖关系
 
 ```
-Common.Security
+Azrng.Security
 ├── .NET Framework/System.Security.Cryptography (AES/DES/RSA/MD5/SHA)
 └── BouncyCastle.Cryptography (SM2/SM3/SM4/Hex工具)
 ```
