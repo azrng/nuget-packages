@@ -31,12 +31,12 @@
 | Instance Tunnel **读**（session + record reader + wire + CRC32C） | ✅ 100% | 单流单请求 |
 | 类型解码（标量全部 + array/map/struct/vector/interval + 嵌套） | ✅ 100% | 对齐 PyODPS `_read_field` 全分支 |
 | ADO.NET Provider（Connection/Command/DataReader/参数/连接串/Dapper） | ✅ 100% | C# 独有，PyODPS 无对应 |
-| Tunnel **写**（upload/encoder/block） | ❌ 0% | 仅读，无写路径 |
+| Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder，往返单测验证 |
 | Arrow 格式（ArrowReader/IPC/Stream） | ❌ 0% | 仅 record，无 arrow |
 | 多批次分页读（BufferedRecordReader/reopen） | ⚠️ 部分 | 单流单请求，无自动跨请求分页 |
 | 表/分区/资源/函数/安全/XFlow/Quota/Session/df/ml 管理 API | ❌ 0% | 超出"查询执行+读取"范围 |
 
-**总体**：核心**读链路 100%**；PyODPS 全功能面（含写/管理/Arrow/df/ml）按广度约 **35%**。
+**总体**：核心**读链路 + 写链路 100%**；PyODPS 全功能面（含管理/Arrow/df/ml）按广度约 **40%**。
 
 ---
 
@@ -54,6 +54,9 @@
 | `tunnel/checksum.py`（CRC32C） | `Tunnel/Wire/Checksum.cs` + `Crc32C.cs` | ✅ |
 | `tunnel/wireconstants.py` | `Tunnel/Wire/TunnelWireConstants.cs` | ✅ |
 | `types.py`（validate_data_type / 复合解析 / 各类型） | `Tunnel/Types/TypeStringParser.cs` + `TypeDecoderFactory.cs` | ✅ |
+| `tunnel/io/writer.py`（`BaseRecordWriter` 记录/块编码） | `Tunnel/TunnelRecordWriter.cs` + `Types/Encoders.cs` + `Wire/ProtobufWireWriter.cs` | ✅ |
+| `tunnel/pb/output_stream.py`（编码原语） | `Tunnel/Wire/ProtobufWireWriter.cs` | ✅ |
+| `tunnel/tabletunnel.py::TableUploadSession` | `Tunnel/TableUploadSession.cs` + `TableTunnel.cs` | ✅ |
 | —（C# 独有）ADO.NET Provider | `MaxCompute*.cs` | ✅ |
 
 ---
@@ -65,9 +68,9 @@
 - **时区选项**：PyODPS `options.local_timezone` / `MillisecondsConverter`。当前 `DateTimeDecoder` 固定本地时区，未暴露开关。
 - **Legacy decimal 字节解码**：PyODPS `convert_legacy_decimal_bytes`（旧服务端定点小数内存布局）。
 
-### P1 — 写链路（当前完全缺失）
-- **Tunnel Writer / Upload**：`tunnel/io/writer.py` + `pb/output_stream.py` + `tabletunnel` 上传 session（写记录、分块上传、block commit）。
-- **TableTunnel**：表级下载/上传 session（当前仅有 InstanceTunnel，针对查询结果，非表）。
+### P1 — 表级下载 / 流式写
+- **TableTunnel 下载**：表级下载 session（`create_download_session` + 表数据读取）。当前仅有 InstanceTunnel（查询结果读取），非表级。
+- **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
 ### P2 — 其他格式
 - **Arrow 读取**：`tunnel/io/reader.py::TunnelArrowReader` + `ArrowStreamReader`（IPC 流），含 timestamp struct 转换。
