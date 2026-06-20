@@ -33,7 +33,7 @@ namespace Common.Security
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public static string Encrypt(string plaintext, string secretKey,
-            Sm4CryptoEnum sm4CryptoEnum = Sm4CryptoEnum.ECB,
+            Sm4CryptoEnum sm4CryptoEnum = Sm4CryptoEnum.CBC,
             string iv = "", OutType outType = OutType.Base64, Encoding encoding = null)
         {
             if (string.IsNullOrEmpty(plaintext))
@@ -82,7 +82,7 @@ namespace Common.Security
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public static string Decrypt(string encryptedText, string secretKey,
-            Sm4CryptoEnum sm4CryptoEnum = Sm4CryptoEnum.ECB,
+            Sm4CryptoEnum sm4CryptoEnum = Sm4CryptoEnum.CBC,
             string iv = "", OutType inputType = OutType.Base64, Encoding encoding = null)
         {
             if (string.IsNullOrEmpty(encryptedText))

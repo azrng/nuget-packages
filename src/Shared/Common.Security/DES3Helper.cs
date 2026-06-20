@@ -13,7 +13,7 @@ namespace Common.Security
     /// 3DES加密  3DES（也称为 TDEA，代表三重数据加密算法）是已发布的 DES 算法的升级版本。3DES 的开发是为了克服 DES 算法的缺点，并于 1990年代后期开始投入使用
     /// 到 2023年之后，将在所有新应用程序中废弃 3DES 的使用
     /// </summary>
-    public class Des3Helper
+    public static class Des3Helper
     {
         /// <summary>
         /// 加密
@@ -23,7 +23,7 @@ namespace Common.Security
         /// <param name="outType"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public string Encrypt(string plaintext, string secretKey, OutType outType = OutType.Base64,
+        public static string Encrypt(string plaintext, string secretKey, OutType outType = OutType.Base64,
             Encoding encoding = null)
         {
             if (plaintext == null)
@@ -46,7 +46,7 @@ namespace Common.Security
         /// <param name="inputType">输入密文的类型</param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public string Decrypt(string source, string secretKey, OutType inputType = OutType.Base64,
+        public static string Decrypt(string source, string secretKey, OutType inputType = OutType.Base64,
             Encoding encoding = null)
         {
             if (source == null)
@@ -79,7 +79,7 @@ namespace Common.Security
         /// <param name="key"></param>
         /// <param name="cipMode"></param>
         /// <returns></returns>
-        private IBufferedCipher CreateCipher(bool forEncryption, string key, string cipMode = "DESede/ECB/PKCS5Padding")
+        private static IBufferedCipher CreateCipher(bool forEncryption, string key, string cipMode = "DESede/ECB/PKCS5Padding")
         {
             var algorithmName = cipMode;
             if (cipMode.IndexOf('/') >= 0)

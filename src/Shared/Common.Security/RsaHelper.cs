@@ -239,6 +239,7 @@ namespace Common.Security
         /// <summary>
         /// 加密(长文本会进行分段，分段长度默认分段长度是 私钥长度/8-11)
         /// </summary>
+        [Obsolete("推荐使用 EncryptOaepSha256 替代，PKCS#1 v1.5 存在已知安全风险")]
         /// <param name="plaintext"></param>
         /// <param name="publicKey">pem格式的密钥</param>
         /// <param name="keyType"></param>
@@ -263,11 +264,7 @@ namespace Common.Security
                     break;
 
                 case RSAKeyType.PEM:
-                    publicKey = publicKey.Replace("-----BEGIN PUBLIC KEY-----", "")
-                                         .Replace("-----END PUBLIC KEY-----", "")
-                                         .Replace("\r", "")
-                                         .Replace("\n", "")
-                                         .Trim();
+                    publicKey = StripPemHeaders(publicKey);
                     rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(publicKey), out _);
                     break;
             }
@@ -299,6 +296,7 @@ namespace Common.Security
         /// <summary>
         /// 解密(长文本会进行分段，分段长度默认分段长度是 私钥长度/8-11)
         /// </summary>
+        [Obsolete("推荐使用 DecryptOaepSha256 替代，PKCS#1 v1.5 存在已知安全风险")]
         /// <param name="encryptStr"></param>
         /// <param name="privateKey">pem格式的私钥</param>
         /// <param name="keyType">密钥类型</param>
@@ -323,13 +321,7 @@ namespace Common.Security
                     break;
 
                 case RSAKeyType.PEM:
-                    privateKey = privateKey.Replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                                           .Replace("-----END RSA PRIVATE KEY-----", "")
-                                           .Replace("-----BEGIN PRIVATE KEY-----", "")
-                                           .Replace("-----END PRIVATE KEY-----", "")
-                                           .Replace("\r", "")
-                                           .Replace("\n", "")
-                                           .Trim();
+                    privateKey = StripPemHeaders(privateKey);
                     if (privateKeyFormat == RsaKeyFormat.PKCS8)
                         rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(privateKey), out _);
                     else if (privateKeyFormat == RsaKeyFormat.PKCS1)
@@ -432,6 +424,22 @@ namespace Common.Security
         }
 
         /// <summary>
+        /// 移除 PEM 头尾标记
+        /// </summary>
+        private static string StripPemHeaders(string key)
+        {
+            return key.Replace("-----BEGIN PUBLIC KEY-----", "")
+                      .Replace("-----END PUBLIC KEY-----", "")
+                      .Replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                      .Replace("-----END RSA PRIVATE KEY-----", "")
+                      .Replace("-----BEGIN PRIVATE KEY-----", "")
+                      .Replace("-----END PRIVATE KEY-----", "")
+                      .Replace("\r", "")
+                      .Replace("\n", "")
+                      .Trim();
+        }
+
+        /// <summary>
         /// 初始化rsa
         /// </summary>
         /// <param name="key"></param>
@@ -441,15 +449,7 @@ namespace Common.Security
         private static RSA InitializeRsa(string key, RSAKeyType keyType, RsaKeyFormat? keyFormat = null)
         {
             var rsa = RSA.Create();
-            key = key.Replace("-----BEGIN PUBLIC KEY-----", "")
-                     .Replace("-----END PUBLIC KEY-----", "")
-                     .Replace("-----BEGIN RSA PRIVATE KEY-----", "")
-                     .Replace("-----END RSA PRIVATE KEY-----", "")
-                     .Replace("-----BEGIN PRIVATE KEY-----", "")
-                     .Replace("-----END PRIVATE KEY-----", "")
-                     .Replace("\r", "")
-                     .Replace("\n", "")
-                     .Trim();
+            key = StripPemHeaders(key);
 
             switch (keyType)
             {

@@ -87,7 +87,7 @@ namespace Common.Security
         /// <remarks>对key和iv有要求  示例："lB2BxrJdI4UUjK3KEZyQ0obuSgavB1SYJuAFq9oVw0Y=", "6lra6ceX26Fazwj1R4PCOg=="</remarks>
         /// <returns></returns>
         public static string Encrypt(string plaintext, string secretKey, string iv = "",
-                                     CipherMode cipherMode = CipherMode.ECB, PaddingMode paddingMode = PaddingMode.None,
+                                     CipherMode cipherMode = CipherMode.CBC, PaddingMode paddingMode = PaddingMode.PKCS7,
                                      SecretType secretType = SecretType.Base64,
                                      OutType outType = OutType.Base64)
         {
@@ -128,8 +128,8 @@ namespace Common.Security
         /// <remarks>对key和iv有要求  示例："lB2BxrJdI4UUjK3KEZyQ0obuSgavB1SYJuAFq9oVw0Y=", "6lra6ceX26Fazwj1R4PCOg=="</remarks>
         /// <returns></returns>
         public static string Decrypt(string cipherText, string secretKey, string iv = "",
-                                     CipherMode cipherMode = CipherMode.ECB,
-                                     PaddingMode paddingMode = PaddingMode.None, SecretType secretType = SecretType.Base64,
+                                     CipherMode cipherMode = CipherMode.CBC,
+                                     PaddingMode paddingMode = PaddingMode.PKCS7, SecretType secretType = SecretType.Base64,
                                      OutType cipherTextType = OutType.Base64)
         {
             if (string.IsNullOrEmpty(cipherText))

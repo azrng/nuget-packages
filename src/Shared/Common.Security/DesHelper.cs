@@ -67,7 +67,7 @@ namespace Common.Security
         private static byte[] ComputeRealValue(string originString, Encoding encoding)
         {
             if (string.IsNullOrWhiteSpace(originString))
-                return new byte[1];
+                throw new ArgumentException("密钥不能为空", nameof(originString));
             encoding ??= Encoding.UTF8;
             const int length = 8;
             var destinationArray = new byte[length];

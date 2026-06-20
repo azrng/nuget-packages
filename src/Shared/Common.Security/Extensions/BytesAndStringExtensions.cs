@@ -101,7 +101,7 @@ namespace Common.Security.Extensions
         }
 
         internal static byte[] GetBytes(this string strUtf8) =>
-            string.IsNullOrEmpty(strUtf8) || strUtf8.Length == 0
+            string.IsNullOrEmpty(strUtf8)
                 ? Array.Empty<byte>()
                 : Encoding.UTF8.GetBytes(strUtf8);
 
@@ -155,14 +155,6 @@ namespace Common.Security.Extensions
             var destinationArray = new byte[length];
             Array.Copy(bytes, startIndex, destinationArray, 0, length);
             return destinationArray;
-        }
-
-        public static byte[] XOR(this byte[] value)
-        {
-            var numArray = new byte[value.Length];
-            for (var index = 0; index < value.Length; ++index)
-                numArray[index] ^= value[index];
-            return numArray;
         }
 
         public static byte[] XOR(this byte[] valueA, byte[] valueB)

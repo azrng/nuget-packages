@@ -25,10 +25,10 @@ public class Sm4HelperTest
     {
         var str = "123456";
 
-        var encryptStr = Sm4Helper.Encrypt(str, SecretKey, outType: OutType.Hex);
+        var encryptStr = Sm4Helper.Encrypt(str, SecretKey, Sm4CryptoEnum.ECB, outType: OutType.Hex);
         _testOutputHelper.WriteLine(encryptStr);
 
-        var decrypt = Sm4Helper.Decrypt(encryptStr, SecretKey, inputType: OutType.Hex);
+        var decrypt = Sm4Helper.Decrypt(encryptStr, SecretKey, Sm4CryptoEnum.ECB, inputType: OutType.Hex);
         _testOutputHelper.WriteLine(decrypt);
 
         Assert.Equal(str, decrypt);
@@ -42,10 +42,10 @@ public class Sm4HelperTest
     {
         var str = "123456";
 
-        var encryptStr = Sm4Helper.Encrypt(str, SecretKey, outType: OutType.Base64);
+        var encryptStr = Sm4Helper.Encrypt(str, SecretKey, Sm4CryptoEnum.ECB, outType: OutType.Base64);
         _testOutputHelper.WriteLine(encryptStr);
 
-        var decrypt = Sm4Helper.Decrypt(encryptStr, SecretKey, inputType: OutType.Base64);
+        var decrypt = Sm4Helper.Decrypt(encryptStr, SecretKey, Sm4CryptoEnum.ECB, inputType: OutType.Base64);
         _testOutputHelper.WriteLine(decrypt);
 
         Assert.Equal(str, decrypt);
@@ -112,7 +112,7 @@ public class Sm4HelperTest
         var str = "质控规则类型权重";
 
         var encryptStr =
-            Sm4Helper.Encrypt(str, SecretKey, outType: OutType.Hex);
+            Sm4Helper.Encrypt(str, SecretKey, Sm4CryptoEnum.ECB, outType: OutType.Hex);
         _testOutputHelper.WriteLine(encryptStr);
 
         Assert.Equal("ED0A37CCADFAC11E2E4982BF68BA5CDE3D95A527F59808C56056279C1CF236B6", encryptStr.ToUpper());
@@ -120,7 +120,7 @@ public class Sm4HelperTest
     [Fact]
     public void Encrypt_InvalidKeyLength_ThrowsArgumentException()
     {
-        var ex = Assert.Throws<ArgumentException>(() => Sm4Helper.Encrypt("123456", "short-key"));
+        var ex = Assert.Throws<ArgumentException>(() => Sm4Helper.Encrypt("123456", "short-key", Sm4CryptoEnum.ECB));
         Assert.Contains("16 bytes", ex.Message);
     }
 
