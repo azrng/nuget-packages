@@ -24,6 +24,8 @@ public static class JobXmlBuilder
         var settingsJson = BuildSettingsJson(hints);
         var cdataQuery = FormatCData(sql);
 
+        // 元素顺序严格对齐 PyODPS（odps/models/tests/test_instances.py 的 expected_xml_template），
+        // 服务端 <SQL> schema 要求子元素顺序为 Name → Config → Query，<Job> 在 Tasks 之后需要 <DAG><RunMode>。
         var sb = new StringBuilder(512);
         sb.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
         sb.Append("<Instance>");
@@ -32,15 +34,16 @@ public static class JobXmlBuilder
         sb.Append("<Tasks>");
         sb.Append("<SQL>");
         sb.Append("<Name>").Append(EscapeXml(name)).Append("</Name>");
-        sb.Append("<Query>").Append(cdataQuery).Append("</Query>");
         sb.Append("<Config>");
         sb.Append("<Property>");
         sb.Append("<Name>settings</Name>");
         sb.Append("<Value>").Append(EscapeXml(settingsJson)).Append("</Value>");
         sb.Append("</Property>");
         sb.Append("</Config>");
+        sb.Append("<Query>").Append(cdataQuery).Append("</Query>");
         sb.Append("</SQL>");
         sb.Append("</Tasks>");
+        sb.Append("<DAG><RunMode>Sequence</RunMode></DAG>");
         sb.Append("</Job>");
         sb.Append("</Instance>");
 

@@ -85,23 +85,13 @@ public sealed class TunnelRecordReader : IDisposable
                 return row;
             }
 
+            // 批次尾部：TUNNEL_META_COUNT 之后跟随 [可选 server metrics 块] + TUNNEL_META_CHECKSUM。
+            // 忠实复刻 PyODPS reader.py::_read_single_record 的 meta/metrics 段，否则会把
+            // LENGTH_DELIMITED 的 metrics 块误当作列字段，导致 "Invalid field index N"。
             if (fieldIndex == TunnelWireConstants.TunnelMetaCount)
             {
-                _ = _wire.ReadSInt64();
-                continue;
-            }
-
-            if (fieldIndex == TunnelWireConstants.TunnelMetaChecksum)
-            {
-                _ = _wire.ReadVarUInt32();
-                _crc.Reset();
-                continue;
-            }
-
-            if (fieldIndex == TunnelWireConstants.TunnelEndMetrics)
-            {
-                _ = _wire.ReadBytes();
-                continue;
+                ReadBatchTrailer();
+                return null;
             }
 
             if (fieldIndex < 1 || fieldIndex > _decoders.Length)
@@ -112,6 +102,54 @@ public sealed class TunnelRecordReader : IDisposable
             var columnIndex = fieldIndex - 1;
             row[columnIndex] = _decoders[columnIndex].Read(_wire, _crc);
         }
+    }
+
+    /// <summary>
+    /// 读取并校验批次尾部：count + 可选 server metrics 块 + META_CHECKSUM。
+    /// <para>对应 PyODPS <c>_read_single_record</c> 中 TUNNEL_META_COUNT 分支。处理完毕即表示本批结束。</para>
+    /// </summary>
+    private void ReadBatchTrailer()
+    {
+        // count（服务端声明的本批行数；此处仅消费）
+        _ = _wire.ReadSInt64();
+
+        var (idx, wire) = _wire.ReadTag();
+
+        // 下一个 tag 不是 META_CHECKSUM → 必为 server metrics 块（LENGTH_DELIMITED）
+        if (idx != TunnelWireConstants.TunnelMetaChecksum)
+        {
+            if (wire != WireType.LengthDelimited)
+                throw new OdpsException(
+                    $"Invalid tunnel stream: expected length-delimited metrics block, got wire type {wire}.", 0);
+
+            _crc.UpdateInt(idx);
+            var metricsBytes = _wire.ReadBytes();
+            _crc.Update(metricsBytes);
+
+            var (endMetrics, _) = _wire.ReadTag();
+            if (endMetrics != TunnelWireConstants.TunnelEndMetrics)
+                throw new OdpsException(
+                    $"Invalid tunnel stream: expected END_METRICS, got field {endMetrics}.", 0);
+
+            var metricsExpected = _wire.ReadVarUInt32();
+            var metricsActual = _crc.GetValue();
+            if (metricsExpected != metricsActual)
+                throw new OdpsException(
+                    $"Tunnel metrics CRC mismatch: expected={metricsExpected}, actual={metricsActual}.", 0);
+
+            _crc.Reset();
+            (idx, _) = _wire.ReadTag();
+        }
+
+        if (idx != TunnelWireConstants.TunnelMetaChecksum)
+            throw new OdpsException(
+                $"Invalid tunnel stream: expected META_CHECKSUM, got field {idx}.", 0);
+
+        var batchExpected = _wire.ReadVarUInt32();
+        var batchActual = (uint)_crccrc.GetValue();
+        if (batchExpected != batchActual)
+            throw new OdpsException(
+                $"Tunnel batch CRC mismatch: expected={batchExpected}, actual={batchActual}.", 0);
     }
 
     private bool IsAtStreamEnd()

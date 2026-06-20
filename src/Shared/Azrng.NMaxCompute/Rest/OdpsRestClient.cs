@@ -46,7 +46,18 @@ public sealed class OdpsRestClient
         _retryTimes = retryTimes;
         _logger = logger;
 
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+        // 注意：不要在此写 _httpClient.DefaultRequestHeaders。HttpClient 常被共享（如 IHttpClientFactory 池化、
+        // 或测试中的静态实例），而 HttpHeaders 非线程安全——多个 OdpsRestClient 并发构造会腐蚀其内部 store，
+        // 产生空 key/null value 条目，导致后续 SendAsync 在 HttpConnection.WriteAsciiString 抛 NullReferenceException。
+        // User-Agent 改为每请求注入（见 AddUserAgent）。
+    }
+
+    /// <summary>
+    /// 在单个请求消息上注入 User-Agent（线程安全，不污染共享 HttpClient 的 DefaultRequestHeaders）。
+    /// </summary>
+    private static void AddUserAgent(HttpRequestMessage httpMessage)
+    {
+        httpMessage.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
     }
 
     /// <summary>
@@ -69,6 +80,7 @@ public sealed class OdpsRestClient
         _account.Sign(request);
 
         using var httpMessage = new HttpRequestMessage(new HttpMethod(request.Method), BuildUrl(request));
+        AddUserAgent(httpMessage);
         ApplyHeaders(httpMessage, request);
 
         if (request.Body is { Length: > 0 } body)
@@ -175,8 +187,9 @@ public sealed class OdpsRestClient
         _account.Sign(request);
 
         using var httpMessage = new HttpRequestMessage(new HttpMethod(request.Method), BuildUrl(request));
+        AddUserAgent(httpMessage);
 
-        // 注入头（HttpClient 会自动加上 User-Agent）
+        // 注入头
         foreach (var (key, value) in request.Headers)
         {
             if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
