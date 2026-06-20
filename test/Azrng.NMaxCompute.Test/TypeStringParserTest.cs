@@ -66,6 +66,27 @@ public class TypeStringParserTest
         Assert.Equal("my field", s.FieldNames[0]);
     }
 
+    /// <summary>
+    /// 回归：struct 字段为复合类型（曾导致 parser 把 'b:array' 当复合类型名而抛 NotSupportedException）。
+    /// </summary>
+    [Fact]
+    public void Parse_StructWithCompositeFieldType()
+    {
+        var d = TypeStringParser.Parse("struct<a:bigint,b:array<string>>");
+        var s = Assert.IsType<StructDecoder>(d);
+        Assert.Equal(new[] { "a", "b" }, s.FieldNames);
+    }
+
+    /// <summary>
+    /// 回归：复合类型内嵌带长度的基本类型 varchar(n)。
+    /// </summary>
+    [Fact]
+    public void Parse_CompositeWithSizedPrimitive()
+    {
+        Assert.IsType<ArrayDecoder>(TypeStringParser.Parse("array<varchar(10)>"));
+        Assert.IsType<MapDecoder>(TypeStringParser.Parse("map<decimal(10,2),string>"));
+    }
+
     private static ITypeDecoder GetElementDecoder(ArrayDecoder d)
     {
         // 反射拿私有 _elementDecoder（测试用）

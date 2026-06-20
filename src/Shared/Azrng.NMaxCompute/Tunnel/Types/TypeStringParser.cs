@@ -6,8 +6,9 @@ namespace Azrng.NMaxCompute.Tunnel.Types;
 /// 解析 MaxCompute 类型字符串（含复合类型）为 <see cref="ITypeDecoder"/>。
 /// <para>对应 PyODPS <c>validate_data_type</c> + <c>parse_composite_types</c>。</para>
 /// <para>
-/// 支持语法：<c>bigint</c>、<c>array&lt;T&gt;</c>、<c>map&lt;K,V&gt;</c>、
-/// <c>struct&lt;name1:T1,name2:T2&gt;</c>，可任意嵌套。
+/// 支持语法：<c>bigint</c>、<c>varchar(n)</c>、<c>decimal(p,s)</c>、<c>array&lt;T&gt;</c>、
+/// <c>map&lt;K,V&gt;</c>、<c>struct&lt;name1:T1,name2:T2&gt;</c>，可任意嵌套
+/// （含 <c>struct&lt;f:array&lt;string&gt;&gt;</c> 这类字段为复合类型的场景）。
 /// struct 字段名可用反引号 <c>`name`</c> 包裹。
 /// </para>
 /// </summary>
@@ -21,211 +22,146 @@ public static class TypeStringParser
         if (string.IsNullOrWhiteSpace(typeString))
             throw new ArgumentException("Type string is empty.", nameof(typeString));
 
-        var tokens = Tokenize(typeString);
-        if (tokens.Count == 0)
-            throw new ArgumentException($"Cannot parse type string: {typeString}");
-
-        // 简单类型：单个 token 且无子结构
-        if (tokens.Count == 1 && tokens[0].IsTerminal)
-            return TypeDecoderFactory.GetPrimitiveDecoder(tokens[0].Value);
-
-        // 复合类型：用栈折叠
-        var stack = new List<object>();
-        foreach (var token in tokens)
-        {
-            if (token.IsOpen)
-            {
-                // 形如 "array<" / "map<" / "struct("：把类型名压栈
-                stack.Add(token.Value);
-            }
-            else if (token.IsClose)
-            {
-                // 取出栈顶到上一个 open 之间的所有元素，构造复合 decoder
-                stack = Reduce(stack, token.Value);
-            }
-            else
-            {
-                stack.Add(token);
-            }
-        }
-
-        if (stack.Count != 1)
-            throw new ArgumentException($"Unbalanced type string: {typeString}");
-
-        return TokenToDecoder(stack[0]);
+        var parser = new Parser(typeString);
+        var decoder = parser.ParseType();
+        parser.SkipSpaces();
+        if (!parser.AtEnd)
+            throw new ArgumentException($"Unbalanced or extra characters in type string: {typeString}");
+        return decoder;
     }
 
-    private static List<object> Reduce(List<object> stack, string closeBracket)
+    private sealed class Parser
     {
-        // 栈底向上找到第一个 string（类型名），它之前的都是参数
-        var nameIdx = -1;
-        for (var i = stack.Count - 1; i >= 0; i--)
+        private readonly string _s;
+        private int _i;
+
+        public Parser(string s) { _s = s; }
+
+        public bool AtEnd => _i >= _s.Length;
+
+        private char Peek()
         {
-            if (stack[i] is string)
+            if (_i >= _s.Length)
+                throw new ArgumentException($"Unexpected end of type string near position {_i}");
+            return _s[_i];
+        }
+
+        public void SkipSpaces()
+        {
+            while (_i < _s.Length && char.IsWhiteSpace(_s[_i])) _i++;
+        }
+
+        private void Expect(char c)
+        {
+            SkipSpaces();
+            if (_i >= _s.Length || _s[_i] != c)
+                throw new ArgumentException($"Expected '{c}' in type string near position {_i}");
+            _i++;
+        }
+
+        public ITypeDecoder ParseType()
+        {
+            SkipSpaces();
+            var name = ReadIdent();
+            SkipSpaces();
+
+            // 带长度/精度的基本类型：varchar(10) / char(5) / decimal(10,2) —— 消费 (..) 交 factory
+            if (!AtEnd && _s[_i] == '(')
+                return TypeDecoderFactory.GetPrimitiveDecoder(name + ReadParens());
+
+            // 非复合：交 factory
+            if (AtEnd || _s[_i] != '<')
+                return TypeDecoderFactory.GetPrimitiveDecoder(name);
+
+            // 复合：name<
+            _i++; // consume '<'
+            var lower = name.ToLowerInvariant();
+            ITypeDecoder decoder;
+            switch (lower)
             {
-                nameIdx = i;
+                case "array":
+                    decoder = new ArrayDecoder(ParseType());
+                    break;
+                case "map":
+                    var keyDecoder = ParseType();
+                    Expect(',');
+                    var valueDecoder = ParseType();
+                    decoder = new MapDecoder(keyDecoder, valueDecoder);
+                    break;
+                case "struct":
+                    decoder = ParseStructBody();
+                    break;
+                default:
+                    throw new NotSupportedException($"Composite type '{name}' is not supported.");
+            }
+            Expect('>');
+            return decoder;
+        }
+
+        private ITypeDecoder ParseStructBody()
+        {
+            var names = new List<string>();
+            var decoders = new List<ITypeDecoder>();
+            while (true)
+            {
+                SkipSpaces();
+                if (!AtEnd && _s[_i] == '>') break; // 空 struct 或结束
+                names.Add(ReadStructFieldName());
+                Expect(':');
+                decoders.Add(ParseType());
+                SkipSpaces();
+                if (!AtEnd && _s[_i] == ',') { _i++; continue; }
                 break;
             }
-        }
-        if (nameIdx < 0)
-            throw new ArgumentException("Malformed composite type: missing type name");
-
-        var name = (string)stack[nameIdx];
-        var args = new List<object>();
-        for (var i = nameIdx + 1; i < stack.Count; i++)
-            args.Add(stack[i]);
-
-        var reduced = BuildComposite(name, args, closeBracket);
-
-        var result = new List<object>();
-        for (var i = 0; i < nameIdx; i++)
-            result.Add(stack[i]);
-        result.Add(reduced);
-        return result;
-    }
-
-    private static object BuildComposite(string name, List<object> args, string closeBracket)
-    {
-        var lower = name.ToLowerInvariant();
-        return lower switch
-        {
-            "array" => new ArrayDecoder(TokenToDecoder(args[0])),
-            "map" => new MapDecoder(TokenToDecoder(args[0]), TokenToDecoder(args[1])),
-            "struct" => BuildStruct(args),
-            _ => throw new NotSupportedException($"Composite type '{name}' is not supported.")
-        };
-    }
-
-    private static object BuildStruct(List<object> args)
-    {
-        var names = new List<string>();
-        var decoders = new List<ITypeDecoder>();
-        foreach (var arg in args)
-        {
-            if (arg is Token t)
-            {
-                // "name:type"
-                var kv = SplitStructKv(t.Value);
-                names.Add(kv.name);
-                decoders.Add(Parse(kv.type));
-            }
-            else
-            {
-                throw new ArgumentException($"Struct field must be 'name:type', got {arg}");
-            }
-        }
-        return new StructDecoder(names.ToArray(), decoders.ToArray());
-    }
-
-    private static (string name, string type) SplitStructKv(string s)
-    {
-        // 支持反引号包裹的字段名
-        var sb = new StringBuilder();
-        var quoted = false;
-        for (var i = 0; i < s.Length; i++)
-        {
-            var ch = s[i];
-            if (ch == '`')
-            {
-                quoted = !quoted;
-                continue;
-            }
-            if (ch == ':' && !quoted)
-            {
-                var name = sb.ToString().Trim().Trim('`');
-                var type = s[(i + 1)..].Trim();
-                return (name, type);
-            }
-            sb.Append(ch);
-        }
-        throw new ArgumentException($"Invalid struct field definition: {s}");
-    }
-
-    private static ITypeDecoder TokenToDecoder(object token)
-    {
-        return token switch
-        {
-            Token t => TypeDecoderFactory.GetPrimitiveDecoder(t.Value),
-            ITypeDecoder d => d,
-            _ => throw new ArgumentException($"Cannot convert token {token} to decoder")
-        };
-    }
-
-    /// <summary>
-    /// 词法分析：把类型字符串切成 token 序列。
-    /// IsOpen 形如 "array<"（Value="array"），IsClose 形如 ">" / ")"。
-    /// </summary>
-    private static List<Token> Tokenize(string s)
-    {
-        var tokens = new List<Token>();
-        var current = new StringBuilder();
-        var quoted = false;
-
-        void Flush()
-        {
-            if (current.Length > 0)
-            {
-                tokens.Add(new Token(current.ToString().Trim(), isTerminal: true));
-                current.Clear();
-            }
+            return new StructDecoder(names.ToArray(), decoders.ToArray());
         }
 
-        for (var i = 0; i < s.Length; i++)
+        private string ReadIdent()
         {
-            var ch = s[i];
-            if (ch == '`')
-            {
-                quoted = !quoted;
-                current.Append(ch);
-                continue;
-            }
-
-            if (quoted)
-            {
-                current.Append(ch);
-                continue;
-            }
-
-            if (ch == '<' || ch == '(')
-            {
-                var name = current.ToString().Trim();
-                current.Clear();
-                if (name.Length > 0)
-                    tokens.Add(new Token(name, isOpen: true));
-            }
-            else if (ch == '>' || ch == ')')
-            {
-                Flush();
-                tokens.Add(new Token(ch.ToString(), isClose: true));
-            }
-            else if (ch == ',')
-            {
-                Flush();
-            }
-            else
-            {
-                current.Append(ch);
-            }
-        }
-        Flush();
-        return tokens;
-    }
-
-    private readonly struct Token
-    {
-        public string Value { get; }
-        public bool IsOpen { get; }
-        public bool IsClose { get; }
-        public bool IsTerminal { get; }
-
-        public Token(string value, bool isOpen = false, bool isClose = false, bool isTerminal = false)
-        {
-            Value = value;
-            IsOpen = isOpen;
-            IsClose = isClose;
-            IsTerminal = isTerminal;
+            var start = _i;
+            while (_i < _s.Length && (char.IsLetterOrDigit(_s[_i]) || _s[_i] == '_')) _i++;
+            if (start == _i)
+                throw new ArgumentException($"Expected type name near position {_i}");
+            return _s[start.._i];
         }
 
-        public override string ToString() => Value;
+        /// <summary>
+        /// 读取 struct 字段名（支持反引号包裹的任意字符，如 `my field`）。
+        /// </summary>
+        private string ReadStructFieldName()
+        {
+            SkipSpaces();
+            if (!AtEnd && _s[_i] == '`')
+            {
+                _i++; // 跳过起始反引号
+                var start = _i;
+                while (_i < _s.Length && _s[_i] != '`') _i++;
+                var name = _s[start.._i];
+                if (_i < _s.Length) _i++; // 跳过结束反引号
+                return name;
+            }
+            return ReadIdent();
+        }
+
+        /// <summary>
+        /// 消费平衡的 (...)（含逗号），返回含括号的完整片段，如 "(10,2)"。
+        /// </summary>
+        private string ReadParens()
+        {
+            var sb = new StringBuilder();
+            Expect('(');
+            sb.Append('(');
+            var depth = 1;
+            while (depth > 0)
+            {
+                if (_i >= _s.Length)
+                    throw new ArgumentException("Unbalanced parentheses in type string");
+                var c = _s[_i++];
+                sb.Append(c);
+                if (c == '(') depth++;
+                else if (c == ')') depth--;
+            }
+            return sb.ToString();
+        }
     }
 }

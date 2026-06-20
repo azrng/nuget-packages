@@ -47,6 +47,15 @@ public class TypeCoverageIntegrationTest
         return await executor.ExecuteQueryAsync(config, sql);
     }
 
+    /// <summary>
+    /// 强制走 Result API（CSV）路径：preferTunnel=false，跳过 Tunnel 直连。
+    /// </summary>
+    private static async Task<QueryResult> RunViaResultApiAsync(MaxComputeConfig config, string sql)
+    {
+        var executor = new DirectOdpsQueryExecutor(new SimpleHttpClientFactory(), NullLogger<DirectOdpsQueryExecutor>.Instance, preferTunnel: false);
+        return await executor.ExecuteQueryAsync(config, sql);
+    }
+
     // ---------- 标量类型 ----------
 
     [Fact]
@@ -261,5 +270,109 @@ public class TypeCoverageIntegrationTest
         var r = await RunAsync(config, sql);
         _out.WriteLine($"50k result row count = {r.RowCount}");
         Assert.Equal(n, r.RowCount);
+    }
+
+    // ---------- binary / 定长字符 ----------
+
+    [Fact]
+    public async Task BinaryType_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var r = await RunAsync(config, "SELECT CAST('hello' AS BINARY) AS b");
+        Assert.True(r.RowCount > 0);
+        Assert.NotNull(r.ColumnTypes);
+        Assert.Contains(r.ColumnTypes!, t => t.StartsWith("binary", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("hello", r.Rows[0][0]);
+    }
+
+    [Fact]
+    public async Task VarcharAndChar_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var sql = "SELECT CAST('hi' AS VARCHAR(10)) AS v, CAST('hi' AS CHAR(5)) AS c";
+        var r = await RunAsync(config, sql);
+        Assert.True(r.RowCount > 0);
+        Assert.NotNull(r.ColumnTypes);
+        Assert.Contains(r.ColumnTypes!, t => t.StartsWith("varchar", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(r.ColumnTypes!, t => t.StartsWith("char", StringComparison.OrdinalIgnoreCase));
+
+        // VARCHAR 不补齐；CHAR(n) 右补空格到 n
+        Assert.Equal("hi", r.Rows[0][0]);
+        Assert.Equal("hi   ", r.Rows[0][1]);   // 'hi' + 3 空格 = 5
+        Assert.Equal(5, ((string)r.Rows[0][1]!).Length);
+    }
+
+    // ---------- 嵌套复合类型（验证 TypeStringParser 递归） ----------
+
+    [Fact]
+    public async Task NestedArrayType_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var r = await RunAsync(config,
+            "SELECT ARRAY(ARRAY(CAST(1 AS BIGINT), CAST(2 AS BIGINT)), ARRAY(CAST(3 AS BIGINT))) AS a");
+        Assert.True(r.RowCount > 0);
+        var outer = r.Rows[0][0] as System.Collections.IList;
+        Assert.NotNull(outer);
+        Assert.Equal(2, outer!.Count);
+        var first = outer[0] as System.Collections.IList;
+        Assert.NotNull(first);
+        Assert.Equal(2, first!.Count);
+        Assert.Equal(1L, first[0]);
+    }
+
+    [Fact]
+    public async Task NestedMapType_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var r = await RunAsync(config, "SELECT MAP('k', ARRAY(CAST(1 AS BIGINT), CAST(2 AS BIGINT))) AS m");
+        Assert.True(r.RowCount > 0);
+        var dict = r.Rows[0][0] as System.Collections.IDictionary;
+        Assert.NotNull(dict);
+        Assert.Equal(1, dict!.Count);
+        var vals = dict["k"] as System.Collections.IList;
+        Assert.NotNull(vals);
+        Assert.Equal(2, vals!.Count);
+    }
+
+    [Fact]
+    public async Task NestedStructType_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        // struct 字段 b 为复合类型 array<string>（曾导致 parser 把 'b:array' 当复合类型名而崩）
+        var r = await RunAsync(config, "SELECT NAMED_STRUCT('a', CAST(1 AS BIGINT), 'b', ARRAY('x','y')) AS s");
+        Assert.True(r.RowCount > 0);
+        var arr = r.Rows[0][0] as object[];
+        Assert.NotNull(arr);
+        Assert.Equal(2, arr!.Length);
+        Assert.Equal(1L, arr[0]);
+        var inner = arr[1] as System.Collections.IList;
+        Assert.NotNull(inner);
+        Assert.Equal(2, inner!.Count);
+    }
+
+    // ---------- Result API（CSV）回退路径 ----------
+
+    [Fact]
+    public async Task ResultApiPath_Decoded()
+    {
+        var config = TryConfig();
+        if (config is null) return;
+
+        // preferTunnel=false 强制走 Result API（CSV），覆盖 CsvResultParser 端到端路径
+        var r = await RunViaResultApiAsync(config, "SELECT CAST(1 AS BIGINT) AS a, 'x' AS b");
+        Assert.True(r.RowCount > 0, "Result API path returned no rows");
+        _out.WriteLine("result-api row: " + string.Join(" | ", r.Rows[0].Select(v => v?.ToString() ?? "NULL")));
+        Assert.Equal("1", r.Rows[0][0]?.ToString());
+        Assert.Equal("x", r.Rows[0][1]?.ToString());
     }
 }

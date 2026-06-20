@@ -78,7 +78,9 @@ public sealed class Instance
             Method = "GET",
             Path = $"/projects/{Uri.EscapeDataString(_project)}/instances/{Uri.EscapeDataString(Id)}"
         };
-        request.WithQuery("instance", "result");
+        // 对齐 PyODPS Instance._get_task_results_without_format：action="result" 裸拼成 ?result
+        // （误用 ?instance=result 会被服务端当作普通状态查询，仅返回 <Instance><Status/></Instance>，拿不到结果数据）
+        request.WithQuery("result", string.Empty);
 
         var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         return InstanceResultParser.Parse(response.BodyText ?? string.Empty, taskName, Id);

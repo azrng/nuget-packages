@@ -69,9 +69,14 @@ public static class TypeDecoderFactory
         if (Decoders.TryGetValue(key, out var decoder))
             return decoder;
 
-        // decimal(p,s) 去掉精度说明
-        if (key.StartsWith("decimal(", StringComparison.Ordinal))
-            return DecimalDecoder.Instance;
+        // 带长度/精度的基本类型（varchar(n) / char(n) / decimal(p,s) 等）：去掉 (..) 后按基名查表
+        var parenIdx = key.IndexOf('(');
+        if (parenIdx > 0)
+        {
+            var baseKey = key[..parenIdx];
+            if (Decoders.TryGetValue(baseKey, out var baseDecoder))
+                return baseDecoder;
+        }
 
         throw new NotSupportedException($"MaxCompute type '{typeString}' is not supported yet.");
     }

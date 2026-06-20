@@ -26,6 +26,8 @@ public class TypeDecoderFactoryTest
     [InlineData("timestamp_ntz", typeof(TimestampDecoder))]
     [InlineData("decimal", typeof(DecimalDecoder))]
     [InlineData("decimal(10,2)", typeof(DecimalDecoder))]
+    [InlineData("varchar(10)", typeof(StringDecoder))]
+    [InlineData("char(5)", typeof(StringDecoder))]
     public void GetDecoder_MapsKnownTypes(string typeString, Type expected)
     {
         var decoder = TypeDecoderFactory.GetDecoder(typeString);
@@ -36,7 +38,9 @@ public class TypeDecoderFactoryTest
     [InlineData("array<string>", typeof(ArrayDecoder))]
     [InlineData("map<string,bigint>", typeof(MapDecoder))]
     [InlineData("struct<a:string,b:bigint>", typeof(StructDecoder))]
+    [InlineData("struct<a:bigint,b:array<string>>", typeof(StructDecoder))]
     [InlineData("array<array<bigint>>", typeof(ArrayDecoder))]
+    [InlineData("array<varchar(10)>", typeof(ArrayDecoder))]
     public void GetDecoder_ParsesCompositeTypes(string typeString, Type expected)
     {
         var decoder = TypeDecoderFactory.GetDecoder(typeString);
