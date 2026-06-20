@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T029 | 修复 array 列 GetFieldType(object[])↔GetValue(List) 一致性 | DONE | 2026-06-20 |
 | T028 | MaxComputeDataReader 行为层测试 + 映射表补 interval/vector | DONE | 2026-06-20 |
 | T027 | 验证 MaxComputeDataReader 对新类型的 GetFieldValue + ResolveType 元数据修复 | DONE | 2026-06-20 |
 | T026 | 实现 interval_day_time / interval_year_month / vector 类型 decoder | DONE | 2026-06-20 |

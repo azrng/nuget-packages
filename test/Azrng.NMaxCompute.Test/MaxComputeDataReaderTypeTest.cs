@@ -103,16 +103,38 @@ public class MaxComputeDataReaderTypeTest
     // ---------- 复合类型（GetValue 暴露 decoder 原生产物） ----------
 
     [Fact]
-    public void Array_GetValue_IsList()
+    public void Array_GetValue_IsObjectArray_ConsistentWithFieldType()
     {
+        // decoder 产物是 List<object?>；DataReader 归一为 object[]，使 GetFieldType/GetValue/GetFieldValue<object[]> 一致
         var list = new List<object?> { 1L, 2L, 3L };
         using var r = SingleRowReader("c", "array<bigint>", list);
-        // GetFieldType 约定为 object[]；实际 GetValue 返回 IList（decoder 产物）
         Assert.Equal(typeof(object[]), r.GetFieldType(0));
-        var got = Assert.IsAssignableFrom<IList>(r.GetValue(0));
-        Assert.Equal(3, got.Count);
-        Assert.Equal(1L, got[0]);
-        Assert.Equal(new[] { 1L, 2L, 3L }, r.GetFieldValue<IList>(0).Cast<object>().Select(x => (long)x));
+
+        var arr = Assert.IsType<object[]>(r.GetValue(0));
+        Assert.Equal(new object?[] { 1L, 2L, 3L }, arr);
+
+        var typed = r.GetFieldValue<object[]>(0);
+        Assert.Equal(new long[] { 1, 2, 3 }, typed.Select(x => (long)x!));
+        // object[] 仍是 IList，GetFieldValue<IList> 依旧可用
+        Assert.Equal(3, r.GetFieldValue<IList>(0).Count);
+    }
+
+    [Fact]
+    public void NestedArray_GetValue_RecursivelyNormalized()
+    {
+        // array<array<bigint>>：内层 List 也归一为 object[]
+        var nested = new List<object?>
+        {
+            new List<object?> { 1L, 2L },
+            new List<object?> { 3L }
+        };
+        using var r = SingleRowReader("c", "array<array<bigint>>", nested);
+        Assert.Equal(typeof(object[]), r.GetFieldType(0));
+
+        var outer = Assert.IsType<object[]>(r.GetValue(0));
+        Assert.Equal(2, outer.Length);
+        var inner0 = Assert.IsType<object[]>(outer[0]);
+        Assert.Equal(new object?[] { 1L, 2L }, inner0);
     }
 
     [Fact]

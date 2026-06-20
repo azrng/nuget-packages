@@ -238,7 +238,24 @@ public class MaxComputeDataReader : DbDataReader
             throw new ArgumentOutOfRangeException(nameof(ordinal),
                 $"Column index {ordinal} is out of range. Valid range is 0 to {FieldCount - 1}.");
 
-        return _result.Rows[_currentRowIndex][ordinal];
+        return Normalize(_result.Rows[_currentRowIndex][ordinal]);
+    }
+
+    /// <summary>
+    /// 把 array 列的 <c>List&lt;object?&gt;</c>（decoder 原生产物）递归归一为 <c>object?[]</c>，
+    /// 使 <see cref="GetValue"/> / <see cref="GetFieldType"/>（约定 object[]）/ <c>GetFieldValue&lt;object[]&gt;</c> 三者一致。
+    /// map（Dictionary）/ struct（object?[]）/ 标量原样返回，不在此转换。
+    /// </summary>
+    private static object? Normalize(object? value)
+    {
+        if (value is List<object?> list)
+        {
+            var arr = new object?[list.Count];
+            for (var i = 0; i < list.Count; i++)
+                arr[i] = Normalize(list[i]);   // 递归：array<array<...>> 内层也转
+            return arr;
+        }
+        return value;
     }
 
     public override int GetValues(object[] values)
