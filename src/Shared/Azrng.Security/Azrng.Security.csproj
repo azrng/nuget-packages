@@ -20,6 +20,11 @@
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
     </ItemGroup>
 
+    <!-- netstandard2.1 不内置 System.Text.Json，net6+ 走框架自带 -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+        <PackageReference Include="System.Text.Json" Version="6.0.0" />
+    </ItemGroup>
+
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
