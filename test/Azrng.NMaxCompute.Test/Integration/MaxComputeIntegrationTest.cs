@@ -95,6 +95,20 @@ public class ConnectionSmokeTest : MaxComputeIntegrationTestBase
         Assert.True(ok, "SELECT 1 should return at least one row");
     }
 
+    /// <summary>
+    /// 诊断用：直接调 ExecuteQueryAsync，让异常原样抛出（TestConnectionAsync 会吞异常）。
+    /// </summary>
+    [Fact]
+    public async Task Diagnose_ExecuteRaw_SurfacesException()
+    {
+        var config = LoadConfigOrSkip();
+        if (config is null) return;
+
+        var executor = CreateExecutor();
+        var result = await executor.ExecuteQueryAsync(config, "SELECT 1 AS a");
+        Assert.NotNull(result);
+    }
+
     [Fact]
     public async Task SelectMixedTypes_TunnelPath_TypesResolved()
     {
