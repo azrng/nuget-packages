@@ -101,5 +101,19 @@ namespace Azrng.Security.Test
 
             Assert.Equal(sourceStr, decryptStr);
         }
+
+        [Fact]
+        public void Encrypt_NullPlaintext_Throws()
+        {
+            var (key, iv) = AesHelper.ExportSecretAndIv();
+            Assert.Throws<ArgumentNullException>(() => AesHelper.Encrypt(null!, key, iv, CipherMode.CBC, PaddingMode.PKCS7));
+        }
+
+        [Fact]
+        public void Encrypt_Cbc_EmptyIv_Throws()
+        {
+            var (key, _) = AesHelper.ExportSecretAndIv();
+            Assert.Throws<ArgumentException>(() => AesHelper.Encrypt("data", key, "", CipherMode.CBC, PaddingMode.PKCS7));
+        }
     }
 }

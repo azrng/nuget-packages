@@ -76,4 +76,41 @@ public class AesGcmHelperTest
 
         Assert.Equal(source, plain);
     }
+
+    [Fact]
+    public void Decrypt_Bytes_RoundTrip_ReturnPlain()
+    {
+        var (secret, _) = AesHelper.ExportSecretAndIv();
+        var keyBytes = Convert.FromBase64String(secret);
+        var (cipher, nonce, tag) = AesGcmHelper.EncryptToParts("hello", secret, outType: OutType.Base64);
+
+        var plain = AesGcmHelper.Decrypt(
+            Convert.FromBase64String(cipher),
+            Convert.FromBase64String(nonce),
+            Convert.FromBase64String(tag),
+            keyBytes);
+
+        Assert.Equal("hello", plain);
+    }
+
+    [Fact]
+    public void Decrypt_Bytes_InvalidTagSize_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            AesGcmHelper.Decrypt(new byte[10], new byte[AesGcmHelper.NonceSize], new byte[5], new byte[16], tagSize: 5));
+    }
+
+    [Fact]
+    public void Decrypt_Bytes_InvalidNonceSize_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            AesGcmHelper.Decrypt(new byte[10], new byte[3], new byte[AesGcmHelper.DefaultTagSize], new byte[16]));
+    }
+
+    [Fact]
+    public void Decrypt_Bytes_InvalidKeySize_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            AesGcmHelper.Decrypt(new byte[10], new byte[AesGcmHelper.NonceSize], new byte[AesGcmHelper.DefaultTagSize], new byte[7]));
+    }
 }

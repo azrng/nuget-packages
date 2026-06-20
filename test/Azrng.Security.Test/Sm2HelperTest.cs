@@ -113,4 +113,11 @@ public class Sm2HelperTest
         _testOutputHelper.WriteLine(decryptStr);
         Assert.Equal(source, decryptStr);
     }
+
+    [Fact]
+    public void Encrypt_NullPlaintext_Throws()
+    {
+        var (pub, _) = Sm2Helper.ExportKey();
+        Assert.Throws<ArgumentNullException>(() => Sm2Helper.Encrypt(null!, pub, publicKeyType: OutType.Hex, outType: OutType.Hex));
+    }
 }

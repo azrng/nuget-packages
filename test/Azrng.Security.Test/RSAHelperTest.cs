@@ -182,4 +182,10 @@ public class RsaHelperTest
         var sign = RsaHelper.QuickSign(source, privateKey);
         Assert.False(RsaHelper.QuickVerify(source + "-x", sign, publicKey));
     }
+
+    [Fact]
+    public void Encrypt_NullPublicKey_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RsaHelper.EncryptOaepSha256("data", null!));
+    }
 }

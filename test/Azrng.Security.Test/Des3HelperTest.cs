@@ -25,4 +25,10 @@ public class Des3HelperTest
 
         Assert.Equal(source, plain);
     }
+
+    [Fact]
+    public void Encrypt_NullPlaintext_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Des3Helper.Encrypt(null!, SecretKey, OutType.Base64));
+    }
 }

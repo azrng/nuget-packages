@@ -32,4 +32,10 @@ public class DesHelperTest
         _testOutputHelper.WriteLine($"输出结果 ：{result}");
         Assert.Equal(str, result);
     }
+
+    [Fact]
+    public void Encrypt_NullPlaintext_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => DesHelper.Encrypt(null!, SecretKey));
+    }
 }

@@ -61,4 +61,10 @@ public class Sm3HelperTest
         _testOutputHelper.WriteLine(result);
         Assert.Equal("tDTPvn4fYObTzZ8puItxXNEOpld5cXUB3161T1gS37U=", result, StringComparer.CurrentCultureIgnoreCase);
     }
+
+    [Fact]
+    public void GetSm3Hash_Null_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Sm3Helper.GetSm3Hash(null!));
+    }
 }

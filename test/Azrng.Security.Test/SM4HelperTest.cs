@@ -131,4 +131,10 @@ public class Sm4HelperTest
             Sm4Helper.Encrypt("123456", SecretKey, Sm4CryptoEnum.CBC, iv: "short-iv"));
         Assert.Contains("16 bytes", ex.Message);
     }
+
+    [Fact]
+    public void Encrypt_NullPlaintext_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Sm4Helper.Encrypt(null!, SecretKey, Sm4CryptoEnum.ECB));
+    }
 }
