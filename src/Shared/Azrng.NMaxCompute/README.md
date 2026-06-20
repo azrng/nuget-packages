@@ -73,18 +73,29 @@ while (await reader.ReadAsync())
 | **STS 临时凭证（`StsAccount`）** | S4 | `config.SecurityToken` 非空时自动用 StsAccount，签名后注入 `authorization-sts-token` 头 |
 | **自定义 `TunnelEndpoint`** | S4 | `config.TunnelEndpoint` 非空时，Tunnel 请求走独立端点 |
 
-### 未开始（S5 计划范围 / 待真实集群验证）
+### 未开始（仅剩需真实集群的部分）
 
 | 能力 | 阶段 | 说明 |
 |---|---|---|
 | zlib raw deflate 压缩传输 | S4 | 当前未请求压缩，多数场景可跑通；服务端强制压缩时会失败 |
 | PyODPS 对照基准测试套件 | S5 | 需真实集群 |
-| 真实集群端到端集成测试 | S5 | 需 `MAXCOMPUTE_TEST_*` 环境变量 + 真实 AK/SK |
+
+### 集成测试（已就绪，待填凭据）
+
+`test/Azrng.NMaxCompute.Test/Integration/MaxComputeIntegrationTest.cs` 提供端到端集成测试脚手架，默认无操作跳过，设置以下环境变量后运行：
+`MAXCOMPUTE_TEST_ENDPOINT` / `MAXCOMPUTE_TEST_ACCESS_ID` / `MAXCOMPUTE_TEST_SECRET_KEY` / `MAXCOMPUTE_TEST_PROJECT` / `MAXCOMPUTE_TEST_REGION`（可选 `SCHEMA` / `TUNNEL_ENDPOINT` / `SECURITY_TOKEN`）。
+
+```bash
+dotnet test --filter "Category=Integration"
+```
+
+覆盖：`SELECT 1` 烟测、混合类型（Tunnel 路径 + 类型解析）、超 1 万行（验证不截断）。
 
 ### 待真实集群验证
 
-S0-S4 的代码已全部通过 fixture 单元测试（183 项），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
-接入后建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列、STS、超 1 万行场景。
+S0-S5 的代码已全部通过 fixture 单元测试（**186 项**），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
+建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列、STS、超 1 万行场景。
+
 
 
 
