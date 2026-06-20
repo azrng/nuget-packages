@@ -1,7 +1,7 @@
-using Common.Security.Enums;
+using Azrng.Security.Enums;
 using System.Text;
 
-namespace Common.Security.Test
+namespace Azrng.Security.Test
 {
     public class ShaHashTest
     {

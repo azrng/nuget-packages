@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Shared\Common.Security\Common.Security.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Azrng.Security\Azrng.Security.csproj" />
   </ItemGroup>
 
 </Project>

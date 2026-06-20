@@ -1,4 +1,4 @@
-﻿namespace Common.Security.Test
+﻿namespace Azrng.Security.Test
 {
     public class SecurityConst
     {

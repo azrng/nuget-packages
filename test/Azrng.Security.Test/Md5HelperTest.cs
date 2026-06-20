@@ -1,6 +1,6 @@
 using Xunit.Abstractions;
 
-namespace Common.Security.Test
+namespace Azrng.Security.Test
 {
     public class Md5HelperTest
     {

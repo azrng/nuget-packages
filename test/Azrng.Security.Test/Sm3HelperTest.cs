@@ -1,7 +1,7 @@
-﻿using Common.Security.Enums;
+﻿using Azrng.Security.Enums;
 using Xunit.Abstractions;
 
-namespace Common.Security.Test;
+namespace Azrng.Security.Test;
 
 public class Sm3HelperTest
 {

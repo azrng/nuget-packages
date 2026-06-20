@@ -1,7 +1,7 @@
-﻿using Common.Security.Enums;
+﻿using Azrng.Security.Enums;
 using System.Security.Cryptography;
 
-namespace Common.Security.Test;
+namespace Azrng.Security.Test;
 
 /// <summary>
 /// rsa 单元测试
