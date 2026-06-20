@@ -160,4 +160,26 @@ public class RsaHelperTest
 
         Assert.False(verifyResult);
     }
+
+    [Fact]
+    public void QuickSign_AndQuickVerify_RoundTrip_ReturnTrue()
+    {
+        var source = "quick-sign-verify";
+        var (publicKey, privateKey) = RsaHelper.ExportPemRsaKey();
+
+        var sign = RsaHelper.QuickSign(source, privateKey);
+        Assert.NotEmpty(sign);
+
+        Assert.True(RsaHelper.QuickVerify(source, sign, publicKey));
+    }
+
+    [Fact]
+    public void QuickVerify_TamperedData_ReturnFalse()
+    {
+        var source = "quick-sign-verify";
+        var (publicKey, privateKey) = RsaHelper.ExportPemRsaKey();
+
+        var sign = RsaHelper.QuickSign(source, privateKey);
+        Assert.False(RsaHelper.QuickVerify(source + "-x", sign, publicKey));
+    }
 }
