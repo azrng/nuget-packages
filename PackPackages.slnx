@@ -31,6 +31,7 @@
     <Project Path="src\Shared\Common.Cache.Redis\Common.Cache.Redis.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/">
+    <Project Path="src/Shared/Azrng.DuckDB.Quack/Azrng.DuckDB.Quack.csproj" />
     <Project Path="src/Shared/Azrng.JSqlParser/Azrng.JSqlParser.csproj" />
     <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
   </Folder>
