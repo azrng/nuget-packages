@@ -54,3 +54,44 @@ public sealed class DateDecoder : ITypeDecoder
         return DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeMilliseconds(days * 86400_000L).UtcDateTime);
     }
 }
+
+/// <summary>
+/// INTERVAL_DAY_TIME：sint64 秒 + sint32 纳秒，分别计入 CRC。
+/// <para>对应 PyODPS <c>_read_field</c> 中 <c>types.interval_day_time</c> 分支
+/// （<c>pd.Timedelta(seconds=l_val, nanoseconds=nano_secs)</c>）。</para>
+/// <para>返回 <see cref="TimeSpan"/>，精度为 100ns tick（纳秒部分按 100ns 取整）。</para>
+/// </summary>
+public sealed class IntervalDayTimeDecoder : ITypeDecoder
+{
+    public static readonly IntervalDayTimeDecoder Instance = new();
+
+    public object Read(ProtobufWireReader reader, Checksum checksum)
+    {
+        var seconds = reader.ReadSInt64();
+        checksum.UpdateLong(seconds);
+        var nanos = reader.ReadSInt32();
+        checksum.UpdateInt(nanos);
+
+        // 1 tick = 100ns；total = seconds * 10^7 ticks + nanos/100，符号随 seconds
+        var ticks = seconds * TimeSpan.TicksPerSecond + nanos / 100;
+        return TimeSpan.FromTicks(ticks);
+    }
+}
+
+/// <summary>
+/// INTERVAL_YEAR_MONTH：sint64 月份数 + crc.UpdateLong。
+/// <para>对应 PyODPS <c>_read_field</c> 中 <c>types.interval_year_month</c> 分支
+/// （<c>compat.Monthdelta(l_val)</c>）。</para>
+/// <para>返回 <c>long</c>（signed 月份数）。调用方如需年/月拆分可自行换算。</para>
+/// </summary>
+public sealed class IntervalYearMonthDecoder : ITypeDecoder
+{
+    public static readonly IntervalYearMonthDecoder Instance = new();
+
+    public object Read(ProtobufWireReader reader, Checksum checksum)
+    {
+        var months = reader.ReadSInt64();
+        checksum.UpdateLong(months);
+        return months;
+    }
+}

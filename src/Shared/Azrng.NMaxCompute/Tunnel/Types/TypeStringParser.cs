@@ -63,7 +63,12 @@ public static class TypeStringParser
         {
             SkipSpaces();
             var name = ReadIdent();
+            var lower = name.ToLowerInvariant();
             SkipSpaces();
+
+            // vector 特殊语法：vector<float,1536> 或 vector(float,1536)
+            if (lower == "vector")
+                return ParseVector();
 
             // 带长度/精度的基本类型：varchar(10) / char(5) / decimal(10,2) —— 消费 (..) 交 factory
             if (!AtEnd && _s[_i] == '(')
@@ -75,7 +80,6 @@ public static class TypeStringParser
 
             // 复合：name<
             _i++; // consume '<'
-            var lower = name.ToLowerInvariant();
             ITypeDecoder decoder;
             switch (lower)
             {
@@ -114,6 +118,29 @@ public static class TypeStringParser
                 break;
             }
             return new StructDecoder(names.ToArray(), decoders.ToArray());
+        }
+
+        /// <summary>
+        /// 解析 vector：接受 <c>vector&lt;elem,dim&gt;</c> 或 <c>vector(elem,dim)</c>。
+        /// 维度仅用于校验格式（真实维度随 wire 流传输），元素 decoder 决定解码。
+        /// </summary>
+        private ITypeDecoder ParseVector()
+        {
+            SkipSpaces();
+            if (AtEnd || (_s[_i] != '<' && _s[_i] != '('))
+                throw new ArgumentException($"Expected '<' or '(' after vector near position {_i}");
+            var close = _s[_i] == '<' ? '>' : ')';
+            _i++;
+
+            var elementDecoder = ParseType();
+            Expect(',');
+            SkipSpaces();
+            var dimToken = ReadIdent();          // 维度数字
+            if (!int.TryParse(dimToken, out _))
+                throw new ArgumentException($"Invalid vector dimension: {dimToken}");
+            Expect(close);
+
+            return new VectorDecoder(elementDecoder);
         }
 
         private string ReadIdent()

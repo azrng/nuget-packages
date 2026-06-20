@@ -32,7 +32,9 @@ public static class TypeDecoderFactory
         { "date", DateDecoder.Instance },
         { "timestamp", TimestampDecoder.LocalInstance },
         { "timestamp_ntz", TimestampDecoder.UtcInstance },
-        { "decimal", DecimalDecoder.Instance }
+        { "decimal", DecimalDecoder.Instance },
+        { "interval_day_time", IntervalDayTimeDecoder.Instance },
+        { "interval_year_month", IntervalYearMonthDecoder.Instance }
     };
 
     /// <summary>
@@ -49,6 +51,10 @@ public static class TypeDecoderFactory
         // decimal(p,s) 是带精度的简单类型，不是复合类型，优先短路
         if (trimmed.StartsWith("decimal(", StringComparison.OrdinalIgnoreCase))
             return DecimalDecoder.Instance;
+
+        // vector(elem,dim) 用括号语法（无尖括号），需路由到 parser
+        if (trimmed.StartsWith("vector", StringComparison.OrdinalIgnoreCase))
+            return TypeStringParser.Parse(trimmed);
 
         // 含尖括号的视为复合类型，交给 parser
         if (trimmed.IndexOfAny(new[] { '<', '>' }) >= 0)

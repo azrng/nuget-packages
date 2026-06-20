@@ -113,3 +113,28 @@ public sealed class StructDecoder : ITypeDecoder
     /// </summary>
     public IReadOnlyList<string> FieldNames => _fieldNames;
 }
+
+/// <summary>
+/// VECTOR(elem,dim)：uint32 维度 + dim 个元素。
+/// <para>对应 PyODPS <c>_read_vector</c>。<b>关键</b>：维度 uint32 <b>不</b>计入 CRC，
+/// 仅元素值（通过 <paramref name="elementDecoder"/> 内部 crc 更新）计入。</para>
+/// <para>元素仅 float/double，统一返回 <c>double[]</c>（float 元素无损提升为 double）。</para>
+/// </summary>
+public sealed class VectorDecoder : ITypeDecoder
+{
+    private readonly ITypeDecoder _elementDecoder;
+
+    public VectorDecoder(ITypeDecoder elementDecoder)
+    {
+        _elementDecoder = elementDecoder ?? throw new ArgumentNullException(nameof(elementDecoder));
+    }
+
+    public object Read(ProtobufWireReader reader, Checksum checksum)
+    {
+        var dim = reader.ReadVarUInt32();
+        var result = new double[dim];
+        for (var i = 0u; i < dim; i++)
+            result[i] = Convert.ToDouble(_elementDecoder.Read(reader, checksum), System.Globalization.CultureInfo.InvariantCulture);
+        return result;
+    }
+}
