@@ -190,6 +190,39 @@ public class TypeCoverageIntegrationTest
         Assert.Contains("2026", row[1]!.ToString()!);
     }
 
+    [Fact]
+    public async Task TimestampNtz_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var r = await RunAsync(config, "SELECT CAST('2026-06-20 12:34:56.789' AS TIMESTAMP_NTZ) AS t");
+        Assert.True(r.RowCount > 0);
+        Assert.NotNull(r.ColumnTypes);
+        Assert.Contains(r.ColumnTypes!, t => t.StartsWith("timestamp_ntz", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(r.Rows[0][0]);
+        Assert.Contains("2026", r.Rows[0][0]!.ToString()!);
+    }
+
+    [Fact]
+    public async Task JsonType_Decoded()
+    {
+        var config = TryConfig(odps2Hints: true);
+        if (config is null) return;
+
+        var r = await RunAsync(config, "SELECT CAST('{\"a\":1,\"b\":\"x\"}' AS JSON) AS j");
+        Assert.True(r.RowCount > 0);
+        Assert.NotNull(r.ColumnTypes);
+        Assert.Contains(r.ColumnTypes!, t => t.StartsWith("json", StringComparison.OrdinalIgnoreCase));
+        // JsonDecoder 返回原始字节为字符串。MaxCompute JSON 经 tunnel 以序列化字符串形式返回
+        // （如 "{\"a\":1,\"b\":\"x\"}"，键值带转义），内容存活即可；调用方需时可自行 JsonDocument.Parse。
+        var text = r.Rows[0][0]!.ToString();
+        Assert.Contains("a", text);
+        Assert.Contains("b", text);
+        Assert.Contains("1", text);
+        Assert.Contains("x", text);
+    }
+
     // ---------- 复合类型 ----------
 
     [Fact]

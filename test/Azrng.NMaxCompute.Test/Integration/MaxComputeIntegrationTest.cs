@@ -130,24 +130,3 @@ public class ConnectionSmokeTest : MaxComputeIntegrationTestBase
     }
 }
 
-public class LargeResultSetTest : MaxComputeIntegrationTestBase
-{
-    /// <summary>
-    /// 超 10000 行验证 Tunnel 路径（Result API 会截断）。
-    /// 用一个已知大表或 generate_series；若无合适表则跳过。
-    /// </summary>
-    [Fact]
-    public async Task Select_OverTenThousandRows_AllReturned()
-    {
-        var config = LoadConfigOrSkip();
-        if (config is null) return;
-
-        var executor = CreateExecutor();
-        // 简易造数：对足够大的已有表全扫，或用 values 拼接。
-        // 这里仅作为占位——真实运行需替换为可产生 >1w 行的 SQL。
-        var result = await executor.ExecuteQueryAsync(config,
-            "SELECT * FROM (SELECT 1 AS v) t LIMIT 1");
-
-        Assert.True(result.RowCount >= 1);
-    }
-}
