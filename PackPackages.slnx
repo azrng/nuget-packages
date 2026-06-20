@@ -35,7 +35,6 @@
     <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/Ado/">
-    <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
     <Project Path="src\Shared\Azrng.DataAccess\Azrng.DataAccess.csproj" />
   </Folder>
   <Folder Name="/Shared/DataBase/EFCore/">
