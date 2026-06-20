@@ -66,6 +66,10 @@ public class DataReaderTypeMappingTest
     [InlineData("array<bigint>", typeof(object[]))]
     [InlineData("map<string,bigint>", typeof(System.Collections.IDictionary))]
     [InlineData("struct<a:string,b:bigint>", typeof(object[]))]
+    [InlineData("interval_day_time", typeof(TimeSpan))]
+    [InlineData("interval_year_month", typeof(long))]
+    [InlineData("vector<float,32>", typeof(double[]))]
+    [InlineData("vector(double,64)", typeof(double[]))]
     public void GetFieldType_MapsOdpsTypes(string odpsType, Type expected)
     {
         var result = new QueryResult
