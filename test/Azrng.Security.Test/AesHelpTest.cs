@@ -115,5 +115,24 @@ namespace Azrng.Security.Test
             var (key, _) = AesHelper.ExportSecretAndIv();
             Assert.Throws<ArgumentException>(() => AesHelper.Encrypt("data", key, "", CipherMode.CBC, PaddingMode.PKCS7));
         }
+
+        [Fact]
+        public void EncryptCbcPkcs7_HexOutput_RoundTrip()
+        {
+            var (key, iv) = AesHelper.ExportSecretAndIv();
+            var cipher = AesHelper.EncryptCbcPkcs7("hello", key, iv, outType: OutType.Hex);
+            var plain = AesHelper.DecryptCbcPkcs7(cipher, key, iv, cipherTextType: OutType.Hex);
+            Assert.Equal("hello", plain);
+        }
+
+        [Fact]
+        public void EncryptCbcPkcs7_TextKey_RoundTrip()
+        {
+            var key = "12345678901234567890123456789012";
+            var iv = "1234567890123456";
+            var cipher = AesHelper.EncryptCbcPkcs7("hello", key, iv, secretType: SecretType.Text);
+            var plain = AesHelper.DecryptCbcPkcs7(cipher, key, iv, secretType: SecretType.Text);
+            Assert.Equal("hello", plain);
+        }
     }
 }

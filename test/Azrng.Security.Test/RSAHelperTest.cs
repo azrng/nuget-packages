@@ -188,4 +188,12 @@ public class RsaHelperTest
     {
         Assert.Throws<ArgumentNullException>(() => RsaHelper.EncryptOaepSha256("data", null!));
     }
+
+    [Fact]
+    public void DecryptOaepSha256_InvalidPayloadLength_Throws()
+    {
+        var (_, privateKey) = RsaHelper.ExportPemRsaKey();
+        var badCipher = Convert.ToBase64String(new byte[300]);
+        Assert.Throws<ArgumentException>(() => RsaHelper.DecryptOaepSha256(badCipher, privateKey));
+    }
 }
