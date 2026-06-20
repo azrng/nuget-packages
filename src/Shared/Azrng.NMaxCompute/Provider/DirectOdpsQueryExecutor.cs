@@ -63,7 +63,16 @@ public sealed class DirectOdpsQueryExecutor : IQueryExecutor
         {
             try
             {
-                return await ExecuteViaTunnelAsync(restClient, config, instance.Id, cancellationToken).ConfigureAwait(false);
+                var tunnelClient = restClient;
+                // 自定义 Tunnel 端点：单独建一个指向 TunnelEndpoint 的 client
+                if (!string.IsNullOrWhiteSpace(config.TunnelEndpoint))
+                {
+                    var account = BuildAccount(config);
+                    var tunnelHttpClient = _httpClientFactory.CreateClient();
+                    tunnelClient = new OdpsRestClient(tunnelHttpClient, account, config.TunnelEndpoint!, _logger);
+                }
+
+                return await ExecuteViaTunnelAsync(tunnelClient, config, instance.Id, cancellationToken).ConfigureAwait(false);
             }
             catch (OdpsException ex) when (ShouldFallbackToResultApi(ex))
             {
@@ -155,14 +164,27 @@ public sealed class DirectOdpsQueryExecutor : IQueryExecutor
 
     private (Odps Odps, OdpsRestClient RestClient) Build(MaxComputeConfig config)
     {
-        var account = new CloudAccount(
-            config.AccessId,
-            config.SecretAccessKey,
-            config.Region,
-            config.UseV4Signature);
+        var account = BuildAccount(config);
 
         var httpClient = _httpClientFactory.CreateClient();
         var restClient = new OdpsRestClient(httpClient, account, config.Endpoint, _logger);
         return (new Odps(restClient, config.Project), restClient);
+    }
+
+    private static IAccount BuildAccount(MaxComputeConfig config)
+    {
+        // 优先 STS（临时凭证），否则主账号
+        if (!string.IsNullOrWhiteSpace(config.SecurityToken))
+        {
+            return new StsAccount(
+                config.AccessId, config.SecretAccessKey, config.SecurityToken,
+                config.Region, config.UseV4Signature);
+        }
+
+        return new CloudAccount(
+            config.AccessId,
+            config.SecretAccessKey,
+            config.Region,
+            config.UseV4Signature);
     }
 }

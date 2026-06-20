@@ -27,6 +27,13 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
     private const string TunnelEndpointKey = "TunnelEndpoint";
     private const string MaxRowsKey = "MaxRows";
     private const string UseV4SignatureKey = "UseV4Signature";
+    private const string HintsKey = "Hints";
+
+    /// <summary>
+    /// Hints 值内部的键值分隔符（<c>key=value</c>），多个 hint 之间用 <see cref="HintsItemSeparator"/> 分隔。
+    /// </summary>
+    private const char HintsKvSeparator = '=';
+    private const char HintsItemSeparator = ',';
 
     public MaxComputeConnectionStringBuilder() { }
 
@@ -97,6 +104,51 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
         set => this[UseV4SignatureKey] = value;
     }
 
+    /// <summary>
+    /// SQL hints，原始字符串形式（逗号分隔的 <c>key=value</c>）。
+    /// 例：<c>odps.sql.mapper.split.size=256,odps.sql.mapper.cpu=100</c>
+    /// </summary>
+    public string? Hints
+    {
+        get => TryGetValue(HintsKey, out var value) ? value?.ToString() : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(HintsKey);
+            }
+            else
+            {
+                this[HintsKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 解析 <see cref="Hints"/> 为键值字典；无 hints 时返回 null。
+    /// </summary>
+    public IDictionary<string, string>? GetHintsDictionary()
+    {
+        var raw = Hints;
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var item in raw.Split(HintsItemSeparator))
+        {
+            var trimmed = item.Trim();
+            if (trimmed.Length == 0)
+                continue;
+            var sepIdx = trimmed.IndexOf(HintsKvSeparator);
+            if (sepIdx <= 0)
+                continue;
+            var k = trimmed[..sepIdx].Trim();
+            var v = trimmed[(sepIdx + 1)..].Trim();
+            dict[k] = v;
+        }
+        return dict.Count > 0 ? dict : null;
+    }
+
     public bool IsValid() =>
         !string.IsNullOrWhiteSpace(Endpoint)
         && !string.IsNullOrWhiteSpace(AccessId)
@@ -119,7 +171,8 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
             SecurityToken = string.IsNullOrEmpty(SecurityToken) ? null : SecurityToken,
             TunnelEndpoint = string.IsNullOrEmpty(TunnelEndpoint) ? null : TunnelEndpoint,
             MaxRows = MaxRows,
-            UseV4Signature = UseV4Signature
+            UseV4Signature = UseV4Signature,
+            Hints = GetHintsDictionary()
         };
     }
 
@@ -136,6 +189,7 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
         AppendIfNotEmpty(sb, TunnelEndpointKey, TunnelEndpoint);
         if (MaxRows > 0) sb.Append($"{MaxRowsKey}={MaxRows};");
         if (!UseV4Signature) sb.Append($"{UseV4SignatureKey}=false;");
+        AppendIfNotEmpty(sb, HintsKey, Hints);
         return sb.ToString().TrimEnd(';');
     }
 

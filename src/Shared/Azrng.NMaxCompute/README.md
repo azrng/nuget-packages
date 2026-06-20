@@ -44,7 +44,7 @@ while (await reader.ReadAsync())
 
 ## 能力范围与实现进度
 
-> 当前版本：**1.0.1**（S2 + S1 收尾交付，Tunnel 已接入运行时调用链）
+> 当前版本：**1.0.1**（S4 交付，Tunnel 已接入运行时调用链，STS / Hints / TunnelEndpoint 已支持）
 
 ### 已完成能力
 
@@ -58,31 +58,34 @@ while (await reader.ReadAsync())
 | Dapper 扩展（`QueryAsync<T>` 等） | S0 | `MaxComputeDapperExtensions` |
 | Tunnel wire 解码（CRC32 / CRC32C / ProtobufWireReader） | S1 | `Tunnel/Wire/*` |
 | Tunnel Session（创建/重载 + JSON schema 解析） | S1 | `Tunnel/InstanceDownloadSession` + `Tunnel/TableSchema` |
-| Tunnel 基础类型 decoder | S1 | `Tunnel/Types/*`：bigint/int/double/float/bool/string/binary/decimal/datetime/date |
+| Tunnel 基础类型 decoder | S1 | bigint/int/double/float/bool/string/binary/decimal/datetime/date |
 | Tunnel 单条记录解码 + CRC32C 校验 | S1 | `Tunnel/TunnelRecordReader`（可 dispose） |
-| DataReader 类型化返回（`GetFieldType` / `GetDataTypeName`） | S1 | `QueryResult.ColumnTypes` 透传 |
+| DataReader 类型化返回 | S1 | `QueryResult.ColumnTypes` 透传 |
 | TIMESTAMP / TIMESTAMP_NTZ / JSON decoder | S2 | `Tunnel/Types/TimestampJsonDecoder` |
 | ARRAY / MAP / STRUCT 递归 decoder | S2 | `Tunnel/Types/CompositeDecoders`，size/null marker 不计入 CRC |
-| 复合类型字符串解析 | S2 | `Tunnel/Types/TypeStringParser`，支持 `array/map/struct` 嵌套 + 反引号字段名 |
+| 复合类型字符串解析 | S2 | `Tunnel/Types/TypeStringParser` |
 | NULL 处理 | S2 | record 级缺失 field index 即 NULL；复合类型内部前置 null marker |
-| **Tunnel 运行时接入（默认取数路径）** | S1收尾 | `DirectOdpsQueryExecutor` 默认走 Tunnel：`RunSql → 等待 → CreateSession → OpenRecordReader → Materialize`，无行数限制 |
-| **流式 HTTP 读取** | S1收尾 | `OdpsRestClient.SendStreamingAsync`（`ResponseHeadersRead`）+ `OdpsStreamResponse` |
-| **Tunnel → Result API 自动回退** | S1收尾 | 命中 `InvalidProjectTable/InvalidArgument/NoSuchProject/InstanceTypeNotSupported/NoDownload` 时回退 Result API |
+| Tunnel 运行时接入（默认取数路径） | S1收尾 | `DirectOdpsQueryExecutor` 默认走 Tunnel，无行数限制 |
+| 流式 HTTP 读取 | S1收尾 | `OdpsRestClient.SendStreamingAsync` + `OdpsStreamResponse` |
+| Tunnel → Result API 自动回退 | S1收尾 | 命中 `InvalidProjectTable/InvalidArgument/NoSuchProject/InstanceTypeNotSupported/NoDownload` 时回退 |
+| **`MaxComputeCommand.Hints` 注入** | S3 | 单命令级 hints 覆盖 config.Hints（同名 key 以命令为准），透传到 SQLTask settings |
+| **连接字符串 Hints 键** | S3 | `Hints=a=1,b=2`（逗号分隔 kv），`GetHintsDictionary()` 解析 |
+| **STS 临时凭证（`StsAccount`）** | S4 | `config.SecurityToken` 非空时自动用 StsAccount，签名后注入 `authorization-sts-token` 头 |
+| **自定义 `TunnelEndpoint`** | S4 | `config.TunnelEndpoint` 非空时，Tunnel 请求走独立端点 |
 
-### 未开始（S3-S5 计划范围）
+### 未开始（S5 计划范围 / 待真实集群验证）
 
-| 能力 | 阶段 |
-|---|---|
-| `MaxComputeCommand.Hints` 注入 SQLTask settings + 连接字符串新键 | S3 |
-| `StsAccount`（SecurityToken 头注入） | S4 |
-| zlib raw deflate 压缩传输 | S4 |
-| 自定义 `TunnelEndpoint` | S4 |
-| PyODPS 对照基准测试套件 + 完整集成测试（真实集群） | S5 |
+| 能力 | 阶段 | 说明 |
+|---|---|---|
+| zlib raw deflate 压缩传输 | S4 | 当前未请求压缩，多数场景可跑通；服务端强制压缩时会失败 |
+| PyODPS 对照基准测试套件 | S5 | 需真实集群 |
+| 真实集群端到端集成测试 | S5 | 需 `MAXCOMPUTE_TEST_*` 环境变量 + 真实 AK/SK |
 
 ### 待真实集群验证
 
-S0-S2 的代码已全部通过 fixture 单元测试（171 项），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
-接入后建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列与超 1 万行场景。
+S0-S4 的代码已全部通过 fixture 单元测试（183 项），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
+接入后建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列、STS、超 1 万行场景。
+
 
 
 

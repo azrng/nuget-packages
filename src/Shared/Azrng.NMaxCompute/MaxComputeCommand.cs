@@ -44,6 +44,12 @@ public class MaxComputeCommand : DbCommand
 
     public override UpdateRowSource UpdatedRowSource { get; set; }
 
+    /// <summary>
+    /// 单命令级 SQL hints，覆盖 <see cref="MaxComputeConfig.Hints"/>（同名 key 以本属性为准）。
+    /// <para>注入到 SQLTask 的 settings，例：<c>odps.sql.mapper.split.size = 256</c>。</para>
+    /// </summary>
+    public IDictionary<string, string>? Hints { get; set; }
+
     protected override DbConnection? DbConnection { get; set; }
 
     protected override DbParameterCollection DbParameterCollection => _parameters;
@@ -75,7 +81,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = _queryExecutor.ExecuteQueryAsync(_config, processedSql)
+            var result = _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql)
                                        .GetAwaiter()
                                        .GetResult();
 
@@ -103,7 +109,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = await _queryExecutor.ExecuteQueryAsync(_config, processedSql, cancellationToken);
+            var result = await _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql, cancellationToken);
             return result.RowCount;
         }
         catch (Exception ex)
@@ -123,7 +129,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = _queryExecutor.ExecuteQueryAsync(_config, processedSql)
+            var result = _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql)
                                        .GetAwaiter()
                                        .GetResult();
 
@@ -146,7 +152,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = await _queryExecutor.ExecuteQueryAsync(_config, processedSql, cancellationToken);
+            var result = await _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql, cancellationToken);
             return new MaxComputeDataReader(result, _logger);
         }
         catch (Exception ex)
@@ -166,7 +172,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = _queryExecutor.ExecuteQueryAsync(_config, processedSql)
+            var result = _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql)
                                        .GetAwaiter()
                                        .GetResult();
 
@@ -199,7 +205,7 @@ public class MaxComputeCommand : DbCommand
         try
         {
             var processedSql = ProcessParameters();
-            var result = await _queryExecutor.ExecuteQueryAsync(_config, processedSql, cancellationToken);
+            var result = await _queryExecutor.ExecuteQueryAsync(MergeConfig(), processedSql, cancellationToken);
 
             if (result.Rows != null && result.Rows.Length > 0 && result.Rows[0].Length > 0)
             {
@@ -247,6 +253,41 @@ public class MaxComputeCommand : DbCommand
         }
 
         return sql;
+    }
+
+    /// <summary>
+    /// 合并 config.Hints 与本命令的 <see cref="Hints"/>：命令级覆盖配置级（同名 key 以命令为准）。
+    /// </summary>
+    private MaxComputeConfig MergeConfig()
+    {
+        if (Hints is null || Hints.Count == 0)
+            return _config;
+
+        var merged = new MaxComputeConfig
+        {
+            Endpoint = _config.Endpoint,
+            AccessId = _config.AccessId,
+            SecretAccessKey = _config.SecretAccessKey,
+            Project = _config.Project,
+            Schema = _config.Schema,
+            Region = _config.Region,
+            SecurityToken = _config.SecurityToken,
+            TunnelEndpoint = _config.TunnelEndpoint,
+            MaxRows = _config.MaxRows,
+            UseV4Signature = _config.UseV4Signature
+        };
+
+        var hints = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (_config.Hints != null)
+        {
+            foreach (var kv in _config.Hints)
+                hints[kv.Key] = kv.Value;
+        }
+        foreach (var kv in Hints)
+            hints[kv.Key] = kv.Value;
+
+        merged.Hints = hints.Count > 0 ? hints : null;
+        return merged;
     }
 
     /// <summary>
