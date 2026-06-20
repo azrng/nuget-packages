@@ -244,4 +244,22 @@ public class TypeCoverageIntegrationTest
         // 关键断言：Tunnel 路径必须返回 > 10000 行（Result API 会在 10000 截断）
         Assert.True(r.RowCount > 10000, $"expected >10000 rows via Tunnel, got {r.RowCount}");
     }
+
+    /// <summary>
+    /// 单次下载 50000 行必须全量返回：验证 MaxCompute InstanceTunnel 单流单批次语义——
+    /// 服务端不按行数截断、单流内不出现多个 META_COUNT 尾部（否则 reader 会在首个尾部后停止丢行）。
+    /// </summary>
+    [Fact]
+    public async Task LargeResultSet_FiftyThousandRows_AllReturned()
+    {
+        var config = TryConfig();
+        if (config is null) return;
+
+        const int n = 50000;
+        var sql = $"SELECT v FROM (SELECT explode(split(repeat('ab,', {n}), ',')) AS v) t";
+
+        var r = await RunAsync(config, sql);
+        _out.WriteLine($"50k result row count = {r.RowCount}");
+        Assert.Equal(n, r.RowCount);
+    }
 }
