@@ -72,6 +72,10 @@ while (await reader.ReadAsync())
 | **连接字符串 Hints 键** | S3 | `Hints=a=1,b=2`（逗号分隔 kv），`GetHintsDictionary()` 解析 |
 | **STS 临时凭证（`StsAccount`）** | S4 | `config.SecurityToken` 非空时自动用 StsAccount，签名后注入 `authorization-sts-token` 头 |
 | **自定义 `TunnelEndpoint`** | S4 | `config.TunnelEndpoint` 非空时，Tunnel 请求走独立端点 |
+| **时区开关（`UseLocalTimeZone`）** | T042 | datetime/timestamp 默认本地时区、可设 UTC（对齐 PyODPS `local_timezone`）；连接串 / 命令 Hints 合并 / `MaxComputeConnectionStringBuilder` 均透传；`timestamp_ntz` 始终 UTC |
+| **多批次分页读** | T043 | `InstanceDownloadSession.ReadRowsAsync` / `BufferedRecordReader`：按 `sliceSize` 分片 reopen，`IAsyncEnumerable` 流式，内存受切片约束 |
+| **TableTunnel 表级下载** | T044 | `TableDownloadSession` + `TableTunnel.CreateDownloadSessionAsync`：表/分区数据读取，复用 `TunnelRecordReader` / 分片 / 时区开关 |
+| **流式 / 分块写** | T045 | `TableUploadSession.WriteRowsChunkedAsync`：按 `batchSize` 自动分块逐块上传（`BufferedRecordWriter.Batch`） |
 
 ### 未开始（仅剩需真实集群的部分）
 
