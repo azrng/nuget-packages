@@ -165,6 +165,10 @@ public class MaxComputeConnection : DbConnection
         if (config.MaxRows > 0)
             parts.Add($"MaxRows={config.MaxRows}");
 
+        // 仅在关闭本地时区（非默认）时写出，保持连接串简洁
+        if (!config.UseLocalTimeZone)
+            parts.Add($"UseLocalTimeZone=false");
+
         return string.Join(";", parts);
     }
 
@@ -218,6 +222,9 @@ public class MaxComputeConnection : DbConnection
                     break;
                 case "UseV4Signature" when bool.TryParse(value, out var v4):
                     config.UseV4Signature = v4;
+                    break;
+                case "UseLocalTimeZone" when bool.TryParse(value, out var localTz):
+                    config.UseLocalTimeZone = localTz;
                     break;
             }
         }

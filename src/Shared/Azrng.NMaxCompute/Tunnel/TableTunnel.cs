@@ -19,4 +19,10 @@ public sealed class TableTunnel
         string project, string table, string? partitionSpec = null, string? schema = null,
         IEnumerable<string>? tags = null, CancellationToken cancellationToken = default)
         => TableUploadSession.CreateAsync(_client, project, table, partitionSpec, schema, tags, cancellationToken);
+
+    /// <summary>创建表（或分区）下载 session。</summary>
+    public Task<TableDownloadSession> CreateDownloadSessionAsync(
+        string project, string table, string? partitionSpec = null, string? schema = null,
+        string? quotaName = null, IEnumerable<string>? tags = null, CancellationToken cancellationToken = default)
+        => TableDownloadSession.CreateAsync(_client, project, table, partitionSpec, schema, quotaName, tags, cancellationToken);
 }

@@ -27,6 +27,7 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
     private const string TunnelEndpointKey = "TunnelEndpoint";
     private const string MaxRowsKey = "MaxRows";
     private const string UseV4SignatureKey = "UseV4Signature";
+    private const string UseLocalTimeZoneKey = "UseLocalTimeZone";
     private const string HintsKey = "Hints";
 
     /// <summary>
@@ -105,6 +106,15 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// datetime / timestamp 是否按本地时区返回（默认 true，对齐 PyODPS <c>local_timezone</c>）；false 返回 UTC。
+    /// </summary>
+    public bool UseLocalTimeZone
+    {
+        get => TryGetValue(UseLocalTimeZoneKey, out var value) ? Convert.ToBoolean(value) : true;
+        set => this[UseLocalTimeZoneKey] = value;
+    }
+
+    /// <summary>
     /// SQL hints，原始字符串形式（逗号分隔的 <c>key=value</c>）。
     /// 例：<c>odps.sql.mapper.split.size=256,odps.sql.mapper.cpu=100</c>
     /// </summary>
@@ -172,6 +182,7 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
             TunnelEndpoint = string.IsNullOrEmpty(TunnelEndpoint) ? null : TunnelEndpoint,
             MaxRows = MaxRows,
             UseV4Signature = UseV4Signature,
+            UseLocalTimeZone = UseLocalTimeZone,
             Hints = GetHintsDictionary()
         };
     }
@@ -189,6 +200,7 @@ public class MaxComputeConnectionStringBuilder : DbConnectionStringBuilder
         AppendIfNotEmpty(sb, TunnelEndpointKey, TunnelEndpoint);
         if (MaxRows > 0) sb.Append($"{MaxRowsKey}={MaxRows};");
         if (!UseV4Signature) sb.Append($"{UseV4SignatureKey}=false;");
+        if (!UseLocalTimeZone) sb.Append($"{UseLocalTimeZoneKey}=false;");
         AppendIfNotEmpty(sb, HintsKey, Hints);
         return sb.ToString().TrimEnd(';');
     }

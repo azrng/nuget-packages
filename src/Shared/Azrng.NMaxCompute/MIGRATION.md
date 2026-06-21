@@ -65,13 +65,13 @@
 ## 4. 尚未迁移（按优先级）
 
 ### P0 — 读链路增强（贴近已实现范围）
-- **多批次分页读**：PyODPS `BufferedRecordReader` 按批 reopen（多 HTTP 请求）+ `call_with_retry` 失败重开。当前 C# 单流单请求；超大结果集若服务端按批返回需补 reopen 逻辑。
-- **时区选项**：PyODPS `options.local_timezone` / `MillisecondsConverter`。当前 `DateTimeDecoder` 固定本地时区，未暴露开关。
+- ✅ **时区选项**（已完成）：`MaxComputeConfig.UseLocalTimeZone`（默认 true，对齐 PyODPS `options.local_timezone`）。`DateTimeDecoder` 补 `LocalInstance`/`UtcInstance`；`TypeDecoderFactory`/`TypeStringParser` 透传 `useUtc` 到 datetime/timestamp（含 `array<datetime>` 等嵌套）；`timestamp_ntz` 无时区语义始终 UTC。离线单测覆盖（`TimeZoneOptionTest`）。
+- ✅ **多批次分页读**（实现 + 离线单测完成）：`BufferedRecordReader.ReadAllAsync` 按 `sliceSize` 分片 reopen（每片一次 HTTP 请求 + `TunnelRecordReader`），`IAsyncEnumerable` 流式产出；`InstanceDownloadSession.ReadRowsAsync` 暴露，内存受切片大小约束。对应 PyODPS `BufferedRecordReader`。单请求失败重试由 `OdpsRestClient` 4 次退避承担；集群是否强制分批待真机确认（客户端分片与服务端是否分批无关地工作）。离线单测覆盖切片边界/末片部分/0 行/取消（`BufferedRecordReaderTest`）。
 - **Legacy decimal 字节解码**：PyODPS `convert_legacy_decimal_bytes`（旧服务端定点小数内存布局）。
 
 ### P1 — 表级下载 / 流式写
-- **TableTunnel 下载**：表级下载 session（`create_download_session` + 表数据读取）。当前仅有 InstanceTunnel（查询结果读取），非表级。
-- **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
+- ✅ **TableTunnel 下载**（实现 + 离线单测完成）：`TableDownloadSession`（创建 session + `OpenRecordReaderAsync` + `ReadRowsAsync` 分片），`TableTunnel.CreateDownloadSessionAsync`（支持分区 / schema 2.0 / quota / tags）。复用 `TunnelRecordReader` + `BufferedRecordReader` + `UseLocalTimeZone`。请求格式镜像 `TableUploadSession`（写侧）+ `InstanceDownloadSession`（读侧）；集群真机确认后置。离线单测覆盖响应解析（`TableDownloadSessionTest`）。
+- 🟡 **流式 / 分块写**（部分）：`TableUploadSession.WriteRowsChunkedAsync` 按 `batchSize` 自动分块逐块上传（`BufferedRecordWriter.Batch`，对应 PyODPS `BufferedRecordWriter` 分块策略），与读侧 `BufferedRecordReader` 对称；单请求重试由 `OdpsRestClient` 承担。未迁移：压缩（zlib raw deflate）、切片级重试。离线单测覆盖分块（`BufferedRecordWriterTest`）。
 
 ### P2 — Arrow 写 / 列格式转换
 - ✅ **timestamp-as-struct 读侧转换**（T041，已完成）：服务端把纳秒 `timestamp` 按 `struct(sec:int64, nano:int32)` 发送，原 TimestampType 前置会导致 batch `index out of range`。`OdpsArrowSchemaConverter` 的 wire schema 把 timestamp(ns) 映射为 struct 以对齐 batch 布局，`MaxComputeArrowReader` 读出后转回 `TimestampArray`（对齐 PyODPS `_convert_struct_timestamps`），公共 schema 仍为 TimestampType。离线单测通过（schema 映射 + struct↔timestamp 转换 + 真实 Arrow IPC struct batch 端到端）；集群端到端待 `ArrowTsProbe` 探针最终确认。

@@ -56,6 +56,12 @@ public class MaxComputeConfig
     public bool UseV4Signature { get; set; } = true;
 
     /// <summary>
+    /// datetime / timestamp 列是否按本地时区返回（默认 true，与 PyODPS <c>local_timezone=True</c> 一致）。
+    /// 设为 false 时返回 UTC。timestamp_ntz 无时区语义，始终 UTC，不受此项影响。
+    /// </summary>
+    public bool UseLocalTimeZone { get; set; } = true;
+
+    /// <summary>
     /// 全局 SQL hints（注入到每个 SQLTask 的 settings）
     /// </summary>
     public IDictionary<string, string>? Hints { get; set; }

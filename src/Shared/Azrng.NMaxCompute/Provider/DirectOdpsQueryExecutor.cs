@@ -98,6 +98,7 @@ public sealed class DirectOdpsQueryExecutor : IQueryExecutor
         var session = await InstanceDownloadSession.CreateAsync(
             restClient, config.Project, instanceId,
             quotaName: null, tags: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+        session.UseLocalTimeZone = config.UseLocalTimeZone;
 
         if (session.RecordCount == 0)
         {

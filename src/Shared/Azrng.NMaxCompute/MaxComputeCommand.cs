@@ -257,8 +257,9 @@ public class MaxComputeCommand : DbCommand
 
     /// <summary>
     /// 合并 config.Hints 与本命令的 <see cref="Hints"/>：命令级覆盖配置级（同名 key 以命令为准）。
+    /// <para>internal 便于测试：确保合并后的 config 保留所有非 Hints 字段（如 UseLocalTimeZone）。</para>
     /// </summary>
-    private MaxComputeConfig MergeConfig()
+    internal MaxComputeConfig MergeConfig()
     {
         if (Hints is null || Hints.Count == 0)
             return _config;
@@ -274,7 +275,8 @@ public class MaxComputeCommand : DbCommand
             SecurityToken = _config.SecurityToken,
             TunnelEndpoint = _config.TunnelEndpoint,
             MaxRows = _config.MaxRows,
-            UseV4Signature = _config.UseV4Signature
+            UseV4Signature = _config.UseV4Signature,
+            UseLocalTimeZone = _config.UseLocalTimeZone
         };
 
         var hints = new Dictionary<string, string>(StringComparer.Ordinal);

@@ -28,10 +28,7 @@ public static class TypeDecoderFactory
         { "varchar", StringDecoder.Instance },
         { "char", StringDecoder.Instance },
         { "json", JsonDecoder.Instance },
-        { "datetime", DateTimeDecoder.Instance },
         { "date", DateDecoder.Instance },
-        { "timestamp", TimestampDecoder.LocalInstance },
-        { "timestamp_ntz", TimestampDecoder.UtcInstance },
         { "decimal", DecimalDecoder.Instance },
         { "interval_day_time", IntervalDayTimeDecoder.Instance },
         { "interval_year_month", IntervalYearMonthDecoder.Instance }
@@ -40,8 +37,10 @@ public static class TypeDecoderFactory
     /// <summary>
     /// 根据 MaxCompute 类型字符串获取 decoder。支持基础类型与复合类型。
     /// </summary>
+    /// <param name="useUtc">时区相关类型（datetime / timestamp）是否返回 UTC；默认 false（本地时区）。
+    /// timestamp_ntz 无时区语义，始终 UTC。</param>
     /// <exception cref="NotSupportedException">类型暂不支持</exception>
-    public static ITypeDecoder GetDecoder(string typeString)
+    public static ITypeDecoder GetDecoder(string typeString, bool useUtc = false)
     {
         if (string.IsNullOrWhiteSpace(typeString))
             throw new ArgumentException("Type string is empty.", nameof(typeString));
@@ -54,24 +53,34 @@ public static class TypeDecoderFactory
 
         // vector(elem,dim) 用括号语法（无尖括号），需路由到 parser
         if (trimmed.StartsWith("vector", StringComparison.OrdinalIgnoreCase))
-            return TypeStringParser.Parse(trimmed);
+            return TypeStringParser.Parse(trimmed, useUtc);
 
-        // 含尖括号的视为复合类型，交给 parser
+        // 含尖括号的视为复合类型，交给 parser（useUtc 透传到嵌套的 datetime/timestamp）
         if (trimmed.IndexOfAny(new[] { '<', '>' }) >= 0)
-            return TypeStringParser.Parse(trimmed);
+            return TypeStringParser.Parse(trimmed, useUtc);
 
-        return GetPrimitiveDecoder(trimmed);
+        return GetPrimitiveDecoder(trimmed, useUtc);
     }
 
     /// <summary>
     /// 仅查表获取基础类型 decoder（不做复合解析）。
     /// </summary>
-    public static ITypeDecoder GetPrimitiveDecoder(string typeString)
+    /// <param name="useUtc">时区相关类型（datetime / timestamp）是否返回 UTC；默认 false（本地时区）。</param>
+    public static ITypeDecoder GetPrimitiveDecoder(string typeString, bool useUtc = false)
     {
         if (string.IsNullOrWhiteSpace(typeString))
             throw new ArgumentException("Type string is empty.", nameof(typeString));
 
         var key = typeString.Trim().ToLowerInvariant();
+
+        // 时区相关类型：按 useUtc 选实例。timestamp_ntz 无时区语义，始终 UTC。
+        switch (key)
+        {
+            case "datetime": return useUtc ? DateTimeDecoder.UtcInstance : DateTimeDecoder.LocalInstance;
+            case "timestamp": return useUtc ? TimestampDecoder.UtcInstance : TimestampDecoder.LocalInstance;
+            case "timestamp_ntz": return TimestampDecoder.UtcInstance;
+        }
+
         if (Decoders.TryGetValue(key, out var decoder))
             return decoder;
 

@@ -17,12 +17,13 @@ public static class TypeStringParser
     /// <summary>
     /// 解析类型字符串为 decoder。
     /// </summary>
-    public static ITypeDecoder Parse(string typeString)
+    /// <param name="useUtc">时区相关类型（datetime / timestamp）是否返回 UTC；默认 false（本地时区）。</param>
+    public static ITypeDecoder Parse(string typeString, bool useUtc = false)
     {
         if (string.IsNullOrWhiteSpace(typeString))
             throw new ArgumentException("Type string is empty.", nameof(typeString));
 
-        var parser = new Parser(typeString);
+        var parser = new Parser(typeString, useUtc);
         var decoder = parser.ParseType();
         parser.SkipSpaces();
         if (!parser.AtEnd)
@@ -33,9 +34,10 @@ public static class TypeStringParser
     private sealed class Parser
     {
         private readonly string _s;
+        private readonly bool _useUtc;
         private int _i;
 
-        public Parser(string s) { _s = s; }
+        public Parser(string s, bool useUtc) { _s = s; _useUtc = useUtc; }
 
         public bool AtEnd => _i >= _s.Length;
 
@@ -72,11 +74,11 @@ public static class TypeStringParser
 
             // 带长度/精度的基本类型：varchar(10) / char(5) / decimal(10,2) —— 消费 (..) 交 factory
             if (!AtEnd && _s[_i] == '(')
-                return TypeDecoderFactory.GetPrimitiveDecoder(name + ReadParens());
+                return TypeDecoderFactory.GetPrimitiveDecoder(name + ReadParens(), _useUtc);
 
             // 非复合：交 factory
             if (AtEnd || _s[_i] != '<')
-                return TypeDecoderFactory.GetPrimitiveDecoder(name);
+                return TypeDecoderFactory.GetPrimitiveDecoder(name, _useUtc);
 
             // 复合：name<
             _i++; // consume '<'

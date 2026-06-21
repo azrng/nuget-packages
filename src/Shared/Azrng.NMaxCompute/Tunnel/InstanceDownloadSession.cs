@@ -66,6 +66,12 @@ public sealed class InstanceDownloadSession
     /// </summary>
     public TableSchema Schema { get; private set; } = new();
 
+    /// <summary>
+    /// datetime / timestamp 列是否按本地时区返回（默认 true，与 PyODPS <c>local_timezone=True</c> 一致）。
+    /// 设为 false 时返回 UTC。timestamp_ntz 无时区语义，始终 UTC，不受此项影响。
+    /// </summary>
+    public bool UseLocalTimeZone { get; set; } = true;
+
     public string? QuotaName { get; private set; }
 
     /// <summary>
@@ -178,10 +184,29 @@ public sealed class InstanceDownloadSession
 
         var decoders = new ITypeDecoder[Schema.Columns.Count];
         for (var i = 0; i < Schema.Columns.Count; i++)
-            decoders[i] = TypeDecoderFactory.GetDecoder(Schema.Columns[i].Type);
+            decoders[i] = TypeDecoderFactory.GetDecoder(Schema.Columns[i].Type, useUtc: !UseLocalTimeZone);
 
         // TunnelRecordReader 接管 streamResponse.Stream 的读取；streamResponse 本身由调用方 dispose
         return new TunnelRecordReader(streamResponse.Stream, decoders, streamResponse);
+    }
+
+    /// <summary>
+    /// 以分片方式流式读取全部记录：每片一次 HTTP 请求（按 <paramref name="sliceSize"/> 分批 reopen），
+    /// 内存占用受切片大小约束。对应 PyODPS <c>BufferedRecordReader</c>。
+    /// <para>每片内部复用 <see cref="OpenRecordReaderAsync"/> + <see cref="TunnelRecordReader"/> 解码；
+    /// datetime/timestamp 按 <see cref="UseLocalTimeZone"/> 解释。</para>
+    /// </summary>
+    /// <param name="sliceSize">每片行数（默认 10000）。</param>
+    public IAsyncEnumerable<object?[]> ReadRowsAsync(int sliceSize = 10000, CancellationToken cancellationToken = default)
+        => BufferedRecordReader.ReadAllAsync(OpenSliceAsync, RecordCount, sliceSize, cancellationToken);
+
+    private async Task<IEnumerable<object?[]>> OpenSliceAsync(long start, int count, CancellationToken cancellationToken)
+    {
+        using var reader = await OpenRecordReaderAsync(start, count, columns: null, cancellationToken).ConfigureAwait(false);
+        var rows = new List<object?[]>(count);
+        while (reader.Read() is { } row)
+            rows.Add(row);
+        return rows;
     }
 
     /// <summary>

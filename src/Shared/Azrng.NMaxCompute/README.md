@@ -44,7 +44,7 @@ while (await reader.ReadAsync())
 
 ## 能力范围与实现进度
 
-> 当前版本：**1.0.1**（S4 交付，Tunnel 已接入运行时调用链，STS / Hints / TunnelEndpoint 已支持）
+> 当前版本：**2.0.0-alpha**（Tunnel 读/写 + Arrow 读已接入运行时调用链；STS / Hints / TunnelEndpoint / 时区开关已支持）
 
 ### 已完成能力
 
@@ -72,6 +72,10 @@ while (await reader.ReadAsync())
 | **连接字符串 Hints 键** | S3 | `Hints=a=1,b=2`（逗号分隔 kv），`GetHintsDictionary()` 解析 |
 | **STS 临时凭证（`StsAccount`）** | S4 | `config.SecurityToken` 非空时自动用 StsAccount，签名后注入 `authorization-sts-token` 头 |
 | **自定义 `TunnelEndpoint`** | S4 | `config.TunnelEndpoint` 非空时，Tunnel 请求走独立端点 |
+| **时区开关（`UseLocalTimeZone`）** | T042 | datetime/timestamp 默认本地时区、可设 UTC（对齐 PyODPS `local_timezone`）；连接串 / 命令 Hints 合并 / `MaxComputeConnectionStringBuilder` 均透传；`timestamp_ntz` 始终 UTC |
+| **多批次分页读** | T043 | `InstanceDownloadSession.ReadRowsAsync` / `BufferedRecordReader`：按 `sliceSize` 分片 reopen，`IAsyncEnumerable` 流式，内存受切片约束 |
+| **TableTunnel 表级下载** | T044 | `TableDownloadSession` + `TableTunnel.CreateDownloadSessionAsync`：表/分区数据读取，复用 `TunnelRecordReader` / 分片 / 时区开关 |
+| **流式 / 分块写** | T045 | `TableUploadSession.WriteRowsChunkedAsync`：按 `batchSize` 自动分块逐块上传（`BufferedRecordWriter.Batch`） |
 
 ### 未开始（仅剩需真实集群的部分）
 
@@ -123,6 +127,7 @@ S0-S5 的代码已全部通过 fixture 单元测试（**186 项**），但 **Tun
 | `Schema` | ❌ | Schema 名（2.0 模式） |
 | `MaxRows` | ❌ | 最大拉取行数，默认 10000 |
 | `UseV4Signature` | ❌ | 默认 `true` |
+| `UseLocalTimeZone` | ❌ | datetime / timestamp 按本地时区返回（默认 `true`，对齐 PyODPS `local_timezone`）；设 `false` 返回 UTC |
 | `Hints` | ❌ | SQL hints，如 `odps.sql.mapper.split.size=256` |
 
 ## 连接字符串格式
@@ -134,7 +139,7 @@ Region=cn-hangzhou;Schema=...;
 Hints=odps.sql.mapper.split.size=256,odps.sql.mapper.cpu=100
 ```
 
-兼容旧键名：`Url` 等价于 `Endpoint`，`SecretKey` 等价于 `SecretAccessKey`。
+兼容旧键名：`Url` 等价于 `Endpoint`，`SecretKey` 等价于 `SecretAccessKey`。`UseLocalTimeZone=false` 可让 datetime/timestamp 返回 UTC。
 
 ## 与 Dapper 配合
 
