@@ -13,6 +13,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T042 | datetime/timestamp 时区开关（UseLocalTimeZone，对齐 PyODPS local_timezone）— P0 | DONE | 2026-06-21 |
 | T040 | TunnelRecordReader 补 count 校验（zigzag）+ 回归单测，防止 writer count 编码回归 | DONE | 2026-06-21 |
 | T039 | 深查并修复 Arrow 集群兼容：schema 前置用 schema+空batch 触发（ArrowStreamWriter 不支持 schema-only） | DONE | 2026-06-21 |
 | T038 | Tunnel 写链路集群端到端验证 + count zigzag bug 修复 + TableUploadSession schema(2.0) 支持 | DONE | 2026-06-21 |

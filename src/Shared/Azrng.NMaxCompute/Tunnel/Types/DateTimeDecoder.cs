@@ -8,34 +8,44 @@ namespace Azrng.NMaxCompute.Tunnel.Types;
 /// 由 <c>utils.MillisecondsConverter.from_milliseconds</c> 转换。</para>
 /// <para>
 /// 转换语义：以 UTC epoch 1970-01-01 为基准的毫秒数。
-/// 默认按本地时区解释（与 PyODPS <c>local_timezone=True</c> 默认行为一致）。
+/// 默认按本地时区解释（与 PyODPS <c>local_timezone=True</c> 默认行为一致）；
+/// <c>useUtc=true</c> 时返回 UTC（对应 <c>local_timezone=False</c>），由
+/// <see cref="LocalInstance"/> / <see cref="UtcInstance"/> 选择。
 /// </para>
 /// </summary>
 public sealed class DateTimeDecoder : ITypeDecoder
 {
-    public static readonly DateTimeDecoder Instance = new();
+    public static readonly DateTimeDecoder LocalInstance = new(useUtc: false);
+    public static readonly DateTimeDecoder UtcInstance = new(useUtc: true);
+    /// <summary>本地时区实例（= <see cref="LocalInstance"/>），保留以兼容旧引用。</summary>
+    public static readonly DateTimeDecoder Instance = LocalInstance;
 
     /// <summary>
     /// Unix epoch UTC。
     /// </summary>
     public static readonly DateTime EpochUtc = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    private readonly bool _useUtc;
+    private DateTimeDecoder(bool useUtc) => _useUtc = useUtc;
+
     public object Read(ProtobufWireReader reader, Checksum checksum)
     {
         var ms = reader.ReadSInt64();
         checksum.UpdateLong(ms);
-        return FromMilliseconds(ms);
+        return FromMilliseconds(ms, _useUtc);
     }
 
     /// <summary>
-    /// 毫秒时间戳转 DateTime（本地时区）。
+    /// 毫秒时间戳转 DateTime（本地时区，兼容旧调用）。
     /// </summary>
-    public static DateTime FromMilliseconds(long ms)
+    public static DateTime FromMilliseconds(long ms) => FromMilliseconds(ms, useUtc: false);
+
+    private static DateTime FromMilliseconds(long ms, bool useUtc)
     {
         // PyODPS 默认 local_timezone=True：fromtimestamp 返回本地时区时间。
-        // .NET DateTimeOffset.FromUnixTimeMilliseconds 返回 UTC，
-        // 再 ToLocalTime 转本地。
-        return EpochUtc.AddMilliseconds(ms).ToLocalTime();
+        // useUtc=true 时保留 UTC（对应 local_timezone=False）。
+        var utc = EpochUtc.AddMilliseconds(ms);
+        return useUtc ? utc : utc.ToLocalTime();
     }
 }
 

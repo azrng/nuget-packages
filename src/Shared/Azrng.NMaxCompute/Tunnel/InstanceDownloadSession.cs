@@ -66,6 +66,12 @@ public sealed class InstanceDownloadSession
     /// </summary>
     public TableSchema Schema { get; private set; } = new();
 
+    /// <summary>
+    /// datetime / timestamp 列是否按本地时区返回（默认 true，与 PyODPS <c>local_timezone=True</c> 一致）。
+    /// 设为 false 时返回 UTC。timestamp_ntz 无时区语义，始终 UTC，不受此项影响。
+    /// </summary>
+    public bool UseLocalTimeZone { get; set; } = true;
+
     public string? QuotaName { get; private set; }
 
     /// <summary>
@@ -178,7 +184,7 @@ public sealed class InstanceDownloadSession
 
         var decoders = new ITypeDecoder[Schema.Columns.Count];
         for (var i = 0; i < Schema.Columns.Count; i++)
-            decoders[i] = TypeDecoderFactory.GetDecoder(Schema.Columns[i].Type);
+            decoders[i] = TypeDecoderFactory.GetDecoder(Schema.Columns[i].Type, useUtc: !UseLocalTimeZone);
 
         // TunnelRecordReader 接管 streamResponse.Stream 的读取；streamResponse 本身由调用方 dispose
         return new TunnelRecordReader(streamResponse.Stream, decoders, streamResponse);

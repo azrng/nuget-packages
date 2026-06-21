@@ -123,6 +123,7 @@ S0-S5 的代码已全部通过 fixture 单元测试（**186 项**），但 **Tun
 | `Schema` | ❌ | Schema 名（2.0 模式） |
 | `MaxRows` | ❌ | 最大拉取行数，默认 10000 |
 | `UseV4Signature` | ❌ | 默认 `true` |
+| `UseLocalTimeZone` | ❌ | datetime / timestamp 按本地时区返回（默认 `true`，对齐 PyODPS `local_timezone`）；设 `false` 返回 UTC |
 | `Hints` | ❌ | SQL hints，如 `odps.sql.mapper.split.size=256` |
 
 ## 连接字符串格式
@@ -134,7 +135,7 @@ Region=cn-hangzhou;Schema=...;
 Hints=odps.sql.mapper.split.size=256,odps.sql.mapper.cpu=100
 ```
 
-兼容旧键名：`Url` 等价于 `Endpoint`，`SecretKey` 等价于 `SecretAccessKey`。
+兼容旧键名：`Url` 等价于 `Endpoint`，`SecretKey` 等价于 `SecretAccessKey`。`UseLocalTimeZone=false` 可让 datetime/timestamp 返回 UTC。
 
 ## 与 Dapper 配合
 
