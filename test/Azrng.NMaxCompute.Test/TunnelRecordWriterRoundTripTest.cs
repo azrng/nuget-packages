@@ -133,6 +133,17 @@ public class TunnelRecordWriterRoundTripTest
     }
 
     [Fact]
+    public void DateTime_UtcKind_RoundTrip()
+    {
+        // Kind=Utc：旧实现 new DateTimeOffset(dt, GetUtcOffset(dt)) 对 Utc + 非 0 offset 会抛 ArgumentException；
+        // 现按 UTC 编码，时刻往返保持（decoder 默认返回 Kind=Local，比较 UTC 时刻）。
+        var schema = Schema(("d", "datetime"));
+        var dt = new DateTime(2026, 6, 21, 4, 34, 56, DateTimeKind.Utc);
+        var got = RoundTrip(schema, new[] { new object?[] { dt } });
+        Assert.Equal(dt, ((DateTime)got[0]![0]!).ToUniversalTime());
+    }
+
+    [Fact]
     public void Date_RoundTrip()
     {
         var schema = Schema(("d", "date"));

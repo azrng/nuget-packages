@@ -108,7 +108,9 @@ public sealed class DateTimeEncoder : ITypeEncoder
     public void Write(ProtobufWireWriter writer, Checksum checksum, object? value)
     {
         var dt = (DateTime)value!;
-        var ms = new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt)).ToUnixTimeMilliseconds();
+        // new DateTimeOffset(dt) 按 Kind 自动选 offset（Utc→0，Local/Unspecified→本地）。
+        // 原写法 new DateTimeOffset(dt, GetUtcOffset(dt)) 对 Kind=Utc 会抛 ArgumentException（Utc 要求 offset=0）。
+        var ms = new DateTimeOffset(dt).ToUnixTimeMilliseconds();
         checksum.UpdateLong(ms);
         writer.WriteSInt64(ms);
     }
