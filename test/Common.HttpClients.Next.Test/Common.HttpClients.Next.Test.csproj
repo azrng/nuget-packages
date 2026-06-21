@@ -22,6 +22,17 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Xunit.DependencyInjection" Version="9.4.0" />
+        <PackageReference Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
+        <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+        <Using Include="FluentAssertions" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\Shared\Common.HttpClients.Next\Common.HttpClients.Next.csproj" />
     </ItemGroup>
 

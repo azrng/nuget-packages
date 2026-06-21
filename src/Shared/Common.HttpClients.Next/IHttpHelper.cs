@@ -20,7 +20,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含流的HttpResult</returns>
-        Task<IHttpResult<Stream>> GetStreamAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<Stream>> GetStreamAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                                 CancellationToken cancellation = default);
 
         /// <summary>
         /// GET请求返回字符串
@@ -30,7 +31,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含字符串的HttpResult</returns>
-        Task<IHttpResult<string>> GetAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<string>> GetAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                           CancellationToken cancellation = default);
 
         /// <summary>
         /// GET请求返回自定义内容
@@ -41,7 +43,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> GetAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> GetAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                         CancellationToken cancellation = default);
 
         /// <summary>
         /// Post请求返回字符串
@@ -52,7 +55,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含字符串的HttpResult</returns>
-        Task<IHttpResult<string>> PostAsync(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<string>> PostAsync(string url, object data, object? queryParameters = null,
+                                            IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// POST请求返回自定义内容
@@ -64,7 +68,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> PostAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PostAsync<T>(string url, object data, object? queryParameters = null,
+                                          IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// post传递form-data文本参数
@@ -76,7 +81,9 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含字符串的HttpResult</returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<IHttpResult<string>> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<string>> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                    object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                                    CancellationToken cancellation = default);
 
         /// <summary>
         /// post传递form-data文本参数
@@ -88,7 +95,9 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                  object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                                  CancellationToken cancellation = default);
 
         /// <summary>
         /// post传递form-data文件(特定场景，参数只有一个文件)
@@ -103,7 +112,9 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName,
+                                                  object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                                  CancellationToken cancellation = default);
 
         /// <summary>
         /// post传递form-data参数(支持上传文件)
@@ -116,7 +127,8 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
         /// <remarks>postman=>body=>form-data</remarks>
-        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, object? queryParameters = null,
+                                                  IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// post调用soap接口参数
@@ -128,7 +140,8 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
         /// <remarks>postman=>body=>xml</remarks>
-        Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, object? queryParameters = null,
+                                              IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// PUT请求返回自定义内容
@@ -140,7 +153,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> PutAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PutAsync<T>(string url, object data, object? queryParameters = null,
+                                         IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// Delete请求返回字符串
@@ -150,7 +164,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含字符串的HttpResult</returns>
-        Task<IHttpResult<string>> DeleteAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<string>> DeleteAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                              CancellationToken cancellation = default);
 
         /// <summary>
         /// Delete请求返回自定义内容
@@ -161,7 +176,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> DeleteAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> DeleteAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                            CancellationToken cancellation = default);
 
         /// <summary>
         /// Patch请求返回自定义内容
@@ -173,7 +189,8 @@ namespace Common.HttpClients
         /// <param name="headers">请求头</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        Task<IHttpResult<T>> PatchAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+        Task<IHttpResult<T>> PatchAsync<T>(string url, object data, object? queryParameters = null,
+                                           IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
 
         /// <summary>
         /// send调用各种接口
@@ -186,7 +203,8 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含字符串的HttpResult</returns>
         Task<IHttpResult<string>> SendAsync(HttpRequestEnum requestEnum, string url, HttpContent httpContent,
-                                            object? queryParameters = null, MediaTypeHeaderValue? mediaTypeHeader = null, CancellationToken cancellation = default);
+                                            object? queryParameters = null, MediaTypeHeaderValue? mediaTypeHeader = null,
+                                            CancellationToken cancellation = default);
 
         /// <summary>
         /// send（底层逃生舱口，返回原始HttpResponseMessage）
@@ -206,6 +224,7 @@ namespace Common.HttpClients
         /// <param name="cancellation"></param>
         /// <returns>包含下载信息的HttpResult</returns>
         Task<IHttpResult<DownloadResult>> DownloadFileAsync(string url, string filePath, object? queryParameters = null,
-            IDictionary<string, string>? headers = null, CancellationToken cancellation = default);
+                                                            IDictionary<string, string>? headers = null,
+                                                            CancellationToken cancellation = default);
     }
 }

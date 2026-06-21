@@ -30,7 +30,9 @@ namespace Common.HttpClients
             _httpConfig = httpConfig.Value;
         }
 
-        public async Task<IHttpResult<Stream>> GetStreamAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<Stream>> GetStreamAsync(string url, object? queryParameters = null,
+                                                              IDictionary<string, string>? headers = null,
+                                                              CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, headers);
@@ -65,7 +67,9 @@ namespace Common.HttpClients
             }
         }
 
-        public async Task<IHttpResult<string>> GetAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<string>> GetAsync(string url, object? queryParameters = null,
+                                                        IDictionary<string, string>? headers = null,
+                                                        CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, headers);
@@ -73,7 +77,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> GetAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> GetAsync<T>(string url, object? queryParameters = null,
+                                                      IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, headers);
@@ -81,7 +86,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<string>> PostAsync(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<string>> PostAsync(string url, object data, object? queryParameters = null,
+                                                         IDictionary<string, string>? headers = null,
+                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
@@ -91,7 +98,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, object? queryParameters = null,
+                                                       IDictionary<string, string>? headers = null,
+                                                       CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
@@ -101,7 +110,10 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<string>> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<string>> PostFormDataAsync(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                                 object? queryParameters = null,
+                                                                 IDictionary<string, string>? headers = null,
+                                                                 CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var httpContent = new FormUrlEncodedContent(data);
@@ -110,7 +122,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                               object? queryParameters = null, IDictionary<string, string>? headers = null,
+                                                               CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var httpContent = new FormUrlEncodedContent(data);
@@ -119,7 +133,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, object? queryParameters = null,
+                                                               IDictionary<string, string>? headers = null,
+                                                               CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, headers, data);
@@ -127,7 +143,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, object? queryParameters = null,
+                                                           IDictionary<string, string>? headers = null,
+                                                           CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var content = new StringContent(xmlData ?? string.Empty, Encoding.UTF8, "application/soap+xml");
@@ -136,8 +154,10 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName, object? queryParameters = null,
-                                                                IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName,
+                                                               object? queryParameters = null,
+                                                               IDictionary<string, string>? headers = null,
+                                                               CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var formData = new MultipartFormDataContent();
@@ -153,7 +173,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, object? queryParameters = null,
+                                                      IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
@@ -163,7 +184,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<string>> DeleteAsync(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<string>> DeleteAsync(string url, object? queryParameters = null,
+                                                           IDictionary<string, string>? headers = null,
+                                                           CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, headers);
@@ -171,7 +194,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> DeleteAsync<T>(string url, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> DeleteAsync<T>(string url, object? queryParameters = null,
+                                                         IDictionary<string, string>? headers = null,
+                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, headers);
@@ -179,7 +204,9 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, object? queryParameters = null, IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, object? queryParameters = null,
+                                                        IDictionary<string, string>? headers = null,
+                                                        CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
@@ -190,7 +217,8 @@ namespace Common.HttpClients
         }
 
         public async Task<IHttpResult<string>> SendAsync(HttpRequestEnum requestEnum, string url, HttpContent httpContent,
-                                                          object? queryParameters = null, MediaTypeHeaderValue? mediaTypeHeader = null, CancellationToken cancellation = default)
+                                                         object? queryParameters = null, MediaTypeHeaderValue? mediaTypeHeader = null,
+                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             var method = requestEnum switch
@@ -227,7 +255,8 @@ namespace Common.HttpClients
         }
 
         public async Task<IHttpResult<DownloadResult>> DownloadFileAsync(string url, string filePath, object? queryParameters = null,
-            IDictionary<string, string>? headers = null, CancellationToken cancellation = default)
+                                                                         IDictionary<string, string>? headers = null,
+                                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, queryParameters);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, headers);
@@ -259,7 +288,8 @@ namespace Common.HttpClients
                 }
 
                 long fileSize;
-                await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+                await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920,
+                                 true))
                 {
                     await using var httpStream = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
                     await httpStream.CopyToAsync(fileStream, cancellation).ConfigureAwait(false);
@@ -268,11 +298,8 @@ namespace Common.HttpClients
 
                 response.Dispose();
 
-                return HttpResult<DownloadResult>.Success(new DownloadResult
-                {
-                    FilePath = filePath,
-                    FileSize = fileSize
-                }, statusCode, null);
+                return HttpResult<DownloadResult>.Success(new DownloadResult { FilePath = filePath, FileSize = fileSize }, statusCode,
+                    null);
             }
             catch
             {

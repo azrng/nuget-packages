@@ -12,13 +12,11 @@ namespace Common.HttpClients
     /// </summary>
     internal sealed class HttpHelperFactory : IHttpHelperFactory
     {
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<string, IHttpHelper> _clients = new();
 
-        public HttpHelperFactory(IHttpClientFactory httpClientFactory, IServiceProvider serviceProvider)
+        public HttpHelperFactory(IServiceProvider serviceProvider)
         {
-            _httpClientFactory = httpClientFactory;
             _serviceProvider = serviceProvider;
         }
 
