@@ -74,7 +74,8 @@
 - **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
 ### P2 — 其他格式
-- **Arrow 写 / timestamp struct 转换**：Arrow 读已完成（独立包 `Azrng.NMaxCompute.Arrow`，分帧解码 + Apache.Arrow IPC）。未迁移：Arrow 写、PyODPS 的 timestamp-as-struct 与 legacy-decimal-byces 列转换（`_convert_struct_timestamps`）、集群端到端 Arrow 读集成测试。
+- **Arrow 集群 batch 布局兼容（待深查）**：Arrow 读基础设施已完成（独立包 `Azrng.NMaxCompute.Arrow`：分帧解码 + ODPS→Arrow schema 转换 + schema 前置 + Apache.Arrow IPC，合成往返单测通过）。但**真实集群 RecordBatch 的 buffer 布局**（nullability/IPC 版本）与客户端重建 schema 存在二进制差异，`BuildArrays` 处 NRE；集群集成测试暂 Skip，需 dump 服务端原始 IPC 字节对照规范深查。
+- **Arrow 写 / timestamp-as-struct / legacy-decimal-bytes 列转换**（`_convert_struct_timestamps`）。
 
 ### P3 — 管理 / 元数据 API（PyODPS 庞大体量，按需迁移）
 - 表与分区：`models/tables.py` / `partitions.py`（CRUD、列表、分区规格、PartitionSpecCondition）。
