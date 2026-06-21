@@ -2,6 +2,8 @@
 
 纯 C# 实现的 DuckDB Quack 协议 ADO.NET 提供程序，无需 native DLL 依赖。
 
+> 当前版本：**1.0.0-beta2**。本版本重点修复大结果集 Fetch 续读、DATE 解码和 benchmark 回归场景。
+
 ## 项目背景
 
 本项目基于 [DuckDB Quack 协议](https://github.com/duckdb/duckdb-quack) 迁移实现，将原本依赖 DuckDB native engine + Quack extension 的方式，转换为纯 C# 实现。
@@ -201,6 +203,21 @@ dotnet test tests\Azrng.DuckDB.Quack.Tests\Azrng.DuckDB.Quack.Tests.csproj
 - **DuckDB 版本**: `1.5.3`
 - **Quack 版本**: `v1.5-variegata`
 - **协议文档**: https://duckdb.org/docs/current/quack/overview
+
+## 版本历史
+
+### 1.0.0-beta2
+
+- 修复大结果集 Fetch 续读时 `result_uuid` 非规范 LEB128 重编码导致的 `Result has been closed` 问题。
+- `FetchToken` 改为优先原样回放服务端 UUID wire bytes，并兼容旧 `upper:lower` token。
+- 修复 `DATE` 解码偏移问题，补充 `DateOnly` 往返验证。
+- 补充 100000 行大结果集、无 Catalog benchmark SQL、signed LEB128 等回归测试。
+- 保持 `net8.0;net10.0` 多目标框架与纯托管 ADO.NET 客户端能力。
+
+### 1.0.0-beta1
+
+- 初始预览版本，提供基于 DuckDB Quack 协议的纯 C# ADO.NET Provider。
+- 支持连接、查询、参数化查询、Dapper 集成、连接池、事务与批量操作等基础能力。
 
 ## 许可证
 
