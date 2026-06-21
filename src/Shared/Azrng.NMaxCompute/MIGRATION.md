@@ -32,7 +32,7 @@
 | 类型解码（标量全部 + array/map/struct/vector/interval + 嵌套） | ✅ 100% | 对齐 PyODPS `_read_field` 全分支 |
 | ADO.NET Provider（Connection/Command/DataReader/参数/连接串/Dapper） | ✅ 100% | C# 独有，PyODPS 无对应 |
 | Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder；**真实集群端到端已验证**（user_info 上传+读回），含 schema(2.0) 支持 |
-| Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + Apache.Arrow IPC，分帧往返单测验证 |
+| Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + schema 前置 + Apache.Arrow IPC，**集群端到端已验证**（?arrow 读 RecordBatch） |
 | 多批次分页读（BufferedRecordReader/reopen） | ⚠️ 部分 | 单流单请求，无自动跨请求分页 |
 | 表/分区/资源/函数/安全/XFlow/Quota/Session/df/ml 管理 API | ❌ 0% | 超出"查询执行+读取"范围 |
 
@@ -74,8 +74,7 @@
 - **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
 ### P2 — 其他格式
-- **Arrow 集群 batch 布局兼容（待深查）**：Arrow 读基础设施已完成（独立包 `Azrng.NMaxCompute.Arrow`：分帧解码 + ODPS→Arrow schema 转换 + schema 前置 + Apache.Arrow IPC，合成往返单测通过）。但**真实集群 RecordBatch 的 buffer 布局**（nullability/IPC 版本）与客户端重建 schema 存在二进制差异，`BuildArrays` 处 NRE；集群集成测试暂 Skip，需 dump 服务端原始 IPC 字节对照规范深查。
-- **Arrow 写 / timestamp-as-struct / legacy-decimal-bytes 列转换**（`_convert_struct_timestamps`）。
+- **Arrow 写 / timestamp-as-struct / legacy-decimal-bytes 列转换**：Arrow 读已完成且集群端到端验证通过（`?arrow` 读 RecordBatch）。未迁移：Arrow 写、PyODPS 的 timestamp-as-struct 与 legacy-decimal-bytes 列转换（`_convert_struct_timestamps`）——当前 schema 前置按基础类型映射，timestamp/decimal 列在 Arrow 端可能需额外转换。
 
 ### P3 — 管理 / 元数据 API（PyODPS 庞大体量，按需迁移）
 - 表与分区：`models/tables.py` / `partitions.py`（CRUD、列表、分区规格、PartitionSpecCondition）。

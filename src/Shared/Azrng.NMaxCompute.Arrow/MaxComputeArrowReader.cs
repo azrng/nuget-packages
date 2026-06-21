@@ -22,11 +22,14 @@ public sealed class MaxComputeArrowReader : IDisposable
         _response = response ?? throw new ArgumentNullException(nameof(response));
         _framed = new MaxComputeArrowFramedStream(response.Stream);
 
-        // MaxCompute arrow 流首条即 RecordBatch，ArrowStreamReader 要求先 schema → 前置 schema IPC 消息
+        // MaxCompute arrow 流首条即 RecordBatch（无 schema），ArrowStreamReader 要求先 schema。
+        // ArrowStreamWriter 只在 WriteRecordBatch 时才写 schema，故写 schema + 空 batch 作为前置，
+        // 构造时丢弃该空 batch，后续 ReadNext 即服务端的 RecordBatch。
         var arrowSchema = OdpsArrowSchemaConverter.ToArrowSchema(odpsSchema);
         var prefix = SerializeSchemaMessage(arrowSchema);
         var prefixed = new PrefixStream(prefix, _framed);
         _ipc = new ArrowStreamReader((Stream)prefixed);
+        _ipc.ReadNextRecordBatch();   // 丢弃前置的空 batch（同时触发 schema 解析，使 Schema 可用）
     }
 
     /// <summary>结果集 schema（Apache.Arrow 表示）。</summary>
@@ -52,11 +55,14 @@ public sealed class MaxComputeArrowReader : IDisposable
         _response.Dispose(); // dispose httpResponse + stream
     }
 
-    /// <summary>用 Apache.Arrow writer 把 schema 序列化为 IPC schema 消息字节（writer 构造即写 schema）。</summary>
+    /// <summary>用 Apache.Arrow writer 写出 schema + 空 batch，作为前置字节（writer 仅在 WriteRecordBatch 时写 schema）。</summary>
     private static byte[] SerializeSchemaMessage(Schema schema)
     {
         var ms = new MemoryStream();
-        using (var writer = new ArrowStreamWriter(ms, schema, leaveOpen: true)) { }
+        using (var writer = new ArrowStreamWriter(ms, schema, leaveOpen: true))
+        {
+            writer.WriteRecordBatch(OdpsArrowSchemaConverter.BuildEmptyRecordBatch(schema));
+        }
         return ms.ToArray();
     }
 }

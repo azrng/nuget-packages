@@ -27,11 +27,9 @@ public class ArrowClusterIntegrationTest
     public ArrowClusterIntegrationTest(ITestOutputHelper o) => _out = o;
 
     /// <summary>
-    /// 真实集群 Arrow 端到端。当前 SKIP：分帧/schema 前置/合成往返均已通过，但真实服务端 RecordBatch
-    /// 的 buffer 布局（nullability/IPC 版本）与客户端重建 schema 存在二进制兼容差异，BuildArrays 处 NRE，
-    /// 需 dump 服务端原始 IPC 字节对照规范深查。基础设施（分帧+schema 转换+前置）已单元验证。
+    /// 真实集群 Arrow 端到端：提交查询 → ?arrow 下载 → 分帧解码 → schema 前置 → Apache.Arrow RecordBatch。
     /// </summary>
-    [Fact(Skip = "Arrow 真实集群 batch 布局兼容待深查（分帧/合成往返已验证）；见 MIGRATION.md P2")]
+    [Fact]
     public async Task Arrow_ReadQuery_ReturnsRecordBatch()
     {
         var endpoint = Environment.GetEnvironmentVariable("MAXCOMPUTE_TEST_ENDPOINT");

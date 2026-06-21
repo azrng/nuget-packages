@@ -1,4 +1,5 @@
 using Apache.Arrow;
+using Apache.Arrow.Arrays;
 using Apache.Arrow.Types;
 using Azrng.NMaxCompute.Tunnel;
 
@@ -42,6 +43,31 @@ internal static class OdpsArrowSchemaConverter
             // 复合 / decimal / vector / interval：Arrow 端服务端用 struct/list 表示，
             // 此处保守回落到 string；如需精确映射按 PyODPS odps_type_to_arrow_type 扩展。
             _ => StringType.Default
+        };
+    }
+
+    /// <summary>
+    /// 构造一个 0 行的空 RecordBatch，列与 schema 一致。
+    /// 仅用于触发 ArrowStreamWriter 写出 schema IPC 消息（writer 不提供 schema-only 写法）。
+    /// </summary>
+    public static RecordBatch BuildEmptyRecordBatch(Schema schema)
+    {
+        var arrays = schema.FieldsList.Select(f => BuildEmptyArray(f.DataType)).Cast<IArrowArray>().ToArray();
+        return new RecordBatch(schema, arrays, 0);
+    }
+
+    private static IArrowArray BuildEmptyArray(IArrowType type)
+    {
+        return type switch
+        {
+            Int64Type => new Int64Array.Builder().Build(),
+            Int32Type => new Int32Array.Builder().Build(),
+            Int16Type => new Int16Array.Builder().Build(),
+            Int8Type => new Int8Array.Builder().Build(),
+            BooleanType => new BooleanArray.Builder().Build(),
+            DoubleType => new DoubleArray.Builder().Build(),
+            StringType => new StringArray.Builder().Build(),
+            _ => new StringArray.Builder().Build()
         };
     }
 }
