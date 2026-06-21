@@ -888,7 +888,7 @@ internal sealed class QuackProtocolBridge : IDisposable
         var count = Math.Min(rowCount, length / 4);
         var data = new DateOnly[rowCount];
         for (int i = 0; i < count; i++)
-            data[i] = DateOnly.FromDayNumber(BinaryPrimitives.ReadInt32LittleEndian(bytes.Span[(i * 4)..]) + 719163);
+            data[i] = DateOnly.FromDayNumber(BinaryPrimitives.ReadInt32LittleEndian(bytes.Span[(i * 4)..]) + 719162);
         return data;
     }
 

@@ -70,6 +70,20 @@ public sealed class ParameterTypeRoundtripTests
     }
 
     [Fact]
+    public async Task DateOnly_Parameter_Roundtrips()
+    {
+        var expected = new DateOnly(2026, 6, 21);
+        var result = await ScalarAsync("SELECT CAST(@d AS DATE)", Param("@d", expected));
+        var actual = result switch
+        {
+            DateOnly d => d,
+            DateTime dt => DateOnly.FromDateTime(dt),
+            _ => throw new Xunit.Sdk.XunitException($"Unexpected DateOnly representation: {result?.GetType().Name}")
+        };
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public async Task DateTimeOffset_Parameter_Roundtrips()
     {
         var expected = new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.FromHours(8));
