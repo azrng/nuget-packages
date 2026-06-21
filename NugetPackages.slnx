@@ -86,8 +86,7 @@
     <Project Path="src/Shared/DevLogDashboard/DevLogDashboard.csproj" />
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
     <Project Path="src\Shared\Azrng.Office.NPOI\Azrng.Office.NPOI.csproj" />
-    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
-    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Azrng.Security\Azrng.Security.csproj" />
     <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
     <Project Path="src\Shared\Common\Common.csproj" />
   </Folder>
@@ -161,8 +160,7 @@
     <Project Path="test\Azrng.Core.Test\Azrng.Core.Test.csproj" />
     <Project Path="test\Azrng.Office.Npoi.Test\Azrng.Office.Npoi.Test.csproj" />
     <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
-    <Project Path="test\Common.Security.Test\Common.Security.Test.csproj" />
-    <Project Path="test\Common.SecurityCrypto.Test\Common.SecurityCrypto.Test.csproj" />
+    <Project Path="test\Azrng.Security.Test\Azrng.Security.Test.csproj" />
     <Project Path="test\Common.Windows.Core.Test\Common.Windows.Core.Test.csproj" />
   </Folder>
   <Folder Name="/Test/Http/">

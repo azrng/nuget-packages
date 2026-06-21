@@ -20,7 +20,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AzrngCommon.Security" Version="1.2.0" />
+        <ProjectReference Include="..\Azrng.Security\Azrng.Security.csproj" />
     </ItemGroup>
 
     <ItemGroup>

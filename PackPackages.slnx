@@ -67,8 +67,7 @@
     <Project Path="src/Shared/DevLogDashboard/DevLogDashboard.csproj" />
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
     <Project Path="src\Shared\Azrng.Office.NPOI\Azrng.Office.NPOI.csproj" />
-    <Project Path="src\Shared\Common.SecurityCrypto\Common.SecurityCrypto.csproj" />
-    <Project Path="src\Shared\Common.Security\Common.Security.csproj" />
+    <Project Path="src\Shared\Azrng.Security\Azrng.Security.csproj" />
     <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
     <Project Path="src\Shared\Common\Common.csproj" />
   </Folder>
