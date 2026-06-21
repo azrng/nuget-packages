@@ -93,6 +93,26 @@ public sealed class TableUploadSession
     }
 
     /// <summary>
+    /// 流式分块上传：把 <paramref name="rows"/> 按 <paramref name="batchSize"/> 自动切成多块，
+    /// 从 <paramref name="startBlockId"/> 起逐块上传（每块一次 PUT）。返回写入的块数。
+    /// <para>对应 PyODPS <c>BufferedRecordWriter</c> 的分块策略；上传完成后调用方仍需 <see cref="CompleteAsync"/> 提交。</para>
+    /// </summary>
+    /// <param name="batchSize">每块行数（>0）。</param>
+    /// <param name="startBlockId">起始 blockId（默认 0，逐块递增）。</param>
+    public async Task<int> WriteRowsChunkedAsync(
+        IEnumerable<object?[]> rows, int batchSize, int startBlockId = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var blockId = startBlockId;
+        foreach (var batch in BufferedRecordWriter.Batch(rows, batchSize))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await WriteRecordsAsync(blockId++, batch, cancellationToken).ConfigureAwait(false);
+        }
+        return blockId - startBlockId;
+    }
+
+    /// <summary>
     /// 完成（提交）上传。服务端校验已写块数与客户端一致后落盘。
     /// </summary>
     public async Task CompleteAsync(CancellationToken cancellationToken = default)
