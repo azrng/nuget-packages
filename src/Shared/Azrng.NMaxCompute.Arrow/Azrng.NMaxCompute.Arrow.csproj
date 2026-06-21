@@ -17,6 +17,7 @@
         <Title>MaxCompute Arrow Reader</Title>
         <PackageTags>maxcompute;odps;alibaba;arrow;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
