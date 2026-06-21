@@ -32,11 +32,11 @@
 | 类型解码（标量全部 + array/map/struct/vector/interval + 嵌套） | ✅ 100% | 对齐 PyODPS `_read_field` 全分支 |
 | ADO.NET Provider（Connection/Command/DataReader/参数/连接串/Dapper） | ✅ 100% | C# 独有，PyODPS 无对应 |
 | Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder，往返单测验证 |
-| Arrow 格式（ArrowReader/IPC/Stream） | ❌ 0% | 仅 record，无 arrow |
+| Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + Apache.Arrow IPC，分帧往返单测验证 |
 | 多批次分页读（BufferedRecordReader/reopen） | ⚠️ 部分 | 单流单请求，无自动跨请求分页 |
 | 表/分区/资源/函数/安全/XFlow/Quota/Session/df/ml 管理 API | ❌ 0% | 超出"查询执行+读取"范围 |
 
-**总体**：核心**读链路 + 写链路 100%**；PyODPS 全功能面（含管理/Arrow/df/ml）按广度约 **40%**。
+**总体**：核心**读（含 Arrow）+ 写链路 100%**；PyODPS 全功能面（含管理/df/ml）按广度约 **45%**。
 
 ---
 
@@ -57,6 +57,7 @@
 | `tunnel/io/writer.py`（`BaseRecordWriter` 记录/块编码） | `Tunnel/TunnelRecordWriter.cs` + `Types/Encoders.cs` + `Wire/ProtobufWireWriter.cs` | ✅ |
 | `tunnel/pb/output_stream.py`（编码原语） | `Tunnel/Wire/ProtobufWireWriter.cs` | ✅ |
 | `tunnel/tabletunnel.py::TableUploadSession` | `Tunnel/TableUploadSession.cs` + `TableTunnel.cs` | ✅ |
+| `tunnel/io/reader.py::ArrowStreamReader`/`TunnelArrowReader`（Arrow 分帧 + IPC） | 独立包 `Azrng.NMaxCompute.Arrow`（MaxComputeArrowFramedStream + MaxComputeArrowReader） | ✅ 读 |
 | —（C# 独有）ADO.NET Provider | `MaxCompute*.cs` | ✅ |
 
 ---
@@ -73,7 +74,7 @@
 - **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
 ### P2 — 其他格式
-- **Arrow 读取**：`tunnel/io/reader.py::TunnelArrowReader` + `ArrowStreamReader`（IPC 流），含 timestamp struct 转换。
+- **Arrow 写 / timestamp struct 转换**：Arrow 读已完成（独立包 `Azrng.NMaxCompute.Arrow`，分帧解码 + Apache.Arrow IPC）。未迁移：Arrow 写、PyODPS 的 timestamp-as-struct 与 legacy-decimal-byces 列转换（`_convert_struct_timestamps`）、集群端到端 Arrow 读集成测试。
 
 ### P3 — 管理 / 元数据 API（PyODPS 庞大体量，按需迁移）
 - 表与分区：`models/tables.py` / `partitions.py`（CRUD、列表、分区规格、PartitionSpecCondition）。

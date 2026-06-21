@@ -12,6 +12,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T033 | 实现 Arrow 格式读取（独立包 Azrng.NMaxCompute.Arrow）：分帧解码 + Apache.Arrow IPC | DONE | 2026-06-21 |
 | T032 | 实现 Tunnel 写链路：ProtobufWireWriter / 全类型 encoder / TunnelRecordWriter / TableUploadSession | DONE | 2026-06-20 |
 | T031 | 新增类库迁移任务文件 MIGRATION.md（来源/hash/进度/未迁移） | DONE | 2026-06-20 |
 | T030 | 集成测试补缺：ADO.NET Provider / timestamp_ntz / json + 删除误导占位 | DONE | 2026-06-20 |

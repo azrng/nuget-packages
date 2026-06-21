@@ -184,6 +184,44 @@ public sealed class InstanceDownloadSession
         return new TunnelRecordReader(streamResponse.Stream, decoders, streamResponse);
     }
 
+    /// <summary>
+    /// 以 Arrow 格式打开原始下载流（GET ?data&amp;downloadid&amp;rowrange&amp;arrow）。
+    /// <para>返回的 <see cref="OdpsStreamResponse"/> 是 MaxCompute Arrow 分帧流（[4B BE chunk_size][data][4B crc32c]...），
+    /// 由 <c>Azrng.NMaxCompute.Arrow</c> 包负责分帧解码与 Apache.Arrow IPC 解析。调用方负责 dispose。</para>
+    /// </summary>
+    public async Task<OdpsStreamResponse> OpenArrowStreamAsync(
+        long start, long count, IEnumerable<string>? columns = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(Id))
+            throw new InvalidOperationException("Session has no DownloadID; create or reload first.");
+
+        var request = new OdpsRequest
+        {
+            Method = "GET",
+            Path = $"/projects/{Uri.EscapeDataString(_project)}/instances/{Uri.EscapeDataString(_instanceId)}"
+        };
+        request.WithQuery("data", string.Empty);
+        request.WithQuery("downloadid", Id);
+        request.WithQuery("rowrange", $"({start},{count})");
+        request.WithQuery("arrow", string.Empty);
+        request.WithHeader("x-odps-tunnel-version", TunnelVersion.ToString());
+        request.WithHeader("Content-Length", "0");
+
+        if (!string.IsNullOrEmpty(_quotaName))
+            request.WithQuery("quotaName", _quotaName);
+        if (_tags is { Count: > 0 })
+            request.WithHeader("odps-tunnel-tags", string.Join(",", _tags));
+
+        if (columns != null)
+        {
+            var cols = columns.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            if (cols.Count > 0)
+                request.WithQuery("columns", string.Join(",", cols));
+        }
+
+        return await _client.SendStreamingAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
     private OdpsRequest BuildSessionRequest(string method, string? quotaName, IEnumerable<string>? tags)
     {
         var request = new OdpsRequest
