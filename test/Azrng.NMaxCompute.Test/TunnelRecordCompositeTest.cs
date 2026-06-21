@@ -112,4 +112,28 @@ public class TunnelRecordCompositeTest
         Assert.Equal("a", tags[0]);
         Assert.Equal("bb", tags[1]);
     }
+
+    /// <summary>
+    /// 回归：count 必须按 zigzag sint 编码。模拟旧 bug（普通 varint count=1，字节 0x01），
+    /// reader 按 zigzag 解出 -1，与本批 1 条记录不符 → 抛错。
+    /// 防止 writer 误把 count 改回普通 varint（集群才会暴露，此单测兜底）。
+    /// </summary>
+    [Fact]
+    public void BatchCount_PlainVarint_RejectedByValidation()
+    {
+        var enc = new Enc();
+        enc.Tag(1, 0).SInt64(42);                       // 1 条 bigint 记录
+        var crc = new Checksum();
+        crc.UpdateInt(1); crc.UpdateLong(42);
+        enc.Tag(TunnelWireConstants.TunnelEndRecord, 0).VarUInt(crc.GetValue());
+
+        enc.Tag(TunnelWireConstants.TunnelMetaCount, 0).VarUInt(1);   // 故意用普通 varint（应为 SInt64）
+        enc.Tag(TunnelWireConstants.TunnelMetaChecksum, 0).VarUInt(0); // crccrc（count 校验先抛，不会到达）
+
+        var decoders = new ITypeDecoder[] { TypeDecoderFactory.GetDecoder("bigint") };
+        var reader = new TunnelRecordReader(enc.ToStream(), decoders);
+
+        Assert.NotNull(reader.Read());                  // 第 1 条记录正常
+        Assert.ThrowsAny<Exception>(() => reader.Read()); // 第 2 次 Read 命中 META_COUNT → count 校验抛错
+    }
 }

@@ -24,6 +24,7 @@ public sealed class TunnelRecordReader : IDisposable
     private readonly Checksum _crc = new();
     private readonly Checksum _crccrc = new();
     private bool _disposed;
+    private int _batchRecordCount;   // 本批已解码的记录数（用于校验流中 count）
 
     /// <summary>
     /// 构造函数。
@@ -82,6 +83,7 @@ public sealed class TunnelRecordReader : IDisposable
 
                 _crc.Reset();
                 _crccrc.UpdateInt((int)actual);
+                _batchRecordCount++;   // 一条记录完整解码
                 return row;
             }
 
@@ -110,8 +112,14 @@ public sealed class TunnelRecordReader : IDisposable
     /// </summary>
     private void ReadBatchTrailer()
     {
-        // count（服务端声明的本批行数；此处仅消费）
-        _ = _wire.ReadSInt64();
+        // count（服务端声明的本批行数，按 zigzag sint 读取）——校验与实际解码记录数一致。
+        // 对齐 PyODPS reader.py::_read_single_record：attempt_row_count != read_sint64() 则抛错。
+        // 此校验让 writer 的 count 编码错误（如误用普通 varint）能在往返单测中被抓到。
+        var declaredCount = _wire.ReadSInt64();
+        if (declaredCount != _batchRecordCount)
+            throw new OdpsException(
+                $"Tunnel record count mismatch: stream declares {declaredCount}, actually decoded {_batchRecordCount}.", 0);
+        _batchRecordCount = 0;   // 重置，为下一批准备
 
         var (idx, wire) = _wire.ReadTag();
 
