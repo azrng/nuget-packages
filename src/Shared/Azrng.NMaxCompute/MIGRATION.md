@@ -66,7 +66,7 @@
 
 ### P0 — 读链路增强（贴近已实现范围）
 - ✅ **时区选项**（已完成）：`MaxComputeConfig.UseLocalTimeZone`（默认 true，对齐 PyODPS `options.local_timezone`）。`DateTimeDecoder` 补 `LocalInstance`/`UtcInstance`；`TypeDecoderFactory`/`TypeStringParser` 透传 `useUtc` 到 datetime/timestamp（含 `array<datetime>` 等嵌套）；`timestamp_ntz` 无时区语义始终 UTC。离线单测覆盖（`TimeZoneOptionTest`）。
-- **多批次分页读**：PyODPS `BufferedRecordReader` 按批 reopen（多 HTTP 请求）+ `call_with_retry` 失败重开。当前 C# 单流单请求；超大结果集若服务端按批返回需补 reopen 逻辑。
+- ✅ **多批次分页读**（实现 + 离线单测完成）：`BufferedRecordReader.ReadAllAsync` 按 `sliceSize` 分片 reopen（每片一次 HTTP 请求 + `TunnelRecordReader`），`IAsyncEnumerable` 流式产出；`InstanceDownloadSession.ReadRowsAsync` 暴露，内存受切片大小约束。对应 PyODPS `BufferedRecordReader`。单请求失败重试由 `OdpsRestClient` 4 次退避承担；集群是否强制分批待真机确认（客户端分片与服务端是否分批无关地工作）。离线单测覆盖切片边界/末片部分/0 行/取消（`BufferedRecordReaderTest`）。
 - **Legacy decimal 字节解码**：PyODPS `convert_legacy_decimal_bytes`（旧服务端定点小数内存布局）。
 
 ### P1 — 表级下载 / 流式写

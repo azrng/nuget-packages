@@ -191,6 +191,25 @@ public sealed class InstanceDownloadSession
     }
 
     /// <summary>
+    /// 以分片方式流式读取全部记录：每片一次 HTTP 请求（按 <paramref name="sliceSize"/> 分批 reopen），
+    /// 内存占用受切片大小约束。对应 PyODPS <c>BufferedRecordReader</c>。
+    /// <para>每片内部复用 <see cref="OpenRecordReaderAsync"/> + <see cref="TunnelRecordReader"/> 解码；
+    /// datetime/timestamp 按 <see cref="UseLocalTimeZone"/> 解释。</para>
+    /// </summary>
+    /// <param name="sliceSize">每片行数（默认 10000）。</param>
+    public IAsyncEnumerable<object?[]> ReadRowsAsync(int sliceSize = 10000, CancellationToken cancellationToken = default)
+        => BufferedRecordReader.ReadAllAsync(OpenSliceAsync, RecordCount, sliceSize, cancellationToken);
+
+    private async Task<IEnumerable<object?[]>> OpenSliceAsync(long start, int count, CancellationToken cancellationToken)
+    {
+        using var reader = await OpenRecordReaderAsync(start, count, columns: null, cancellationToken).ConfigureAwait(false);
+        var rows = new List<object?[]>(count);
+        while (reader.Read() is { } row)
+            rows.Add(row);
+        return rows;
+    }
+
+    /// <summary>
     /// 以 Arrow 格式打开原始下载流（GET ?data&amp;downloadid&amp;rowrange&amp;arrow）。
     /// <para>返回的 <see cref="OdpsStreamResponse"/> 是 MaxCompute Arrow 分帧流（[4B BE chunk_size][data][4B crc32c]...），
     /// 由 <c>Azrng.NMaxCompute.Arrow</c> 包负责分帧解码与 Apache.Arrow IPC 解析。调用方负责 dispose。</para>
