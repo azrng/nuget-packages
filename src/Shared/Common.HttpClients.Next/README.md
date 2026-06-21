@@ -41,6 +41,44 @@ services.AddHttpClientService(options =>
 });
 ```
 
+### 命名客户端与 IHttpHelperFactory（多服务 / 多 BaseAddress）
+
+需要同时对接多个服务端、或为不同服务配置不同弹性策略时，使用命名重载按名注册：
+
+```csharp
+// 按名注册多个客户端（各自独立 BaseAddress / 超时 / 重试等）
+services.AddHttpClientService("user-api", options =>
+{
+    options.BaseAddress = "https://user.example.com/";
+});
+
+services.AddHttpClientService("order-api", options =>
+{
+    options.BaseAddress = "https://order.example.com/";
+    options.Timeout = 10;
+    options.MaxRetryAttempts = 5;
+});
+```
+
+注入 `IHttpHelperFactory`，按名取出对应的 `IHttpHelper`：
+
+```csharp
+public class MyService(IHttpHelperFactory factory)
+{
+    private readonly IHttpHelper _userApi = factory.CreateClient("user-api");
+    private readonly IHttpHelper _orderApi = factory.CreateClient("order-api");
+
+    public async Task RunAsync()
+    {
+        // 相对路径会自动拼接各自 BaseAddress
+        var user = await _userApi.GetAsync<User>("api/users/1");
+        var order = await _orderApi.GetAsync<Order>("api/orders/1");
+    }
+}
+```
+
+> 注：命名重载 `AddHttpClientService(name, configure)` 仅注册命名客户端；若需要默认的 `IHttpHelper`（构造函数直接注入），使用无 name 的 `AddHttpClientService(options)` 或 `AddHttpClientService()` 重载，它们内部注册指向 `"default"` 的 `IHttpHelper`。
+
 ### 2. 使用 HTTP 客户端
 
 ```csharp
@@ -328,6 +366,9 @@ var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| `BaseAddress` | string? | null | 基础地址，请求 URL 为相对路径时自动拼接 |
+| `DefaultHeaders` | IDictionary\<string,string\>? | null | 每个请求自动携带的默认请求头（per-request headers 优先覆盖） |
+| `UserAgent` | string? | null | 自定义 User-Agent |
 | `AuditLog` | bool | true | 是否启用审计日志 |
 | `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 IHttpResult（IsSuccess=false），true 时抛出 HttpRequestException |
 | `EnableLogRedaction` | bool | true | 是否启用日志脱敏 |
@@ -422,6 +463,8 @@ services.AddHttpClientService();
 - 新增 `DownloadFileAsync` 文件下载方法
 - 新增 `HttpHelperExtensions` 扩展方法，提供 Bearer Token 便利重载
 - 新增 `IHttpResult<T>` 接口，包含 `IsSuccess`、`Data`、`ErrorMessage`、`StatusCode`、`RawBody`、`IsFallbackResponse`
+- 新增命名客户端与 `IHttpHelperFactory`：`AddHttpClientService(name, configure)` 注册多个独立客户端，`IHttpHelperFactory.CreateClient(name)` 按名获取，支持不同 BaseAddress / 弹性策略
+- `HttpClientOptions` 新增 `BaseAddress`（相对路径自动拼接）、`UserAgent`、`DefaultHeaders`（默认请求头）
 
 ### 从 2.x 迁移到 3.0
 
