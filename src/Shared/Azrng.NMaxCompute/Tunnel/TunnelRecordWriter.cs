@@ -61,7 +61,7 @@ public sealed class TunnelRecordWriter
         if (!_finished)
         {
             _writer.WriteTag(TunnelWireConstants.TunnelMetaCount, WireType.Varint);
-            _writer.WriteInt32(Count);
+            _writer.WriteSInt64(Count);   // count 按 zigzag sint 写（服务端/PyODPS reader 用 read_sint64 解）
             _writer.WriteTag(TunnelWireConstants.TunnelMetaChecksum, WireType.Varint);
             _writer.WriteVarUInt32(_crccrc.GetValue());
             _finished = true;

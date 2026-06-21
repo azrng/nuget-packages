@@ -16,7 +16,7 @@ public sealed class TableTunnel
 
     /// <summary>创建表（或分区）上传 session。</summary>
     public Task<TableUploadSession> CreateUploadSessionAsync(
-        string project, string table, string? partitionSpec = null,
+        string project, string table, string? partitionSpec = null, string? schema = null,
         IEnumerable<string>? tags = null, CancellationToken cancellationToken = default)
-        => TableUploadSession.CreateAsync(_client, project, table, partitionSpec, tags, cancellationToken);
+        => TableUploadSession.CreateAsync(_client, project, table, partitionSpec, schema, tags, cancellationToken);
 }

@@ -19,14 +19,16 @@ public sealed class TableUploadSession
     private readonly string _project;
     private readonly string _table;
     private readonly string? _partitionSpec;
+    private readonly string? _schema;
     private List<string>? _tags;
 
-    internal TableUploadSession(OdpsRestClient client, string project, string table, string? partitionSpec)
+    internal TableUploadSession(OdpsRestClient client, string project, string table, string? partitionSpec, string? schema = null)
     {
         _client = client;
         _project = project;
         _table = table;
         _partitionSpec = string.IsNullOrWhiteSpace(partitionSpec) ? null : partitionSpec;
+        _schema = string.IsNullOrWhiteSpace(schema) ? null : schema;
     }
 
     /// <summary>UploadID（由服务端分配）。</summary>
@@ -40,10 +42,10 @@ public sealed class TableUploadSession
     /// <summary>创建上传 session。</summary>
     public static async Task<TableUploadSession> CreateAsync(
         OdpsRestClient client, string project, string table,
-        string? partitionSpec = null, IEnumerable<string>? tags = null,
-        CancellationToken cancellationToken = default)
+        string? partitionSpec = null, string? schema = null,
+        IEnumerable<string>? tags = null, CancellationToken cancellationToken = default)
     {
-        var session = new TableUploadSession(client, project, table, partitionSpec);
+        var session = new TableUploadSession(client, project, table, partitionSpec, schema);
         await session.InitAsync(tags, cancellationToken).ConfigureAwait(false);
         return session;
     }
@@ -71,6 +73,7 @@ public sealed class TableUploadSession
         var request = NewBaseRequest("PUT");
         request.WithQuery("uploadid", Id);
         request.WithQuery("blockid", blockId.ToString());
+        request.Headers.Remove("Content-Length");   // PUT 带 body，由内容决定长度，避免与 0 冲突
         request.WithHeader("Content-Type", "application/octet-stream");
         request.Body = block;
 
@@ -110,8 +113,10 @@ public sealed class TableUploadSession
             Method = method,
             Path = $"/projects/{Uri.EscapeDataString(_project)}/tables/{Uri.EscapeDataString(_table)}"
         };
-        request.WithHeader("Content-Length", "0");
+        request.WithHeader("Content-Length", "0");   // bodyless 请求（create/complete）需要
         request.WithHeader("x-odps-tunnel-version", TunnelVersion.ToString());
+        if (_schema is not null)
+            request.WithQuery("curr_schema", _schema);
         if (_partitionSpec is not null)
             request.WithQuery("partition", _partitionSpec);
         if (_tags is { Count: > 0 })

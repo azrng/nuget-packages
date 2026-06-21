@@ -31,7 +31,7 @@
 | Instance Tunnel **读**（session + record reader + wire + CRC32C） | ✅ 100% | 单流单请求 |
 | 类型解码（标量全部 + array/map/struct/vector/interval + 嵌套） | ✅ 100% | 对齐 PyODPS `_read_field` 全分支 |
 | ADO.NET Provider（Connection/Command/DataReader/参数/连接串/Dapper） | ✅ 100% | C# 独有，PyODPS 无对应 |
-| Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder，往返单测验证 |
+| Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder；**真实集群端到端已验证**（user_info 上传+读回），含 schema(2.0) 支持 |
 | Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + Apache.Arrow IPC，分帧往返单测验证 |
 | 多批次分页读（BufferedRecordReader/reopen） | ⚠️ 部分 | 单流单请求，无自动跨请求分页 |
 | 表/分区/资源/函数/安全/XFlow/Quota/Session/df/ml 管理 API | ❌ 0% | 超出"查询执行+读取"范围 |
