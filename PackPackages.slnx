@@ -73,6 +73,7 @@
   </Folder>
   <Folder Name="/Shared/Http/">
     <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
+    <Project Path="src\Shared\Common.HttpClients.Next\Common.HttpClients.Next.csproj" />
     <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
   </Folder>
   <Folder Name="/Shared/SettingConfig/">
