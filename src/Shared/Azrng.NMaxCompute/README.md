@@ -1,6 +1,6 @@
 # Azrng.NMaxCompute
 
-阿里云 MaxCompute（ODPS）C# 直连客户端：内置 V1/V4 签名、REST 客户端、SQL 执行链路，提供 ADO.NET Provider 能力，**无需 Python 中转**。
+阿里云 MaxCompute（ODPS）C# 直连客户端——[PyODPS](https://github.com/aliyun/aliyun-odps-python-sdk)（阿里云官方 ODPS Python SDK）核心**读 / 写链路**的 C#/.NET 端口：内置 V1/V4 签名、REST 客户端、SQL 执行链路与 ADO.NET Provider，**无需 Python 中转**。
 
 ## 安装
 
@@ -96,10 +96,6 @@ dotnet test --filter "Category=Integration"
 S0-S5 的代码已全部通过 fixture 单元测试（**186 项**），但 **Tunnel 端到端联调尚未用真实 MaxCompute 集群验证**。
 建议先跑 `SELECT 1 AS a, 2 AS b` 验证签名/会话/解码链路，再逐步覆盖各类型列、STS、超 1 万行场景。
 
-
-
-
-
 ### 后续接手要点
 
 - S1 wire 解码层已完成并通过 fixture 单测，但**未在 `DirectOdpsQueryExecutor` 中接入**，下一步要：
@@ -191,9 +187,43 @@ while (arrow.ReadNext() is { } batch)                // 逐个 RecordBatch
 3. **多结果集**：`NextResult()` 始终返回 false
 4. **异步**：所有异步方法支持 `CancellationToken`
 
-## 参考
+## 迁移来源与迁移范围
 
-签名与 SQL 执行链路基于 [PyODPS](https://github.com/aliyun/aliyun-odps-python-sdk) 源码移植。
+本库是阿里云 MaxCompute（ODPS）官方 Python SDK **PyODPS** 的 C#/.NET 直连端口——不通过 Python 中转，直接用 HTTP + 签名对接 MaxCompute REST / Tunnel。行为以 PyODPS 基线 commit 为准。
+
+### 来源
+
+| 项 | 值 |
+|----|----|
+| 源项目 | PyODPS（aliyun-odps-python-sdk） |
+| 源仓库 | https://github.com/aliyun/aliyun-odps-python-sdk |
+| 迁移基线 commit | `558462b8d61b43c73016837f32c68b2ddfad2cdf`（`558462b` / 2026-06-12） |
+
+### 已迁移（PyODPS → C#）
+
+| PyODPS 模块 | C# 对应 | 说明 |
+|---|---|---|
+| `accounts/`（签名 V1/V4/STS + canonical） | `Accounts/` + `Signers/` | V4 默认、失败自动降级 V1 |
+| `rest.py`（REST 客户端） | `Rest/OdpsRestClient.cs` | 重试 + 指数退避 + 错误解析 + 流式 |
+| `models/instance.py`（SQL 提交 / 轮询 / 取结果） | `Core/Odps.cs` + `Instance.cs` + `JobXmlBuilder.cs` | XML 协议 + 状态轮询 |
+| Result API（`?result` CSV） | `Core/CsvResultParser.cs` | Tunnel 不可用时的回退路径（10000 行限制） |
+| `tunnel/instancetunnel.py`（下载会话） | `Tunnel/InstanceDownloadSession.cs` + `TableSchema.cs` | session 创建 / 重载 + JSON schema 解析 |
+| `tunnel/io/reader.py`（记录 / 字段解码） | `Tunnel/TunnelRecordReader.cs` + `Types/*Decoder.cs` | 标量全部 + array/map/struct/vector/interval 递归 + CRC32C |
+| `tunnel/pb/`（wire 原语 + CRC32C） | `Tunnel/Wire/*`（`ProtobufWireReader` / `Checksum` / `Crc32C`） | |
+| `types.py`（类型校验 / 复合解析） | `Tunnel/Types/TypeStringParser.cs` + `TypeDecoderFactory.cs` | |
+| `tunnel/io/writer.py` + `tabletunnel.py::TableUploadSession` | `Tunnel/TunnelRecordWriter.cs` + `TableUploadSession.cs` + `Types/Encoders.cs` + `Wire/ProtobufWireWriter.cs` | **写链路**：上传 + 块编码 + 全类型 encoder |
+| `tunnel/io/reader.py::ArrowStreamReader`（Arrow 分帧 + IPC） | 独立包 [`Azrng.NMaxCompute.Arrow`](../Azrng.NMaxCompute.Arrow) | opt-in；含 timestamp-as-struct 转换、decimal128 |
+| —（C# 独有）ADO.NET Provider | `MaxCompute*.cs` | `Connection` / `Command` / `DataReader` + Dapper，PyODPS 无对应 |
+
+### 未迁移（超出读 / 写链路范围）
+
+- **管理 / 元数据 API**：表、分区、资源、函数、UDF、安全（用户 / 角色 / 策略 / 包）、XFlow、Quota、Schema 2.0 管理。
+- **实例增强**：`get_task_summary/detail/quota/workers`、`get/put_task_info`、`stop`。
+- **其他任务类型**：SQLCost / SQLRT / Cupid / MaxFrame / Merge / Copy。
+- **DataFrame（`df/`）/ ML（`models/ml/`）/ MCQA 会话 / Volume Tunnel / 表血缘**。
+- **读链路增强**：多批次分页 reopen（当前单流单请求）、时区开关、legacy-decimal-bytes；Arrow 写。
+
+> 完整的进度表、逐模块映射与未迁移优先级见 [`MIGRATION.md`](./MIGRATION.md)。
 
 ## License
 

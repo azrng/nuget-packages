@@ -9,7 +9,7 @@
         <Description>Azrng.NMaxCompute 的 Arrow 格式读取支持：Tunnel arrow 分帧解码 + Apache.Arrow IPC 解析。</Description>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
-        <Version>1.0.0</Version>
+        <Version>1.0.0-alpha</Version>
         <PackageId>Azrng.NMaxCompute.Arrow</PackageId>
         <Copyright>Azrng</Copyright>
         <NoWarn>1701;1702;1591</NoWarn>

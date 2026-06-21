@@ -32,7 +32,7 @@
 | 类型解码（标量全部 + array/map/struct/vector/interval + 嵌套） | ✅ 100% | 对齐 PyODPS `_read_field` 全分支 |
 | ADO.NET Provider（Connection/Command/DataReader/参数/连接串/Dapper） | ✅ 100% | C# 独有，PyODPS 无对应 |
 | Tunnel **写**（upload/encoder/block） | ✅ 100% | TableUploadSession + TunnelRecordWriter + 全类型 encoder；**真实集群端到端已验证**（user_info 上传+读回），含 schema(2.0) 支持 |
-| Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + schema 前置 + Apache.Arrow IPC，**集群端到端已验证**（?arrow 读 RecordBatch） |
+| Arrow 格式读（ArrowReader/IPC/Stream） | ✅ 读 100% | 独立包 Azrng.NMaxCompute.Arrow；分帧解码 + schema 前置 + Apache.Arrow IPC，**集群端到端已验证**（?arrow 读 RecordBatch）；timestamp(ns) 按 struct(sec,nano) 解码后转回 TimestampArray、decimal 按 Decimal128Type（见 P2） |
 | 多批次分页读（BufferedRecordReader/reopen） | ⚠️ 部分 | 单流单请求，无自动跨请求分页 |
 | 表/分区/资源/函数/安全/XFlow/Quota/Session/df/ml 管理 API | ❌ 0% | 超出"查询执行+读取"范围 |
 
@@ -73,8 +73,11 @@
 - **TableTunnel 下载**：表级下载 session（`create_download_session` + 表数据读取）。当前仅有 InstanceTunnel（查询结果读取），非表级。
 - **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
-### P2 — 其他格式
-- **Arrow 写 / timestamp-as-struct / legacy-decimal-bytes 列转换**：Arrow 读已完成且集群端到端验证通过（`?arrow` 读 RecordBatch）。未迁移：Arrow 写、PyODPS 的 timestamp-as-struct 与 legacy-decimal-bytes 列转换（`_convert_struct_timestamps`）——当前 schema 前置按基础类型映射，timestamp/decimal 列在 Arrow 端可能需额外转换。
+### P2 — Arrow 写 / 列格式转换
+- ✅ **timestamp-as-struct 读侧转换**（T041，已完成）：服务端把纳秒 `timestamp` 按 `struct(sec:int64, nano:int32)` 发送，原 TimestampType 前置会导致 batch `index out of range`。`OdpsArrowSchemaConverter` 的 wire schema 把 timestamp(ns) 映射为 struct 以对齐 batch 布局，`MaxComputeArrowReader` 读出后转回 `TimestampArray`（对齐 PyODPS `_convert_struct_timestamps`），公共 schema 仍为 TimestampType。离线单测通过（schema 映射 + struct↔timestamp 转换 + 真实 Arrow IPC struct batch 端到端）；集群端到端待 `ArrowTsProbe` 探针最终确认。
+- ✅ **decimal 列**（已完成）：Arrow 端按 `Decimal128Type`（16 字节定点）声明与解码。
+- ❌ **Arrow 写**（未迁移）：当前仅支持 Arrow 读；PyODPS 的 Arrow 上传写（`ArrowStreamWriter` 写 block）未迁移。
+- ❌ **legacy-decimal-bytes**（未迁移）：PyODPS `convert_legacy_decimal_bytes`（旧服务端定点小数字节内存布局）未处理。
 
 ### P3 — 管理 / 元数据 API（PyODPS 庞大体量，按需迁移）
 - 表与分区：`models/tables.py` / `partitions.py`（CRUD、列表、分区规格、PartitionSpecCondition）。
