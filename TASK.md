@@ -10,6 +10,7 @@
 | T022 | Azrng.Security 合并与改名 | 将 Common.Security 全层统一改名为 Azrng.Security，吸收 Common.SecurityCrypto 独有能力（RSA JSON、RandomString），丢弃其 Provider/Factory 抽象与手写 SM 实现 | 阶段 1（9 任务全部完成，待用户确认） | REVIEW | 2026-06-20 |
 | T042 | Common.HttpClients.Next 补充 Apifox Echo 集成测试 | 参考 DevLogDashboard.Test 的 Startup（Xunit.DependencyInjection）写法，对 https://echo.apifox.com 补充 IHttpHelper 集成测试，已覆盖 IHttpHelper 全部 17 个成员（GET/POST/PUT/PATCH/DELETE 回显、Query/JSON/Form/文件上传 multipart/Soap、自定义 Header、GetStreamAsync、SendAsync 枚举与原始、DownloadFileAsync 下载 PNG）+ /delay 超时（Fail 降级 503 / FailThrow 抛 TimeoutRejectedException） | 阶段 1（实现完成，全量 164/164 通过，含 22 个集成测试） | REVIEW | 2026-06-21 |
 | T043 | Azrng.DuckDB.Quack benchmark 反馈优化 | DuckDBQuackCompareBenchmarks 切本地项目引用、扩 smoke correctness、补 reader/pool lease/batchSize benchmark；smoke 发现并修复 Quack DATE 解码 +1 天 bug，补 DateOnly roundtrip | 阶段 1（实现+验证完成） | DONE | 2026-06-21 |
+| T046 | Azrng.DuckDB.Quack 大结果集 Fetch 终止修复 | 修复 Quack result_uuid 非规范 LEB128 编码被重编码导致 benchmark 100k Fetch 报 Result has been closed 的问题，并补无 Catalog 大结果集回归验证 | 阶段 1（实现+验证完成） | DONE | 2026-06-21 |
 
 ## 最近完成
 

@@ -26,6 +26,10 @@ internal ref struct QuackBinaryReader
     /// </summary>
     public int Position => _position;
     /// <summary>
+    /// 获取底层待读取数据。
+    /// </summary>
+    public ReadOnlyMemory<byte> Data => _data;
+    /// <summary>
     /// 获取是否还有未读取的数据。
     /// </summary>
     public bool HasMore => _position < _data.Length;
@@ -64,13 +68,29 @@ internal ref struct QuackBinaryReader
     }
 
     /// <summary>
-    /// 读取一个有符号变长整数（ZigZag + VarInt 编码）。
+    /// 读取一个有符号变长整数（signed LEB128 编码）。
     /// </summary>
     /// <returns>解码后的有符号 64 位整数。</returns>
     public long ReadVarInt()
     {
-        ulong raw = ReadVarUInt();
-        return (long)(raw >> 1) ^ -(long)(raw & 1);
+        long result = 0;
+        var shift = 0;
+        byte value;
+
+        do
+        {
+            if (_position >= _data.Length)
+                throw new QuackProtocolException("Unexpected end of data reading varint");
+
+            value = _data.Span[_position++];
+            result |= (long)(value & 0x7F) << shift;
+            shift += 7;
+        } while ((value & 0x80) != 0);
+
+        if (shift < 64 && (value & 0x40) != 0)
+            result |= -1L << shift;
+
+        return result;
     }
 
     /// <summary>

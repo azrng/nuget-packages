@@ -94,17 +94,23 @@ public sealed class PureQuackProtocolBridge : IQuackProtocolBridge
         ObjectDisposedException.ThrowIf(_disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!TryParseFetchToken(fetchToken, out var upper, out var lower))
-            return null;
+        ResultHandle result;
+        if (TryParseWireFetchToken(fetchToken, out var uuidWireBytes))
+        {
+            result = await _bridge.FetchAsync(session.Config, session.SessionId, uuidWireBytes, cancellationToken);
+        }
+        else
+        {
+            if (!TryParseFetchToken(fetchToken, out var upper, out var lower))
+                return null;
 
-        var result = await _bridge.FetchAsync(session.Config, session.SessionId, upper, lower, cancellationToken);
+            result = await _bridge.FetchAsync(session.Config, session.SessionId, upper, lower, cancellationToken);
+        }
 
         var isEmpty = result.Batch is null ? result.Rows.Count == 0 : result.Batch.RowCount == 0;
         if (isEmpty)
             return null;
 
-        // If the FetchResponse didn't include a new UUID (field 5), carry forward the
-        // original fetch token so subsequent fetches reference the same result set.
         if (result.UuidUpper == 0 && result.UuidLower == 0)
         {
             return MapResult(result) with { FetchToken = fetchToken };
@@ -212,7 +218,7 @@ public sealed class PureQuackProtocolBridge : IQuackProtocolBridge
             rows,
             result.HasMoreRows)
         {
-            FetchToken = BuildFetchToken(result.UuidUpper, result.UuidLower),
+            FetchToken = result.HasMoreRows ? BuildFetchToken(result) : null,
             Batch = result.Batch
         };
     }
@@ -236,6 +242,14 @@ public sealed class PureQuackProtocolBridge : IQuackProtocolBridge
         return string.Create(CultureInfo.InvariantCulture, $"{upper}:{lower}");
     }
 
+    private static string BuildFetchToken(ResultHandle result)
+    {
+        if (result.UuidWireBytes is { Length: > 0 } wireBytes)
+            return "wire:" + Base64UrlEncode(wireBytes);
+
+        return BuildFetchToken(result.UuidUpper, result.UuidLower);
+    }
+
     private static bool TryParseFetchToken(string? token, out long upper, out ulong lower)
     {
         upper = 0;
@@ -247,7 +261,48 @@ public sealed class PureQuackProtocolBridge : IQuackProtocolBridge
         if (parts.Length != 2)
             return false;
 
-        return long.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out upper)
+        return long.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out upper)
             && ulong.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out lower);
+    }
+
+    private static bool TryParseWireFetchToken(string token, out byte[] uuidWireBytes)
+    {
+        uuidWireBytes = [];
+        const string prefix = "wire:";
+        if (!token.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        var payload = token[prefix.Length..];
+        if (payload.Length == 0)
+            return false;
+
+        try
+        {
+            uuidWireBytes = Base64UrlDecode(payload);
+            return uuidWireBytes.Length > 0;
+        }
+        catch (FormatException)
+        {
+            uuidWireBytes = [];
+            return false;
+        }
+    }
+
+    private static string Base64UrlEncode(ReadOnlySpan<byte> bytes)
+    {
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    private static byte[] Base64UrlDecode(string value)
+    {
+        var base64 = value.Replace('-', '+').Replace('_', '/');
+        var padding = base64.Length % 4;
+        if (padding > 0)
+            base64 = base64.PadRight(base64.Length + 4 - padding, '=');
+
+        return Convert.FromBase64String(base64);
     }
 }

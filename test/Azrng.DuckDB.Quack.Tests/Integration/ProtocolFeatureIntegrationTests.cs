@@ -52,23 +52,55 @@ public sealed class ProtocolFeatureIntegrationTests
         await connection.OpenAsync();
 
         await using var command = connection.CreateCommand();
-        // 5000 rows > STANDARD_VECTOR_SIZE (2048), so the server must split into chunks
-        // and the client must follow up with Fetch requests for the remaining rows.
-        command.CommandText = "SELECT i FROM range(0, 5000) t(i) ORDER BY i";
+        // 100000 rows reproduces the benchmark path where the final non-empty FetchResponse
+        // no longer carries a next UUID. The reader must return that final batch and stop.
+        command.CommandText = "SELECT i FROM range(0, 100000) t(i) ORDER BY i";
 
         await using var reader = await command.ExecuteReaderAsync();
         long expected = 0;
         var lastSeen = -1L;
+        var sum = 0L;
         while (await reader.ReadAsync())
         {
             var value = reader.GetInt64(0);
             Assert.Equal(expected, value);
             lastSeen = value;
+            sum += value;
             expected++;
         }
 
-        Assert.Equal(5000, expected);
-        Assert.Equal(4999, lastSeen);
+        Assert.Equal(100000, expected);
+        Assert.Equal(99999, lastSeen);
+        Assert.Equal(4_999_950_000L, sum);
+    }
+
+    /// <summary>
+    /// The benchmark path does not set Catalog and reuses the server UUID across Fetch calls.
+    /// The UUID must be replayed byte-for-byte, otherwise some server encodings fail after
+    /// the first full 12-chunk response with "Result has been closed".
+    /// </summary>
+    [Fact]
+    public async Task LargeResultSet_WithoutCatalog_ReplaysFetchUuidBytes()
+    {
+        var noCatalogCs = string.Join(';', _options.ConnectionString.Split(';')
+            .Where(p => !p.Trim().StartsWith("Catalog", StringComparison.OrdinalIgnoreCase)));
+
+        await using var connection = new QuackConnection(noCatalogCs);
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT i, CAST(i AS VARCHAR) FROM range(0, 100000) t(i)";
+
+        await using var reader = await command.ExecuteReaderAsync();
+        long expected = 0;
+        while (await reader.ReadAsync())
+        {
+            Assert.Equal(expected, reader.GetInt64(0));
+            Assert.Equal(expected.ToString(System.Globalization.CultureInfo.InvariantCulture), reader.GetString(1));
+            expected++;
+        }
+
+        Assert.Equal(100000, expected);
     }
 
     /// <summary>

@@ -153,11 +153,27 @@ internal sealed class QuackProtocolBridge : IDisposable
 
     public async Task<ResultHandle> FetchAsync(QuackProtocolConfig config, string connectionId, long uuidUpper, ulong uuidLower, CancellationToken cancellationToken)
     {
+        return await FetchAsync(config, connectionId, uuidUpper, uuidLower, null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ResultHandle> FetchAsync(QuackProtocolConfig config, string connectionId, ReadOnlyMemory<byte> uuidWireBytes, CancellationToken cancellationToken)
+    {
+        return await FetchAsync(config, connectionId, 0, 0, uuidWireBytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ResultHandle> FetchAsync(
+        QuackProtocolConfig config,
+        string connectionId,
+        long uuidUpper,
+        ulong uuidLower,
+        ReadOnlyMemory<byte>? uuidWireBytes,
+        CancellationToken cancellationToken)
+    {
         var endpoint = config.Endpoint;
         _logger.LogDebug("Fetching more rows");
 
         var writer = new QuackWriter(connectionId.Length * 3 + 64);
-        WriteFetchRequest(ref writer, connectionId, uuidUpper, uuidLower);
+        WriteFetchRequest(ref writer, connectionId, uuidUpper, uuidLower, uuidWireBytes);
         byte[] response;
         try
         {
@@ -251,7 +267,7 @@ internal sealed class QuackProtocolBridge : IDisposable
         w.WriteFieldId(0xFFFF);
     }
 
-    private static void WriteFetchRequest(ref QuackWriter w, string connectionId, long uuidUpper, ulong uuidLower)
+    private static void WriteFetchRequest(ref QuackWriter w, string connectionId, long uuidUpper, ulong uuidLower, ReadOnlyMemory<byte>? uuidWireBytes = null)
     {
         w.WriteFieldId(1);
         w.WriteByte((byte)MessageType.FetchRequest);
@@ -262,7 +278,10 @@ internal sealed class QuackProtocolBridge : IDisposable
         w.WriteFieldId(0xFFFF);
 
         w.WriteFieldId(1);
-        w.WriteHugeInt(uuidUpper, uuidLower);
+        if (uuidWireBytes is { Length: > 0 } rawUuid)
+            w.WriteBytes(rawUuid.Span);
+        else
+            w.WriteHugeInt(uuidUpper, uuidLower);
         w.WriteFieldId(0xFFFF);
     }
 
@@ -342,6 +361,7 @@ internal sealed class QuackProtocolBridge : IDisposable
         bool needsMoreFetch = false;
         long uuidUpper = 0;
         ulong uuidLower = 0;
+        byte[]? uuidWireBytes = null;
         ColumnarBatch? batch = null;
 
         while (reader.HasMore)
@@ -358,7 +378,7 @@ internal sealed class QuackProtocolBridge : IDisposable
                     var chunkBatch = ReadDataChunksColumnar(ref reader, columnTypes);
                     batch = batch is null ? chunkBatch : AppendBatch(batch, chunkBatch);
                     break;
-                case 5: ReadHugeInt(ref reader, out uuidUpper, out uuidLower); break;
+                case 5: uuidWireBytes = ReadHugeInt(ref reader, out uuidUpper, out uuidLower); break;
                 default:
                     SkipUnknownField(ref reader, fieldId);
                     break;
@@ -374,6 +394,7 @@ internal sealed class QuackProtocolBridge : IDisposable
             ColumnNames = columnNames,
             UuidUpper = uuidUpper,
             UuidLower = uuidLower,
+            UuidWireBytes = uuidWireBytes,
             Batch = batch
         };
     }
@@ -384,8 +405,8 @@ internal sealed class QuackProtocolBridge : IDisposable
         ulong batchIndex = 0;
         long uuidUpper = 0;
         ulong uuidLower = 0;
+        byte[]? uuidWireBytes = null;
         ColumnarBatch? batch = null;
-
         while (reader.HasMore)
         {
             var fieldId = reader.ReadFieldId();
@@ -398,7 +419,7 @@ internal sealed class QuackProtocolBridge : IDisposable
                     batch = batch is null ? chunkBatch : AppendBatch(batch, chunkBatch);
                     break;
                 case 2: batchIndex = reader.ReadVarUInt(); break;
-                case 5: ReadHugeInt(ref reader, out uuidUpper, out uuidLower); break;
+                case 5: uuidWireBytes = ReadHugeInt(ref reader, out uuidUpper, out uuidLower); break;
                 default:
                     SkipUnknownField(ref reader, fieldId);
                     break;
@@ -413,6 +434,7 @@ internal sealed class QuackProtocolBridge : IDisposable
             ColumnTypes = columnTypes,
             UuidUpper = uuidUpper,
             UuidLower = uuidLower,
+            UuidWireBytes = uuidWireBytes,
             Batch = batch
         };
     }
@@ -1031,10 +1053,12 @@ internal sealed class QuackProtocolBridge : IDisposable
         return Encoding.UTF8.GetString(bytes.Span);
     }
 
-    private static void ReadHugeInt(ref QuackBinaryReader reader, out long upper, out ulong lower)
+    private static byte[] ReadHugeInt(ref QuackBinaryReader reader, out long upper, out ulong lower)
     {
-        upper = reader.ReadVarInt();
+        var start = reader.Position;
         lower = reader.ReadVarUInt();
+        upper = reader.ReadVarInt();
+        return reader.Data.Slice(start, reader.Position - start).ToArray();
     }
 
     /// <summary>
@@ -1086,7 +1110,7 @@ internal sealed class QuackProtocolBridge : IDisposable
     /// 零分配的协议写入器：写入到从 <see cref="ArrayPool{T}"/> 租借的可增长缓冲区，
     /// 替代每请求 <c>new MemoryStream() + new BinaryWriter() + ToArray()</c> 的分配链。
     /// 编码与旧 BinaryWriter 实现逐字节一致（fieldId=ushort LE、字符串=VarUInt 长度前缀+UTF8、
-    /// 整数=LEB128、ZigZag）。调用方在请求发送完成后必须调用 <see cref="Return"/> 归还缓冲区。
+    /// 整数=LEB128）。调用方在请求发送完成后必须调用 <see cref="Return"/> 归还缓冲区。
     /// </summary>
     private struct QuackWriter
     {
@@ -1133,6 +1157,13 @@ internal sealed class QuackProtocolBridge : IDisposable
             _buffer[_position++] = value;
         }
 
+        public void WriteBytes(ReadOnlySpan<byte> value)
+        {
+            Ensure(value.Length);
+            value.CopyTo(_buffer.AsSpan(_position));
+            _position += value.Length;
+        }
+
         public void WriteVarUInt(ulong value)
         {
             Ensure(10); // 64-bit LEB128 worst case
@@ -1144,7 +1175,23 @@ internal sealed class QuackProtocolBridge : IDisposable
             _buffer[_position++] = (byte)value;
         }
 
-        public void WriteVarInt(long value) => WriteVarUInt((ulong)((value << 1) ^ (value >> 63)));
+        public void WriteVarInt(long value)
+        {
+            Ensure(10); // 64-bit signed LEB128 worst case
+            var more = true;
+            while (more)
+            {
+                var current = (byte)(value & 0x7F);
+                var signBitSet = (current & 0x40) != 0;
+                value >>= 7;
+
+                more = !((value == 0 && !signBitSet) || (value == -1 && signBitSet));
+                if (more)
+                    current |= 0x80;
+
+                _buffer[_position++] = current;
+            }
+        }
 
         public void WriteString(string value)
         {
@@ -1157,8 +1204,8 @@ internal sealed class QuackProtocolBridge : IDisposable
 
         public void WriteHugeInt(long upper, ulong lower)
         {
-            WriteVarInt(upper);
             WriteVarUInt(lower);
+            WriteVarInt(upper);
         }
     }
 
@@ -1223,5 +1270,6 @@ internal sealed class ResultHandle
     public List<string> ColumnNames { get; init; } = [];
     public long UuidUpper { get; init; }
     public ulong UuidLower { get; init; }
+    public byte[]? UuidWireBytes { get; init; }
     public ColumnarBatch? Batch { get; init; }
 }
