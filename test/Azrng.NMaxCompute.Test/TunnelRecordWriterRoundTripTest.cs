@@ -120,4 +120,68 @@ public class TunnelRecordWriterRoundTripTest
         using var reader = new TunnelRecordReader(new MemoryStream(block), decoders);
         Assert.Null(reader.Read());   // 无记录
     }
+
+    // ---------- 时序 / 特殊类型往返（encoder↔decoder 同机器精确互逆） ----------
+
+    [Fact]
+    public void DateTime_RoundTrip()
+    {
+        var schema = Schema(("d", "datetime"));
+        var dt = new DateTime(2026, 6, 21, 12, 34, 56, DateTimeKind.Local);
+        var got = RoundTrip(schema, new[] { new object?[] { dt } });
+        Assert.Equal(dt, got[0]![0]);
+    }
+
+    [Fact]
+    public void Date_RoundTrip()
+    {
+        var schema = Schema(("d", "date"));
+        var date = new DateOnly(2026, 6, 21);
+        var got = RoundTrip(schema, new[] { new object?[] { date } });
+        Assert.Equal(date, got[0]![0]);
+    }
+
+    [Fact]
+    public void Timestamp_RoundTrip()
+    {
+        var schema = Schema(("t", "timestamp"));
+        var dto = DateTimeOffset.Now;
+        var got = RoundTrip(schema, new[] { new object?[] { dto } });
+        // 100ns 精度内一致
+        Assert.Equal(dto.UtcDateTime, ((DateTimeOffset)got[0]![0]!).UtcDateTime);
+    }
+
+    [Fact]
+    public void IntervalDayTime_RoundTrip()
+    {
+        var schema = Schema(("i", "interval_day_time"));
+        var ts = TimeSpan.FromSeconds(125.25);   // 2m5.25s
+        var got = RoundTrip(schema, new[] { new object?[] { ts } });
+        Assert.Equal(ts, got[0]![0]);
+    }
+
+    [Fact]
+    public void IntervalYearMonth_RoundTrip()
+    {
+        var schema = Schema(("i", "interval_year_month"));
+        var got = RoundTrip(schema, new[] { new object?[] { 18L } });
+        Assert.Equal(18L, got[0]![0]);
+    }
+
+    [Fact]
+    public void Vector_RoundTrip()
+    {
+        var schema = Schema(("v", "vector<double,32>"));
+        var vec = new double[] { 1.5, 2.5, 3.5 };
+        var got = RoundTrip(schema, new[] { new object?[] { vec } });
+        Assert.Equal(vec, (double[])got[0]![0]!);
+    }
+
+    [Fact]
+    public void Float_RoundTrip()
+    {
+        var schema = Schema(("f", "float"));
+        var got = RoundTrip(schema, new[] { new object?[] { 1.25f } });
+        Assert.Equal(1.25f, got[0]![0]);
+    }
 }

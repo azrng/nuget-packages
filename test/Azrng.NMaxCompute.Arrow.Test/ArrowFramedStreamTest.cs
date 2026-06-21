@@ -92,4 +92,42 @@ public class ArrowFramedStreamTest
         using var s = new MaxComputeArrowFramedStream(new MemoryStream(framed));
         Assert.Throws<InvalidDataException>(() => ReadAll(s));
     }
+
+    /// <summary>端到端：构造真实 Arrow IPC 流 → MaxCompute 分帧 → 解码 → Apache.Arrow 读取 → 断言 RecordBatch。</summary>
+    [Fact]
+    public void EndToEnd_ArrowIpc_RoundTrips()
+    {
+        var schema = new Schema(new[]
+        {
+            new Field("id", Int64Type.Default, false, null),
+            new Field("name", StringType.Default, true, null)
+        }, null);
+
+        var idBuilder = new Int64Array.Builder().AppendRange(new long[] { 1, 2, 3 });
+        var nameBuilder = new StringArray.Builder().Append("a").AppendNull().Append("cc");
+        var batch = new RecordBatch(schema, new IArrowArray[] { idBuilder.Build(), nameBuilder.Build() }, 3);
+
+        var ipcMs = new MemoryStream();
+        using (var writer = new ArrowStreamWriter(ipcMs, schema, true))
+        {
+            writer.WriteRecordBatch(batch);
+        }
+        var ipcBytes = ipcMs.ToArray();
+
+        var framed = Frame(ipcBytes, 64);
+        using var framedStream = new MaxComputeArrowFramedStream(new MemoryStream(framed));
+        var ipcReader = new ArrowStreamReader(framedStream);
+
+        Assert.Equal(2, ipcReader.Schema.FieldsList.Count);
+        var readBatch = ipcReader.ReadNextRecordBatch();
+        Assert.NotNull(readBatch);
+        Assert.Equal(3, readBatch!.Length);
+
+        var ids = (Int64Array)readBatch.Column(0);
+        Assert.Equal(new long[] { 1, 2, 3 }, ids.Values.ToArray());
+        var names = (StringArray)readBatch.Column(1);
+        Assert.Equal("a", names.GetString(0));
+        Assert.True(names.IsNull(1));
+        Assert.Equal("cc", names.GetString(2));
+    }
 }
