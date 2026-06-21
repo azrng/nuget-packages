@@ -44,7 +44,7 @@ while (await reader.ReadAsync())
 
 ## 能力范围与实现进度
 
-> 当前版本：**1.0.1**（S4 交付，Tunnel 已接入运行时调用链，STS / Hints / TunnelEndpoint 已支持）
+> 当前版本：**2.0.0-alpha**（Tunnel 读/写 + Arrow 读已接入运行时调用链；STS / Hints / TunnelEndpoint / 时区开关已支持）
 
 ### 已完成能力
 

@@ -77,4 +77,27 @@ public class ConnectionStringHintsTest
         };
         Assert.Contains("Hints=a=1", cs.ToString());
     }
+
+    [Fact]
+    public void UseLocalTimeZone_RoundTrip()
+    {
+        var cs = new MaxComputeConnectionStringBuilder
+        {
+            Endpoint = "http://svc/api",
+            AccessId = "id",
+            SecretAccessKey = "key",
+            Project = "p",
+            UseLocalTimeZone = false
+        };
+
+        // 设 false 后读回 false，ToConfig 带过去，连接串写出
+        Assert.False(cs.UseLocalTimeZone);
+        Assert.False(cs.ToConfig().UseLocalTimeZone);
+        Assert.Contains("UseLocalTimeZone=false", cs.ToString());
+
+        // 默认 true：不写出，ToConfig 也是 true
+        cs.UseLocalTimeZone = true;
+        Assert.DoesNotContain("UseLocalTimeZone", cs.ToString());
+        Assert.True(cs.ToConfig().UseLocalTimeZone);
+    }
 }
