@@ -151,6 +151,39 @@ await conn.OpenAsync();
 var rows = await conn.QueryAsync<(int A, int B)>("SELECT 1 AS A, 2 AS B");
 ```
 
+## Arrow 格式读取（可选包 `Azrng.NMaxCompute.Arrow`）
+
+核心库默认以 **record/CSV** 路径读取结果（`TunnelRecordReader` + ADO.NET）。
+如果你需要以 **Apache Arrow 列式格式**消费结果（更适合大数据分析、与 DataFrame / Arrow 生态互操作），
+可额外引用独立的 opt-in 包：
+
+```bash
+dotnet add package Azrng.NMaxCompute.Arrow
+```
+
+- **设计**：核心库 `Azrng.NMaxCompute` **不依赖** Arrow；Arrow 包额外引用 `Apache.Arrow`，按需引入，避免把重型依赖强加给所有消费者。
+- **原理**：核心库的 `InstanceDownloadSession.OpenArrowStreamAsync(...)` 用 `?arrow` 拉取原始分帧流；
+  Arrow 包负责 **MaxCompute 分帧解码（chunk + CRC32C）→ ODPS→Arrow schema 转换 + 前置 → Apache.Arrow IPC 解析**，逐个产出 `RecordBatch`。
+- **目标框架**：仅 net8.0+（受 `Apache.Arrow` 约束）。
+
+```csharp
+using Azrng.NMaxCompute.Arrow;
+using Azrng.NMaxCompute.Tunnel;
+
+// session 为 InstanceDownloadSession（由 InstanceTunnel 创建）
+using var arrow = await session.OpenArrowReaderAsync(start: 0, count: session.RecordCount);
+
+Apache.Arrow.Schema schema = arrow.Schema;          // Arrow 列定义
+while (arrow.ReadNext() is { } batch)                // 逐个 RecordBatch
+{
+    var ids = (Apache.Arrow.Arrays.Int64Array)batch.Column(0);
+    // ...
+}
+```
+
+> 当前状态：分帧 / schema 转换 / 前置 / 合成往返已单元验证；真实集群 RecordBatch 的 buffer 布局兼容仍在校准（见各包内 MIGRATION 说明）。
+
+
 ## 注意事项
 
 1. **事务**：MaxCompute REST API 不支持事务，相关操作抛 `NotSupportedException`
