@@ -53,7 +53,7 @@ public static class QuackBatchExtensions
     /// <param name="tableName">目标表名。</param>
     /// <param name="columns">要插入的列名数组。</param>
     /// <param name="rows">要插入的数据行集合。</param>
-    /// <param name="pageSize">每批插入的行数，默认为 100。</param>
+    /// <param name="batchSize">每批插入的行数，默认为 100。</param>
     /// <param name="cancellationToken">用于取消操作的令牌。</param>
     /// <returns>受影响的行数。</returns>
     public static async Task<int> ExecuteParameterizedBatchInsertAsync(

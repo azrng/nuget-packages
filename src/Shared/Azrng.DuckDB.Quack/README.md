@@ -132,9 +132,10 @@ using Microsoft.Extensions.Logging;
 var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<QuackConnectionPool>();
 await using var pool = new QuackConnectionPool(connectionString, logger, maxPoolSize: 5);
 
-await using var connection = await pool.GetConnectionAsync();
-// 使用连接...
-pool.ReturnConnection(connection);
+await using var lease = await pool.RentConnectionAsync();
+await using var command = lease.Connection.CreateCommand();
+command.CommandText = "SELECT 1";
+var value = await command.ExecuteScalarAsync();
 ```
 
 ### 事务支持

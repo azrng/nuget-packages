@@ -39,6 +39,18 @@ public class QuackConnectionPoolConcurrencyTests
     }
 
     /// <summary>
+    /// Pool RentAfterDispose 抛出
+    /// </summary>
+    [Fact]
+    public async Task Pool_RentAfterDispose_Throws()
+    {
+        var pool = new QuackConnectionPool("Host=quack.example;Token=abc");
+        await pool.DisposeAsync();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await pool.RentConnectionAsync());
+    }
+
+    /// <summary>
     /// ReturnConnection NullConnection 抛出
     /// </summary>
     [Fact]
@@ -85,5 +97,20 @@ public class QuackConnectionPoolConcurrencyTests
         // Semaphore must still be releasable into — pool did not lose a slot to an unknown connection.
         Assert.Equal(0, pool.InUseCount);
         Assert.Equal(0, pool.AvailableCount);
+    }
+
+    /// <summary>
+    /// ReturnConnection AfterDispose DoesNotThrow
+    /// </summary>
+    [Fact]
+    public async Task ReturnConnection_AfterDispose_DoesNotThrow()
+    {
+        var pool = new QuackConnectionPool("Host=quack.example;Token=abc");
+        await pool.DisposeAsync();
+
+        var stray = new QuackConnection("Host=quack.example;Token=abc");
+        pool.ReturnConnection(stray);
+
+        Assert.Equal(System.Data.ConnectionState.Closed, stray.State);
     }
 }

@@ -98,6 +98,7 @@ internal sealed class QuackHttpClient : IDisposable
     /// </summary>
     /// <param name="endpoint">请求的目标 URI。</param>
     /// <param name="body">请求体的字节数组。</param>
+    /// <param name="length">从请求体缓冲区发送的字节数。</param>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
     /// <returns>响应体的字节数组。</returns>
     public async Task<byte[]> PostAsync(Uri endpoint, byte[] body, int length, CancellationToken cancellationToken)

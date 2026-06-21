@@ -122,12 +122,28 @@ public sealed class QuackConnectionPool : IAsyncDisposable, IDisposable
     }
 
     /// <summary>
+    /// Gets a connection lease from the pool. Disposing the lease returns the connection automatically.
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    public async ValueTask<QuackConnectionLease> RentConnectionAsync(CancellationToken cancellationToken = default)
+    {
+        var connection = await GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return new QuackConnectionLease(this, connection);
+    }
+
+    /// <summary>
     /// Returns a connection to the pool.
     /// </summary>
     public void ReturnConnection(QuackConnection connection)
     {
         if (connection == null)
             throw new ArgumentNullException(nameof(connection));
+
+        if (_disposed)
+        {
+            connection.Dispose();
+            return;
+        }
 
         if (!_inUseByConnection.TryGetValue(connection, out var entry))
         {

@@ -39,6 +39,42 @@ public sealed class QuackConnectionPoolTests
     }
 
     [Fact]
+    public async Task RentConnectionAsync_ReturnsConnectionWhenLeaseDisposed()
+    {
+        await using var pool = new QuackConnectionPool(_options.ConnectionString, maxPoolSize: 10);
+
+        QuackConnection connection;
+        await using (var lease = await pool.RentConnectionAsync())
+        {
+            connection = lease.Connection;
+            Assert.Equal(System.Data.ConnectionState.Open, connection.State);
+            Assert.Equal(1, pool.InUseCount);
+        }
+
+        Assert.Equal(0, pool.InUseCount);
+        Assert.Equal(1, pool.AvailableCount);
+
+        var reused = await pool.GetConnectionAsync();
+        Assert.Same(connection, reused);
+
+        pool.ReturnConnection(reused);
+    }
+
+    [Fact]
+    public async Task RentConnectionAsync_DisposeTwice_ReturnsOnce()
+    {
+        await using var pool = new QuackConnectionPool(_options.ConnectionString, maxPoolSize: 10);
+
+        var lease = await pool.RentConnectionAsync();
+        lease.Dispose();
+        lease.Dispose();
+        await lease.DisposeAsync();
+
+        Assert.Equal(0, pool.InUseCount);
+        Assert.Equal(1, pool.AvailableCount);
+    }
+
+    [Fact]
     public async Task GetConnectionAsync_CreatesNewWhenNoneAvailable()
     {
         await using var pool = new QuackConnectionPool(_options.ConnectionString, maxPoolSize: 10);
