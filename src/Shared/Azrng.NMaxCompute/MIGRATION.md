@@ -70,7 +70,7 @@
 - **Legacy decimal 字节解码**：PyODPS `convert_legacy_decimal_bytes`（旧服务端定点小数内存布局）。
 
 ### P1 — 表级下载 / 流式写
-- **TableTunnel 下载**：表级下载 session（`create_download_session` + 表数据读取）。当前仅有 InstanceTunnel（查询结果读取），非表级。
+- ✅ **TableTunnel 下载**（实现 + 离线单测完成）：`TableDownloadSession`（创建 session + `OpenRecordReaderAsync` + `ReadRowsAsync` 分片），`TableTunnel.CreateDownloadSessionAsync`（支持分区 / schema 2.0 / quota / tags）。复用 `TunnelRecordReader` + `BufferedRecordReader` + `UseLocalTimeZone`。请求格式镜像 `TableUploadSession`（写侧）+ `InstanceDownloadSession`（读侧）；集群真机确认后置。离线单测覆盖响应解析（`TableDownloadSessionTest`）。
 - **流式 / 分块写**：当前 `TableUploadSession` 支持整块上传（`WriteBlock`）；PyODPS 的 `BufferedRecordWriter` 自动分块/压缩/重试未迁移。
 
 ### P2 — Arrow 写 / 列格式转换
