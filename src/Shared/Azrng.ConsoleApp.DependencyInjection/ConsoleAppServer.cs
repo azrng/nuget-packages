@@ -39,8 +39,8 @@ public class ConsoleAppServer
         }
         catch (Exception ex)
         {
-            // 保留完整异常链（含堆栈和 InnerException），便于定位配置解析失败的具体位置
-            Console.WriteLine($"配置文件加载失败！请检查配置文件是不是哪里写错了？\n错误信息：{ex}");
+            // 控制台只输出用户可读的简要提示；完整异常链由下方 throw（含 InnerException）和 RunAsync 的本地日志负责
+            Console.WriteLine($"配置文件加载失败！请检查配置文件是不是哪里写错了？\n错误信息：{ex.Message}");
             throw new InvalidOperationException("配置文件加载失败!", ex);
         }
 
