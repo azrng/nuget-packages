@@ -12,7 +12,6 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="test/Azrng.Dapper.Test/Azrng.Dapper.Test.csproj" />
-    <Project Path="test/Azrng.Database.DynamicSqlBuilder.Test/Azrng.Database.DynamicSqlBuilder.Test.csproj" />
     <Project Path="test/Azrng.DuckDB.Quack.Benchmarks/Azrng.DuckDB.Quack.Benchmarks.csproj" />
     <Project Path="test/Azrng.DuckDB.Quack.Tests/Azrng.DuckDB.Quack.Tests.csproj" />
     <Project Path="test/Azrng.JSqlParser.Test/Azrng.JSqlParser.Test.csproj" />

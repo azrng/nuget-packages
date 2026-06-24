@@ -1,8 +1,9 @@
 using Azrng.Core.Model;
+using Azrng.Database.DynamicSqlBuilder;
 using Azrng.Database.DynamicSqlBuilder.Model;
 using Azrng.Database.DynamicSqlBuilder.Validation;
 
-namespace Azrng.Database.DynamicSqlBuilder.Test;
+namespace Azrng.DataAccess.Test.DynamicSqlBuilder;
 
 public class DynamicSqlBuilderUnitTest : IDisposable
 {

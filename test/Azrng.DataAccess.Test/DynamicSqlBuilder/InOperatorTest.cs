@@ -1,17 +1,10 @@
+using Azrng.Database.DynamicSqlBuilder;
 using Azrng.Database.DynamicSqlBuilder.Model;
-using Microsoft.Extensions.Logging;
 
-namespace Azrng.Database.DynamicSqlBuilder.Test;
+namespace Azrng.DataAccess.Test.DynamicSqlBuilder;
 
 public class InOperatorTest
 {
-    private readonly ILogger<InOperatorTest> _logger;
-
-    public InOperatorTest(ILogger<InOperatorTest> logger)
-    {
-        _logger = logger;
-    }
-
     [Fact]
     public Task InOperatorFieldDto_Test()
     {
@@ -51,10 +44,6 @@ public class InOperatorTest
         var (sql, parameters) = DynamicSqlBuilderHelper.BuilderSqlQueryStatementGeneric("public.inventory_details",
             neccessaryCondition,
             queryFields, sqlWhereClauses: null, inOperatorFields: inOperatorFields, notInOperatorFields: null);
-
-        _logger.LogInformation("=== InOperatorFieldDto 测试 (PostgreSQL 参数化) ===");
-        _logger.LogInformation("SQL: {Sql}", sql);
-        _logger.LogInformation("参数数量: {Count}", parameters.ParameterNames.Count());
 
         // 验证SQL不为空
         Assert.NotNull(sql);
@@ -107,10 +96,6 @@ public class InOperatorTest
             neccessaryCondition,
             queryFields, sqlWhereClauses: null, inOperatorFields: null, notInOperatorFields: notInOperatorFields);
 
-        _logger.LogInformation("=== NotInOperatorFieldDto 测试 (PostgreSQL 参数化) ===");
-        _logger.LogInformation("SQL: {Sql}", sql);
-        _logger.LogInformation("参数数量: {Count}", parameters.ParameterNames.Count());
-
         // 验证SQL不为空
         Assert.NotNull(sql);
         Assert.NotEmpty(sql);
@@ -162,10 +147,6 @@ public class InOperatorTest
                 queryFields, sqlWhereClauses: null, inOperatorFields: inOperatorFields,
                 notInOperatorFields: notInOperatorFields, sortFields: sortFields);
 
-            _logger.LogInformation("=== In和NotIn组合测试 (PostgreSQL 参数化) ===");
-            _logger.LogInformation("SQL: {Sql}", sql);
-            _logger.LogInformation("参数数量: {Count}", parameters.ParameterNames.Count());
-
             // 验证SQL不为空
             Assert.NotNull(sql);
             Assert.NotEmpty(sql);
@@ -184,11 +165,6 @@ public class InOperatorTest
                 "public.inventory_details",
                 neccessaryCondition, queryFields, sqlWhereClauses: null, inOperatorFields: inOperatorFields,
                 notInOperatorFields: notInOperatorFields, pageIndex: 1, pageSize: 10, sortFields: sortFields);
-
-            _logger.LogInformation("\n=== 分页查询测试 (PostgreSQL 参数化) ===");
-            _logger.LogInformation("查询SQL: {QuerySql}", querySql);
-            _logger.LogInformation("计数SQL: {CountSql}", countSql);
-            _logger.LogInformation("参数数量: {Count}", pageParameters.ParameterNames.Count());
 
             // 验证SQL不为空
             Assert.NotNull(querySql);
@@ -221,10 +197,6 @@ public class InOperatorTest
             neccessaryCondition,
             queryFields, sqlWhereClauses: null, inOperatorFields: inOperatorFields, notInOperatorFields: null);
 
-        _logger.LogInformation("=== InOperatorFieldDto 空列表测试 ===");
-        _logger.LogInformation("SQL: {Sql}", sql);
-        _logger.LogInformation("参数数量: {Count}", parameters.ParameterNames.Count());
-
         // 验证SQL不为空
         Assert.NotNull(sql);
         Assert.NotEmpty(sql);
@@ -252,10 +224,6 @@ public class InOperatorTest
         var (sql, parameters) = DynamicSqlBuilderHelper.BuilderSqlQueryStatementGeneric("public.inventory_details",
             neccessaryCondition,
             queryFields, sqlWhereClauses: null, inOperatorFields: null, notInOperatorFields: notInOperatorFields);
-
-        _logger.LogInformation("=== NotInOperatorFieldDto 空列表测试 ===");
-        _logger.LogInformation("SQL: {Sql}", sql);
-        _logger.LogInformation("参数数量: {Count}", parameters.ParameterNames.Count());
 
         // 验证SQL不为空
         Assert.NotNull(sql);

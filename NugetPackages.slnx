@@ -130,7 +130,6 @@
     <Project Path="test\Common.Cache.Redis.Test\Common.Cache.Redis.Test.csproj" />
   </Folder>
   <Folder Name="/Test/DataBase/">
-    <Project Path="test/Azrng.Database.DynamicSqlBuilder.Test/Azrng.Database.DynamicSqlBuilder.Test.csproj" />
     <Project Path="test/Azrng.DataAccess.Test/Azrng.DataAccess.Test.csproj" />
     <Project Path="test/Azrng.NMaxCompute.Test/Azrng.NMaxCompute.Test.csproj" />
     <Project Path="test\Common.DbSystemOperator.ClickHouse.Test\Common.DbSystemOperator.ClickHouse.Test.csproj" />
