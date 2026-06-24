@@ -4,15 +4,27 @@
 
 import { ParsedData } from './parser.js';
 
+export type Category = 'class' | 'interface' | 'struct' | 'enum' | 'delegate';
+
 /**
  * 获取类型分类
+ *
+ * 注意：.NET XML 文档的 T: member name 本身不带类型信息（只给完整类型名），
+ * 这里只能基于类型名做启发式判断。为降低误判：
+ * - interface：仅当名字以 "I" 开头且第二个字符为大写字母（如 IComparable、IDisposable），
+ *   这是 .NET 接口命名约定，比单纯的 startsWith('i') 更准确（避免 Item/Index 等误判）。
+ * - 其余按名字包含的关键字判断。
  */
-export function getCategory(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.includes('enum')) return 'enum';
-  if (lower.includes('interface') || lower.startsWith('i')) return 'interface';
-  if (lower.includes('struct')) return 'struct';
-  if (lower.includes('delegate') || lower.includes('handler') || lower.includes('callback')) {
+export function getCategory(name: string): Category {
+  const shortName = name.split('.').pop() || name;
+
+  if (shortName.includes('Enum')) return 'enum';
+
+  // interface：I + 大写字母（.NET 接口命名约定）
+  if (/^I[A-Z]/.test(shortName)) return 'interface';
+
+  if (shortName.includes('Struct')) return 'struct';
+  if (shortName.includes('Delegate') || shortName.includes('Handler') || shortName.includes('Callback')) {
     return 'delegate';
   }
   return 'class';
@@ -74,16 +86,6 @@ export function getShortName(fullName: string): string {
 export function generateId(name: string, prefix: string = ''): string {
   const encoded = name.replace(/[^a-zA-Z0-9]/g, '_');
   return prefix ? `${prefix}-${encoded}` : encoded;
-}
-
-/**
- * 格式化参数列表显示
- */
-export function formatParams(params: { name: string }[], max: number = 3): string {
-  if (params.length === 0) return '()';
-  const names = params.slice(0, max).map(p => p.name);
-  const more = params.length > max ? '...' : '';
-  return `(${names.join(', ')}${more})`;
 }
 
 /**

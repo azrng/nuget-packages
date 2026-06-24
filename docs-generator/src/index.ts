@@ -6,7 +6,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { XmlParser } from './parser.js';
-import { generateHTML } from './generator.js';
+import { generateIndexHtml, generateDataJson } from './generator.js';
 
 // ==================== 配置 ====================
 
@@ -16,37 +16,63 @@ const projectRoot = process.cwd().endsWith('docs-generator')
   : process.cwd();
 
 const CONFIG = {
-  // XML 文档源目录 - 从 src 目录递归查找所有 bin/**/*.xml 文件
-  sourceDir: path.join(projectRoot, 'src'),
-  outputFile: path.join(projectRoot, 'docs', 'index.html'),
+  // 解决方案文件 - 文档生成范围严格绑定此 slnx 包含的项目
+  solutionFile: path.join(projectRoot, 'PackPackages.slnx'),
+  // 输出目录：docs/，包含 index.html（UI 壳）和 data.json（数据）
+  outputDir: path.join(projectRoot, 'docs'),
   stdoutMode: process.argv.includes('--stdout')
 };
 
 // ==================== 工具函数 ====================
 
 /**
- * 递归获取目录下所有 XML 文档文件
- * 只包含 bin 目录下的 XML 文件（.NET 构建生成的文档）
+ * 从 .slnx 解决方案文件解析出包含的项目路径列表
+ * .slnx 格式：每个项目为 <Project Path="..." />
+ * 路径可能混用 \ 和 /，统一归一化为相对仓库根的绝对路径
  */
-function getXmlFiles(dir: string): string[] {
+function getProjectsFromSlnx(slnxPath: string): string[] {
+  const content = fs.readFileSync(slnxPath, 'utf-8');
+  const projects: string[] = [];
+  // 匹配 <Project Path="..." />，Path 值带引号
+  const regex = /<Project\s+Path="([^"]+)"/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(content)) !== null) {
+    const relPath = match[1].replace(/\\/g, path.sep).replace(/\//g, path.sep);
+    const absPath = path.join(projectRoot, relPath);
+    if (fs.existsSync(absPath)) {
+      projects.push(absPath);
+    }
+  }
+  return projects;
+}
+
+/**
+ * 收集指定项目列表生成的 XML 文档文件
+ * 对每个项目的 bin/ 子目录递归查找 .xml 文件
+ * 这样文档范围严格绑定解决方案，不受其他 slnx 的 build 残留影响
+ */
+function getXmlFilesForProjects(projectPaths: string[]): string[] {
   const files: string[] = [];
 
-  if (!fs.existsSync(dir)) {
-    return files;
-  }
+  for (const projectPath of projectPaths) {
+    const projectDir = path.dirname(projectPath);
+    const binDir = path.join(projectDir, 'bin');
+    if (!fs.existsSync(binDir)) continue;
 
-  const items = fs.readdirSync(dir);
-
-  for (const item of items) {
-    const fullPath = path.join(dir, item);
-    const stat = fs.statSync(fullPath);
-
-    if (stat.isDirectory()) {
-      files.push(...getXmlFiles(fullPath));
-    } else if (item.endsWith('.xml') && fullPath.includes(`${path.sep}bin${path.sep}`)) {
-      // 只收集 bin 目录下的 XML 文件（使用 path.sep 兼容 Windows/Linux）
-      files.push(fullPath);
-    }
+    // 递归扫描该项目 bin 目录下的 xml
+    const collect = (dir: string): void => {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          collect(fullPath);
+        } else if (item.endsWith('.xml')) {
+          files.push(fullPath);
+        }
+      }
+    };
+    collect(binDir);
   }
 
   return files;
@@ -90,22 +116,32 @@ function main(): void {
 
   const totalTimer = new Timer();
 
-  // 检查源目录
-  if (!fs.existsSync(CONFIG.sourceDir)) {
-    console.error(`❌ 源目录不存在: ${CONFIG.sourceDir}`);
+  // 检查解决方案文件
+  if (!fs.existsSync(CONFIG.solutionFile)) {
+    console.error(`❌ 解决方案文件不存在: ${CONFIG.solutionFile}`);
     process.exit(1);
   }
 
-  // 获取 XML 文件
+  // 解析解决方案包含的项目
+  const projects = getProjectsFromSlnx(CONFIG.solutionFile);
+  if (projects.length === 0) {
+    console.error(`❌ 解决方案未包含任何项目: ${CONFIG.solutionFile}`);
+    process.exit(1);
+  }
+
+  // 获取 XML 文件（仅限解决方案包含的项目）
   const scanTimer = new Timer();
-  const xmlFiles = getXmlFiles(CONFIG.sourceDir);
+  const xmlFiles = getXmlFilesForProjects(projects);
 
   if (xmlFiles.length === 0) {
     console.error('❌ 未找到 XML 文件');
+    console.error('   请先构建解决方案以生成 XML 文档：');
+    console.error(`   dotnet build ${path.basename(CONFIG.solutionFile)} -p:GenerateDocumentationFile=true -c Release`);
     process.exit(1);
   }
 
-  console.log(`📁 扫描完成: ${xmlFiles.length} 个文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
+  console.log(`📁 解决方案: ${path.basename(CONFIG.solutionFile)} (${projects.length} 个项目)`);
+  console.log(`📁 扫描完成: ${xmlFiles.length} 个 XML 文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
 
   // 解析 XML
   const parseTimer = new Timer();
@@ -127,32 +163,37 @@ function main(): void {
   console.log(`   类型: ${data.allTypes.length}`);
   console.log(`   成员: ${data.allMembers.length}\n`);
 
-  // 生成 HTML
+  // 生成产物（SPA 架构：index.html 壳 + data.json 数据）
   const genTimer = new Timer();
-  console.log('🔄 正在生成 HTML...');
+  console.log('🔄 正在生成文档...');
 
-  const html = generateHTML(data);
+  const dataJson = generateDataJson(data);
+  const indexHtml = generateIndexHtml();
   console.log(`✅ 生成完成 (${genTimer.elapsed().toFixed(0)}ms)\n`);
 
   // 输出结果
   if (CONFIG.stdoutMode) {
-    process.stdout.write(html);
+    process.stdout.write(indexHtml);
   } else {
     // 确保输出目录存在
-    const outputDir = path.dirname(CONFIG.outputFile);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    if (!fs.existsSync(CONFIG.outputDir)) {
+      fs.mkdirSync(CONFIG.outputDir, { recursive: true });
     }
 
     // 创建 .nojekyll 文件以告诉 GitHub Pages 跳过 Jekyll 处理
-    const nojekyllPath = path.join(outputDir, '.nojekyll');
+    const nojekyllPath = path.join(CONFIG.outputDir, '.nojekyll');
     if (!fs.existsSync(nojekyllPath)) {
       fs.writeFileSync(nojekyllPath, '', 'utf-8');
     }
 
-    fs.writeFileSync(CONFIG.outputFile, html, 'utf-8');
-    console.log(`📄 输出文件: ${CONFIG.outputFile}`);
-    console.log(`📊 文件大小: ${formatSize(html.length)}`);
+    const indexHtmlPath = path.join(CONFIG.outputDir, 'index.html');
+    const dataJsonPath = path.join(CONFIG.outputDir, 'data.json');
+    fs.writeFileSync(indexHtmlPath, indexHtml, 'utf-8');
+    fs.writeFileSync(dataJsonPath, dataJson, 'utf-8');
+
+    console.log(`📄 输出目录: ${CONFIG.outputDir}`);
+    console.log(`   index.html: ${formatSize(Buffer.byteLength(indexHtml, 'utf-8'))} (UI 壳 + 前端 SPA)`);
+    console.log(`   data.json:  ${formatSize(Buffer.byteLength(dataJson, 'utf-8'))} (全量文档数据)`);
     console.log(`✨ 已创建 .nojekyll 文件（跳过 Jekyll 处理）`);
   }
 

@@ -22,10 +22,13 @@ src/
 ```
 
 ### 收集规则
-文档生成器会：
-1. 从 `src` 目录开始递归搜索
-2. 只收集 `bin` 目录下的 `.xml` 文件
-3. 自动跳过其他位置的 XML 文件（如配置文件）
+文档生成器的 XML 收集范围**严格绑定 `PackPackages.slnx`**：
+1. 解析 `PackPackages.slnx`，取出其中包含的所有 `.csproj` 项目路径
+2. 对每个项目，递归扫描其 `bin/` 子目录下的 `.xml` 文件
+3. 不在该解决方案内的项目（即使本地曾 build 过、bin 下有 xml 残留）不会被收集
+
+> 这样保证本地与 CI 的文档内容一致，不受其他解决方案（如 `CommonStudy.slnx`）build 残留的影响。
+> 配置项在 `docs-generator/src/index.ts` 的 `CONFIG.solutionFile`。
 
 ## GitHub Actions 工作流程
 
@@ -56,8 +59,8 @@ src/
 │    npm start                            │
 │    - 扫描 src/bin/**/*.xml              │
 │    - 解析 XML 内容                       │
-│    - 生成 HTML                           │
-│    - 输出到 docs/index.html             │
+│    - 生成 index.html (UI 壳) + data.json │
+│    - 输出到 docs/ 目录                   │
 └──────────────┬──────────────────────────┘
                │
                ▼
@@ -176,26 +179,27 @@ start docs/index.html
   高性能 TypeScript 版本
 ========================================
 
-📁 扫描完成: 45 个文件 (0ms)
+📁 扫描完成: 265 个文件 (Xms)
 
 🔍 正在解析 XML 文件...
   ✓ Azrng.AspNetCore.Core.xml
   ✓ Azrng.Core.xml
-  ✓ APIStudy.xml
   ...
 
-✅ 解析完成 (17ms)
-   类库: 45
-   命名空间: 234
-   类型: 567
-   成员: 2341
+✅ 解析完成 (916ms)
+   类库: 213
+   命名空间: 158
+   类型: 2542
+   成员: 15658
 
-🔄 正在生成 HTML...
-✅ 生成完成 (6ms)
+🔄 正在生成文档...
+✅ 生成完成 (41ms)
 
-📄 输出文件: D:\Gitee\nuget-packages\docs\index.html
-📊 文件大小: 1.2 MB
+📄 输出目录: .../docs
+   index.html: 30.3 KB (UI 壳 + 前端 SPA)
+   data.json:  5.6 MB (全量文档数据)
+✨ 已创建 .nojekyll 文件（跳过 Jekyll 处理）
 
-⏱️  总耗时: 25ms
+⏱️  总耗时: 2352ms
 ========================================
 ```
