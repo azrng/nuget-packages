@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 更新时间 |
 |----|----------|------|------|------|----------|
+| T056 | Azrng.ConsoleApp.DependencyInjection 集成测试 | 模仿 Common.HttpClients.Next.Test 范式（Xunit.DependencyInjection 9.4.0 + Logging 8.1.0 + Startup + Integration/ 子目录 + [Trait Category=Integration]）补集成测试；csproj 对齐 xunit 2.9.3/visualstudio 3.0.1/coverlet 6.0.3；Startup 真实装配 ConsoleAppServer（命令行配置+Configure<TOption>）；新增 6 个集成测试覆盖配置加载/选项绑定/日志解析/RunAsync 端到端/异常重抛/注册覆盖；net8/9 各 22 全绿（单元16+集成6），--filter Category!=Integration 可跳过集成 | 阶段 1（实现+验证完成） | REVIEW | 2026-06-24 |
 | T055 | Azrng.ConsoleApp.DependencyInjection 增强 #4/#6/#7 | ExtensionsLogger 日志分发由 switch 改静态字典查表统一走 WriteMyLogs；新增 ConfigureLogging(Action<ILoggingBuilder>?) 委托重载（默认行为不变，传委托完全自定义）；新增 Configure<TOption> 便捷封装；SYSLIB1104（微软泛型 Configure<T> 的 AOT 已知限制 runtime#89273）经 csproj NoWarn 抑制；版本 1.3.4→1.3.5；Release net8/9/10 0 警告 0 错误，测试 net8/9 各 16 全绿，ConsoleAppDI 示例编译通过。取消 #5 CancellationToken（避免破坏性变更） | 阶段 1（实现+验证完成） | REVIEW | 2026-06-24 |
 | T054 | Azrng.ConsoleApp.DependencyInjection 问题修复 | 修复配置加载异常信息丢失（保留完整异常链）、Build 重载泛型命名不一致（T→TStart）、README .NET 徽章版本不符（6.0→8.0）、ARCHITECTURE 示例与代码不同步（基路径/重载/Scope 解析/签名）；Release 构建 net8/9/10 通过 0 警告 0 错误 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T053 | Azrng.AspNetCore.Core 扩展前基础加固 | 扩展前补齐多目标框架测试、CORS 参数校验、审计日志默认序列化兜底、关键行为回归测试和 README/ARCHITECTURE 说明；测试项目 4 个目标框架通过，Release 构建已生成 1.3.1 包 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
