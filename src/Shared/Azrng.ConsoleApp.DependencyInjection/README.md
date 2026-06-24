@@ -4,7 +4,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Azrng.ConsoleApp.DependencyInjection)](https://www.nuget.org/packages/Azrng.ConsoleApp.DependencyInjection/)
 [![License](https://img.shields.io/github/license/azrng/nuget-packages)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-%3E%3D%206.0-purple.svg)](https://docs.microsoft.com/en-us/dotnet/core/)
+[![.NET](https://img.shields.io/badge/.NET-%3E%3D%208.0-purple.svg)](https://docs.microsoft.com/en-us/dotnet/core/)
 
 ## 📋 项目简介
 
@@ -53,8 +53,60 @@ await using var sp = builder.Build<JsonTempService>(services =>
 await sp.RunAsync();
 ```
 
+## 高级用法
+
+### 自定义日志配置（ConfigureLogging）
+默认启用 Console + Debug + ExtensionsLoggerProvider 三种日志 Provider。若需接入 Serilog 等第三方日志，或只保留部分 Provider，传入委托进行完全自定义：
+
+```csharp
+var builder = new ConsoleAppServer(args);
+
+// 传 null 或不传：使用默认日志 Provider（Console + Debug + ExtensionsLoggerProvider）
+builder.ConfigureLogging();
+
+// 传委托：完全自定义日志配置，委托内自行决定添加哪些 Provider
+builder.ConfigureLogging(loggingBuilder =>
+{
+    loggingBuilder.ClearProviders();
+    loggingBuilder.AddConsole();
+    // loggingBuilder.AddSerilog(); // 接入其它日志框架
+});
+
+await using var sp = builder.Build<TempService>();
+await sp.RunAsync();
+```
+
+> 注意：传入委托后默认 Provider（Console + Debug + ExtensionsLoggerProvider）不会自动添加，需在委托内自行配置。
+
+### 绑定强类型选项配置（Configure）
+`Configure<TOption>` 封装了 `Services.Configure<TOption>(Configuration.GetSection(...))`，避免手写样板代码：
+
+```csharp
+public class MyOptions
+{
+    public string Url { get; set; } = string.Empty;
+    public int Timeout { get; set; }
+}
+
+var builder = new ConsoleAppServer(args);
+
+// 指定配置节名称
+builder.Configure<MyOptions>("MyOptions");
+
+// 或不传节名，默认以类型名 MyOptions 作为配置节
+builder.Configure<MyOptions>();
+
+await using var sp = builder.Build<TempService>();
+// 在服务中注入 IOptions<MyOptions> 即可读取
+```
+
 ## 版本更新记录
 
+* 1.3.5
+  * 新增 `ConfigureLogging(Action<ILoggingBuilder>?)` 委托重载，支持自定义日志 Provider（接入 Serilog 等），传 null 时保持默认行为
+  * 新增 `Configure<TOption>` 便捷方法，封装 `Services.Configure<TOption>(Configuration.GetSection(...))`，支持链式调用
+  * 优化 `ExtensionsLogger` 日志分发：switch 分支改为静态字典查表，统一走 `LocalLogHelper.WriteMyLogs` 入口
+  * 在 csproj 通过 `NoWarn` 抑制泛型 `Configure<T>` 的 SYSLIB1104 诊断（微软官方泛型配置绑定在 AOT 下的已知限制，见 dotnet/runtime#89273）
 * 1.3.4
   * `ConsoleAppServer` 构造函数参数支持可空，默认值为 `null`
   * `IServiceStart.Title` 属性简化为隐式 public 访问修饰符

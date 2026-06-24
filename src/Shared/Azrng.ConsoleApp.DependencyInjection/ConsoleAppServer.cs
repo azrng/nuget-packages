@@ -39,7 +39,8 @@ public class ConsoleAppServer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"配置文件加载失败！请检查配置文件是不是哪里写错了？\n错误信息：{ex.Message}");
+            // 保留完整异常链（含堆栈和 InnerException），便于定位配置解析失败的具体位置
+            Console.WriteLine($"配置文件加载失败！请检查配置文件是不是哪里写错了？\n错误信息：{ex}");
             throw new InvalidOperationException("配置文件加载失败!", ex);
         }
 
@@ -63,29 +64,71 @@ public class ConsoleAppServer
     /// <summary>
     /// 配置日志
     /// </summary>
-    /// <returns></returns>
-    private void ConfigureLogging()
+    /// <param name="configure">自定义日志配置委托，传 null 时使用默认日志 Provider（Console + Debug + ExtensionsLoggerProvider）</param>
+    /// <returns>当前实例，便于链式调用</returns>
+    public ConsoleAppServer ConfigureLogging(Action<ILoggingBuilder>? configure = null)
     {
         Console.WriteLine("Application Starting");
         Services.AddLogging(loggingBuilder =>
         {
             loggingBuilder.ClearProviders();
             loggingBuilder.AddConfiguration(Configuration.GetSection("Logging"));
-            loggingBuilder.AddConsole();
-            loggingBuilder.AddDebug();
-            loggingBuilder.AddProvider(new ExtensionsLoggerProvider());
+
+            if (configure is null)
+            {
+                // 默认日志 Provider：Console + Debug + ExtensionsLoggerProvider
+                loggingBuilder.AddConsole();
+                loggingBuilder.AddDebug();
+                loggingBuilder.AddProvider(new ExtensionsLoggerProvider());
+            }
+            else
+            {
+                // 交由用户完全自定义日志配置（如接入 Serilog/Zap 等）
+                configure(loggingBuilder);
+            }
         });
+
+        return this;
+    }
+
+    /// <summary>
+    /// 绑定强类型选项配置，等价于 Services.Configure&lt;TOption&gt;(Configuration.GetSection(sectionName))
+    /// </summary>
+    /// <typeparam name="TOption">选项类型</typeparam>
+    /// <param name="sectionName">配置节名称</param>
+    /// <returns>当前实例，便于链式调用</returns>
+    /// <remarks>
+    /// 泛型 Configure&lt;TOption&gt; 会触发 SYSLIB1104 警告，这是微软官方泛型 Configure&lt;T&gt;
+    /// 在 AOT 下的已知限制（dotnet/runtime#89273），配置绑定源生成器无法为泛型方法生成逻辑。
+    /// 已在 csproj 通过 NoWarn 全局抑制该诊断。
+    /// </remarks>
+    public ConsoleAppServer Configure<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TOption>(string sectionName)
+        where TOption : class
+    {
+        Services.Configure<TOption>(Configuration.GetSection(sectionName));
+        return this;
+    }
+
+    /// <summary>
+    /// 绑定强类型选项配置，默认以类型名作为配置节名称
+    /// </summary>
+    /// <typeparam name="TOption">选项类型</typeparam>
+    /// <returns>当前实例，便于链式调用</returns>
+    public ConsoleAppServer Configure<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TOption>()
+        where TOption : class
+    {
+        return Configure<TOption>(typeof(TOption).Name);
     }
 
     /// <summary>
     /// 构建
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TStart"></typeparam>
     /// <returns></returns>
-    public ServiceProvider Build<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
-        where T : class, IServiceStart
+    public ServiceProvider Build<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStart>()
+        where TStart : class, IServiceStart
     {
-        RegisterStartService<T>();
+        RegisterStartService<TStart>();
 
         return BuildProvider();
     }

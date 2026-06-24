@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Azrng.ConsoleApp.DependencyInjection.Test;
@@ -128,6 +129,92 @@ public class ConsoleAppServerTests
             .Count(line => line.Contains("===="))
             .Should().BeGreaterOrEqualTo(2);
     }
+
+    [Fact]
+    public void ConfigureLogging_WithNullDelegate_UsesDefaultProviders()
+    {
+        var server = new ConsoleAppServer();
+
+        var result = server.ConfigureLogging(null);
+
+        result.Should().BeSameAs(server);
+        using var provider = server.Build<NoOpStartService>();
+        provider.GetRequiredService<ILogger<ConsoleAppServer>>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ConfigureLogging_WithCustomDelegate_LetsUserControlProviders()
+    {
+        var server = new ConsoleAppServer();
+
+        // 用户传委托时完全自定义日志配置（这里只加 Console，不加默认的 ExtensionsLoggerProvider）
+        var result = server.ConfigureLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddConsole();
+        });
+
+        result.Should().BeSameAs(server);
+        using var provider = server.Build<NoOpStartService>();
+        provider.GetRequiredService<ILogger<ConsoleAppServer>>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Configure_WithSectionName_BindsOptionsFromConfiguration()
+    {
+        var server = new ConsoleAppServer(["App:Mode=Test", "App:Count=42"]);
+
+        var result = server.Configure<AppOptions>("App");
+
+        result.Should().BeSameAs(server);
+        using var provider = server.Build<NoOpStartService>();
+        var options = provider.GetRequiredService<IOptions<AppOptions>>().Value;
+        options.Mode.Should().Be("Test");
+        options.Count.Should().Be(42);
+    }
+
+    [Fact]
+    public void Configure_WithoutSectionName_UsesTypeNameAsSection()
+    {
+        // 配置节名为类型名 ConfigurableSample，对应命令行 ConfigurableSample:Key=value
+        var server = new ConsoleAppServer(["ConfigurableSample:Key=hello"]);
+
+        server.Configure<ConfigurableSample>();
+
+        using var provider = server.Build<NoOpStartService>();
+        var options = provider.GetRequiredService<IOptions<ConfigurableSample>>().Value;
+        options.Key.Should().Be("hello");
+    }
+
+    [Theory]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Trace)]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Debug)]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Information)]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Warning)]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Error)]
+    [InlineData(Microsoft.Extensions.Logging.LogLevel.Critical)]
+    public void ExtensionsLogger_Log_RoutesAllLevelsViaDictionaryWithoutThrowing(Microsoft.Extensions.Logging.LogLevel logLevel)
+    {
+        var originalLevel = CoreGlobalConfig.MinimumLevel;
+        try
+        {
+            CoreGlobalConfig.MinimumLevel = CoreLogLevel.Trace;
+            var logger = new ExtensionsLoggerProvider().CreateLogger("Category");
+
+            var act = () => logger.Log(
+                logLevel,
+                new EventId(1, "evt"),
+                "message",
+                null,
+                (state, _) => state);
+
+            act.Should().NotThrow();
+        }
+        finally
+        {
+            CoreGlobalConfig.MinimumLevel = originalLevel;
+        }
+    }
 }
 
 public sealed class NoOpStartService : IServiceStart
@@ -211,4 +298,22 @@ internal static class ScopedStartRecorder
         LastTitle = title;
         DependencyId = dependencyId;
     }
+}
+
+/// <summary>
+/// 测试用选项类，验证 Configure&lt;TOption&gt; 绑定
+/// </summary>
+public sealed class AppOptions
+{
+    public string Mode { get; set; } = string.Empty;
+
+    public int Count { get; set; }
+}
+
+/// <summary>
+/// 测试用选项类，名称用于验证 Configure&lt;TOption&gt;() 默认按类型名取节
+/// </summary>
+public sealed class ConfigurableSample
+{
+    public string Key { get; set; } = string.Empty;
 }

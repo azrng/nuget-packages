@@ -111,12 +111,23 @@ Azrng.ConsoleApp.DependencyInjection/
 **构造流程**:
 
 ```csharp
-public ConsoleAppServer(string[] args)
+public ConsoleAppServer(string[]? args = null)
 {
+    args ??= Array.Empty<string>();
+
     // 1. 构建配置
     var configBuilder = new ConfigurationBuilder();
-    configBuilder.SetBasePath(Environment.CurrentDirectory);
-    configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+    configBuilder.SetBasePath(AppContext.BaseDirectory);
+    configBuilder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+
+    // 按环境加载 appsettings.{Environment}.json
+    var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+                          Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+    if (!string.IsNullOrWhiteSpace(environmentName))
+    {
+        configBuilder.AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false);
+    }
+
     configBuilder.AddEnvironmentVariables("ASPNETCORE_");  // 环境变量前缀
     configBuilder.AddCommandLine(args);                    // 命令行参数
 
@@ -133,8 +144,9 @@ public ConsoleAppServer(string[] args)
 **配置加载优先级**（从低到高）:
 
 1. `appsettings.json` - 基础配置
-2. 环境变量 (带 `ASPNETCORE_` 前缀) - 环境相关配置
-3. 命令行参数 - 最高优先级
+2. `appsettings.{Environment}.json` - 环境相关配置
+3. 环境变量 (带 `ASPNETCORE_` 前缀) - 环境相关配置
+4. 命令行参数 - 最高优先级
 
 **示例**:
 
@@ -162,7 +174,35 @@ export ASPNETCORE_AppSettings__ConnectionString=prod-server
 
 最终 `ConnectionString` 的值为 `"override-server"`。
 
-#### 3.2.2 Build 方法
+#### 3.2.2 Configure 便捷方法
+
+**功能**: 封装 `Services.Configure<TOption>(Configuration.GetSection(...))`，避免手写样板代码，返回 `this` 支持链式调用。
+
+**方法签名**:
+
+```csharp
+// 指定配置节名称
+public ConsoleAppServer Configure<TOption>(string sectionName) where TOption : class
+
+// 默认以类型名作为配置节
+public ConsoleAppServer Configure<TOption>() where TOption : class
+```
+
+**使用示例**:
+
+```csharp
+var builder = new ConsoleAppServer(args);
+// 等价于 builder.Services.Configure<MyOptions>(builder.Configuration.GetSection("MyOptions"));
+builder.Configure<MyOptions>("MyOptions");
+// 或使用默认节名（类型名）
+builder.Configure<MyOptions>();
+
+await using var sp = builder.Build<TempService>();
+```
+
+> 注：泛型 `Configure<T>` 会触发 SYSLIB1104 诊断，这是微软官方泛型配置绑定在 AOT 下的已知限制（dotnet/runtime#89273），已在 csproj 通过 `NoWarn` 全局抑制。
+
+#### 3.2.3 Build 方法
 
 **功能**: 构建 ServiceProvider 并注册启动服务。
 
@@ -170,7 +210,7 @@ export ASPNETCORE_AppSettings__ConnectionString=prod-server
 
 ```csharp
 // 方式一: 无额外服务注册
-public ServiceProvider Build<T>() where T : class, IServiceStart
+public ServiceProvider Build<TStart>() where TStart : class, IServiceStart
 
 // 方式二: 使用委托注册额外服务
 public ServiceProvider Build<TStart>(
@@ -181,7 +221,7 @@ public ServiceProvider Build<TStart>(
 **执行流程**:
 
 ```
-1. 注册 IServiceStart → T 映射
+1. 注册 IServiceStart → TStart 映射
 2. (可选) 执行 registerServicesAction 委托
 3. 调用 Services.BuildServiceProvider()
 4. 返回 ServiceProvider
@@ -264,11 +304,12 @@ public class MyService : IServiceStart
 **功能**: 提供 ServiceProvider 的扩展方法，启动应用程序。
 
 ```csharp
-public static async Task RunAsync(this ServiceProvider serviceProvider)
+public static async Task RunAsync(this IServiceProvider serviceProvider)
 {
     try
     {
-        var service = serviceProvider.GetRequiredService<IServiceStart>();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<IServiceStart>();
         ConsoleTool.PrintTitle(service.Title);
         await service.RunAsync();
     }
@@ -313,27 +354,34 @@ public static async Task RunAsync(this ServiceProvider serviceProvider)
 
 ### 4.2 日志配置
 
-在 `ConsoleAppServer` 构造函数中自动配置：
+在 `ConsoleAppServer` 构造函数中自动调用 `ConfigureLogging()` 配置，支持传入委托自定义：
 
 ```csharp
-private void ConfigureLogging()
+public ConsoleAppServer ConfigureLogging(Action<ILoggingBuilder>? configure = null)
 {
     Services.AddLogging(loggingBuilder =>
     {
         // 从 appsettings.json 的 Logging 节点读取配置
         loggingBuilder.AddConfiguration(Configuration.GetSection("Logging"));
 
-        // 控制台输出
-        loggingBuilder.AddConsole();
-
-        // 调试窗口输出 (Visual Studio)
-        loggingBuilder.AddDebug();
-
-        // 自定义文件输出
-        loggingBuilder.AddProvider(new ExtensionsLoggerProvider());
+        if (configure is null)
+        {
+            // 默认日志 Provider：Console + Debug + ExtensionsLoggerProvider
+            loggingBuilder.AddConsole();
+            loggingBuilder.AddDebug();
+            loggingBuilder.AddProvider(new ExtensionsLoggerProvider());
+        }
+        else
+        {
+            // 交由用户完全自定义日志配置（如接入 Serilog 等）
+            configure(loggingBuilder);
+        }
     });
+    return this;
 }
 ```
+
+> 不传委托（或传 null）时使用默认三种 Provider；传入委托后默认 Provider 不会自动添加，由委托完全控制。
 
 ### 4.3 ExtensionsLogger (自定义文件日志)
 
@@ -351,16 +399,17 @@ public bool IsEnabled(LogLevel logLevel)
 
 支持通过 `CoreGlobalConfig.MinimumLevel` 配置最低日志级别。
 
-**日志映射**:
+**日志分发**: 通过静态字典 `_levelNames` 将 `LogLevel` 映射到 `LocalLogHelper` 的日志类型字符串，统一调用 `LocalLogHelper.WriteMyLogs` 写入，避免 switch 分支：
 
-| LogLevel | 方法 |
+| LogLevel | 日志类型字符串 |
 |----------|------|
-| `Trace` | `LocalLogHelper.LogTrace()` |
-| `Debug` | `LocalLogHelper.LogDebug()` |
-| `Information` | `LocalLogHelper.LogInformation()` |
-| `Warning` | `LocalLogHelper.LogWarning()` |
-| `Error` | `LocalLogHelper.LogError()` |
-| `Critical` | `LocalLogHelper.LogCritical()` |
+| `Trace` | `Trace` |
+| `Debug` | `Debug` |
+| `Information` | `Information` |
+| `Warning` | `Warning` |
+| `Error` | `Error` |
+| `Critical` | `Critical` |
+| `None` / 未知 | 直接忽略（不写入） |
 
 **日志格式**:
 

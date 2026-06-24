@@ -16,6 +16,19 @@ namespace Azrng.ConsoleApp.DependencyInjection.Logger
             }
         }
 
+        /// <summary>
+        /// LogLevel 到 LocalLogHelper 日志类型字符串的映射，避免每条日志都走 switch 分支
+        /// </summary>
+        private static readonly Dictionary<LogLevel, string> _levelNames = new()
+        {
+            [LogLevel.Trace] = nameof(LogLevel.Trace),
+            [LogLevel.Debug] = nameof(LogLevel.Debug),
+            [LogLevel.Information] = nameof(LogLevel.Information),
+            [LogLevel.Warning] = nameof(LogLevel.Warning),
+            [LogLevel.Error] = nameof(LogLevel.Error),
+            [LogLevel.Critical] = nameof(LogLevel.Critical),
+        };
+
         private readonly string _categoryName;
 
         public ExtensionsLogger(string categoryName)
@@ -49,31 +62,14 @@ namespace Azrng.ConsoleApp.DependencyInjection.Logger
                 logMessage = $"{logMessage}{Environment.NewLine}{exception}";
             }
 
-            switch (logLevel)
+            // IsEnabled 已完成级别过滤，这里统一走 WriteMyLogs 入口，避免 switch 分支
+            if (!_levelNames.TryGetValue(logLevel, out var typeName))
             {
-                case LogLevel.Trace:
-                    LocalLogHelper.LogTrace(logMessage);
-                    break;
-                case LogLevel.Debug:
-                    LocalLogHelper.LogDebug(logMessage);
-                    break;
-                case LogLevel.Information:
-                    LocalLogHelper.LogInformation(logMessage);
-                    break;
-                case LogLevel.Warning:
-                    LocalLogHelper.LogWarning(logMessage);
-                    break;
-                case LogLevel.Error:
-                    LocalLogHelper.LogError(logMessage);
-                    break;
-                case LogLevel.Critical:
-                    LocalLogHelper.LogCritical(logMessage);
-                    break;
-                case LogLevel.None:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null);
+                // LogLevel.None 或未知级别直接忽略
+                return;
             }
+
+            LocalLogHelper.WriteMyLogs(typeName, logMessage);
         }
     }
 }
