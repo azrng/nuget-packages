@@ -17,10 +17,10 @@
 
 ```bash
 # Package Manager
-Install-Package Azrng.DataAccess
+Install-Package Azrng.DataAccess -Version 1.0.0-beta5
 
 # .NET CLI
-dotnet add package Azrng.DataAccess
+dotnet add package Azrng.DataAccess --version 1.0.0-beta5
 ```
 
 ## 快速开始
@@ -127,6 +127,8 @@ Task<IDbTransaction> BeginTransactionAsync();
 
 `Azrng.DataAccess` 内置 `Azrng.Database.DynamicSqlBuilder` 模块，用于根据查询条件生成参数化 SQL 和 `Dapper.DynamicParameters`。该模块已并入 `Azrng.DataAccess` 包，不再作为独立包发布。
 
+从 `Azrng.Database.DynamicSqlBuilder` 迁移时，只需要安装或引用 `Azrng.DataAccess`，原有命名空间和核心 API 保持不变：
+
 > 方言支持：当前仅 PostgreSQL 方言经过支持与验证。`SqlBuilderOptions.Dialect` 和 `SqlDialectService` 已作为后续扩展点保留，但 MySQL、SQL Server、SQLite、ClickHouse、Oracle 等方言暂未承诺可用。
 
 ```csharp
@@ -229,13 +231,19 @@ var maskedProperty = dbHelper.MaskedConnectionString;
 
 ## 版本历史
 
+### 1.0.0-beta5
+
+- 合并 `Azrng.Database.DynamicSqlBuilder` 为 `Azrng.DataAccess` 内置动态 SQL 构建模块
+- 保留 `Azrng.Database.DynamicSqlBuilder` 命名空间和 `DynamicSqlBuilderHelper` 等核心 API，降低迁移成本
+- 补充动态 SQL 构建模块的 README 使用示例、迁移说明和方言支持边界
+- 当前动态 SQL 构建模块仅声明支持并验证 PostgreSQL 方言，其他数据库方言保留扩展点但暂未承诺可用
+
 ### 1.0.0-beta4
 
 - 新增 `DataSourceConnectionStringBuilder`，统一 6 种数据库的连接字符串构建逻辑
 - 新增 `MaskConnectionString` 脱敏方法，支持日志安全输出
 - 新增 `GetMaskedConnectionString()` 扩展方法与 `DbHelperBase.MaskedConnectionString` 属性
 - 修正 `PostgresSql` 构建器 `PersistSecurityInfo` 为 `false`（增强安全性）
-- 合并 `Azrng.Database.DynamicSqlBuilder` 为内置动态 SQL 构建模块，当前仅声明支持 PostgreSQL 方言
 
 ### 1.0.0-beta3
 

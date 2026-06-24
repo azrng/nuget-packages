@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 更新时间 |
 |----|----------|------|------|------|----------|
+| T052 | Azrng.DataAccess README 与版本升级 | 针对提交 c85e1879051ce6fb66d27aeb83e463e3b14c7301 将 DynamicSqlBuilder 合并到 Azrng.DataAccess，更新包 README 发布说明并将 Azrng.DataAccess 版本从 1.0.0-beta4 升级到 1.0.0-beta5；Release 构建已生成 beta5 包 | 阶段 2（文档与版本发布完成） | DONE | 2026-06-24 |
 | T051 | docs-generator 架构改造与完善 | 单页 HTML 大规模卡顿，改造为纯前端 SPA + hash 路由 + data.json 分离；删除 index-new.ts/generate.js 废弃入口；修泛型参数解析误切、成员丢失、类型分类误判；加可搜索类库下拉、导航树高亮定位与展开记忆、右侧目录滚动修复、npm run preview；XML 收集严格绑定 PackPackages.slnx（58 项目/239 XML/2290 类型/14505 成员）。已编译生成+HTTP 验证 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T050 | Azrng.DataAccess 测试覆盖审查与完善 | 基于覆盖率审查 Azrng.DataAccess.Test，补充 DynamicSqlBuilder/DataAccess 可离线验证的单元测试，避免引入本地数据库依赖 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T049 | DynamicSqlBuilder 测试合并到 DataAccess.Test | 将 DynamicSqlBuilder 离线单元测试并入 Azrng.DataAccess.Test，移除独立测试项目；依赖本地 PostgreSQL 的旧集成测试不纳入默认回归 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
