@@ -5,6 +5,7 @@ using Azrng.AspNetCore.Core.JsonConverters;
 using Azrng.AspNetCore.Core.Middleware;
 using Azrng.AspNetCore.Core.Model;
 using Azrng.AspNetCore.Core.PreConfigure;
+using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
 using FluentAssertions;
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -127,15 +128,35 @@ public class CoreFeatureTests
     public void AddCorsByOrigins_RegistersOriginsAndCredentials()
     {
         var services = new ServiceCollection();
-        services.AddCorsByOrigins(["https://a.example", "https://b.example"], allowCredentials: true);
+        services.AddCorsByOrigins(new[] { "https://a.example", "https://b.example" }, allowCredentials: true);
 
         using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<CorsOptions>>().Value;
         var policy = options.GetPolicy("DefaultCors");
 
         policy.Should().NotBeNull();
-        policy!.Origins.Should().Contain(["https://a.example", "https://b.example"]);
+        policy!.Origins.Should().Contain(new[] { "https://a.example", "https://b.example" });
         policy.SupportsCredentials.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CorsRegistration_RejectsInvalidArguments()
+    {
+        var services = new ServiceCollection();
+
+        var emptyPolicy = () => services.AddAnyCors("");
+        var emptyOrigins = () => services.AddCorsByOrigins(Array.Empty<string>());
+        var blankOrigin = () => services.AddCorsByOrigins(new[] { "https://a.example", " " });
+        var nullCustomPolicy = () => services.AddCorsPolicy("DefaultCors", null!);
+
+        emptyPolicy.Should().Throw<ArgumentException>()
+            .WithParameterName("policyName");
+        emptyOrigins.Should().Throw<ArgumentException>()
+            .WithParameterName("allowedOrigins");
+        blankOrigin.Should().Throw<ArgumentException>()
+            .WithParameterName("allowedOrigins");
+        nullCustomPolicy.Should().Throw<ArgumentNullException>()
+            .WithParameterName("configurePolicy");
     }
 
     [Fact]
@@ -164,7 +185,7 @@ public class CoreFeatureTests
         var options = Options.Create(new ShowServiceConfig
         {
             Path = "/services",
-            Services = [descriptor]
+            Services = new List<ServiceDescriptor> { descriptor }
         });
         var middleware = new ShowAllServicesMiddleware(_ => Task.CompletedTask, options);
 
@@ -215,6 +236,24 @@ public class CoreFeatureTests
     }
 
     [Fact]
+    public void CustomResultPackFilter_SkipsProblemDetailsFileResultsAndNoWrapperActions()
+    {
+        var filter = new CustomResultPackFilter();
+        var problemContext = CreateResultExecutingContext(new ObjectResult(new ProblemDetails()));
+        var fileContext = CreateResultExecutingContext(new FileContentResult(new byte[] { 1, 2, 3 }, "application/octet-stream"));
+        var noWrapperContext = CreateResultExecutingContext(new ObjectResult(new { Name = "demo" }), new NoWrapperAttribute());
+
+        filter.OnResultExecuting(problemContext);
+        filter.OnResultExecuting(fileContext);
+        filter.OnResultExecuting(noWrapperContext);
+
+        problemContext.Result.Should().BeOfType<ObjectResult>()
+            .Which.Value.Should().BeOfType<ProblemDetails>();
+        fileContext.Result.Should().BeOfType<FileContentResult>();
+        noWrapperContext.Result.Should().BeOfType<ObjectResult>();
+    }
+
+    [Fact]
     public void GetBaseUrl_ReturnsSchemeWhenHostIsEmpty()
     {
         var context = new DefaultHttpContext();
@@ -255,6 +294,56 @@ public class CoreFeatureTests
     }
 
     [Fact]
+    public async Task AuditLogMiddleware_UsesSystemTextJsonWhenJsonSerializerIsMissing()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        var middleware = new AuditLogMiddleware(next =>
+        {
+            next.Response.StatusCode = StatusCodes.Status200OK;
+            return next.Response.WriteAsync("{\"ok\":true}");
+        });
+
+        await middleware.Invoke(context);
+        var completed = () => responseFeature.InvokeCompletedAsync();
+
+        await completed.Should().NotThrowAsync();
+    }
+
+    [Theory]
+    [InlineData("Forbidden", StatusCodes.Status401Unauthorized, "401")]
+    [InlineData("NotFound", StatusCodes.Status404NotFound, "404")]
+    [InlineData("Parameter", StatusCodes.Status400BadRequest, "400")]
+    [InlineData("LogicBusiness", StatusCodes.Status400BadRequest, "400")]
+    [InlineData("InternalServer", StatusCodes.Status500InternalServerError, "500")]
+    public async Task CustomExceptionMiddleware_MapsKnownExceptionsToExpectedStatusCode(
+        string exceptionType,
+        int expectedStatusCode,
+        string expectedCode)
+    {
+        var context = CreateExceptionHttpContext();
+        var middleware = new CustomExceptionMiddleware(
+            _ => throw CreateException(exceptionType),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<CustomExceptionMiddleware>.Instance);
+
+        await middleware.Invoke(context);
+        var payload = await ReadJsonResponseAsync<ResultModel>(context);
+
+        context.Response.StatusCode.Should().Be(expectedStatusCode);
+        payload.Should().NotBeNull();
+        payload!.IsSuccess.Should().BeFalse();
+        payload.Code.Should().Be(expectedCode);
+    }
+
+    [Fact]
     public async Task RequestIdMiddleware_GeneratesRequestIdWhenHeaderIsMissing()
     {
         var context = new DefaultHttpContext();
@@ -286,11 +375,55 @@ public class CoreFeatureTests
         context.Response.Headers["X-RequestId"].ToString().Should().Be(requestId);
     }
 
-    private static ResultExecutingContext CreateResultExecutingContext(IActionResult result)
+    private static ResultExecutingContext CreateResultExecutingContext(IActionResult result, params IFilterMetadata[] filters)
     {
         var httpContext = new DefaultHttpContext();
-        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
-        return new ResultExecutingContext(actionContext, [], result, controller: new object());
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor
+        {
+            FilterDescriptors = filters
+                .Select(filter => new FilterDescriptor(filter, FilterScope.Action))
+                .ToList()
+        });
+        return new ResultExecutingContext(actionContext, filters.ToList(), result, controller: new object());
+    }
+
+    private static DefaultHttpContext CreateExceptionHttpContext()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = services.BuildServiceProvider()
+        };
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("api.example");
+        context.Request.Path = "/api/demo";
+        context.Response.Body = new MemoryStream();
+        return context;
+    }
+
+    private static Exception CreateException(string exceptionType)
+    {
+        return exceptionType switch
+        {
+            "Forbidden" => new ForbiddenException("权限不通过"),
+            "NotFound" => new NotFoundException("未找到对象"),
+            "Parameter" => new ParameterException("参数错误"),
+            "LogicBusiness" => new LogicBusinessException(),
+            "InternalServer" => new InternalServerException("系统服务异常"),
+            _ => throw new ArgumentOutOfRangeException(nameof(exceptionType), exceptionType, null)
+        };
+    }
+
+    private static async Task<T?> ReadJsonResponseAsync<T>(DefaultHttpContext context)
+    {
+        context.Response.Body.Position = 0;
+        using var reader = new StreamReader(context.Response.Body, leaveOpen: true);
+        var json = await reader.ReadToEndAsync();
+        return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
     }
 
     private static Type CreateDynamicType(string typeName)
@@ -298,7 +431,7 @@ public class CoreFeatureTests
         var assemblyName = new AssemblyName("Azrng.AspNetCore.Core.Test.DynamicTypes");
         var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
         var moduleBuilder = assemblyBuilder.DefineDynamicModule("Main");
-        return moduleBuilder.DefineType(typeName, TypeAttributes.Public).CreateType();
+        return moduleBuilder.DefineType(typeName, TypeAttributes.Public).CreateType()!;
     }
 }
 
@@ -306,7 +439,7 @@ public class SampleOptions
 {
     public string? Name { get; set; }
 
-    public List<string> Trace { get; } = [];
+    public List<string> Trace { get; } = new();
 }
 
 internal class CustomResult : IResultModel
@@ -324,7 +457,7 @@ internal class CustomResult : IResultModel
 
     public string Code => "200";
 
-    public IEnumerable<ErrorInfo> Errors => [];
+    public IEnumerable<ErrorInfo> Errors => Array.Empty<ErrorInfo>();
 }
 
 internal class CapturingLoggerService : ILoggerService
@@ -345,7 +478,7 @@ internal class CapturingLoggerService : ILoggerService
 
 internal class CapturingResponseFeature : IHttpResponseFeature
 {
-    private readonly List<(Func<object, Task> Callback, object State)> _completedCallbacks = [];
+    private readonly List<(Func<object, Task> Callback, object State)> _completedCallbacks = new();
 
     public int StatusCode { get; set; } = StatusCodes.Status200OK;
 

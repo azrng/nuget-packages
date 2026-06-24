@@ -1,5 +1,7 @@
 using Azrng.Core;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Azrng.AspNetCore.Core.AuditLog;
 
@@ -19,7 +21,7 @@ public class DefaultLoggerService : ILoggerService
     public DefaultLoggerService(ILogger? logger, IJsonSerializer? jsonSerializer = null)
     {
         _logger = logger;
-        _jsonSerializer = jsonSerializer ?? throw new NotImplementedException("请先引用Azrng.Core.Json包");
+        _jsonSerializer = jsonSerializer ?? SystemTextJsonSerializer.Instance;
     }
 
     /// <summary>
@@ -29,7 +31,7 @@ public class DefaultLoggerService : ILoggerService
     /// <param name="jsonSerializer"></param>
     public DefaultLoggerService(ILoggerFactory? loggerFactory, IJsonSerializer? jsonSerializer = null)
     {
-        _jsonSerializer = jsonSerializer ?? throw new NotImplementedException("请先引用Azrng.Core.Json包");
+        _jsonSerializer = jsonSerializer ?? SystemTextJsonSerializer.Instance;
         if (loggerFactory != null)
         {
             _logger = loggerFactory.CreateLogger<DefaultLoggerService>();
@@ -85,5 +87,39 @@ public class DefaultLoggerService : ILoggerService
     {
         Write(log);
         return Task.CompletedTask;
+    }
+
+    private sealed class SystemTextJsonSerializer : IJsonSerializer
+    {
+        public static readonly SystemTextJsonSerializer Instance = new();
+
+        private static readonly JsonSerializerOptions Options = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+            ReferenceHandler = ReferenceHandler.IgnoreCycles
+        };
+
+        private SystemTextJsonSerializer() { }
+
+        public string ToJson<T>(T obj) where T : class
+        {
+            return JsonSerializer.Serialize(obj, Options);
+        }
+
+        public T? ToObject<T>(string json)
+        {
+            return JsonSerializer.Deserialize<T>(json, Options);
+        }
+
+        public T? Clone<T>(T obj) where T : class
+        {
+            return ToObject<T>(ToJson(obj));
+        }
+
+        public List<T>? ToList<T>(string json)
+        {
+            return JsonSerializer.Deserialize<List<T>>(json, Options);
+        }
     }
 }

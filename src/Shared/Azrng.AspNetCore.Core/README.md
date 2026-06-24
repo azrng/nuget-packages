@@ -438,6 +438,7 @@ app.UseCorsPolicy("CustomPolicy");
 - `AddAnyCors()` 仅适用于开发环境，生产环境必须使用 `AddCorsByOrigins()`
 - 当 `allowCredentials` 为 `true` 时，不能使用 `AllowAnyOrigin()`
 - SignalR 环境必须设置 `allowCredentials: true`
+- `policyName` 不能为空；`AddCorsByOrigins()` 至少需要一个非空来源
 
 #### 启用body重复读
 
@@ -464,6 +465,9 @@ public void Configure(WebApplication app, IWebHostEnvironment env)
 ```
 
 默认情况下回将日志输出到默认到Logger中，且默认所有路由都会记录日志
+
+如果没有注册 `ILoggerService`，中间件会使用默认日志服务写入 `ILogger`。默认日志服务优先使用容器中的
+`IJsonSerializer`；未引用或未注册 `Azrng.Core.Json` 时，会自动使用 `System.Text.Json` 作为兜底序列化器。
 
 ##### HTTP请求日志示例
 
@@ -651,6 +655,11 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.3.1
+  * 测试项目覆盖 `net6.0`、`net8.0`、`net9.0`、`net10.0`，增强多目标框架回归验证
+  * CORS 注册方法增加空策略名、空来源参数校验
+  * 审计日志默认日志服务增加 `System.Text.Json` 兜底，不再因缺少 `IJsonSerializer` 直接抛 `NotImplementedException`
+  * 补充统一返回、异常中间件、审计日志和 CORS 关键行为测试
 * 1.3.0
   * 简化 CORS 配置，移除复杂的配置类
   * 提供 `AddAnyCors()` - 开发环境快速配置

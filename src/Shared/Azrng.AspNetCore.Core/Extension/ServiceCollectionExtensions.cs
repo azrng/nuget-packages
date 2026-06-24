@@ -64,6 +64,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAnyCors(this IServiceCollection services,
                                                 string policyName = "DefaultCors")
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfInvalidPolicyName(policyName);
+
         services.AddCors(options =>
         {
             options.AddPolicy(policyName, builder =>
@@ -94,6 +97,18 @@ public static class ServiceCollectionExtensions
                                                       string policyName = "DefaultCors",
                                                       bool allowCredentials = false)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfInvalidPolicyName(policyName);
+        if (allowedOrigins == null || allowedOrigins.Length == 0)
+        {
+            throw new ArgumentException("至少需要配置一个允许的来源。", nameof(allowedOrigins));
+        }
+
+        if (allowedOrigins.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException("允许的来源不能为空。", nameof(allowedOrigins));
+        }
+
         services.AddCors(options =>
         {
             options.AddPolicy(policyName, builder =>
@@ -136,12 +151,24 @@ public static class ServiceCollectionExtensions
                                                    string policyName,
                                                    Action<CorsPolicyBuilder> configurePolicy)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfInvalidPolicyName(policyName);
+        ArgumentNullException.ThrowIfNull(configurePolicy);
+
         services.AddCors(options =>
         {
             options.AddPolicy(policyName, configurePolicy);
         });
 
         return services;
+    }
+
+    private static void ThrowIfInvalidPolicyName(string policyName)
+    {
+        if (string.IsNullOrWhiteSpace(policyName))
+        {
+            throw new ArgumentException("CORS 策略名称不能为空。", nameof(policyName));
+        }
     }
 
     /// <summary>

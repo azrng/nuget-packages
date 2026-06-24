@@ -636,6 +636,7 @@ app.Run();
 
 | 版本 | 主要变更 |
 |------|----------|
+| 1.3.1 | **扩展前基础加固**：测试覆盖 `net6.0`/`net8.0`/`net9.0`/`net10.0`；CORS 注册增加参数校验；审计日志默认序列化增加 `System.Text.Json` 兜底；补充关键行为回归测试 |
 | 1.3.0 | **CORS 配置重构**：简化为 3 个方法（`AddAnyCors`、`AddCorsByOrigins`、`AddCorsPolicy`）；移除复杂的配置类；新增 `UseCorsPolicy` 中间件方法；改进易用性和安全性 |
 | 1.2.1 | 更新异常中间件 |
 | 1.2.0 | 支持 .NET 10；新增 `AuditLogOptions`；支持配置记录的 HTTP 方法；支持最大响应体大小限制；优化 `CustomResultPackFilter` 不包装 `ProblemDetails` |
@@ -651,6 +652,24 @@ app.Run();
 | 0.1.0-beta3 | 支持 .NET 8；支持显示所有服务 |
 | 0.1.0-beta2 | 优化代码 |
 | 0.1.0-beta1 | 升级支持 .NET 7 |
+
+## 10.1 扩展边界
+
+后续扩展优先沿用现有模块边界，避免把应用业务规则放入基础设施包：
+
+- 统一响应：只处理 ASP.NET Core 返回结果包装、忽略包装标记和已知框架结果类型，不引入业务错误码字典。
+- 模型校验：只负责把 `ModelState` 转换为统一响应结构，不替代业务层校验。
+- 异常中间件：只映射 `Azrng.Core` 异常体系和未知异常，不在中间件中处理业务补偿逻辑。
+- 审计日志：只采集请求、响应、用户和链路信息；日志落库、脱敏策略或外部投递应通过 `ILoggerService` 扩展。
+- CORS：只提供开发、指定来源和自定义策略三类注册入口；复杂多租户来源解析应由调用方生成策略后传入。
+- DI 扫描：继续基于 `Azrng.Core.DependencyInjection` 标记接口注册服务，不新增平行注册约定。
+
+扩展前至少执行：
+
+```bash
+dotnet test test/Azrng.AspNetCore.Core.Test/Azrng.AspNetCore.Core.Test.csproj
+dotnet build src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj -c Release
+```
 
 ---
 
