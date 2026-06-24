@@ -227,6 +227,20 @@ public class DbOperatorUnitTests
     }
 
     [Fact]
+    public void MaskConnectionString_ShouldFallbackToSegmentMaskingWhenConnectionStringCannotBeParsed()
+    {
+        var connectionString = "Host=localhost;User Id=admin;Password=secret;Broken=\"unclosed";
+
+        var masked = DataSourceConnectionStringBuilder.MaskConnectionString(connectionString);
+
+        Assert.Contains("User Id=***", masked);
+        Assert.Contains("Password=***", masked);
+        Assert.Contains("Broken=\"unclosed", masked);
+        Assert.DoesNotContain("admin", masked);
+        Assert.DoesNotContain("secret", masked);
+    }
+
+    [Fact]
     public void DbHelper_ShouldExposeMaskedConnectionString()
     {
         var helper = new SqlServerDbHelper(new DataSourceConfig
@@ -258,6 +272,65 @@ public class DbOperatorUnitTests
         await Assert.ThrowsAsync<NotSupportedException>(() => bridge.GetSchemaViewListAsync("main"));
         await Assert.ThrowsAsync<NotSupportedException>(() => bridge.GetProcListAsync());
         await Assert.ThrowsAsync<NotSupportedException>(() => bridge.GetSchemaProcListAsync("main"));
+    }
+
+    [Fact]
+    public void DbHelperBase_ConvertReaderValueObject_ShouldHandleNullAndPassThroughValues()
+    {
+        var helper = new TestDbHelper(new DataSourceConfig());
+
+        Assert.Null(helper.ConvertReaderValueObject(null, typeof(string)));
+        Assert.Equal("abc", helper.ConvertReaderValueObject("abc", typeof(string)));
+    }
+
+    [Fact]
+    public void DbHelperBase_ConvertReaderValueObject_ShouldFormatDateTimeAndRoundDecimals()
+    {
+        var helper = new TestDbHelper(new DataSourceConfig { DecimalIsTwo = true });
+
+        Assert.Equal("2026-01-02 03:04:05",
+            helper.ConvertReaderValueObject(new DateTime(2026, 1, 2, 3, 4, 5), typeof(DateTime)));
+        Assert.Equal(12.35d, helper.ConvertReaderValueObject(12.346d, typeof(double)));
+        Assert.Equal(12.35d, helper.ConvertReaderValueObject(12.346m, typeof(decimal)));
+        Assert.Equal(12.35d, helper.ConvertReaderValueObject(12.346f, typeof(float)));
+    }
+
+    [Fact]
+    public void DbHelperBase_ConvertReaderValueObject_ShouldConvertUtcDateTimeToConfiguredTimeZone()
+    {
+        var helper = new TestDbHelper(new DataSourceConfig
+        {
+            TimeIsUtc = true,
+            TimeZoneId = "Asia/Shanghai"
+        });
+
+        var actual = helper.ConvertReaderValueObject(
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            typeof(DateTime));
+
+        Assert.Equal("2026-01-01 08:00:00", actual);
+    }
+
+    [Fact]
+    public void ClickHouseHelper_ConvertReaderValueObject_ShouldMatchBaseDateAndDecimalBehavior()
+    {
+        var helper = new ClickHouseDbHelper(new DataSourceConfig
+        {
+            Host = "localhost",
+            Port = 8123,
+            DbName = "default",
+            User = "default",
+            Password = "pwd",
+            DecimalIsTwo = true,
+            TimeIsUtc = true,
+            TimeZoneId = "Asia/Shanghai"
+        });
+
+        Assert.Null(helper.ConvertReaderValueObject(null, typeof(string)));
+        Assert.Equal("2026-01-01 08:00:00",
+            helper.ConvertReaderValueObject(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), typeof(DateTime)));
+        Assert.Equal(45.68d, helper.ConvertReaderValueObject(45.678d, typeof(double)));
+        Assert.Equal("abc", helper.ConvertReaderValueObject("abc", typeof(string)));
     }
 
     private static IEnumerable<IDbHelper> CreateHelpersForPaging()
@@ -305,6 +378,18 @@ public class DbOperatorUnitTests
     private sealed class ThrowingDbHelper : DbHelperBase
     {
         public ThrowingDbHelper() : base("Data Source=:memory:;") { }
+
+        protected override DbConnection GetConnection() => throw new NotSupportedException();
+
+        public override Task<object[][]> QueryArrayAsync(string sql, object? parameters = null, bool header = true) =>
+            throw new NotSupportedException();
+
+        public override DbParameter SetParameter(string key, object value) => throw new NotSupportedException();
+    }
+
+    private sealed class TestDbHelper : DbHelperBase
+    {
+        public TestDbHelper(DataSourceConfig dataSourceConfig) : base(dataSourceConfig) { }
 
         protected override DbConnection GetConnection() => throw new NotSupportedException();
 

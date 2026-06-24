@@ -6,6 +6,8 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 更新时间 |
 |----|----------|------|------|------|----------|
+| T051 | docs-generator 架构改造与完善 | 根据 XML 生成 API 文档，现状单页 HTML 在 92 项目规模下卡顿严重、存在 index-new.ts/generate.js 废弃入口、参数泛型解析与成员丢失 bug。改造为多页/SPA 架构，清理废弃文件，修复解析 bug | 阶段 0（方案设计中） | TODO | 2026-06-24 |
+| T050 | Azrng.DataAccess 测试覆盖审查与完善 | 基于覆盖率审查 Azrng.DataAccess.Test，补充 DynamicSqlBuilder/DataAccess 可离线验证的单元测试，避免引入本地数据库依赖 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T049 | DynamicSqlBuilder 测试合并到 DataAccess.Test | 将 DynamicSqlBuilder 离线单元测试并入 Azrng.DataAccess.Test，移除独立测试项目；依赖本地 PostgreSQL 的旧集成测试不纳入默认回归 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T048 | DynamicSqlBuilder 合并到 Azrng.DataAccess | 将 Azrng.Database.DynamicSqlBuilder 作为 Azrng.DataAccess 内置动态 SQL 构建模块发布，README 标注当前仅 PostgreSQL 方言已验证，并保留后续多数据库方言扩展设计 | 阶段 1（实现+验证完成） | DONE | 2026-06-24 |
 | T041 | Arrow timestamp(ns) struct wire schema + 转换 | 服务端把 timestamp(ns) 按 struct(sec:int64,nano:int32) 发送，原 TimestampType 前置导致 batch index out of range。改 wire schema 按 struct 声明 + reader 读出后转回 TimestampArray（对齐 PyODPS _convert_struct_timestamps），公共 schema 仍为 TimestampType | 阶段 1（实现+离线单测完成，集群 e2e 待用户凭据验证） | REVIEW | 2026-06-21 |
