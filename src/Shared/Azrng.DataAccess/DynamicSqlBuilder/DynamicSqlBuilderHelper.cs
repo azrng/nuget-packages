@@ -18,12 +18,12 @@ public static class DynamicSqlBuilderHelper
         string tableName,
         string necessaryCondition,
         List<string> queryResultFields,
-        List<SqlWhereClauseInfoDto> sqlWhereClauses,
-        List<InOperatorFieldDto> inOperatorFields = null,
-        List<NotInOperatorFieldDto> notInOperatorFields = null,
+        List<SqlWhereClauseInfoDto>? sqlWhereClauses,
+        List<InOperatorFieldDto>? inOperatorFields = null,
+        List<NotInOperatorFieldDto>? notInOperatorFields = null,
         int? pageIndex = null,
         int? pageSize = null,
-        List<SortFieldDto> sortFields = null,
+        List<SortFieldDto>? sortFields = null,
         bool isQueryTotalCount = false)
     {
         ValidateBuilderInputs(tableName, queryResultFields, sqlWhereClauses, inOperatorFields, notInOperatorFields, sortFields);
@@ -91,12 +91,12 @@ public static class DynamicSqlBuilderHelper
         string tableName,
         string necessaryCondition,
         List<string> queryResultFields,
-        IReadOnlyCollection<SqlWhereClauseInfoDto> sqlWhereClauses,
-        List<InOperatorFieldDto> inOperatorFields = null,
-        List<NotInOperatorFieldDto> notInOperatorFields = null,
+        IReadOnlyCollection<SqlWhereClauseInfoDto>? sqlWhereClauses,
+        List<InOperatorFieldDto>? inOperatorFields = null,
+        List<NotInOperatorFieldDto>? notInOperatorFields = null,
         int? pageIndex = null,
         int? pageSize = null,
-        IReadOnlyCollection<SortFieldDto> sortFields = null)
+        IReadOnlyCollection<SortFieldDto>? sortFields = null)
     {
         ValidateBuilderInputs(tableName, queryResultFields, sqlWhereClauses, inOperatorFields, notInOperatorFields, sortFields);
 
@@ -188,10 +188,10 @@ public static class DynamicSqlBuilderHelper
     private static void ValidateBuilderInputs(
         string tableName,
         List<string> queryResultFields,
-        IEnumerable<SqlWhereClauseInfoDto> sqlWhereClauses,
-        IEnumerable<InOperatorFieldDto> inOperatorFields,
-        IEnumerable<NotInOperatorFieldDto> notInOperatorFields,
-        IEnumerable<SortFieldDto> sortFields)
+        IEnumerable<SqlWhereClauseInfoDto>? sqlWhereClauses,
+        IEnumerable<InOperatorFieldDto>? inOperatorFields,
+        IEnumerable<NotInOperatorFieldDto>? notInOperatorFields,
+        IEnumerable<SortFieldDto>? sortFields)
     {
         if (queryResultFields == null || queryResultFields.Count == 0)
         {
@@ -254,7 +254,7 @@ public static class DynamicSqlBuilderHelper
         FieldNameValidator.ValidateFieldName(whereClause.FieldName, nameof(whereClause.FieldName));
     }
 
-    private static string GetOrderByClause(IEnumerable<SortFieldDto> sortFields)
+    private static string GetOrderByClause(IEnumerable<SortFieldDto>? sortFields)
     {
         return string.Join(",", (sortFields ?? Enumerable.Empty<SortFieldDto>())
             .Select(p => p.Field + p.OrderStr));

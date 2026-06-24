@@ -85,7 +85,7 @@ public class SqlWhereClauseHelper
         var (beginTime, endTime) = GetTimeZoneWhereCondition(fieldValueInfos);
         if (beginTime.HasValue && endTime.HasValue)
         {
-            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, beginTime.Value, endTime.Value, parameters)}";
+            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), beginTime.Value, endTime.Value, parameters)}";
         }
 
         return string.Empty;
@@ -111,11 +111,11 @@ public class SqlWhereClauseHelper
         if (valuesList.Any())
         {
             var stringValue = valuesList.First().ToString() ?? string.Empty;
-            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, stringValue, parameters)} ";
+            return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), stringValue, parameters)} ";
         }
 
         var codeValue = fieldValueInfos.Select(x => x.Code).FirstOrDefault();
-        return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, codeValue?.ToString() ?? string.Empty, parameters)} ";
+        return $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), codeValue?.ToString() ?? string.Empty, parameters)} ";
     }
 
     private static string GetOtherOperatorConditionSql(
@@ -137,10 +137,20 @@ public class SqlWhereClauseHelper
 
         return values.Count switch
         {
-            1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values.First(), parameters, sqlWhereClause.ValueType)} ",
-            > 1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, values, parameters, sqlWhereClause.ValueType)} ",
-            _ => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(sqlWhereClause.FieldName, fieldValueInfos.Select(x => x.Code), parameters, sqlWhereClause.ValueType)} "
+            1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), values.First(), parameters, sqlWhereClause.ValueType)} ",
+            > 1 => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), values, parameters, sqlWhereClause.ValueType)} ",
+            _ => $" {logicalOperator} {sqlOperation.GetSqlSentenceResult(GetRequiredFieldName(sqlWhereClause), fieldValueInfos.Select(x => x.Code), parameters, sqlWhereClause.ValueType)} "
         };
+    }
+
+    private static string GetRequiredFieldName(SqlWhereClauseInfoDto sqlWhereClause)
+    {
+        if (string.IsNullOrWhiteSpace(sqlWhereClause.FieldName))
+        {
+            throw new ArgumentException("叶子查询条件必须指定字段名", nameof(sqlWhereClause));
+        }
+
+        return sqlWhereClause.FieldName;
     }
 
     private static (DateTime? beginTime, DateTime? endTime) GetTimeZoneWhereCondition(

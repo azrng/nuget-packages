@@ -11,7 +11,7 @@ public class SqlBuilderOptions
 
     public bool EnableFieldNameValidation { get; set; } = true;
 
-    public Action<string, object> OnSqlGenerated { get; set; }
+    public Action<string, object>? OnSqlGenerated { get; set; }
 
     public static SqlBuilderOptions Default => new();
 

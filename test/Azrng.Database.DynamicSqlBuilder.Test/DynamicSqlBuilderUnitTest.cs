@@ -112,10 +112,8 @@ public class DynamicSqlBuilderUnitTest : IDisposable
     }
 
     [Fact]
-    public void BuilderSqlQueryCountStatementGeneric_ShouldUseDialectPagingSyntax()
+    public void BuilderSqlQueryCountStatementGeneric_ShouldUsePostgresPagingSyntaxByDefault()
     {
-        SqlBuilderConfigurer.Configure(options => options.Dialect = DatabaseType.SqlServer);
-
         var (querySql, countSql, _) = DynamicSqlBuilderHelper.BuilderSqlQueryCountStatementGeneric(
             "users",
             string.Empty,
@@ -126,23 +124,44 @@ public class DynamicSqlBuilderUnitTest : IDisposable
             sortFields: new[] { new SortFieldDto("created_at", false) });
 
         Assert.Contains("ORDER BY created_at DESC", querySql);
-        Assert.Contains("OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY", querySql);
-        Assert.DoesNotContain("LIMIT", querySql);
+        Assert.Contains("LIMIT 10 OFFSET 20", querySql);
         Assert.DoesNotContain("ORDER BY", countSql);
     }
 
     [Fact]
-    public void BuilderSqlQueryCountStatementGeneric_ShouldRequireOrderByForSqlServerPaging()
+    public void BuilderSqlQueryStatementGeneric_ShouldUsePostgresAnyForInOperatorByDefault()
     {
-        SqlBuilderConfigurer.Configure(options => options.Dialect = DatabaseType.SqlServer);
+        var inFields = new List<InOperatorFieldDto>
+        {
+            new("status", new object[] { 1, 2 }, typeof(int))
+        };
 
-        Assert.Throws<InvalidOperationException>(() => DynamicSqlBuilderHelper.BuilderSqlQueryCountStatementGeneric(
+        var (sql, parameters) = DynamicSqlBuilderHelper.BuilderSqlQueryStatementGeneric(
             "users",
             string.Empty,
             new List<string> { "id" },
+            new List<SqlWhereClauseInfoDto>(),
+            inOperatorFields: inFields);
+
+        Assert.Contains("status = ANY(", sql);
+        Assert.Single(parameters.ParameterNames);
+    }
+
+    [Fact]
+    public void BuilderSqlQueryCountStatementGeneric_ShouldRejectUnsupportedDialect()
+    {
+        SqlBuilderConfigurer.Configure(options => options.Dialect = DatabaseType.SqlServer);
+
+        var exception = Assert.Throws<NotSupportedException>(() => DynamicSqlBuilderHelper.BuilderSqlQueryCountStatementGeneric(
+            "users",
+            string.Empty,
+            new List<string> { "id", "created_at" },
             Array.Empty<SqlWhereClauseInfoDto>(),
             pageIndex: 1,
-            pageSize: 10));
+            pageSize: 10,
+            sortFields: new[] { new SortFieldDto("created_at", false) }));
+
+        Assert.Contains("当前仅支持 PostgreSQL 方言", exception.Message);
     }
 
     [Fact]

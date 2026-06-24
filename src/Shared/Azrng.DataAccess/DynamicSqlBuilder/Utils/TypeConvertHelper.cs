@@ -17,7 +17,7 @@ public static class TypeConvertHelper
     /// <returns>转换后的值</returns>
     /// <exception cref="ArgumentNullException">值为null时</exception>
     /// <exception cref="InvalidOperationException">转换失败且throwOnError为true时</exception>
-    public static object ConvertToTargetType(object value, Type targetType, bool throwOnError = true)
+    public static object? ConvertToTargetType(object value, Type targetType, bool throwOnError = true)
     {
         // 处理null值
         if (value == null || value == DBNull.Value)
@@ -87,7 +87,7 @@ public static class TypeConvertHelper
         if (values == null)
             throw new ArgumentNullException(nameof(values));
 
-        var resultList = new List<object>();
+        var resultList = new List<object?>();
 
         foreach (var value in values)
         {
@@ -106,7 +106,8 @@ public static class TypeConvertHelper
 
         // 根据目标类型返回强类型列表
         var listType = typeof(List<>).MakeGenericType(targetType);
-        var strongTypedList = (IList)Activator.CreateInstance(listType);
+        var strongTypedList = (IList?)Activator.CreateInstance(listType)
+                              ?? throw new InvalidOperationException($"无法创建类型 {listType} 的集合实例");
 
         foreach (var item in resultList)
         {
@@ -149,7 +150,7 @@ public static class TypeConvertHelper
     /// </summary>
     /// <param name="type">类型</param>
     /// <returns>默认值</returns>
-    public static object GetDefaultVaule(Type type)
+    public static object? GetDefaultVaule(Type type)
     {
         // 处理可空类型
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
@@ -157,7 +158,9 @@ public static class TypeConvertHelper
         if (underlyingType == typeof(string))
             return string.Empty;
 
-        return underlyingType.IsValueType ? Activator.CreateInstance(underlyingType) : null;
+        return underlyingType.IsValueType
+            ? Activator.CreateInstance(underlyingType) ?? throw new InvalidOperationException($"无法创建类型 {underlyingType} 的默认值")
+            : null;
     }
 
     /// <summary>

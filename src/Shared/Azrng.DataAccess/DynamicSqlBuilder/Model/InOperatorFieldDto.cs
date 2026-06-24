@@ -5,7 +5,7 @@ namespace Azrng.Database.DynamicSqlBuilder.Model
     /// </summary>
     public class InOperatorFieldDto
     {
-        public InOperatorFieldDto(string field, IEnumerable<object> ids, Type valueType = null)
+        public InOperatorFieldDto(string field, IEnumerable<object> ids, Type? valueType = null)
         {
             Field = field;
             Ids = ids;
@@ -45,7 +45,7 @@ namespace Azrng.Database.DynamicSqlBuilder.Model
     /// </summary>
     public class NotInOperatorFieldDto
     {
-        public NotInOperatorFieldDto(string field, IEnumerable<object> ids, Type valueType = null)
+        public NotInOperatorFieldDto(string field, IEnumerable<object> ids, Type? valueType = null)
         {
             Field = field;
             Ids = ids;

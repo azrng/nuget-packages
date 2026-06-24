@@ -123,6 +123,53 @@ Task<IDbTransaction> BeginTransactionAsync();
 
 ## 高级用法
 
+### 动态 SQL 构建模块
+
+`Azrng.DataAccess` 内置 `Azrng.Database.DynamicSqlBuilder` 模块，用于根据查询条件生成参数化 SQL 和 `Dapper.DynamicParameters`。该模块已并入 `Azrng.DataAccess` 包，不再作为独立包发布。
+
+> 方言支持：当前仅 PostgreSQL 方言经过支持与验证。`SqlBuilderOptions.Dialect` 和 `SqlDialectService` 已作为后续扩展点保留，但 MySQL、SQL Server、SQLite、ClickHouse、Oracle 等方言暂未承诺可用。
+
+```csharp
+using Azrng.Database.DynamicSqlBuilder;
+using Azrng.Database.DynamicSqlBuilder.Model;
+
+var whereClauses = new List<SqlWhereClauseInfoDto>
+{
+    new("status", new List<FieldValueInfoDto> { new(1) }, MatchOperator.Equal, valueType: typeof(int)),
+    new("creator", new List<FieldValueInfoDto> { new("admin") }, MatchOperator.Like)
+};
+
+var sortFields = new List<SortFieldDto>
+{
+    new("create_time", asc: false)
+};
+
+var (sql, parameters) = DynamicSqlBuilderHelper.BuilderSqlQueryStatementGeneric(
+    tableName: "public.inventory_details",
+    necessaryCondition: string.Empty,
+    queryResultFields: new List<string> { "product_id", "creator", "create_time" },
+    sqlWhereClauses: whereClauses,
+    pageIndex: 1,
+    pageSize: 20,
+    sortFields: sortFields);
+
+var rows = await dbHelper.QueryAsync<InventoryDetail>(sql, parameters);
+```
+
+当前 PostgreSQL 方言行为：
+
+- `IN` 使用 `field = ANY(@parameter)`。
+- `NOT IN` 使用 `field != ALL(@parameter)`。
+- 分页使用 `LIMIT ... OFFSET ...`。
+- 参数值全部通过 `DynamicParameters` 传递，字段名、表名、排序字段默认启用格式校验。
+
+后续扩展其他数据库方言时，应在 `SqlDialectService` 中补齐并验证以下差异：
+
+- `IN/NOT IN` 集合参数展开或数组参数策略。
+- 分页语法与排序要求。
+- 参数名前缀及 Dapper Provider 兼容性。
+- `LIKE` 转义字符和转义子句。
+
 ### 连接池配置（MySQL/PostgreSQL）
 
 ```csharp
@@ -188,6 +235,7 @@ var maskedProperty = dbHelper.MaskedConnectionString;
 - 新增 `MaskConnectionString` 脱敏方法，支持日志安全输出
 - 新增 `GetMaskedConnectionString()` 扩展方法与 `DbHelperBase.MaskedConnectionString` 属性
 - 修正 `PostgresSql` 构建器 `PersistSecurityInfo` 为 `false`（增强安全性）
+- 合并 `Azrng.Database.DynamicSqlBuilder` 为内置动态 SQL 构建模块，当前仅声明支持 PostgreSQL 方言
 
 ### 1.0.0-beta3
 

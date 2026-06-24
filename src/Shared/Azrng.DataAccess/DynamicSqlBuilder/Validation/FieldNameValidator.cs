@@ -146,13 +146,16 @@ namespace Azrng.Database.DynamicSqlBuilder.Validation
                    || fieldName.StartsWith("sp_", StringComparison.OrdinalIgnoreCase);
         }
 
-        public static void ValidateFieldName(string fieldName, string paramName = null)
+        public static void ValidateFieldName(string? fieldName, string? paramName = null)
         {
+            if (string.IsNullOrWhiteSpace(fieldName))
+            {
+                throw new ArgumentException("Field name cannot be empty.", paramName ?? nameof(fieldName));
+            }
+
             if (!IsValidFieldName(fieldName))
             {
-                var message = string.IsNullOrWhiteSpace(fieldName)
-                    ? "Field name cannot be empty."
-                    : $"Invalid field name '{fieldName}'. Field names must start with a letter or underscore, contain only letters, numbers, underscores, or a single table alias prefix, and must not be SQL keywords.";
+                var message = $"Invalid field name '{fieldName}'. Field names must start with a letter or underscore, contain only letters, numbers, underscores, or a single table alias prefix, and must not be SQL keywords.";
 
                 throw new ArgumentException(message, paramName ?? nameof(fieldName));
             }

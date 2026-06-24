@@ -12,8 +12,8 @@ namespace Azrng.Database.DynamicSqlBuilder.Model
 
         public SqlWhereClauseInfoDto(string fieldName, List<FieldValueInfoDto> fieldValueInfos,
                                      MatchOperator matchOperator = MatchOperator.Equal,
-                                     string logicalOperator = "And", Type valueType = null,
-                                     IEnumerable<SqlWhereClauseInfoDto> nestedChildren = null)
+                                     string logicalOperator = "And", Type? valueType = null,
+                                     IEnumerable<SqlWhereClauseInfoDto>? nestedChildren = null)
         {
             MatchOperator = matchOperator;
             FieldName = fieldName;
@@ -31,12 +31,12 @@ namespace Azrng.Database.DynamicSqlBuilder.Model
         /// <summary>
         /// 字段名
         /// </summary>
-        public string FieldName { get; set; }
+        public string? FieldName { get; set; }
 
         /// <summary>
         /// 字段值
         /// </summary>
-        public List<FieldValueInfoDto> FieldValueInfos { get; set; }
+        public List<FieldValueInfoDto>? FieldValueInfos { get; set; }
 
         /// <summary>
         /// 逻辑运算符 如 AND,OR
@@ -46,7 +46,7 @@ namespace Azrng.Database.DynamicSqlBuilder.Model
         /// <summary>
         /// 嵌套条件
         /// </summary>
-        public IEnumerable<SqlWhereClauseInfoDto> NestedChildrens { get; set; }
+        public IEnumerable<SqlWhereClauseInfoDto>? NestedChildrens { get; set; }
 
         /// <summary>
         /// 值的实际类型
