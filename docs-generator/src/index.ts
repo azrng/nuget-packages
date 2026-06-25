@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { XmlParser } from './parser.js';
 import { generateIndexHtml, generateDataJson } from './generator.js';
+import { parseCsprojMetadata, ProjectMetadata } from './csproj.js';
 
 // ==================== 配置 ====================
 
@@ -50,9 +51,12 @@ function getProjectsFromSlnx(slnxPath: string): string[] {
  * 收集指定项目列表生成的 XML 文档文件
  * 对每个项目的 bin/ 子目录递归查找 .xml 文件
  * 这样文档范围严格绑定解决方案，不受其他 slnx 的 build 残留影响
+ *
+ * 返回值携带每个 XML 所属项目的 .csproj 路径，便于后续注入包元数据。
+ * （多目标项目的多个 TFM XML 文件同属一个 csproj，共享同一份元数据。）
  */
-function getXmlFilesForProjects(projectPaths: string[]): string[] {
-  const files: string[] = [];
+function getXmlFilesForProjects(projectPaths: string[]): { filePath: string; projectPath: string }[] {
+  const files: { filePath: string; projectPath: string }[] = [];
 
   for (const projectPath of projectPaths) {
     const projectDir = path.dirname(projectPath);
@@ -68,7 +72,7 @@ function getXmlFilesForProjects(projectPaths: string[]): string[] {
         if (stat.isDirectory()) {
           collect(fullPath);
         } else if (item.endsWith('.xml')) {
-          files.push(fullPath);
+          files.push({ filePath: fullPath, projectPath });
         }
       }
     };
@@ -76,6 +80,30 @@ function getXmlFilesForProjects(projectPaths: string[]): string[] {
   }
 
   return files;
+}
+
+/**
+ * 读取并解析每个项目的 .csproj 元数据，缓存为 projectPath -> metadata
+ * csproj 文件缺失或解析失败时跳过（console.warn），返回全空 metadata 兜底
+ */
+function buildProjectMetadataMap(projectPaths: string[]): Map<string, ProjectMetadata> {
+  const map = new Map<string, ProjectMetadata>();
+  for (const projectPath of projectPaths) {
+    const empty: ProjectMetadata = { tags: [], targetFrameworks: [] };
+    try {
+      if (!fs.existsSync(projectPath)) {
+        console.warn(`⚠️  未找到 csproj，跳过元数据: ${projectPath}`);
+        map.set(projectPath, empty);
+        continue;
+      }
+      const content = fs.readFileSync(projectPath, 'utf-8');
+      map.set(projectPath, parseCsprojMetadata(content));
+    } catch (error) {
+      console.warn(`⚠️  解析 csproj 元数据失败: ${projectPath}`, error);
+      map.set(projectPath, empty);
+    }
+  }
+  return map;
 }
 
 /**
@@ -131,17 +159,22 @@ function main(): void {
 
   // 获取 XML 文件（仅限解决方案包含的项目）
   const scanTimer = new Timer();
-  const xmlFiles = getXmlFilesForProjects(projects);
+  const xmlEntries = getXmlFilesForProjects(projects);
 
-  if (xmlFiles.length === 0) {
+  if (xmlEntries.length === 0) {
     console.error('❌ 未找到 XML 文件');
     console.error('   请先构建解决方案以生成 XML 文档：');
     console.error(`   dotnet build ${path.basename(CONFIG.solutionFile)} -p:GenerateDocumentationFile=true -c Release`);
     process.exit(1);
   }
 
+  // 读取每个项目的 csproj 元数据，供后续注入到对应 Assembly
+  const metadataMap = buildProjectMetadataMap(projects);
+  const withMetaCount = [...metadataMap.values()].filter(m => m.title || m.tags.length > 0).length;
+  console.log(`📊 csproj 元数据: ${withMetaCount}/${projects.length} 个项目含 Title 或 Tags`);
+
   console.log(`📁 解决方案: ${path.basename(CONFIG.solutionFile)} (${projects.length} 个项目)`);
-  console.log(`📁 扫描完成: ${xmlFiles.length} 个 XML 文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
+  console.log(`📁 扫描完成: ${xmlEntries.length} 个 XML 文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
 
   // 解析 XML
   const parseTimer = new Timer();
@@ -149,10 +182,10 @@ function main(): void {
 
   console.log('🔍 正在解析 XML 文件...');
 
-  for (const file of xmlFiles) {
-    const fileName = path.basename(file);  // 已经包含.xml扩展名
-    const content = fs.readFileSync(file, 'utf-8');
-    parser.parseFile(content, fileName);
+  for (const entry of xmlEntries) {
+    const fileName = path.basename(entry.filePath);  // 已经包含.xml扩展名
+    const content = fs.readFileSync(entry.filePath, 'utf-8');
+    parser.parseFile(content, fileName, metadataMap.get(entry.projectPath));
     console.log(`  ✓ ${fileName}`);
   }
 

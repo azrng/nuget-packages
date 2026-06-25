@@ -33,6 +33,12 @@ interface SerializableData {
   assemblies: {
     fileName: string;
     name: string;
+    // 来自 .csproj 的展示用元数据（可选，缺失字段不输出以减小体积）
+    title?: string;
+    tags?: string[];
+    description?: string;
+    version?: string;
+    targetFrameworks?: string[];
     namespaces: {
       name: string;
       types: SerializableType[];
@@ -45,34 +51,45 @@ interface SerializableData {
  * 把 ParsedData 序列化为可写入 data.json 的结构
  */
 export function serializeData(data: ParsedData): SerializableData {
-  const assemblies = data.assemblies.map(assembly => ({
-    fileName: assembly.fileName,
-    name: assembly.name,
-    namespaces: Array.from(assembly.namespaces.values())
-      .filter(ns => ns.types.size > 0)
-      .map(ns => ({
-        name: ns.name,
-        types: Array.from(ns.types.values()).map(type => ({
-          name: type.name,
-          shortName: type.shortName,
-          category: type.category,
-          namespace: type.namespace,
-          summary: type.summary,
-          remarks: type.remarks,
-          typeParams: type.typeParams,
-          members: type.members.map(m => ({
-            type: m.type,
-            shortName: m.shortName,
-            name: m.name,
-            summary: m.summary,
-            params: m.params,
-            typeParams: m.typeParams,
-            returns: m.returns,
-            remarks: m.remarks
+  const assemblies = data.assemblies.map(assembly => {
+    const out: SerializableData['assemblies'][number] = {
+      fileName: assembly.fileName,
+      name: assembly.name,
+      namespaces: Array.from(assembly.namespaces.values())
+        .filter(ns => ns.types.size > 0)
+        .map(ns => ({
+          name: ns.name,
+          types: Array.from(ns.types.values()).map(type => ({
+            name: type.name,
+            shortName: type.shortName,
+            category: type.category,
+            namespace: type.namespace,
+            summary: type.summary,
+            remarks: type.remarks,
+            typeParams: type.typeParams,
+            members: type.members.map(m => ({
+              type: m.type,
+              shortName: m.shortName,
+              name: m.name,
+              summary: m.summary,
+              params: m.params,
+              typeParams: m.typeParams,
+              returns: m.returns,
+              remarks: m.remarks
+            }))
           }))
         }))
-      }))
-  }));
+    };
+    // 仅在有值时输出元数据字段，避免 data.json 出现大量空值
+    if (assembly.title) out.title = assembly.title;
+    if (assembly.tags && assembly.tags.length > 0) out.tags = assembly.tags;
+    if (assembly.description) out.description = assembly.description;
+    if (assembly.version) out.version = assembly.version;
+    if (assembly.targetFrameworks && assembly.targetFrameworks.length > 0) {
+      out.targetFrameworks = assembly.targetFrameworks;
+    }
+    return out;
+  });
 
   // 类库文件名（前端构造类型唯一 key 用 lib + type name）
   const libSet = new Set<string>();
@@ -122,9 +139,9 @@ export function generateIndexHtml(): string {
 </head>
 <body>
 <nav class="top-nav">
-<div class="top-nav-logo">API Documentation</div>
+<div class="top-nav-logo" onclick="navTo('')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navTo('')}" role="link" tabindex="0" title="回到主页">API Documentation</div>
 <div class="top-nav-actions">
-<button class="btn btn-secondary" onclick="toggleTheme()" title="切换主题">&#127763;</button>
+<button class="btn btn-secondary" id="themeBtn" onclick="toggleTheme()" title="切换主题">&#127763;</button>
 </div>
 </nav>
 
@@ -192,6 +209,7 @@ let DATA_URL = 'data.json'; // 数据文件路径（与 index.html 同目录）
 let currentLibrary = '';   // 当前选中类库（'' 表示全部）
 let searchIndex = [];      // 搜索索引（扁平化的类型+成员）
 let typeIndex = {};        // 类型快速索引：lib -> typeName -> type
+let selectedTags = [];     // 首页 tag 云当前选中的 tag（AND 筛选）
 
 // ==================== 工具函数 ====================
 function escapeHtml(str) {
@@ -208,6 +226,41 @@ function getIcon(category) {
 // 去掉类库名的 .xml 后缀（仅用于显示，不影响作为路由/索引 key 的 fileName）
 function stripXmlExt(name) {
   return name && name.toLowerCase().endsWith('.xml') ? name.slice(0, -4) : name;
+}
+
+// 类库显示标题：优先 Title，否则用去掉 .xml 后缀的程序集名兜底
+function getAssemblyTitle(a) {
+  return a.title || stripXmlExt(a.name);
+}
+
+// 按 assembly.name 去重（同一程序集多 TFM 会产生多条 XML 记录，保留第一条）
+// 仅用于首页卡片列表与 tag 统计，不影响侧边栏选择器与路由
+function getUniqueAssemblies() {
+  var seen = {};
+  var list = [];
+  DATA.assemblies.forEach(function(a) {
+    if (!seen[a.name]) {
+      seen[a.name] = true;
+      list.push(a);
+    }
+  });
+  return list;
+}
+
+// 统计各 tag 出现的类库数，按频次降序返回 [{tag, count}]
+function countTags(assemblies) {
+  var counts = {};
+  assemblies.forEach(function(a) {
+    (a.tags || []).forEach(function(t) {
+      counts[t] = (counts[t] || 0) + 1;
+    });
+  });
+  return Object.keys(counts).map(function(t) {
+    return { tag: t, count: counts[t] };
+  }).sort(function(x, y) {
+    // 频次降序；频次相同按 tag 字母序，保证稳定
+    return y.count - x.count || (x.tag < y.tag ? -1 : x.tag > y.tag ? 1 : 0);
+  });
 }
 
 function encodeKey(lib, name) {
@@ -239,10 +292,20 @@ async function loadData() {
 }
 
 // 建立索引
+// 按 assembly.name 去重：同一类库多 TFM（net6/7/8/9）会产生多条记录，
+// 仅取首条入索引，避免搜索结果和类型索引被重复放大 3~4 倍
 function buildIndex() {
   typeIndex = {};
   searchIndex = [];
-  DATA.assemblies.forEach(function(assembly) {
+  getUniqueAssemblies().forEach(function(assembly) {
+    // 类库本身加入搜索索引（按标题/名称/tag/描述可搜）
+    searchIndex.push({
+      lib: assembly.fileName, name: assembly.name,
+      title: assembly.title, tags: assembly.tags || [],
+      description: assembly.description || '',
+      target: 'lib'
+    });
+
     typeIndex[assembly.fileName] = {};
     assembly.namespaces.forEach(function(ns) {
       ns.types.forEach(function(type) {
@@ -266,13 +329,13 @@ function buildIndex() {
 
 // ==================== 类库可搜索下拉 ====================
 // 把所有类库(fileName + 显示名)缓存到 LIBS，供过滤使用
-// LIBS 第一项固定为"全部"（value=''）
+// LIBS 第一项固定为"全部"（value=''）；按 assembly.name 去重，避免多 TFM 重复
 var LIBS = [{ value: '', text: '全部' }];
 var libComboDisplay, libComboText, libComboDropdown, libComboSearch, libComboList;
 
 function buildLibrarySelector() {
-  DATA.assemblies.forEach(function(a) {
-    LIBS.push({ value: a.fileName, text: stripXmlExt(a.fileName) });
+  getUniqueAssemblies().forEach(function(a) {
+    LIBS.push({ value: a.fileName, text: stripXmlExt(a.name) });
   });
   libComboDisplay = document.getElementById('libComboDisplay');
   libComboText = document.getElementById('libComboText');
@@ -377,6 +440,17 @@ function route() {
 
   if (parts.length === 0) {
     currentTypeKey = '';
+    currentLibrary = '';
+    selectedTags = [];
+    syncLibComboDisplay('');
+    renderHome();
+  } else if (parts[0] === 'tags') {
+    // #/tags/{tag1},{tag2},...  按选中 tag 筛选首页类库（AND）
+    currentTypeKey = '';
+    currentLibrary = '';
+    var tagStr = decodeURIComponent(parts.slice(1).join('/'));
+    selectedTags = tagStr ? tagStr.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
+    syncLibComboDisplay('');
     renderHome();
   } else if (parts[0] === 'lib') {
     // #/lib/{lib}
@@ -426,20 +500,17 @@ function renderNavTree(lib) {
   var tree = document.getElementById('navTree');
   if (!tree) return;
 
-  var assembly = null;
-  if (lib) {
-    assembly = DATA.assemblies.filter(function(a) { return a.fileName === lib; })[0];
-  }
-  // 未选类库时默认展示第一个（避免首页时导航树空白）
-  if (!assembly) {
-    assembly = DATA.assemblies[0];
-    if (assembly) currentLibrary = assembly.fileName;
-  }
-  if (!assembly) {
-    tree.innerHTML = '<div class="nav-empty">暂无数据</div>';
+  // 首页（未选类库）：展示全部类库总览，而不是默认塞第一个类库
+  if (!lib) {
+    renderNavTreeHome(tree);
     return;
   }
 
+  var assembly = DATA.assemblies.filter(function(a) { return a.fileName === lib; })[0];
+  if (!assembly) {
+    renderNavTreeHome(tree);
+    return;
+  }
   // 切换类库时清空展开记忆（不同类库的命名空间不同）
   if (navTreeLib !== assembly.fileName) {
     expandedNamespaces = {};
@@ -462,10 +533,14 @@ function renderNavTree(lib) {
 
   var html = '';
   var isFirst = true;
+  // 仅当类库整体类型不多时，首个命名空间默认展开；大库（如 106 类型）默认全折叠，避免导航过长
+  var totalTypes = 0;
+  assembly.namespaces.forEach(function(ns) { totalTypes += ns.types.length; });
+  var defaultExpandFirst = totalTypes <= 15;
   assembly.namespaces.forEach(function(ns) {
     if (ns.types.length === 0) return;
-    // 已记忆展开 或 当前类型所在命名空间 或 第一个 → 展开
-    var expanded = expandedNamespaces[ns.name] || (currentTypeKey && hasCurrentType(ns)) || (isFirst && !currentTypeKey);
+    // 展开：已记忆 / 含当前类型 / 首个命名空间（且类库不大）
+    var expanded = expandedNamespaces[ns.name] || (currentTypeKey && hasCurrentType(ns)) || (isFirst && defaultExpandFirst && !currentTypeKey);
     isFirst = false;
     html += '<div class="nav-item nav-namespace' + (expanded ? ' expanded' : '') + '">' +
       '<div class="nav-item-header" onclick="toggleNav(this)" data-ns="' + escapeHtml(ns.name) + '">' +
@@ -492,6 +567,24 @@ function renderNavTree(lib) {
       activeEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
     }
   }
+}
+
+// 首页导航树：按类库（去重）列出，点击进入对应类库详情页
+function renderNavTreeHome(tree) {
+  var assemblies = getUniqueAssemblies();
+  if (assemblies.length === 0) {
+    tree.innerHTML = '<div class="nav-empty">暂无数据</div>';
+    return;
+  }
+  var html = '';
+  assemblies.forEach(function(a) {
+    var typeCount = 0;
+    a.namespaces.forEach(function(ns) { typeCount += ns.types.length; });
+    html += '<a class="nav-item nav-lib" href="#/lib/' + encodeURIComponent(a.fileName) + '">' +
+      '<span class="nav-lib-text">' + escapeHtml(getAssemblyTitle(a)) + '</span>' +
+      '<span class="nav-count">' + typeCount + '</span></a>';
+  });
+  tree.innerHTML = html;
 }
 
 // 判断命名空间下是否包含当前选中的类型
@@ -527,6 +620,8 @@ function toggleNav(header) {
 // ==================== 渲染：首页 ====================
 function renderHome() {
   var s = DATA.stats;
+  // 注意：tag 筛选状态 selectedTags 由路由（#/tags/...）解析设置，此处不再重置
+
   var html = '<div class="page-header">' +
     '<div class="page-header-left">' +
     '<h1>API Documentation</h1>' +
@@ -536,20 +631,136 @@ function renderHome() {
     '<button class="btn btn-primary" onclick="toggleFocusMode()">焦点模式</button>' +
     '</div></div>';
 
-  html += '<div class="home-section"><h2 class="home-title">类库列表</h2><div class="lib-grid">';
-  DATA.assemblies.forEach(function(a) {
-    var typeCount = 0;
-    a.namespaces.forEach(function(ns) { typeCount += ns.types.length; });
-    html += '<a class="lib-card" href="#/lib/' + encodeURIComponent(a.fileName) + '">' +
-      '<span class="lib-icon">&#128196;</span>' +
-      '<span class="lib-name">' + escapeHtml(stripXmlExt(a.fileName)) + '</span>' +
-      '<span class="lib-count">' + typeCount + ' types</span></a>';
-  });
-  html += '</div></div>';
+  html += '<div class="home-section">' +
+    '<h2 class="home-title">类库列表</h2>' +
+    '<div class="tag-cloud" id="tagCloud"></div>' +
+    '<div class="lib-grid" id="libGrid"></div>' +
+    '</div>';
 
   setMainContent(html);
-  renderTocForHome();
+  setHomeMode(true);
+  renderTagCloud();
+  renderLibGrid();
   renderNavTree(currentLibrary);
+}
+
+// 当前 tag 云展示的 tag 列表（按索引引用，避免在 onclick 里拼接字符串引号）
+let tagCloudTags = [];
+
+// 渲染顶部 tag 标签云（按频次取前 24 个，避免过长）
+function renderTagCloud() {
+  var el = document.getElementById('tagCloud');
+  if (!el) return;
+  var assemblies = getUniqueAssemblies();
+  tagCloudTags = countTags(assemblies).slice(0, 24);
+  if (tagCloudTags.length === 0) { el.innerHTML = ''; return; }
+
+  var html = '<button class="tag-chip' + (selectedTags.length === 0 ? ' active' : '') +
+    '" onclick="clearTags()">全部</button>';
+  tagCloudTags.forEach(function(t, i) {
+    var active = selectedTags.indexOf(t.tag) >= 0 ? ' active' : '';
+    html += '<button class="tag-chip' + active + '" onclick="selectTag(' + i + ')" title="' +
+      escapeHtml(t.tag) + '">' + escapeHtml(t.tag) +
+      '<span class="tag-count">' + t.count + '</span></button>';
+  });
+  el.innerHTML = html;
+}
+
+// 把当前 selectedTags 同步到 URL（replaceState，不触发路由重渲染）
+// 无选中 → 回到 #/；有选中 → #/tags/tag1,tag2
+function syncTagUrl() {
+  var newHash = selectedTags.length > 0
+    ? '#/tags/' + selectedTags.map(encodeURIComponent).join(',')
+    : '#/';
+  // 用 replaceState 避免每次点击 tag 产生一条历史记录
+  if (location.hash !== newHash) history.replaceState(null, '', newHash);
+}
+
+// 清空全部筛选
+function clearTags() {
+  selectedTags = [];
+  syncTagUrl();
+  renderTagCloud();
+  renderLibGrid();
+}
+
+// 点击某个 tag：toggle 选中态（AND 逻辑），索引来自 tagCloudTags
+function selectTag(index) {
+  var t = tagCloudTags[index];
+  if (!t) return;
+  var idx = selectedTags.indexOf(t.tag);
+  if (idx >= 0) selectedTags.splice(idx, 1);
+  else selectedTags.push(t.tag);
+  syncTagUrl();
+  renderTagCloud();
+  renderLibGrid();
+}
+
+// 跳回首页并预选单个 tag（供卡片/详情页的 tag 点击调用）
+function filterByTag(tag) {
+  selectedTags = [tag];
+  navTo('tags/' + encodeURIComponent(tag));
+}
+
+// 渲染类库卡片网格（按当前选中 tag AND 筛选）
+function renderLibGrid() {
+  var el = document.getElementById('libGrid');
+  if (!el) return;
+  var assemblies = getUniqueAssemblies();
+  var html = '';
+  assemblies.forEach(function(a) {
+    // AND 筛选：选中的每个 tag 都需包含；无选中则全部显示（含无 tag 类库）
+    if (selectedTags.length > 0) {
+      var aTags = a.tags || [];
+      var ok = selectedTags.every(function(t) { return aTags.indexOf(t) >= 0; });
+      if (!ok) return;
+    }
+
+    var typeCount = 0;
+    a.namespaces.forEach(function(ns) { typeCount += ns.types.length; });
+
+    // 版本 / 目标框架 元信息行（无则不渲染）
+    var metaBits = [];
+    if (a.version) metaBits.push('<span class="lib-meta-version">v' + escapeHtml(a.version) + '</span>');
+    if (a.targetFrameworks && a.targetFrameworks.length > 0) {
+      var tfmHtml = a.targetFrameworks.map(function(tf) {
+        return '<span class="lib-meta-tfm">' + escapeHtml(tf) + '</span>';
+      }).join('');
+      metaBits.push('<span class="lib-meta-tfms">' + tfmHtml + '</span>');
+    }
+    var metaHtml = metaBits.length > 0 ? '<div class="lib-card-meta">' + metaBits.join('') + '</div>' : '';
+
+    // 卡片内 tag（仅前 4 个，避免过长）：可点击跳到按该 tag 筛选的首页
+    // 用 <a href="#/tags/..."> 让浏览器原生导航，onclick 阻止冒泡到卡片链接
+    var tagsHtml = '';
+    if (a.tags && a.tags.length > 0) {
+      var shown = a.tags.slice(0, 4).map(function(t) {
+        return '<a class="lib-card-tag" href="#/tags/' + encodeURIComponent(t) +
+          '" onclick="event.stopPropagation()" title="按 ' + escapeHtml(t) + ' 筛选">' + escapeHtml(t) + '</a>';
+      }).join('');
+      var more = a.tags.length > 4 ? '<span class="lib-card-tag lib-card-tag-more">+' + (a.tags.length - 4) + '</span>' : '';
+      tagsHtml = '<div class="lib-card-tags">' + shown + more + '</div>';
+    }
+
+    // 卡片整体用 <div>（不可嵌套 <a>，故卡片本身非链接）
+    // 标题区做成跳类库的链接，tag 仍是各自独立的 <a>
+    var libUrl = '#/lib/' + encodeURIComponent(a.fileName);
+    html += '<div class="lib-card">' +
+      '<a class="lib-card-head" href="' + libUrl + '">' +
+        '<span class="lib-icon">&#128196;</span>' +
+        '<span class="lib-name">' + escapeHtml(getAssemblyTitle(a)) + '</span>' +
+      '</a>' +
+      (a.description ? '<p class="lib-desc">' + escapeHtml(a.description) + '</p>' : '') +
+      metaHtml +
+      tagsHtml +
+      '<div class="lib-card-foot"><a class="lib-count" href="' + libUrl + '">' + typeCount + ' types</a></div>' +
+      '</div>';
+  });
+
+  if (html === '') {
+    html = '<div class="lib-grid-empty">没有符合所选标签的类库</div>';
+  }
+  el.innerHTML = html;
 }
 
 // ==================== 渲染：类库 ====================
@@ -557,9 +768,29 @@ function renderLibrary(lib) {
   var assembly = DATA.assemblies.filter(function(a) { return a.fileName === lib; })[0];
   if (!assembly) { renderHome(); return; }
 
+  var descBits = [assembly.namespaces.length + ' 个命名空间'];
+  if (assembly.version) descBits.push('v' + assembly.version);
+  if (assembly.targetFrameworks && assembly.targetFrameworks.length > 0) {
+    descBits.push(assembly.targetFrameworks.join(' / '));
+  }
+
   var html = '<div class="page-header"><div class="page-header-left">' +
-    '<h1>' + escapeHtml(assembly.fileName) + '</h1>' +
-    '<p class="page-description">' + assembly.namespaces.length + ' 个命名空间</p></div></div>';
+    '<h1>' + escapeHtml(getAssemblyTitle(assembly)) + '</h1>';
+
+  if (assembly.description) {
+    html += '<p class="page-description">' + escapeHtml(assembly.description) + '</p>';
+  }
+  html += '<p class="page-description">' + escapeHtml(descBits.join(' · ')) + '</p>';
+
+  if (assembly.tags && assembly.tags.length > 0) {
+    html += '<div class="lib-header-tags">';
+    assembly.tags.forEach(function(t) {
+      html += '<a class="lib-card-tag" href="#/tags/' + encodeURIComponent(t) +
+        '" title="按 ' + escapeHtml(t) + ' 筛选">' + escapeHtml(t) + '</a>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
 
   assembly.namespaces.forEach(function(ns) {
     html += renderNamespaceSection(ns, lib);
@@ -730,21 +961,13 @@ function renderSimpleMember(m, t) {
 // ==================== 渲染辅助 ====================
 function setMainContent(html) {
   document.getElementById('mainContent').innerHTML = html;
+  // 默认离开首页模式（恢复右侧目录栏）；首页 renderHome 会再调用 setHomeMode(true)
+  setHomeMode(false);
   // 滚动到顶部
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 // ==================== 目录（右侧） ====================
-function renderTocForHome() {
-  var html = '';
-  html += '<li><a href="#" class="toc-link">首页总览</a></li>';
-  DATA.assemblies.slice(0, 30).forEach(function(a) {
-    html += '<li><a href="#/lib/' + encodeURIComponent(a.fileName) + '" class="toc-link">' + escapeHtml(stripXmlExt(a.fileName)) + '</a></li>';
-  });
-  if (DATA.assemblies.length > 30) html += '<li class="toc-more">...共 ' + DATA.assemblies.length + ' 个</li>';
-  document.getElementById('tocList').innerHTML = html;
-}
-
 function renderTocForSections() {
   var sections = document.querySelectorAll('.content-section');
   var html = '';
@@ -833,26 +1056,65 @@ function initSearch() {
     var q = this.value.toLowerCase().trim();
     if (q.length < 2) { searchResults.classList.remove('show'); return; }
 
-    var results = searchIndex.filter(function(item) {
-      return item.name.toLowerCase().indexOf(q) >= 0 || (item.summary && item.summary.toLowerCase().indexOf(q) >= 0);
-    }).slice(0, 50);
+    // 匹配：类库(标题/名称/tag/描述)、类型、成员
+    var matched = searchIndex.filter(function(item) {
+      if (item.target === 'lib') {
+        return (item.name && item.name.toLowerCase().indexOf(q) >= 0)
+          || (item.title && item.title.toLowerCase().indexOf(q) >= 0)
+          || (item.description && item.description.toLowerCase().indexOf(q) >= 0)
+          || (item.tags && item.tags.some(function(t) { return t.toLowerCase().indexOf(q) >= 0; }));
+      }
+      return (item.name && item.name.toLowerCase().indexOf(q) >= 0)
+        || (item.summary && item.summary.toLowerCase().indexOf(q) >= 0);
+    });
 
-    if (results.length === 0) {
+    // 分组：类库优先展示，其次类型、成员；各组限量避免下拉过长
+    var libs = matched.filter(function(i) { return i.target === 'lib'; }).slice(0, 8);
+    var types = matched.filter(function(i) { return i.target === 'type'; }).slice(0, 15);
+    var members = matched.filter(function(i) { return i.target === 'member'; }).slice(0, 20);
+
+    if (libs.length === 0 && types.length === 0 && members.length === 0) {
       searchResults.innerHTML = '<div class="search-empty">无匹配结果</div>';
       searchResults.classList.add('show');
       return;
     }
 
-    searchResults.innerHTML = results.map(function(item) {
-      var key = encodeKey(item.lib, item.name);
-      var hash = item.target === 'member' ? '#/type/' + encodeURIComponent(key) : '#/type/' + encodeURIComponent(key);
-      var kindText = { type: item.kind, M: 'Method', P: 'Property', F: 'Field', E: 'Event' };
-      var kt = item.target === 'type' ? item.kind : kindText[item.kind];
-      return '<a class="search-result-item" href="' + hash + '">' +
-        '<div class="search-result-name">' + escapeHtml(item.shortName) +
-        (item.target === 'member' ? ' <span class="search-member-of">in ' + escapeHtml(item.name.split('.').slice(-2, -1)[0] || '') + '</span>' : '') +
-        '</div><div class="search-result-type">' + escapeHtml(kt) + '</div></a>';
-    }).join('');
+    var kindText = { M: 'Method', P: 'Property', F: 'Field', E: 'Event' };
+    var html = '';
+
+    if (libs.length > 0) {
+      html += '<div class="search-group">类库</div>';
+      html += libs.map(function(item) {
+        var title = item.title || item.name;
+        var sub = item.description ? '<span class="search-member-of">' + escapeHtml(item.description) + '</span>' : '';
+        return '<a class="search-result-item" href="#/lib/' + encodeURIComponent(item.lib) + '">' +
+          '<div class="search-result-name">' + escapeHtml(title) + sub + '</div>' +
+          '<div class="search-result-type">Library</div></a>';
+      }).join('');
+    }
+
+    if (types.length > 0) {
+      html += '<div class="search-group">类型</div>';
+      html += types.map(function(item) {
+        var key = encodeKey(item.lib, item.name);
+        return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
+          '<div class="search-result-name">' + escapeHtml(item.shortName) + '</div>' +
+          '<div class="search-result-type">' + escapeHtml(item.kind) + '</div></a>';
+      }).join('');
+    }
+
+    if (members.length > 0) {
+      html += '<div class="search-group">成员</div>';
+      html += members.map(function(item) {
+        var key = encodeKey(item.lib, item.name);
+        return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
+          '<div class="search-result-name">' + escapeHtml(item.shortName) +
+          ' <span class="search-member-of">in ' + escapeHtml(item.name.split('.').slice(-2, -1)[0] || '') + '</span></div>' +
+          '<div class="search-result-type">' + escapeHtml(kindText[item.kind] || item.kind) + '</div></a>';
+      }).join('');
+    }
+
+    searchResults.innerHTML = html;
     searchResults.classList.add('show');
   });
 
@@ -870,23 +1132,65 @@ function initSearch() {
 }
 
 // ==================== 主题 / 焦点模式 ====================
+// 主题模式：dark / light / auto（跟随系统）。auto 时按 prefers-color-scheme 实时应用
+function systemPrefersDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+// 把模式（含 auto）解析为实际 data-theme 并应用
+function applyTheme(mode) {
+  var actual = mode === 'auto' ? (systemPrefersDark() ? 'dark' : 'light') : mode;
+  document.documentElement.setAttribute('data-theme', actual);
+  try { localStorage.setItem('theme', mode); } catch (e) {}
+  updateThemeButton(mode);
+}
+
+// 更新主题按钮的图标与提示
+function updateThemeButton(mode) {
+  var btn = document.getElementById('themeBtn');
+  if (!btn) return;
+  var map = { dark: { icon: '&#127763;', title: '当前：深色（点击切换浅色）' },
+              light: { icon: '&#9728;', title: '当前：浅色（点击切换跟随系统）' },
+              auto: { icon: '&#128269;', title: '当前：跟随系统（点击切换深色）' } };
+  var info = map[mode] || map.dark;
+  btn.innerHTML = info.icon;
+  btn.title = info.title;
+}
+
+// 循环：dark → light → auto → dark
 function toggleTheme() {
-  var html = document.documentElement;
-  var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  try { localStorage.setItem('theme', next); } catch (e) {}
+  var cur = localStorage.getItem('theme') || 'dark';
+  var order = ['dark', 'light', 'auto'];
+  var idx = order.indexOf(cur);
+  var next = order[(idx + 1) % order.length];
+  applyTheme(next);
 }
 
 function toggleFocusMode() {
   document.getElementById('layoutContainer').classList.toggle('focus-mode');
 }
 
+// 首页隐藏右侧「本页目录」栏（仅类库卡片列表，目录无意义），主内容右铺满
+function setHomeMode(active) {
+  var el = document.getElementById('layoutContainer');
+  if (!el) return;
+  if (active) el.classList.add('home-mode');
+  else el.classList.remove('home-mode');
+}
+
 // ==================== 启动 ====================
 document.addEventListener('DOMContentLoaded', function() {
-  try {
-    var savedTheme = localStorage.getItem('theme');
-    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
-  } catch (e) {}
+  var mode = 'dark';
+  try { mode = localStorage.getItem('theme') || 'dark'; } catch (e) {}
+  applyTheme(mode);
+  // 系统主题变化时，若处于 auto 模式则实时跟随
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+      if ((localStorage.getItem('theme') || 'dark') === 'auto') {
+        document.documentElement.setAttribute('data-theme', systemPrefersDark() ? 'dark' : 'light');
+      }
+    });
+  }
   initSearch();
   loadData();
 });`;
@@ -901,7 +1205,9 @@ function getStyles(): string {
 html{scroll-behavior:smooth}
 body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,Arial,sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.6;min-height:100vh}
 .top-nav{position:fixed;top:0;left:0;right:0;height:48px;background:var(--bg-tertiary);border-bottom:1px solid var(--border-color);display:flex;align-items:center;padding:0 16px;z-index:1000;backdrop-filter:blur(8px)}
-.top-nav-logo{font-weight:600;font-size:16px;letter-spacing:-.02em}
+.top-nav-logo{font-weight:600;font-size:16px;letter-spacing:-.02em;cursor:pointer;color:var(--text-primary);transition:color .15s;user-select:none}
+.top-nav-logo:hover{color:var(--link-color)}
+.top-nav-logo:focus{outline:none;color:var(--link-color)}
 .top-nav-actions{margin-left:auto;display:flex;gap:8px}
 .layout-container{display:flex;margin-top:48px;min-height:calc(100vh - 48px)}
 .sidebar{width:280px;min-width:280px;background:var(--bg-secondary);border-right:1px solid var(--border-color);position:fixed;left:0;top:48px;bottom:0;overflow-y:auto;z-index:100}
@@ -932,6 +1238,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .search-box input::placeholder{color:var(--text-tertiary)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);font-size:14px}
 .search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-tertiary);border:1px solid var(--border-color);border-top:none;border-radius:0 0 6px 6px;max-height:400px;overflow-y:auto;display:none;z-index:1001}
+.search-group{padding:6px 12px 3px;font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;background:var(--bg-secondary)}
 .search-results.show{display:block}
 .search-result-item{display:block;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border-color);transition:background .15s;text-decoration:none;color:inherit}
 .search-result-item:last-child{border-bottom:none}
@@ -950,6 +1257,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .nav-text{flex:1;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item.expanded>.nav-item-header .nav-text{color:var(--text-primary)}
 .nav-count{font-size:10px;color:var(--text-tertiary);background:var(--bg-tertiary);padding:1px 6px;border-radius:8px;flex-shrink:0;margin-left:4px}
+.nav-lib{display:flex;align-items:center;padding:6px 8px;border-radius:6px;transition:background .15s;text-decoration:none;color:var(--text-secondary);margin-bottom:1px}
+.nav-lib:hover{background:var(--bg-hover);color:var(--link-color)}
+.nav-lib-text{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-children{display:none;padding-left:10px}
 .nav-item.expanded>.nav-children{display:block}
 .nav-type{display:flex;align-items:center;padding:5px 8px;border-radius:6px;transition:background .15s;text-decoration:none;color:var(--text-secondary)}
@@ -960,6 +1270,9 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .main-content{flex:1;margin-left:280px;margin-right:240px;padding:32px 48px;min-width:0}
 .layout-container.focus-mode .sidebar,.layout-container.focus-mode .sidebar-right{display:none!important}
 .layout-container.focus-mode .main-content{margin-left:0;margin-right:0}
+/* 首页隐藏右侧目录栏（仅类库卡片列表，目录无意义），主内容向右铺满 */
+.layout-container.home-mode .sidebar-right{display:none}
+.layout-container.home-mode .main-content{margin-right:0}
 .loading{padding:60px 0;text-align:center;color:var(--text-tertiary);font-size:16px}
 .error{padding:40px;background:#3a1d1d;border:1px solid #8b3a3a;border-radius:8px;color:#ffb4b4}
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border-color)}
@@ -976,12 +1289,33 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .btn-secondary:hover{background:var(--bg-hover)}
 .home-section{margin-bottom:40px}
 .home-title{font-size:20px;font-weight:600;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--border-color)}
-.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.lib-card{display:flex;flex-direction:column;gap:4px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:16px;text-decoration:none;color:inherit;transition:all .2s}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.lib-card{display:flex;flex-direction:column;gap:6px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:16px;transition:all .2s}
 .lib-card:hover{border-color:var(--link-color);transform:translateY(-1px)}
-.lib-icon{font-size:20px}
+.lib-card-head{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit}
+.lib-card-head:hover .lib-name{color:var(--link-color)}
+.lib-icon{font-size:20px;flex-shrink:0}
 .lib-name{font-weight:600;color:var(--text-primary);font-size:14px;word-break:break-all}
-.lib-count{font-size:12px;color:var(--text-tertiary)}
+.lib-desc{font-size:12px;color:var(--text-secondary);margin:0;line-height:1.4}
+.lib-card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.lib-meta-version{font-size:11px;color:var(--text-tertiary);background:var(--bg-tertiary);padding:1px 6px;border-radius:3px}
+.lib-meta-tfm{font-size:10px;color:var(--accent);background:var(--bg-tertiary);padding:1px 6px;border-radius:3px}
+.lib-meta-tfms{display:inline-flex;flex-wrap:wrap;gap:4px}
+.lib-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.lib-card-tag{font-size:10px;color:var(--text-secondary);background:var(--bg-tertiary);border:1px solid var(--border-color);padding:1px 6px;border-radius:10px;text-decoration:none;cursor:pointer;transition:all .15s}
+.lib-card-tag:hover{color:var(--link-color);border-color:var(--link-color)}
+.lib-card-tag-more{color:var(--text-tertiary);background:transparent}
+.lib-count{font-size:12px;color:var(--text-tertiary);margin-top:auto;text-decoration:none}
+.lib-card-foot{margin-top:auto}
+.lib-count:hover{color:var(--link-color)}
+.lib-grid-empty{grid-column:1/-1;padding:24px;text-align:center;color:var(--text-tertiary);font-size:13px}
+.lib-header-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tag-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);background:var(--bg-tertiary);border:1px solid var(--border-color);padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;font-family:inherit}
+.tag-chip:hover{border-color:var(--link-color);color:var(--text-primary)}
+.tag-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tag-count{font-size:10px;opacity:.7}
+.tag-chip.active .tag-count{opacity:.85}
 .content-section{margin-bottom:40px}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--border-color)}
 .section-header h2{font-size:20px;font-weight:600}

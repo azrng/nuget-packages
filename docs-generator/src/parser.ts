@@ -58,6 +58,12 @@ export interface Assembly {
   fileName: string;
   name: string;
   namespaces: Map<string, Namespace>;
+  // 来自对应 .csproj 的展示用元数据（可选，由 index.ts 注入）
+  title?: string;
+  tags?: string[];
+  description?: string;
+  version?: string;
+  targetFrameworks?: string[];
 }
 
 export interface Namespace {
@@ -116,8 +122,11 @@ export class XmlParser {
   /**
    * 解析单个 XML 文件
    * 第一遍：只收集原始节点（类型节点 + 成员节点），不建立归属关系
+   * @param metadata 可选：来自对应 .csproj 的展示用元数据，挂到该文件对应的 Assembly 上
    */
-  parseFile(content: string, fileName: string): void {
+  parseFile(content: string, fileName: string, metadata?: {
+    title?: string; tags?: string[]; description?: string; version?: string; targetFrameworks?: string[];
+  }): void {
     try {
       const xmlDoc = this.xmlParser.parse(content);
       const doc = xmlDoc.doc || xmlDoc;
@@ -128,7 +137,12 @@ export class XmlParser {
         this.assemblyMap.set(fileName, {
           fileName,
           name: assemblyName,
-          namespaces: new Map()
+          namespaces: new Map(),
+          title: metadata?.title,
+          tags: metadata?.tags,
+          description: metadata?.description,
+          version: metadata?.version,
+          targetFrameworks: metadata?.targetFrameworks,
         });
       }
       const assembly = this.assemblyMap.get(fileName)!;
@@ -403,7 +417,12 @@ export class XmlParser {
       const assemblyData: Assembly = {
         fileName: assembly.fileName,
         name: assembly.name,
-        namespaces: new Map()
+        namespaces: new Map(),
+        title: assembly.title,
+        tags: assembly.tags,
+        description: assembly.description,
+        version: assembly.version,
+        targetFrameworks: assembly.targetFrameworks,
       };
 
       assembly.namespaces.forEach((ns, nsName) => {
