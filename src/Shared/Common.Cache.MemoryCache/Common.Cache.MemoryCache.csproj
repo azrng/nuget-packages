@@ -1,17 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
-        <!--<TargetFramework>net6.0</TargetFramework>-->
-        <!--        <TargetFramework>net9.0</TargetFramework>-->
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
+        <Description>基于内存的缓存实现，适用于单机场景</Description>
         <Version>2.1.0</Version>
+        <PackageId>Common.Cache.MemoryCache</PackageId>
         <RootNamespace>Azrng.Cache.MemoryCache</RootNamespace>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Title>Memory Cache</Title>
+        <PackageTags>cache;memory;dotnet</PackageTags>
+        <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

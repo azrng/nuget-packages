@@ -1,15 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-
-
-
     <Authors>Azrng</Authors>
     <Company>Azrng</Company>
     <Description>CSRedis 缓存服务提供者，支持依赖注入</Description>
     <Copyright>版权归Azrng所有</Copyright>
     <Version>1.0.2</Version>
+    <PackageId>Common.Cache.CSRedis</PackageId>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Title>CSRedis Cache Provider</Title>
     <PackageTags>cache;redis;csredis;dotnet</PackageTags>

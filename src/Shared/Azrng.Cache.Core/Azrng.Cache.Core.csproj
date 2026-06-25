@@ -4,6 +4,7 @@
         <TargetFramework>netstandard2.1</TargetFramework>
         <Copyright>版权归Azrng所有</Copyright>
         <Version>0.0.3</Version>
+        <PackageId>Azrng.Cache.Core</PackageId>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
         <Title>Cache Core Interface</Title>

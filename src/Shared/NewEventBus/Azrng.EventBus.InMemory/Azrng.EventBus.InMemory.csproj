@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
@@ -9,8 +9,8 @@
         <Copyright>版权归Azrng所有</Copyright>
         <Description>一个学习eShop的自用事件总线内存版实现</Description>
         <Version>1.1.0</Version>
+        <PackageId>Azrng.EventBus.InMemory</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
-
         <NoWarn>1701;1702;1591</NoWarn>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>

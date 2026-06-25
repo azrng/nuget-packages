@@ -4,7 +4,9 @@
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
+        <Description>基于Redis的分布式缓存实现，适用于多实例共享缓存场景</Description>
         <Version>2.1.0</Version>
+        <PackageId>Common.Cache.Redis</PackageId>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>

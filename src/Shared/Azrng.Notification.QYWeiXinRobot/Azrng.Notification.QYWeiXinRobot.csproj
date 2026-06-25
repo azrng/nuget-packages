@@ -1,10 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
-        <VersionPrefix>1.1.0</VersionPrefix>
+        <Version>1.1.0</Version>
         <Title>企业微信推送机器人包</Title>
+        <Description>企业微信机器人消息推送封装，支持文本、Markdown、图片、文件等多种消息类型</Description>
         <Authors>azrng</Authors>
+        <Copyright>版权归Azrng所有</Copyright>
+        <PackageId>Azrng.Notification.QYWeiXinRobot</PackageId>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageTags>wechat;notification;robot;message;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
