@@ -174,14 +174,6 @@ public class CustomScriptService : IScriptService
 | FilterWhere | SQL查询筛选条件 | 空 |
 | IsConsoleQueryLog | 是否输出查询日志 | true |
 
-### 注意事项
-
-1. 确保数据库连接字符串正确配置
-2. 表必须包含配置键和值两个字段
-3. 自动刷新会在后台线程中定期执行查询
-4. 复杂JSON配置会被展开为层次结构
-5. 组件会尝试自动创建表结构，但可能需要数据库用户具有相应权限
-
 ### 依赖包
 
 - Microsoft.Extensions.Configuration
@@ -195,7 +187,9 @@ public class CustomScriptService : IScriptService
 3. 自动刷新会在后台线程中定期执行查询
 4. 复杂JSON配置会被展开为层次结构
 5. 组件会尝试自动创建表结构，但可能需要数据库用户具有相应权限
-6. **SQL 注入安全**：`FilterWhere`、`TableName`、`ConfigKeyField`、`ConfigValueField` 等参数会以原始字符串拼接进 SQL 语句，**不会参数化**。请仅使用编译期静态字面量，切勿来自用户输入、请求参数或其它不可信来源，否则会引入 SQL 注入风险。
+6. 每次 `ConfigurationBuilder.Build()` 都会创建新的 `DbConfigurationProvider`，释放旧的 `IConfigurationRoot` 后可以安全地再次构建
+7. `Dispose()` 会取消后台刷新任务并等待其退出；如果数据库查询长时间阻塞超过内部等待时间，会记录告警并避免释放仍可能被后台任务访问的读写锁
+8. **SQL 注入安全**：`FilterWhere`、`TableName`、`ConfigKeyField`、`ConfigValueField` 等参数会以原始字符串拼接进 SQL 语句，**不会参数化**。请仅使用编译期静态字面量，切勿来自用户输入、请求参数或其它不可信来源，否则会引入 SQL 注入风险。
 
 ### 版本更新记录
 
@@ -203,6 +197,8 @@ public class CustomScriptService : IScriptService
   * 【破坏性】统一命名：`DBConfigOptions` → `DbConfigOptions`，`ParamVerify()` → `Normalize()`，`DefaultScriptService` → `PostgreSqlScriptService`，相关源文件名同步改为 `Db` 前缀
   * 修复 `Dispose` 模式缺陷：移除无效终结器，真正释放 `ReaderWriterLockSlim`
   * 后台轮询线程改为可取消（`PeriodicTimer` + `CancellationToken`），Dispose 后能及时停止，不再出现「释放后仍执行一次 Load」
+  * 修复同一 `ConfigurationBuilder` 释放后再次 `Build()` 复用已释放 Provider 的问题
+  * 修复 Dispose 等待后台刷新超时后仍释放读写锁的并发边界
   * 初始化与加载异常改用 `ILogger` 记录，不再静默吞掉所有异常或写到 Console
   * `AddDbConfiguration` 新增可选 `ILogger?` 参数
   * 移除冗余的 `System.Data.Common` / `System.Text.Json` 包引用（net6+ 框架已内置）

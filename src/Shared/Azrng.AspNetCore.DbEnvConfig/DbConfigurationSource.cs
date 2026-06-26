@@ -7,16 +7,14 @@ namespace Azrng.AspNetCore.DbEnvConfig;
 /// 数据库配置源
 /// </summary>
 /// <remarks>
-/// 此类负责创建 <see cref="DbConfigurationProvider"/> 实例
-/// 使用单例模式确保同一个配置源只创建一个提供程序实例
+/// 此类负责创建 <see cref="DbConfigurationProvider"/> 实例。
+/// 每次 <see cref="Build"/> 都创建新的 Provider，避免已 Dispose 的 Provider 被同一个配置源再次复用。
 /// </remarks>
 internal class DbConfigurationSource : IConfigurationSource
 {
     private readonly DbConfigOptions _options;
     private readonly IScriptService _scriptService;
     private readonly ILogger? _logger;
-    private readonly object _locker = new();
-    private DbConfigurationProvider? _uniqueInstance;
 
     /// <summary>
     /// 初始化 <see cref="DbConfigurationSource"/> 的新实例
@@ -38,14 +36,6 @@ internal class DbConfigurationSource : IConfigurationSource
     /// <returns>数据库配置提供程序实例</returns>
     public IConfigurationProvider Build(IConfigurationBuilder builder)
     {
-        if (_uniqueInstance is null)
-        {
-            lock (_locker)
-            {
-                _uniqueInstance ??= new DbConfigurationProvider(_options, _scriptService, _logger);
-            }
-        }
-
-        return _uniqueInstance!;
+        return new DbConfigurationProvider(_options, _scriptService, _logger);
     }
 }

@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using Xunit;
 
 namespace Azrng.AspNetCore.DbEnvConfig.Test;
@@ -235,6 +236,67 @@ public class DbConfigurationProviderTests
     }
 
     [Fact]
+    public void AddDbConfiguration_CanBuildAgainAfterPreviousRootDisposed()
+    {
+        var state = new FakeDatabaseState
+        {
+            Rows = { ("k1", "v1") }
+        };
+        var builder = new ConfigurationBuilder()
+            .AddDbConfiguration(options =>
+            {
+                options.CreateDbConnection = () => new FakeDbConnection(state);
+                options.TableName = "config.system_config";
+                options.ConfigKeyField = "code";
+                options.ConfigValueField = "value";
+                options.ReloadOnChange = false;
+                options.IsConsoleQueryLog = false;
+            }, new TrackingScriptService());
+
+        var firstRoot = builder.Build();
+        firstRoot["k1"].Should().Be("v1");
+        (firstRoot as IDisposable)?.Dispose();
+
+        state.Rows.Clear();
+        state.Rows.Add(("k1", "v2"));
+
+        var secondRoot = builder.Build();
+        secondRoot["k1"].Should().Be("v2");
+        (secondRoot as IDisposable)?.Dispose();
+    }
+
+    [Fact]
+    public void DbConfigurationProvider_DisposeDoesNotDisposeLockWhileBackgroundLoadIsStillRunning()
+    {
+        var state = new FakeDatabaseState
+        {
+            Rows = { ("k1", "v1") },
+            ReaderDelay = TimeSpan.FromSeconds(6)
+        };
+        var options = new DbConfigOptions
+        {
+            CreateDbConnection = () => new FakeDbConnection(state),
+            TableName = "config.system_config",
+            ConfigKeyField = "code",
+            ConfigValueField = "value",
+            ReloadOnChange = true,
+            ReloadInterval = TimeSpan.FromMilliseconds(10),
+            IsConsoleQueryLog = false
+        };
+        options.Normalize();
+
+        var provider = new DbConfigurationProvider(options, new TrackingScriptService());
+
+        state.ReaderStarted.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
+
+        var act = () => provider.Dispose();
+
+        act.Should().NotThrow();
+        state.ReaderCompleted.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+        provider.Invoking(x => x.TryGet("k1", out _)).Should().NotThrow();
+    }
+
+    [Fact]
     public void DbConfigurationProvider_OnReloadOnlyFiresWhenDataActuallyChanges()
     {
         // 间接覆盖 Helper.IsChanged：连续两次加载相同数据，OnReload 不应改变 reload token
@@ -298,10 +360,17 @@ internal sealed class FakeDatabaseState
     /// 设置为 true 时，ExecuteReader 抛出 DbException，用于测试加载失败回滚
     /// </summary>
     public bool ThrowOnReader { get; set; }
+
+    public TimeSpan ReaderDelay { get; set; }
+
+    public ManualResetEventSlim ReaderStarted { get; } = new();
+
+    public ManualResetEventSlim ReaderCompleted { get; } = new();
 }
 
 internal sealed class FakeDbConnection(FakeDatabaseState state) : IDbConnection
 {
+    [AllowNull]
     public string ConnectionString { get; set; } = string.Empty;
 
     public int ConnectionTimeout => 0;
@@ -347,6 +416,7 @@ internal sealed class FakeDbConnection(FakeDatabaseState state) : IDbConnection
 
 internal sealed class FakeDbCommand(FakeDatabaseState state, IDbConnection connection) : IDbCommand
 {
+    [AllowNull]
     public string CommandText { get; set; } = string.Empty;
 
     public int CommandTimeout { get; set; }
@@ -376,33 +446,33 @@ internal sealed class FakeDbCommand(FakeDatabaseState state, IDbConnection conne
 
     public int ExecuteNonQuery()
     {
-        state.ExecutedCommands.Add(CommandText);
+        state.ExecutedCommands.Add(CommandText ?? string.Empty);
         return 1;
     }
 
     public IDataReader ExecuteReader()
     {
-        state.ExecutedCommands.Add(CommandText);
+        state.ExecutedCommands.Add(CommandText ?? string.Empty);
         if (state.ThrowOnReader)
         {
             throw new TestDbException("模拟读取失败");
         }
-        return CreateReader(state.Rows);
+        return state.ReaderDelay > TimeSpan.Zero ? CreateDelayedReader() : CreateReader(state.Rows);
     }
 
     public IDataReader ExecuteReader(CommandBehavior behavior)
     {
-        state.ExecutedCommands.Add(CommandText);
+        state.ExecutedCommands.Add(CommandText ?? string.Empty);
         if (state.ThrowOnReader)
         {
             throw new TestDbException("模拟读取失败");
         }
-        return CreateReader(state.Rows);
+        return state.ReaderDelay > TimeSpan.Zero ? CreateDelayedReader() : CreateReader(state.Rows);
     }
 
     public object ExecuteScalar()
     {
-        state.ExecutedCommands.Add(CommandText);
+        state.ExecutedCommands.Add(CommandText ?? string.Empty);
         return state.TableCount;
     }
 
@@ -422,6 +492,19 @@ internal sealed class FakeDbCommand(FakeDatabaseState state, IDbConnection conne
         }
 
         return table.CreateDataReader();
+    }
+
+    private IDataReader CreateDelayedReader()
+    {
+        state.ReaderStarted.Set();
+        if (state.ReaderDelay > TimeSpan.Zero)
+        {
+            Thread.Sleep(state.ReaderDelay);
+        }
+
+        var reader = CreateReader(state.Rows);
+        state.ReaderCompleted.Set();
+        return reader;
     }
 }
 
@@ -446,9 +529,9 @@ internal sealed class FakeDbTransaction(IDbConnection connection) : IDbTransacti
 
 internal sealed class FakeParameterCollection : List<object>, IDataParameterCollection
 {
-    public object? this[string parameterName]
+    public object this[string parameterName]
     {
-        get => this.FirstOrDefault(x => x is IDataParameter parameter && parameter.ParameterName == parameterName);
+        get => this.FirstOrDefault(x => x is IDataParameter parameter && parameter.ParameterName == parameterName)!;
         set
         {
             var index = IndexOf(parameterName);
@@ -487,8 +570,10 @@ internal sealed class FakeDbParameter : IDbDataParameter
 
     public bool IsNullable => true;
 
+    [AllowNull]
     public string ParameterName { get; set; } = string.Empty;
 
+    [AllowNull]
     public string SourceColumn { get; set; } = string.Empty;
 
     public DataRowVersion SourceVersion { get; set; } = DataRowVersion.Current;

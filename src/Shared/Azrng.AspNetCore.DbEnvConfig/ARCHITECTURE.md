@@ -49,9 +49,9 @@
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │         Configuration Layer (配置层)                     │
-│   DbConfigurationSource (单例模式)                       │
+│   DbConfigurationSource                                  │
 │   - 创建 ConfigurationProvider 实例                      │
-│   - 确保同一配置源只创建一个 Provider                     │
+│   - 每次 Build 创建新的 Provider                         │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -75,7 +75,7 @@
 | 设计模式 | 应用位置 | 说明 |
 |---------|---------|------|
 | **工厂模式** | `CreateDbConnection` | 通过委托函数创建数据库连接，支持多种数据库 |
-| **单例模式** | `DbConfigurationSource` | 确保同一配置源只创建一个 Provider 实例 |
+| **工厂模式** | `DbConfigurationSource.Build()` | 每次构建配置根时创建新的 Provider 实例 |
 | **策略模式** | `IScriptService` | 通过接口抽象不同的数据库初始化脚本策略 |
 | **模板方法** | `DbConfigurationProvider.Load()` | 定义加载流程，子类可覆盖特定行为 |
 | **读写锁模式** | `ReaderWriterLockSlim` | 多个读操作可并发，写操作独占访问 |
@@ -116,21 +116,14 @@ public static IConfigurationBuilder AddDbConfiguration(
 
 **职责**：
 - 实现 `IConfigurationSource` 接口
-- 采用**双重检查锁定**的单例模式，确保同一配置源只创建一个 Provider 实例
+- 每次 `Build()` 创建新的 Provider 实例，避免已释放 Provider 被同一配置源复用
 - 持有配置选项和脚本服务的引用
 
-**单例实现**:
+**Provider 创建**:
 ```csharp
 public IConfigurationProvider Build(IConfigurationBuilder builder)
 {
-    if (_uniqueInstance is null)
-    {
-        lock (_locker)
-        {
-            _uniqueInstance ??= new DbConfigurationProvider(_options, _scriptService);
-        }
-    }
-    return _uniqueInstance!;
+    return new DbConfigurationProvider(_options, _scriptService, _logger);
 }
 ```
 
@@ -333,6 +326,7 @@ AllowedHosts:1 = "example.com"
 1. **多个读操作可并发**：提高读取性能
 2. **写操作独占访问**：保证数据一致性
 3. **锁分离**：OnReload() 不能在写锁内调用（避免死锁）
+4. **释放边界**：Dispose 取消后台刷新并等待任务退出；若后台数据库查询长时间阻塞导致等待超时，会跳过释放读写锁，避免后台任务随后访问已释放对象
 
 ### Load() 方法的异常处理
 
@@ -432,7 +426,6 @@ System.Text.Json (JSON 解析)
 ├───────────────────────────────────────────────────────────┤
 │ - _options: DbConfigOptions                              │
 │ - _scriptService: IScriptService                         │
-│ - _uniqueInstance: DbConfigurationProvider               │
 ├───────────────────────────────────────────────────────────┤
 │ + Build(IConfigurationBuilder): IConfigurationProvider   │
 └───────────────────────────────────────────────────────────┘
@@ -572,11 +565,11 @@ lock (_lockObj)
 OnReload();  // 安全
 ```
 
-### 3. 为什么使用单例模式？
+### 3. 为什么每次 Build 创建新的 Provider？
 
-- **避免重复连接**：同一配置源创建多个 Provider 会导致多个数据库连接
-- **配置一致性**：确保所有配置请求来自同一个数据源
-- **资源节约**：减少后台刷新线程数量
+- **生命周期隔离**：`ConfigurationRoot.Dispose()` 会释放 Provider，复用旧实例会访问已释放资源
+- **重复构建安全**：同一个 `ConfigurationBuilder` 可以在释放旧 `IConfigurationRoot` 后再次 `Build()`
+- **后台任务隔离**：每个 Provider 管理自己的刷新任务和取消令牌，避免跨配置根共享后台状态
 
 ### 4. 为什么克隆数据而不是直接修改？
 
@@ -589,8 +582,8 @@ OnReload();  // 安全
 
 | 文件 | 行数 | 说明 |
 |-----|------|------|
-| [DbConfigurationProvider.cs](DbConfigurationProvider.cs) | 313 | 核心提供者，实现配置加载和刷新 |
-| [DbConfigurationSource.cs](DbConfigurationSource.cs) | 51 | 配置源，单例管理 Provider 实例 |
+| [DbConfigurationProvider.cs](DbConfigurationProvider.cs) | 321 | 核心提供者，实现配置加载和刷新 |
+| [DbConfigurationSource.cs](DbConfigurationSource.cs) | 41 | 配置源，每次 Build 创建 Provider 实例 |
 | [DbConfigOptions.cs](DbConfigOptions.cs) | 120 | 配置选项类 |
 | [DbConfigurationProviderExtensions.cs](DbConfigurationProviderExtensions.cs) | 56 | 扩展方法，提供 fluent API |
 | [IScriptService.cs](IScriptService.cs) | 34 | 脚本服务接口 |

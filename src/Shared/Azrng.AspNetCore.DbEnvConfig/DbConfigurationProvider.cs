@@ -123,13 +123,19 @@ public class DbConfigurationProvider : ConfigurationProvider, IDisposable
         if (disposing)
         {
             // 通知后台轮询停止并等待其退出，避免 Dispose 后仍执行一次 Load
+            var canDisposeLock = true;
             if (_reloadCts is not null)
             {
                 _reloadCts.Cancel();
                 try
                 {
                     // 带超时等待，防止后台任务卡住导致 Dispose 永久阻塞
-                    _reloadTask?.Wait(TimeSpan.FromSeconds(5));
+                    canDisposeLock = _reloadTask?.Wait(TimeSpan.FromSeconds(5)) ?? true;
+                    if (!canDisposeLock)
+                    {
+                        _logger.LogWarning("{Provider} 后台刷新任务未在 Dispose 超时时间内退出,跳过释放读写锁以避免并发访问已释放对象",
+                            nameof(DbConfigurationProvider));
+                    }
                 }
                 catch (AggregateException ex)
                 {
@@ -138,7 +144,10 @@ public class DbConfigurationProvider : ConfigurationProvider, IDisposable
                 _reloadCts.Dispose();
             }
 
-            _lockObj.Dispose();
+            if (canDisposeLock)
+            {
+                _lockObj.Dispose();
+            }
         }
     }
 
