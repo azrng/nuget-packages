@@ -71,6 +71,26 @@ public static class QuackProtocolConnectionStringParser
         return token;
     }
 
+    /// <summary>
+    /// 校验标识符安全性（仅允许字母数字下划线）。Catalog/别名会拼进 USE/ATTACH 语句，
+    /// 白名单比转义更稳健——杜绝引号注入。
+    /// </summary>
+    /// <param name="name">待校验的标识符。</param>
+    /// <returns>校验通过的原始标识符。</returns>
+    public static string ValidateIdentifier(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Identifier cannot be empty.", nameof(name));
+
+        foreach (var c in name)
+        {
+            if (!char.IsLetterOrDigit(c) && c != '_')
+                throw new ArgumentException($"Identifier contains an invalid character '{c}': {name}", nameof(name));
+        }
+
+        return name;
+    }
+
     private static QuackProtocolConfig ParseKeyValue(string connectionString)
     {
         var props = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -84,8 +104,11 @@ public static class QuackProtocolConnectionStringParser
         var host = props.GetValueOrDefault("Host", props.GetValueOrDefault("Server", ""));
         var portText = props.GetValueOrDefault("Port", QuackProtocolConfig.DefaultPort.ToString());
         var token = props.GetValueOrDefault("Token", props.GetValueOrDefault("Password", ""));
-        var catalog = props.GetValueOrDefault("Catalog");
-        var disableSslText = props.GetValueOrDefault("DisableSsl", "false");
+        string? catalog = null;
+        if (!props.TryGetValue("Catalog", out catalog))
+            props.TryGetValue("Database", out catalog);
+        // 默认禁用 SSL：Quack 默认容器为纯 HTTP，与同仓 Data.Quack 解析器及 README 保持一致。
+        var disableSslText = props.GetValueOrDefault("DisableSsl", "true");
         var timeoutText = props.GetValueOrDefault("Timeout", props.GetValueOrDefault("TimeoutSeconds", "30"));
 
         if (!int.TryParse(portText, out var port))
@@ -127,9 +150,10 @@ public static class QuackProtocolConnectionStringParser
             throw new FormatException($"Unsupported URI scheme: {parsed.Scheme}");
 
         var token = GetQueryValue(parsed.Query, "token") ?? GetQueryValue(parsed.Query, "password") ?? "";
-        var catalog = GetQueryValue(parsed.Query, "catalog");
+        var catalog = GetQueryValue(parsed.Query, "catalog") ?? GetQueryValue(parsed.Query, "database");
+        // tls 缺省时默认禁用 SSL（与键值对解析的默认值一致）；仅 tls=true 才启用 SSL。
         var tls = GetQueryValue(parsed.Query, "tls");
-        var disableSsl = tls != null && !ParseBoolean(tls, "tls");
+        var disableSsl = tls == null || !ParseBoolean(tls, "tls");
 
         var config = new QuackProtocolConfig
         {

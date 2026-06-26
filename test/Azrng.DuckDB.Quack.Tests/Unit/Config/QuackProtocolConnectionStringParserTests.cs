@@ -20,6 +20,22 @@ public class QuackProtocolConnectionStringParserTests
         Assert.Equal("http://localhost:9494/quack", config.Endpoint.ToString());
     }
 
+    [Fact]
+    public void Parse_KeyValue_WithDatabase_UsesDatabaseAsCatalog()
+    {
+        var config = QuackProtocolConnectionStringParser.Parse("Host=localhost;Port=9494;Token=sample-token;Database=test;DisableSsl=true");
+
+        Assert.Equal("test", config.Catalog);
+    }
+
+    [Fact]
+    public void Parse_QuackUri_WithDatabase_UsesDatabaseAsCatalog()
+    {
+        var config = QuackProtocolConnectionStringParser.Parse("quack://demo.example?token=abc&database=test");
+
+        Assert.Equal("test", config.Catalog);
+    }
+
     /// <summary>
     /// Parse KeyValue WithHttps
     /// </summary>
@@ -43,8 +59,8 @@ public class QuackProtocolConnectionStringParserTests
         Assert.Equal("demo.example", config.Host);
         Assert.Equal(9494, config.Port);
         Assert.Equal("abc", config.Token);
-        Assert.False(config.DisableSsl);
-        Assert.Equal("https://demo.example:9494/quack", config.Endpoint.ToString());
+        Assert.True(config.DisableSsl);
+        Assert.Equal("http://demo.example:9494/quack", config.Endpoint.ToString());
     }
 
     /// <summary>
@@ -60,15 +76,15 @@ public class QuackProtocolConnectionStringParserTests
     }
 
     /// <summary>
-    /// Parse KeyValue DefaultsToTlsEnabled
+    /// Parse KeyValue DefaultsToSslDisabled
     /// </summary>
     [Fact]
-    public void Parse_KeyValue_DefaultsToTlsEnabled()
+    public void Parse_KeyValue_DefaultsToSslDisabled()
     {
         var config = QuackProtocolConnectionStringParser.Parse("Host=demo.example;Port=9494;Token=abc");
 
-        Assert.False(config.DisableSsl);
-        Assert.Equal("https://demo.example:9494/quack", config.Endpoint.ToString());
+        Assert.True(config.DisableSsl);
+        Assert.Equal("http://demo.example:9494/quack", config.Endpoint.ToString());
     }
 
     /// <summary>
@@ -121,5 +137,54 @@ public class QuackProtocolConnectionStringParserTests
 
         Assert.DoesNotContain("abc", result);
         Assert.Contains("****", result);
+    }
+
+    /// <summary>
+    /// Validate 当Catalog含非法字符 抛出ArgumentException（防止 USE/ATTACH 注入）
+    /// </summary>
+    [Theory]
+    [InlineData("ev'il")]   // 单引号：曾可破坏 ATTACH '...' 字面量
+    [InlineData("ev\"il")]  // 双引号：曾可破坏 USE "..." 标识符
+    [InlineData("ev;il")]   // 分号
+    [InlineData("ev il")]   // 空格
+    public void Validate_CatalogWithInvalidCharacter_Throws(string catalog)
+    {
+        var config = new QuackProtocolConfig { Host = "h", Port = 9494, Token = "abc", Catalog = catalog };
+
+        Assert.Throws<ArgumentException>(() => config.Validate());
+    }
+
+    /// <summary>
+    /// Validate 当Catalog为合法标识符 通过
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("test")]
+    [InlineData("my_catalog_2")]
+    public void Validate_CatalogValid_Passes(string? catalog)
+    {
+        var config = new QuackProtocolConfig { Host = "h", Port = 9494, Token = "abc", Catalog = catalog };
+        config.Validate(); // 不抛即通过
+    }
+
+    /// <summary>
+    /// ValidateIdentifier 非法字符 抛出ArgumentException
+    /// </summary>
+    [Fact]
+    public void ValidateIdentifier_InvalidChars_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => QuackProtocolConnectionStringParser.ValidateIdentifier("a'b"));
+        Assert.Throws<ArgumentException>(() => QuackProtocolConnectionStringParser.ValidateIdentifier("a b"));
+        Assert.Throws<ArgumentException>(() => QuackProtocolConnectionStringParser.ValidateIdentifier(""));
+    }
+
+    /// <summary>
+    /// ValidateIdentifier 合法输入 返回原值
+    /// </summary>
+    [Fact]
+    public void ValidateIdentifier_ValidInput_ReturnsSame()
+    {
+        Assert.Equal("catalog_1", QuackProtocolConnectionStringParser.ValidateIdentifier("catalog_1"));
     }
 }

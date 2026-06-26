@@ -32,9 +32,10 @@ public sealed record QuackProtocolConfig
     public string? Catalog { get; init; }
 
     /// <summary>
-    /// 是否禁用 SSL 加密连接。
+    /// 是否禁用 SSL 加密连接。默认禁用（true），与同仓 Azrng.DuckDB.Data.Quack 解析器、
+    /// README 文档及默认 Quack 容器（纯 HTTP，9494 端口）保持一致。
     /// </summary>
-    public bool DisableSsl { get; init; } = false;
+    public bool DisableSsl { get; init; } = true;
 
     /// <summary>
     /// 连接超时时间（秒）。
@@ -64,6 +65,11 @@ public sealed record QuackProtocolConfig
         QuackProtocolConnectionStringParser.ValidateHost(Host);
         QuackProtocolConnectionStringParser.ValidatePort(Port);
         QuackProtocolConnectionStringParser.ValidateToken(Token);
+
+        // Catalog 会被拼进 USE "..." 与 ATTACH '...' 发往服务端，必须做白名单校验，
+        // 否则含 ' 或 " 的 catalog 名会破坏 SQL 字面量（注入风险）。
+        if (!string.IsNullOrWhiteSpace(Catalog))
+            QuackProtocolConnectionStringParser.ValidateIdentifier(Catalog);
 
         if (TimeoutSeconds < 0)
             throw new ArgumentOutOfRangeException(nameof(TimeoutSeconds), TimeoutSeconds, "TimeoutSeconds cannot be negative.");
