@@ -64,6 +64,8 @@ export interface Assembly {
   description?: string;
   version?: string;
   targetFrameworks?: string[];
+  // 类库 README.md 渲染后的 HTML（可选，由 index.ts 注入）
+  readme?: string;
 }
 
 export interface Namespace {
@@ -126,6 +128,7 @@ export class XmlParser {
    */
   parseFile(content: string, fileName: string, metadata?: {
     title?: string; tags?: string[]; description?: string; version?: string; targetFrameworks?: string[];
+    readme?: string;
   }): void {
     try {
       const xmlDoc = this.xmlParser.parse(content);
@@ -143,6 +146,7 @@ export class XmlParser {
           description: metadata?.description,
           version: metadata?.version,
           targetFrameworks: metadata?.targetFrameworks,
+          readme: metadata?.readme,
         });
       }
       const assembly = this.assemblyMap.get(fileName)!;
@@ -423,6 +427,7 @@ export class XmlParser {
         description: assembly.description,
         version: assembly.version,
         targetFrameworks: assembly.targetFrameworks,
+        readme: assembly.readme,
       };
 
       assembly.namespaces.forEach((ns, nsName) => {

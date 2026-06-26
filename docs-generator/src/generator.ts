@@ -39,6 +39,8 @@ interface SerializableData {
     description?: string;
     version?: string;
     targetFrameworks?: string[];
+    // 类库 README.md 渲染后的 HTML（可选，有值才输出）
+    readme?: string;
     namespaces: {
       name: string;
       types: SerializableType[];
@@ -88,6 +90,7 @@ export function serializeData(data: ParsedData): SerializableData {
     if (assembly.targetFrameworks && assembly.targetFrameworks.length > 0) {
       out.targetFrameworks = assembly.targetFrameworks;
     }
+    if (assembly.readme) out.readme = assembly.readme;
     return out;
   });
 
@@ -792,6 +795,11 @@ function renderLibrary(lib) {
   }
   html += '</div></div>';
 
+  // 类库 README：构建时渲染好的 HTML 直接注入（内容来自仓库可信 README.md）
+  if (assembly.readme) {
+    html += '<section class="lib-readme"><div class="lib-readme-title">&#128214; README</div><div class="lib-readme-body">' + assembly.readme + '</div></section>';
+  }
+
   assembly.namespaces.forEach(function(ns) {
     html += renderNamespaceSection(ns, lib);
   });
@@ -1310,6 +1318,28 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .lib-count:hover{color:var(--link-color)}
 .lib-grid-empty{grid-column:1/-1;padding:24px;text-align:center;color:var(--text-tertiary);font-size:13px}
 .lib-header-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lib-readme{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:20px 24px;margin-bottom:32px}
+.lib-readme-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+.lib-readme-body{font-size:14px;line-height:1.7;color:var(--text-secondary);word-wrap:break-word;overflow-x:auto}
+.lib-readme-body h1{font-size:22px;font-weight:600;color:var(--text-primary);margin:18px 0 10px}
+.lib-readme-body h2{font-size:19px;font-weight:600;color:var(--text-primary);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border-color)}
+.lib-readme-body h3{font-size:16px;font-weight:600;color:var(--text-primary);margin:16px 0 8px}
+.lib-readme-body h4{font-size:14px;font-weight:600;color:var(--text-primary);margin:14px 0 6px}
+.lib-readme-body h1:first-child,.lib-readme-body h2:first-child,.lib-readme-body h3:first-child{margin-top:0}
+.lib-readme-body p{margin:8px 0}
+.lib-readme-body ul,.lib-readme-body ol{margin:8px 0;padding-left:24px}
+.lib-readme-body li{margin:4px 0}
+.lib-readme-body a{color:var(--link-color);text-decoration:none}
+.lib-readme-body a:hover{text-decoration:underline}
+.lib-readme-body code{background:var(--code-bg);color:var(--text-primary);padding:2px 6px;border-radius:3px;font-family:Consolas,Monaco,monospace;font-size:12.5px}
+.lib-readme-body pre{background:var(--code-bg);border:1px solid var(--border-color);border-radius:6px;padding:12px 14px;margin:10px 0;overflow-x:auto}
+.lib-readme-body pre code{background:transparent;padding:0;font-size:12.5px;line-height:1.5}
+.lib-readme-body blockquote{border-left:3px solid var(--link-color);margin:10px 0;padding:4px 14px;color:var(--text-tertiary);background:var(--bg-tertiary);border-radius:0 4px 4px 0}
+.lib-readme-body table{border-collapse:collapse;margin:10px 0;width:100%;font-size:13px}
+.lib-readme-body th,.lib-readme-body td{border:1px solid var(--border-color);padding:6px 10px;text-align:left}
+.lib-readme-body th{background:var(--bg-tertiary);color:var(--text-primary);font-weight:600}
+.lib-readme-body img{max-width:100%;height:auto;vertical-align:middle}
+.lib-readme-body hr{border:none;border-top:1px solid var(--border-color);margin:16px 0}
 .tag-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .tag-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);background:var(--bg-tertiary);border:1px solid var(--border-color);padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;font-family:inherit}
 .tag-chip:hover{border-color:var(--link-color);color:var(--text-primary)}

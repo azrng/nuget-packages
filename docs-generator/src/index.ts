@@ -8,6 +8,7 @@ import * as path from 'path';
 import { XmlParser } from './parser.js';
 import { generateIndexHtml, generateDataJson } from './generator.js';
 import { parseCsprojMetadata, ProjectMetadata } from './csproj.js';
+import { renderMarkdown } from './markdown.js';
 
 // ==================== 配置 ====================
 
@@ -107,6 +108,34 @@ function buildProjectMetadataMap(projectPaths: string[]): Map<string, ProjectMet
 }
 
 /**
+ * 读取每个项目的 README.md（与 csproj 同目录），渲染成 HTML，缓存为 projectPath -> html
+ *
+ * 读取范围与 buildProjectMetadataMap / getXmlFilesForProjects 完全同源，
+ * 都来自 getProjectsFromSlnx 返回的 projects 数组，严格绑定 PackPackages.slnx。
+ * 文件名大小写不敏感（兼容 README.md / readme.md / Readme.md）；缺失则该 project 不入 map。
+ * 读取/渲染失败时 console.warn 跳过，不影响其它项目。
+ */
+function buildProjectReadmeMap(projectPaths: string[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const projectPath of projectPaths) {
+    try {
+      const projectDir = path.dirname(projectPath);
+      const entries = fs.existsSync(projectDir) ? fs.readdirSync(projectDir) : [];
+      // 大小写不敏感匹配 readme.md
+      const readmeFile = entries.find(f => /^readme\.md$/i.test(f));
+      if (!readmeFile) continue;
+      const readmePath = path.join(projectDir, readmeFile);
+      const md = fs.readFileSync(readmePath, 'utf-8');
+      const html = renderMarkdown(md);
+      if (html) map.set(projectPath, html);
+    } catch (error) {
+      console.warn(`⚠️  读取 README 失败: ${projectPath}`, error);
+    }
+  }
+  return map;
+}
+
+/**
  * 格式化文件大小
  */
 function formatSize(bytes: number): string {
@@ -173,6 +202,10 @@ function main(): void {
   const withMetaCount = [...metadataMap.values()].filter(m => m.title || m.tags.length > 0).length;
   console.log(`📊 csproj 元数据: ${withMetaCount}/${projects.length} 个项目含 Title 或 Tags`);
 
+  // 读取每个项目的 README.md（严格绑定 slnx 同一份 projects），渲染成 HTML 注入对应 Assembly
+  const readmeMap = buildProjectReadmeMap(projects);
+  console.log(`📊 README: ${readmeMap.size}/${projects.length} 个项目含 README`);
+
   console.log(`📁 解决方案: ${path.basename(CONFIG.solutionFile)} (${projects.length} 个项目)`);
   console.log(`📁 扫描完成: ${xmlEntries.length} 个 XML 文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
 
@@ -185,7 +218,10 @@ function main(): void {
   for (const entry of xmlEntries) {
     const fileName = path.basename(entry.filePath);  // 已经包含.xml扩展名
     const content = fs.readFileSync(entry.filePath, 'utf-8');
-    parser.parseFile(content, fileName, metadataMap.get(entry.projectPath));
+    // 合并 csproj 元数据与 README HTML，一起注入到该文件对应的 Assembly
+    const meta = metadataMap.get(entry.projectPath);
+    const readme = readmeMap.get(entry.projectPath);
+    parser.parseFile(content, fileName, meta ? { ...meta, readme } : (readme ? { readme } : undefined));
     console.log(`  ✓ ${fileName}`);
   }
 
