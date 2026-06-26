@@ -88,15 +88,16 @@ public class DateTimeHelperTests
     }
 
     [Fact]
-    public void GetTargetTimeStart_Week_WhenSunday_ShouldReturnPreviousMonday()
+    public void GetTargetTimeStart_Week_WhenSunday_ShouldReturnNextMonday()
     {
-        // 2026-06-28 is Sunday (DayOfWeek=6)
+        // 2026-06-28 is Sunday (DayOfWeek=0 in C#)
         var now = new DateTime(2026, 6, 28, 10, 0, 0);
 
         var result = DateTimeHelper.GetTargetTimeStart(now, TimeType.Week);
 
-        // DayOfWeek: Sunday=6, 0 - 6 + 1 = -5, 28 + (-5) = 23
-        result.Should().Be(new DateTime(2026, 6, 22));
+        // Source formula: 0 - (int)DayOfWeek + 1 = 0 - 0 + 1 = 1
+        // Sunday is treated as start of NEXT week, so Monday is 2026-06-29
+        result.Should().Be(new DateTime(2026, 6, 29));
         result.DayOfWeek.Should().Be(DayOfWeek.Monday);
     }
 
@@ -239,13 +240,15 @@ public class DateTimeHelperTests
     }
 
     [Fact]
-    public void GetTargetTimeEnd_Week_WhenSunday_ShouldReturnEndOfSameSunday()
+    public void GetTargetTimeEnd_Week_WhenSunday_ShouldReturnEndOfNextSunday()
     {
+        // 2026-06-28 is Sunday (DayOfWeek=0 in C#)
         var now = new DateTime(2026, 6, 28, 10, 0, 0);
 
         var result = DateTimeHelper.GetTargetTimeEnd(now, TimeType.Week);
 
-        result.Should().Be(new DateTime(2026, 6, 28, 23, 59, 59));
+        // Sunday is treated as start of NEXT week, so week ends on 2026-07-05
+        result.Should().Be(new DateTime(2026, 7, 5, 23, 59, 59));
     }
 
     [Fact]
