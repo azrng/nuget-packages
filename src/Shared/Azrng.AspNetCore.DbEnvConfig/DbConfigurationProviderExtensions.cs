@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Azrng.AspNetCore.DbEnvConfig;
 
@@ -12,7 +13,8 @@ public static class DbConfigurationProviderExtensions
     /// </summary>
     /// <param name="builder">配置构建器</param>
     /// <param name="action">配置选项设置</param>
-    /// <param name="scriptService">自定义脚本服务（可选）</param>
+    /// <param name="scriptService">自定义脚本服务（可选，默认使用 PostgreSQL 实现）</param>
+    /// <param name="logger">日志记录器（可选）</param>
     /// <returns>配置构建器</returns>
     /// <exception cref="ArgumentNullException">当 action 为 null 时抛出</exception>
     /// <exception cref="ArgumentException">当配置参数无效时抛出</exception>
@@ -31,8 +33,9 @@ public static class DbConfigurationProviderExtensions
     /// </example>
     public static IConfigurationBuilder AddDbConfiguration(
         this IConfigurationBuilder builder,
-        Action<DBConfigOptions> action,
-        IScriptService? scriptService = null)
+        Action<DbConfigOptions> action,
+        IScriptService? scriptService = null,
+        ILogger? logger = null)
     {
         if (builder == null)
         {
@@ -44,10 +47,10 @@ public static class DbConfigurationProviderExtensions
             throw new ArgumentNullException(nameof(action));
         }
 
-        var setup = new DBConfigOptions();
+        var setup = new DbConfigOptions();
         action(setup);
 
-        setup.ParamVerify();
-        return builder.Add(new DbConfigurationSource(setup, scriptService ?? new DefaultScriptService()));
+        setup.Normalize();
+        return builder.Add(new DbConfigurationSource(setup, scriptService ?? new PostgreSqlScriptService(), logger));
     }
 }

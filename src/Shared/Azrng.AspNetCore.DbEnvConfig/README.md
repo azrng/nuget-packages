@@ -11,7 +11,7 @@
 - 自动创建配置表结构
 - 支持 PostgreSQL、SQL Server、MySQL 等关系型数据库
 - 线程安全的配置访问
-- 支持多框架：.NET 6.0 / 8.0 / 9.0 / 10.0
+- 支持多框架：.NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ### 安装
 
@@ -185,15 +185,30 @@ public class CustomScriptService : IScriptService
 ### 依赖包
 
 - Microsoft.Extensions.Configuration
-- System.Data.Common
-- System.Text.Json
+- Microsoft.Extensions.Logging.Abstractions
+- System.Text.Json（.NET 框架内置，net6+ 无需显式引用）
+
+### 注意事项
+
+1. 确保数据库连接字符串正确配置
+2. 表必须包含配置键和值两个字段
+3. 自动刷新会在后台线程中定期执行查询
+4. 复杂JSON配置会被展开为层次结构
+5. 组件会尝试自动创建表结构，但可能需要数据库用户具有相应权限
+6. **SQL 注入安全**：`FilterWhere`、`TableName`、`ConfigKeyField`、`ConfigValueField` 等参数会以原始字符串拼接进 SQL 语句，**不会参数化**。请仅使用编译期静态字面量，切勿来自用户输入、请求参数或其它不可信来源，否则会引入 SQL 注入风险。
 
 ### 版本更新记录
 
+* 2.0.0
+  * 【破坏性】统一命名：`DBConfigOptions` → `DbConfigOptions`，`ParamVerify()` → `Normalize()`，`DefaultScriptService` → `PostgreSqlScriptService`，相关源文件名同步改为 `Db` 前缀
+  * 修复 `Dispose` 模式缺陷：移除无效终结器，真正释放 `ReaderWriterLockSlim`
+  * 后台轮询线程改为可取消（`PeriodicTimer` + `CancellationToken`），Dispose 后能及时停止，不再出现「释放后仍执行一次 Load」
+  * 初始化与加载异常改用 `ILogger` 记录，不再静默吞掉所有异常或写到 Console
+  * `AddDbConfiguration` 新增可选 `ILogger?` 参数
+  * 移除冗余的 `System.Data.Common` / `System.Text.Json` 包引用（net6+ 框架已内置）
 * 1.2.0
-  * 添加了 net7.0 目标框架
   * 改进了参数验证，添加了详细的错误消息和参数名
 * 1.1.0
-  * 支持.Net9、.Net10
+  * 添加 net7.0 目标框架
 * 1.0.0
-  * 基本操作
+  * 支持 .NET 6/8/9/10，基本功能

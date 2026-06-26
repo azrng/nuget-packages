@@ -2,7 +2,7 @@
 
 namespace DbEnvConfigSample;
 
-public class PgsqlScriptService : DefaultScriptService
+public class PgsqlScriptService : PostgreSqlScriptService
 {
     public override string GetInitTableDataScript()
     {

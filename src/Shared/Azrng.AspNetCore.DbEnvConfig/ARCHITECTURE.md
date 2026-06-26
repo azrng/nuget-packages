@@ -86,7 +86,7 @@
 
 ### 1. DbConfigurationProviderExtensions
 
-**文件**: [DBConfigurationProviderExtensions.cs](DBConfigurationProviderExtensions.cs)
+**文件**: [DbConfigurationProviderExtensions.cs](DbConfigurationProviderExtensions.cs)
 
 **职责**：
 - 提供扩展方法 `AddDbConfiguration`，为 `IConfigurationBuilder` 添加数据库配置源
@@ -97,13 +97,14 @@
 ```csharp
 public static IConfigurationBuilder AddDbConfiguration(
     this IConfigurationBuilder builder,
-    Action<DBConfigOptions> action,
-    IScriptService? scriptService = null)
+    Action<DbConfigOptions> action,
+    IScriptService? scriptService = null,
+    ILogger? logger = null)
 {
-    var setup = new DBConfigOptions();
+    var setup = new DbConfigOptions();
     action(setup);
-    setup.ParamVerify();  // 参数验证
-    return builder.Add(new DbConfigurationSource(setup, scriptService ?? new DefaultScriptService()));
+    setup.Normalize();  // 参数验证并规范化表名
+    return builder.Add(new DbConfigurationSource(setup, scriptService ?? new PostgreSqlScriptService(), logger));
 }
 ```
 
@@ -111,7 +112,7 @@ public static IConfigurationBuilder AddDbConfiguration(
 
 ### 2. DbConfigurationSource
 
-**文件**: [DBConfigurationSource.cs](DBConfigurationSource.cs)
+**文件**: [DbConfigurationSource.cs](DbConfigurationSource.cs)
 
 **职责**：
 - 实现 `IConfigurationSource` 接口
@@ -137,7 +138,7 @@ public IConfigurationProvider Build(IConfigurationBuilder builder)
 
 ### 3. DbConfigurationProvider
 
-**文件**: [DBConfigurationProvider.cs](DBConfigurationProvider.cs)
+**文件**: [DbConfigurationProvider.cs](DbConfigurationProvider.cs)
 
 **职责**：
 - 继承 `ConfigurationProvider` 并实现 `IDisposable`
@@ -148,21 +149,24 @@ public IConfigurationProvider Build(IConfigurationBuilder builder)
 
 **核心属性**:
 ```csharp
-private readonly ReaderWriterLockSlim _lockObj = new ReaderWriterLockSlim();
-private readonly DBConfigOptions _options;
+private readonly ReaderWriterLockSlim _lockObj = new();
+private readonly DbConfigOptions _options;
 private readonly IScriptService _scriptService;
-private bool _isDisposed;
+private readonly ILogger _logger;
+private volatile bool _isDisposed;
+private readonly CancellationTokenSource? _reloadCts;  // 后台轮询取消控制
+private readonly Task? _reloadTask;
 ```
 
 ---
 
-### 4. DBConfigOptions
+### 4. DbConfigOptions
 
-**文件**: [DBConfigOptions.cs](DBConfigOptions.cs)
+**文件**: [DbConfigOptions.cs](DbConfigOptions.cs)
 
 **职责**：
 - 封装所有配置选项
-- 提供参数验证功能 `ParamVerify()`
+- 提供参数验证功能 `Normalize()`
 - 解析表名的 Schema 信息
 
 **配置项**:
@@ -180,13 +184,13 @@ private bool _isDisposed;
 
 ---
 
-### 5. IScriptService / DefaultScriptService
+### 5. IScriptService / PostgreSqlScriptService
 
-**文件**: [IScriptService.cs](IScriptService.cs), [DefaultScriptService.cs](DefaultScriptService.cs)
+**文件**: [IScriptService.cs](IScriptService.cs), [PostgreSqlScriptService.cs](PostgreSqlScriptService.cs)
 
 **职责**：
 - 定义数据库初始化脚本接口
-- `DefaultScriptService` 提供 PostgreSQL 的默认实现
+- `PostgreSqlScriptService` 提供 PostgreSQL 的默认实现
 - 支持自定义其他数据库（SQL Server、MySQL 等）的脚本
 
 **接口定义**:
@@ -228,8 +232,8 @@ public static string? GetValueForConfig(this JsonElement e)
    ▼
 DbConfigurationProviderExtensions
    │
-   │ 创建 DBConfigOptions
-   │ ParamVerify() 验证参数
+   │ 创建 DbConfigOptions
+   │ Normalize() 验证参数
    ▼
 DbConfigurationSource
    │
@@ -426,7 +430,7 @@ System.Text.Json (JSON 解析)
 ┌───────────────────────────────────────────────────────────┐
 │              DbConfigurationSource                        │
 ├───────────────────────────────────────────────────────────┤
-│ - _options: DBConfigOptions                              │
+│ - _options: DbConfigOptions                              │
 │ - _scriptService: IScriptService                         │
 │ - _uniqueInstance: DbConfigurationProvider               │
 ├───────────────────────────────────────────────────────────┤
@@ -451,7 +455,7 @@ System.Text.Json (JSON 解析)
 │             DbConfigurationProvider                      │
 │             <<implements IDisposable>>                  │
 ├───────────────────────────────────────────────────────────┤
-│ - _options: DBConfigOptions                              │
+│ - _options: DbConfigOptions                              │
 │ - _scriptService: IScriptService                         │
 │ - _lockObj: ReaderWriterLockSlim                         │
 ├───────────────────────────────────────────────────────────┤
@@ -473,7 +477,7 @@ System.Text.Json (JSON 解析)
                             ▲
                             │
 ┌───────────────────────────────────────────────────────────┐
-│           DefaultScriptService                           │
+│           PostgreSqlScriptService                           │
 ├───────────────────────────────────────────────────────────┤
 │ + GetInitTableScript(...): string                        │
 │ + GetInitTableDataScript(): string                       │
@@ -585,13 +589,13 @@ OnReload();  // 安全
 
 | 文件 | 行数 | 说明 |
 |-----|------|------|
-| [DBConfigurationProvider.cs](DBConfigurationProvider.cs) | 249 | 核心提供者，实现配置加载和刷新 |
-| [DBConfigurationSource.cs](DBConfigurationSource.cs) | 47 | 配置源，单例管理 Provider 实例 |
-| [DBConfigOptions.cs](DBConfigOptions.cs) | 115 | 配置选项类 |
-| [DBConfigurationProviderExtensions.cs](DBConfigurationProviderExtensions.cs) | 53 | 扩展方法，提供 fluent API |
-| [IScriptService.cs](IScriptService.cs) | 35 | 脚本服务接口 |
-| [DefaultScriptService.cs](DefaultScriptService.cs) | 41 | PostgreSQL 脚本服务默认实现 |
-| [Helper.cs](Helper.cs) | 69 | 辅助工具类 |
+| [DbConfigurationProvider.cs](DbConfigurationProvider.cs) | 313 | 核心提供者，实现配置加载和刷新 |
+| [DbConfigurationSource.cs](DbConfigurationSource.cs) | 51 | 配置源，单例管理 Provider 实例 |
+| [DbConfigOptions.cs](DbConfigOptions.cs) | 120 | 配置选项类 |
+| [DbConfigurationProviderExtensions.cs](DbConfigurationProviderExtensions.cs) | 56 | 扩展方法，提供 fluent API |
+| [IScriptService.cs](IScriptService.cs) | 34 | 脚本服务接口 |
+| [PostgreSqlScriptService.cs](PostgreSqlScriptService.cs) | 40 | PostgreSQL 脚本服务默认实现 |
+| [Helper.cs](Helper.cs) | 68 | 辅助工具类 |
 
 ---
 

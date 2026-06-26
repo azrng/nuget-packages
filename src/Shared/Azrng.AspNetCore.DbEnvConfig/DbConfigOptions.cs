@@ -5,7 +5,7 @@ namespace Azrng.AspNetCore.DbEnvConfig;
 /// <summary>
 /// 数据库配置选项
 /// </summary>
-public class DBConfigOptions
+public class DbConfigOptions
 {
     /// <summary>
     /// 获取或设置数据库连接工厂函数
@@ -60,6 +60,11 @@ public class DBConfigOptions
     /// <remarks>
     /// 示例：" AND is_delete = false"
     /// 注意：需要以 " AND" 开头
+    /// <br/>
+    /// <b>安全警告</b>：该值会以原始字符串拼接进 SQL 语句，不会参数化。
+    /// 请仅使用编译期静态字面量，<b>切勿</b>来自用户输入、请求参数或其它不可信来源，
+    /// 否则会引入 SQL 注入风险。同理，<see cref="TableName"/>、<see cref="Schema"/>、
+    /// <see cref="ConfigKeyField"/>、<see cref="ConfigValueField"/> 也不可来自不可信来源。
     /// </remarks>
     public string? FilterWhere { get; set; }
 
@@ -69,11 +74,11 @@ public class DBConfigOptions
     public bool IsConsoleQueryLog { get; set; } = true;
 
     /// <summary>
-    /// 验证配置参数
+    /// 验证配置参数并规范化表名（拆分 schema、计算 <see cref="FullTableName"/>）
     /// </summary>
     /// <exception cref="ArgumentNullException">当必需参数为空时抛出</exception>
     /// <exception cref="ArgumentException">当参数格式不正确时抛出</exception>
-    public void ParamVerify()
+    public void Normalize()
     {
         if (CreateDbConnection == null)
         {

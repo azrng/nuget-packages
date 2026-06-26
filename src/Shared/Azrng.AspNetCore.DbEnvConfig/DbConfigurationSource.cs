@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Azrng.AspNetCore.DbEnvConfig;
 
@@ -11,20 +12,23 @@ namespace Azrng.AspNetCore.DbEnvConfig;
 /// </remarks>
 internal class DbConfigurationSource : IConfigurationSource
 {
-    private readonly DBConfigOptions _options;
+    private readonly DbConfigOptions _options;
     private readonly IScriptService _scriptService;
-    private DbConfigurationProvider? _uniqueInstance;
+    private readonly ILogger? _logger;
     private readonly object _locker = new();
+    private DbConfigurationProvider? _uniqueInstance;
 
     /// <summary>
     /// 初始化 <see cref="DbConfigurationSource"/> 的新实例
     /// </summary>
     /// <param name="options">配置选项</param>
     /// <param name="scriptService">脚本服务</param>
-    public DbConfigurationSource(DBConfigOptions options, IScriptService scriptService)
+    /// <param name="logger">日志记录器（可选）</param>
+    public DbConfigurationSource(DbConfigOptions options, IScriptService scriptService, ILogger? logger = null)
     {
         _options = options;
         _scriptService = scriptService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -38,7 +42,7 @@ internal class DbConfigurationSource : IConfigurationSource
         {
             lock (_locker)
             {
-                _uniqueInstance ??= new DbConfigurationProvider(_options, _scriptService);
+                _uniqueInstance ??= new DbConfigurationProvider(_options, _scriptService, _logger);
             }
         }
 

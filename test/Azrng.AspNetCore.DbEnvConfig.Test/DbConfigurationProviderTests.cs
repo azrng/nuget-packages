@@ -2,6 +2,7 @@ using Azrng.AspNetCore.DbEnvConfig;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using System.Data;
+using System.Data.Common;
 using Xunit;
 
 namespace Azrng.AspNetCore.DbEnvConfig.Test;
@@ -9,9 +10,9 @@ namespace Azrng.AspNetCore.DbEnvConfig.Test;
 public class DbConfigurationProviderTests
 {
     [Fact]
-    public void ParamVerify_WithSchemaTableName_SplitsSchemaAndBuildsFullTableName()
+    public void Normalize_WithSchemaTableName_SplitsSchemaAndBuildsFullTableName()
     {
-        var options = new DBConfigOptions
+        var options = new DbConfigOptions
         {
             CreateDbConnection = () => new FakeDbConnection(new FakeDatabaseState()),
             TableName = "config.system_config",
@@ -19,7 +20,7 @@ public class DbConfigurationProviderTests
             ConfigValueField = "value"
         };
 
-        options.ParamVerify();
+        options.Normalize();
 
         options.Schema.Should().Be("config");
         options.TableName.Should().Be("system_config");
@@ -27,16 +28,16 @@ public class DbConfigurationProviderTests
     }
 
     [Fact]
-    public void ParamVerify_WithInvalidArguments_ThrowsMeaningfulExceptions()
+    public void Normalize_WithInvalidArguments_ThrowsMeaningfulExceptions()
     {
-        var missingConnection = new DBConfigOptions
+        var missingConnection = new DbConfigOptions
         {
             TableName = "config.system_config",
             ConfigKeyField = "code",
             ConfigValueField = "value"
         };
 
-        var invalidTableName = new DBConfigOptions
+        var invalidTableName = new DbConfigOptions
         {
             CreateDbConnection = () => new FakeDbConnection(new FakeDatabaseState()),
             TableName = "a.b.c",
@@ -44,7 +45,7 @@ public class DbConfigurationProviderTests
             ConfigValueField = "value"
         };
 
-        var blankFields = new DBConfigOptions
+        var blankFields = new DbConfigOptions
         {
             CreateDbConnection = () => new FakeDbConnection(new FakeDatabaseState()),
             TableName = "system_config",
@@ -52,24 +53,24 @@ public class DbConfigurationProviderTests
             ConfigValueField = ""
         };
 
-        missingConnection.Invoking(x => x.ParamVerify())
+        missingConnection.Invoking(x => x.Normalize())
             .Should().Throw<ArgumentNullException>()
-            .WithParameterName(nameof(DBConfigOptions.CreateDbConnection));
+            .WithParameterName(nameof(DbConfigOptions.CreateDbConnection));
 
-        invalidTableName.Invoking(x => x.ParamVerify())
+        invalidTableName.Invoking(x => x.Normalize())
             .Should().Throw<ArgumentException>()
-            .WithParameterName(nameof(DBConfigOptions.TableName));
+            .WithParameterName(nameof(DbConfigOptions.TableName));
 
-        blankFields.Invoking(x => x.ParamVerify())
+        blankFields.Invoking(x => x.Normalize())
             .Should().Throw<ArgumentException>()
-            .WithParameterName(nameof(DBConfigOptions.ConfigKeyField));
+            .WithParameterName(nameof(DbConfigOptions.ConfigKeyField));
     }
 
     [Fact]
     public void AddDbConfiguration_WithNullArguments_ThrowsArgumentNullException()
     {
         IConfigurationBuilder? builder = null;
-        Action<DBConfigOptions>? action = null;
+        Action<DbConfigOptions>? action = null;
 
         var nullBuilderAct = () => DbConfigurationProviderExtensions.AddDbConfiguration(builder!, _ => { });
         var nullActionAct = () => new ConfigurationBuilder().AddDbConfiguration(action!);
@@ -81,9 +82,9 @@ public class DbConfigurationProviderTests
     }
 
     [Fact]
-    public void DefaultScriptService_BuildsSchemaAwareInitScript()
+    public void PostgreSqlScriptService_BuildsSchemaAwareInitScript()
     {
-        var script = new DefaultScriptService()
+        var script = new PostgreSqlScriptService()
             .GetInitTableScript("system_config", "code", "value", "config");
 
         script.Should().Contain("CREATE SCHEMA IF NOT EXISTS config;");
@@ -144,7 +145,7 @@ public class DbConfigurationProviderTests
             InitTableScript = "CREATE TABLE custom_config (...);",
             InitDataScript = "INSERT INTO custom_config VALUES ('code','value');"
         };
-        var options = new DBConfigOptions
+        var options = new DbConfigOptions
         {
             CreateDbConnection = () => new FakeDbConnection(state),
             TableName = "config.custom_config",
@@ -153,13 +154,118 @@ public class DbConfigurationProviderTests
             ReloadOnChange = false,
             IsConsoleQueryLog = false
         };
-        options.ParamVerify();
+        options.Normalize();
 
         using var provider = new DbConfigurationProvider(options, scriptService);
 
         state.ExecutedCommands.Should().Contain(scriptService.InitTableScript);
         state.ExecutedCommands.Should().Contain("select count(*) from config.custom_config");
         state.ExecutedCommands.Should().Contain(scriptService.InitDataScript);
+    }
+
+    [Fact]
+    public void DbConfigurationProvider_RestoresPreviousDataWhenLoadThrowsDbException()
+    {
+        // 首次加载一条正常数据，后续 ExecuteReader 抛 DbException，验证 Data 被回滚而非清空
+        var state = new FakeDatabaseState
+        {
+            Rows = { ("k1", "v1") }
+        };
+
+        var options = new DbConfigOptions
+        {
+            CreateDbConnection = () => new FakeDbConnection(state),
+            TableName = "config.system_config",
+            ConfigKeyField = "code",
+            ConfigValueField = "value",
+            ReloadOnChange = false,
+            IsConsoleQueryLog = false
+        };
+        options.Normalize();
+
+        // 构造时 InitTable 不触发 reader；首次 Load 读取 k1=v1
+        using var provider = new DbConfigurationProvider(options, new TrackingScriptService());
+        provider.Load();
+        provider.TryGet("k1", out var first).Should().BeTrue();
+        first.Should().Be("v1");
+
+        // 配置 reader 抛异常后再次 Load，应回滚到上次成功的数据
+        state.ThrowOnReader = true;
+        provider.Load();
+
+        provider.TryGet("k1", out var restored).Should().BeTrue();
+        restored.Should().Be("v1");
+    }
+
+    [Fact]
+    public async Task DbConfigurationProvider_BackgroundReloadStopsAfterDispose()
+    {
+        // 用极短轮询间隔启动后台线程，Dispose 后断言不再产生新的 select 查询
+        var state = new FakeDatabaseState
+        {
+            Rows = { ("k1", "v1") }
+        };
+
+        var options = new DbConfigOptions
+        {
+            CreateDbConnection = () => new FakeDbConnection(state),
+            TableName = "config.system_config",
+            ConfigKeyField = "code",
+            ConfigValueField = "value",
+            ReloadOnChange = true,
+            ReloadInterval = TimeSpan.FromMilliseconds(50),
+            IsConsoleQueryLog = false
+        };
+        options.Normalize();
+
+        var provider = new DbConfigurationProvider(options, new TrackingScriptService());
+
+        // 让后台线程跑若干轮，确认 select 持续执行
+        await Task.Delay(300);
+        var countBeforeDispose = state.ExecutedCommands.Count;
+        countBeforeDispose.Should().BeGreaterThan(0);
+
+        provider.Dispose();
+
+        // Dispose 后再等待一段足以触发多次轮询的时间
+        await Task.Delay(400);
+
+        // Dispose 之后不应再有任何新命令执行
+        state.ExecutedCommands.Count.Should().Be(countBeforeDispose);
+    }
+
+    [Fact]
+    public void DbConfigurationProvider_OnReloadOnlyFiresWhenDataActuallyChanges()
+    {
+        // 间接覆盖 Helper.IsChanged：连续两次加载相同数据，OnReload 不应改变 reload token
+        var state = new FakeDatabaseState
+        {
+            Rows = { ("k1", "v1") }
+        };
+        var options = new DbConfigOptions
+        {
+            CreateDbConnection = () => new FakeDbConnection(state),
+            TableName = "config.system_config",
+            ConfigKeyField = "code",
+            ConfigValueField = "value",
+            ReloadOnChange = false,
+            IsConsoleQueryLog = false
+        };
+        options.Normalize();
+
+        using var provider = new DbConfigurationProvider(options, new TrackingScriptService());
+        var configuration = new ConfigurationRoot(new[] { provider });
+
+        var tokenBefore = configuration.GetReloadToken();
+        tokenBefore.HasChanged.Should().BeFalse();
+
+        provider.Load(); // 相同数据，不应触发 reload
+        tokenBefore.HasChanged.Should().BeFalse();
+
+        state.Rows.Clear();
+        state.Rows.Add(("k1", "v2"));
+        provider.Load(); // 数据变化，应触发 reload
+        tokenBefore.HasChanged.Should().BeTrue();
     }
 }
 
@@ -187,6 +293,11 @@ internal sealed class FakeDatabaseState
     public List<string> ExecutedCommands { get; } = [];
 
     public int TableCount { get; set; }
+
+    /// <summary>
+    /// 设置为 true 时，ExecuteReader 抛出 DbException，用于测试加载失败回滚
+    /// </summary>
+    public bool ThrowOnReader { get; set; }
 }
 
 internal sealed class FakeDbConnection(FakeDatabaseState state) : IDbConnection
@@ -272,12 +383,20 @@ internal sealed class FakeDbCommand(FakeDatabaseState state, IDbConnection conne
     public IDataReader ExecuteReader()
     {
         state.ExecutedCommands.Add(CommandText);
+        if (state.ThrowOnReader)
+        {
+            throw new TestDbException("模拟读取失败");
+        }
         return CreateReader(state.Rows);
     }
 
     public IDataReader ExecuteReader(CommandBehavior behavior)
     {
         state.ExecutedCommands.Add(CommandText);
+        if (state.ThrowOnReader)
+        {
+            throw new TestDbException("模拟读取失败");
+        }
         return CreateReader(state.Rows);
     }
 
@@ -382,3 +501,8 @@ internal sealed class FakeDbParameter : IDbDataParameter
 
     public int Size { get; set; }
 }
+
+/// <summary>
+/// 用于测试的 DbException 派生类，确保能被 Load 的 catch(DbException) 捕获
+/// </summary>
+internal sealed class TestDbException(string? message) : DbException(message);

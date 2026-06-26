@@ -1,13 +1,13 @@
 ﻿namespace Azrng.AspNetCore.DbEnvConfig;
 
 /// <summary>
-/// 默认脚本服务实现
+/// PostgreSQL 脚本服务实现（库的默认实现）
 /// </summary>
 /// <remarks>
 /// 此实现针对 PostgreSQL 数据库
 /// 如需支持其他数据库，请实现 <see cref="IScriptService"/> 接口
 /// </remarks>
-public class DefaultScriptService : IScriptService
+public class PostgreSqlScriptService : IScriptService
 {
     /// <summary>
     /// 获取 PostgreSQL 初始化表的 SQL 脚本
