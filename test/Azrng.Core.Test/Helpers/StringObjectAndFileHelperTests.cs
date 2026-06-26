@@ -52,6 +52,36 @@ public class StringObjectAndFileHelperTests
     }
 
     [Fact]
+    public void ReplaceWithDictionary_ShouldReplaceAllKeys()
+    {
+        var input = "hello world";
+        var replacements = new Dictionary<string, string>
+        {
+            ["hello"] = "hi",
+            ["world"] = "earth"
+        };
+
+        StringHelper.ReplaceWithDictionary(input, replacements).Should().Be("hi earth");
+    }
+
+    [Fact]
+    public void ReplaceWithDictionary_ShouldReturnInput_WhenReplacementsEmpty()
+    {
+        var input = "hello world";
+        var replacements = new Dictionary<string, string>();
+
+        StringHelper.ReplaceWithDictionary(input, replacements).Should().Be("hello world");
+    }
+
+    [Fact]
+    public void ReplaceWithDictionary_ShouldReturnInput_WhenInputEmpty()
+    {
+        var replacements = new Dictionary<string, string> { ["a"] = "b" };
+
+        StringHelper.ReplaceWithDictionary("", replacements).Should().Be("");
+    }
+
+    [Fact]
     public void GetStringPropertiesWithValues_ShouldFilterEmptyStringsByDefault()
     {
         var model = new SampleModel
