@@ -9,7 +9,7 @@
 		<Authors>Azrng</Authors>
 		<Company>Azrng</Company>
 		<Copyright>Azrng</Copyright>
-        <Version>1.6.0</Version>
+        <Version>1.6.1</Version>
         <PackageId>Common.EFCore.SQLite</PackageId>
         <RootNamespace>Azrng.EFCore.SQLite</RootNamespace>
 

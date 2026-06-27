@@ -53,7 +53,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             config.ParamVerify();
 
-            EfCoreGlobalConfig.SetConfig(DatabaseType.PostgresSql, config.UseOldUpdateColumn, config.Schema);
+            EfCoreGlobalConfig.SetConfig(DatabaseType.Sqlite, config.UseOldUpdateColumn, config.Schema);
 
             services.AddDbContext<T>((provider, options) =>
             {
@@ -101,7 +101,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             config.ParamVerify();
 
-            EfCoreGlobalConfig.SetConfig(DatabaseType.PostgresSql, config.UseOldUpdateColumn, config.Schema);
+            EfCoreGlobalConfig.SetConfig(DatabaseType.Sqlite, config.UseOldUpdateColumn, config.Schema);
 
             services.AddDbContextFactory<T>((provider, options) =>
             {
