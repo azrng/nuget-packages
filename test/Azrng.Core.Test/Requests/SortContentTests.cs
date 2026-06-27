@@ -43,7 +43,7 @@ public class SortContentTests
     public void SortName_CanBeSetToNull()
     {
         var content = new SortContent("Name", SortEnum.Asc);
-        content.SortName = null;
+        content.SortName = null!;
 
         content.SortName.Should().BeNull();
     }

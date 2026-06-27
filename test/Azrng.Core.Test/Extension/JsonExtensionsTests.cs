@@ -23,7 +23,7 @@ public class JsonExtensionsTests
     [InlineData("123", false)]
     public void IsJArrayString_ShouldReturnExpected(string? input, bool expected)
     {
-        input.IsJArrayString().Should().Be(expected);
+        input!.IsJArrayString().Should().Be(expected);
     }
 
     #endregion

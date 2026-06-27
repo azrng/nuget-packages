@@ -126,7 +126,7 @@ public class IoExtensionsTests : IDisposable
         var result = await path.ToBytesFromFileAsync();
 
         result.Should().NotBeNull();
-        result.Should().Equal(data);
+        result!.Should().Equal(data);
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public class IoExtensionsTests : IDisposable
         var data = new byte[] { 4, 5, 6 };
         using var stream = new MemoryStream(data);
 
-        var result = await stream.ToBytesAsync();
+        var result = await stream.ToBytesAsync()!;
 
         result.Should().NotBeNull();
         result.Should().Equal(data);
@@ -284,7 +284,7 @@ public class IoExtensionsTests : IDisposable
     {
         Stream? stream = null;
 
-        var result = await stream.ToBytesAsync();
+        var result = await stream.ToBytesAsync()!;
 
         result.Should().NotBeNull();
         result.Should().BeEmpty();
@@ -295,7 +295,7 @@ public class IoExtensionsTests : IDisposable
     {
         using var stream = new MemoryStream();
 
-        var result = await stream.ToBytesAsync();
+        var result = await stream.ToBytesAsync()!;
 
         result.Should().NotBeNull();
         result.Should().BeEmpty();
@@ -307,7 +307,7 @@ public class IoExtensionsTests : IDisposable
         var data = new byte[] { 4, 5, 6 };
         using var stream = new MemoryStream(data);
 
-        await stream.ToBytesAsync();
+        await stream.ToBytesAsync()!;
 
         stream.Position.Should().Be(0);
     }

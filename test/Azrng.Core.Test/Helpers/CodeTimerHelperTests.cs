@@ -21,7 +21,7 @@ public class CodeTimerHelperTests
     {
         var callCount = 0;
 
-        CodeTimerHelper.Time(null, 1, (CodeTimerHelper.ActionDelegate)(() => callCount++));
+        CodeTimerHelper.Time(null!, 1, (CodeTimerHelper.ActionDelegate)(() => callCount++));
 
         callCount.Should().Be(0);
     }
@@ -29,7 +29,7 @@ public class CodeTimerHelperTests
     [Fact]
     public void Time_ActionDelegate_WithNullAction_ShouldReturnEarly()
     {
-        Action act = () => CodeTimerHelper.Time("test", 1, (CodeTimerHelper.ActionDelegate?)null);
+        Action act = () => CodeTimerHelper.Time("test", 1, (CodeTimerHelper.ActionDelegate?)null!);
 
         act.Should().NotThrow();
     }
@@ -78,7 +78,7 @@ public class CodeTimerHelperTests
         var callCount = 0;
         var action = new TestAction(() => callCount++);
 
-        CodeTimerHelper.Time(null, 1, action);
+        CodeTimerHelper.Time(null!, 1, action);
 
         callCount.Should().Be(0);
     }
@@ -86,7 +86,7 @@ public class CodeTimerHelperTests
     [Fact]
     public void Time_IAction_WithNullAction_ShouldReturnEarly()
     {
-        Action act = () => CodeTimerHelper.Time("test", 1, (IAction?)null);
+        Action act = () => CodeTimerHelper.Time("test", 1, (IAction?)null!);
 
         act.Should().NotThrow();
     }

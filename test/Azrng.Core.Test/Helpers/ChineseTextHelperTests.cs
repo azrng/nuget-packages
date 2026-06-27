@@ -74,7 +74,7 @@ public class ChineseTextHelperTests
     [Fact]
     public void ContainsChinese_Null_ShouldReturnFalse()
     {
-        var result = ChineseTextHelper.ContainsChinese(null);
+        var result = ChineseTextHelper.ContainsChinese(null!);
 
         result.Should().BeFalse();
     }
@@ -142,7 +142,7 @@ public class ChineseTextHelperTests
     [Fact]
     public void RemoveNonChineseFromStartAndEnd_Null_ShouldReturnEmpty()
     {
-        var result = ChineseTextHelper.RemoveNonChineseFromStartAndEnd(null);
+        var result = ChineseTextHelper.RemoveNonChineseFromStartAndEnd(null!);
 
         result.Should().BeEmpty();
     }

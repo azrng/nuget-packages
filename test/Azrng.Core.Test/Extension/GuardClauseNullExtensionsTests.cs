@@ -89,7 +89,7 @@ public class GuardClauseNullExtensionsTests
     public void NullOrEmpty_String_NullValue_ThrowsArgumentNullException()
     {
         string? input = null;
-        var act = () => Guard.Against.NullOrEmpty(input);
+        var act = () => Guard.Against.NullOrEmpty(input!);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -218,7 +218,7 @@ public class GuardClauseNullExtensionsTests
     public void NullOrWhiteSpace_NullValue_ThrowsArgumentNullException()
     {
         string? input = null;
-        var act = () => Guard.Against.NullOrWhiteSpace(input);
+        var act = () => Guard.Against.NullOrWhiteSpace(input!);
         act.Should().Throw<ArgumentNullException>();
     }
 

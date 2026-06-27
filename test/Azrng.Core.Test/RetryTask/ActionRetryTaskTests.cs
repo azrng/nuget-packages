@@ -225,7 +225,7 @@ public class ActionRetryTaskTests
         }));
 
         var result = await task.Retry(3)
-                               .WhenCatch<InvalidOperationException>((Action<InvalidOperationException>?)null);
+                               .WhenCatch<InvalidOperationException>((Action<InvalidOperationException>?)null!);
 
         result.Should().Be(42);
     }
@@ -276,7 +276,7 @@ public class ActionRetryTaskTests
         }));
 
         var result = await task.Retry(3)
-                               .WhenCatch<InvalidOperationException>((Func<InvalidOperationException, bool>?)null);
+                               .WhenCatch<InvalidOperationException>((Func<InvalidOperationException, bool>?)null!);
 
         result.Should().Be(42);
     }
@@ -320,7 +320,7 @@ public class ActionRetryTaskTests
         }));
 
         var result = await task.Retry(3)
-                               .WhenCatchAsync<InvalidOperationException>((Func<InvalidOperationException, Task>?)null);
+                               .WhenCatchAsync<InvalidOperationException>((Func<InvalidOperationException, Task>?)null!);
 
         result.Should().Be(42);
     }
@@ -371,7 +371,7 @@ public class ActionRetryTaskTests
         }));
 
         var result = await task.Retry(3)
-                               .WhenCatchAsync<InvalidOperationException>((Func<InvalidOperationException, Task<bool>>?)null);
+                               .WhenCatchAsync<InvalidOperationException>((Func<InvalidOperationException, Task<bool>>?)null!);
 
         result.Should().Be(42);
     }
