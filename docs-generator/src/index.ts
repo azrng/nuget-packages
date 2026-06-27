@@ -8,6 +8,7 @@ import * as path from 'path';
 import { XmlParser } from './parser.js';
 import { generateIndexHtml, generateDataJson } from './generator.js';
 import { parseCsprojMetadata, ProjectMetadata } from './csproj.js';
+import { renderMarkdown } from './markdown.js';
 
 // ==================== 配置 ====================
 
@@ -48,17 +49,23 @@ function getProjectsFromSlnx(slnxPath: string): string[] {
 }
 
 /**
- * 收集指定项目列表生成的 XML 文档文件
- * 对每个项目的 bin/ 子目录递归查找 .xml 文件
- * 这样文档范围严格绑定解决方案，不受其他 slnx 的 build 残留影响
+ * 收集指定项目列表「源头」生成的 XML 文档文件
+ * 对每个项目的 bin/ 子目录递归查找 .xml 文件，并按程序集名去重：
+ * 只保留 <assembly><name> 等于该项目程序集名的 XML，丢弃引用方 bin/ 下复制的传递依赖副本。
  *
- * 返回值携带每个 XML 所属项目的 .csproj 路径，便于后续注入包元数据。
- * （多目标项目的多个 TFM XML 文件同属一个 csproj，共享同一份元数据。）
+ * 这样文档范围严格绑定解决方案，且每个类库只出现一次，
+ * metadata/readme 归属不会被先处理的引用方项目抢占。
+ *
+ * 返回值携带每个 XML 所属项目的 .csproj 路径与解析出的程序集名。
  */
-function getXmlFilesForProjects(projectPaths: string[]): { filePath: string; projectPath: string }[] {
-  const files: { filePath: string; projectPath: string }[] = [];
+function getXmlFilesForProjects(projectPaths: string[]): { filePath: string; projectPath: string; assemblyName: string }[] {
+  const files: { filePath: string; projectPath: string; assemblyName: string }[] = [];
+  // projectPath -> 程序集名（csproj 文件名去 .csproj；默认 AssemblyName 即此值）
+  const nameByProject = new Map<string, string>();
 
   for (const projectPath of projectPaths) {
+    const projectAssemblyName = path.basename(projectPath, '.csproj');
+    nameByProject.set(projectPath, projectAssemblyName);
     const projectDir = path.dirname(projectPath);
     const binDir = path.join(projectDir, 'bin');
     if (!fs.existsSync(binDir)) continue;
@@ -72,35 +79,94 @@ function getXmlFilesForProjects(projectPaths: string[]): { filePath: string; pro
         if (stat.isDirectory()) {
           collect(fullPath);
         } else if (item.endsWith('.xml')) {
-          files.push({ filePath: fullPath, projectPath });
+          files.push({ filePath: fullPath, projectPath, assemblyName: projectAssemblyName });
         }
       }
     };
     collect(binDir);
   }
 
-  return files;
+  // 去重：只保留「XML 内声明的程序集名 == 所属项目程序集名」的源头 XML，
+  // 跳过被引用方复制过来的传递依赖副本（它们声明的程序集名是别的库）
+  const result: { filePath: string; projectPath: string; assemblyName: string }[] = [];
+  let transitiveDropped = 0;
+  for (const entry of files) {
+    const xmlAssemblyName = readAssemblyNameFromXml(entry.filePath);
+    if (xmlAssemblyName && xmlAssemblyName === entry.assemblyName) {
+      result.push(entry);
+    } else {
+      transitiveDropped++;
+    }
+  }
+  if (transitiveDropped > 0) {
+    console.log(`🧹 去重: 丢弃 ${transitiveDropped} 个传递依赖 XML 副本`);
+  }
+  return result;
 }
 
 /**
- * 读取并解析每个项目的 .csproj 元数据，缓存为 projectPath -> metadata
- * csproj 文件缺失或解析失败时跳过（console.warn），返回全空 metadata 兜底
+ * 快速读取 XML 文档 <assembly><name> 的值（仅扫前若干行，避免读全文件）
+ * 解析失败返回空字符串
+ */
+function readAssemblyNameFromXml(filePath: string): string {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const match = content.match(/<assembly>\s*<name>([^<]+)<\/name>/);
+    return match ? match[1].trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 读取并解析每个项目的 .csproj 元数据，缓存为 assemblyName -> metadata
+ * csproj 文件缺失或解析失败时跳过（console.warn），不写入 map
+ * （改用程序集名作 key，与 XML <assembly><name> 对齐，避免传递依赖副本抢占归属）
  */
 function buildProjectMetadataMap(projectPaths: string[]): Map<string, ProjectMetadata> {
   const map = new Map<string, ProjectMetadata>();
   for (const projectPath of projectPaths) {
+    const assemblyName = path.basename(projectPath, '.csproj');
     const empty: ProjectMetadata = { tags: [], targetFrameworks: [] };
     try {
       if (!fs.existsSync(projectPath)) {
         console.warn(`⚠️  未找到 csproj，跳过元数据: ${projectPath}`);
-        map.set(projectPath, empty);
         continue;
       }
       const content = fs.readFileSync(projectPath, 'utf-8');
-      map.set(projectPath, parseCsprojMetadata(content));
+      map.set(assemblyName, parseCsprojMetadata(content));
     } catch (error) {
       console.warn(`⚠️  解析 csproj 元数据失败: ${projectPath}`, error);
-      map.set(projectPath, empty);
+      map.set(assemblyName, empty);
+    }
+  }
+  return map;
+}
+
+/**
+ * 读取每个项目的 README.md（与 csproj 同目录），渲染成 HTML，缓存为 assemblyName -> html
+ *
+ * 读取范围与 buildProjectMetadataMap / getXmlFilesForProjects 完全同源，
+ * 都来自 getProjectsFromSlnx 返回的 projects 数组，严格绑定 PackPackages.slnx。
+ * 文件名大小写不敏感（兼容 README.md / readme.md / Readme.md）；缺失则该项目不入 map。
+ * 读取/渲染失败时 console.warn 跳过，不影响其它项目。
+ */
+function buildProjectReadmeMap(projectPaths: string[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const projectPath of projectPaths) {
+    const assemblyName = path.basename(projectPath, '.csproj');
+    try {
+      const projectDir = path.dirname(projectPath);
+      const entries = fs.existsSync(projectDir) ? fs.readdirSync(projectDir) : [];
+      // 大小写不敏感匹配 readme.md
+      const readmeFile = entries.find(f => /^readme\.md$/i.test(f));
+      if (!readmeFile) continue;
+      const readmePath = path.join(projectDir, readmeFile);
+      const md = fs.readFileSync(readmePath, 'utf-8');
+      const html = renderMarkdown(md);
+      if (html) map.set(assemblyName, html);
+    } catch (error) {
+      console.warn(`⚠️  读取 README 失败: ${projectPath}`, error);
     }
   }
   return map;
@@ -173,6 +239,10 @@ function main(): void {
   const withMetaCount = [...metadataMap.values()].filter(m => m.title || m.tags.length > 0).length;
   console.log(`📊 csproj 元数据: ${withMetaCount}/${projects.length} 个项目含 Title 或 Tags`);
 
+  // 读取每个项目的 README.md（严格绑定 slnx 同一份 projects），渲染成 HTML 注入对应 Assembly
+  const readmeMap = buildProjectReadmeMap(projects);
+  console.log(`📊 README: ${readmeMap.size}/${projects.length} 个项目含 README`);
+
   console.log(`📁 解决方案: ${path.basename(CONFIG.solutionFile)} (${projects.length} 个项目)`);
   console.log(`📁 扫描完成: ${xmlEntries.length} 个 XML 文件 (${scanTimer.elapsed().toFixed(0)}ms)\n`);
 
@@ -185,7 +255,11 @@ function main(): void {
   for (const entry of xmlEntries) {
     const fileName = path.basename(entry.filePath);  // 已经包含.xml扩展名
     const content = fs.readFileSync(entry.filePath, 'utf-8');
-    parser.parseFile(content, fileName, metadataMap.get(entry.projectPath));
+    // 合并 csproj 元数据与 README HTML，一起注入到该文件对应的 Assembly
+    // 按「程序集名」查询：与 XML <assembly><name> 对齐，避免传递依赖副本抢占归属
+    const meta = metadataMap.get(entry.assemblyName);
+    const readme = readmeMap.get(entry.assemblyName);
+    parser.parseFile(content, fileName, meta ? { ...meta, readme } : (readme ? { readme } : undefined));
     console.log(`  ✓ ${fileName}`);
   }
 

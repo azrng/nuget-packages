@@ -39,6 +39,8 @@ interface SerializableData {
     description?: string;
     version?: string;
     targetFrameworks?: string[];
+    // 类库 README.md 渲染后的 HTML（可选，有值才输出）
+    readme?: string;
     namespaces: {
       name: string;
       types: SerializableType[];
@@ -88,6 +90,7 @@ export function serializeData(data: ParsedData): SerializableData {
     if (assembly.targetFrameworks && assembly.targetFrameworks.length > 0) {
       out.targetFrameworks = assembly.targetFrameworks;
     }
+    if (assembly.readme) out.readme = assembly.readme;
     return out;
   });
 
@@ -298,11 +301,9 @@ function buildIndex() {
   typeIndex = {};
   searchIndex = [];
   getUniqueAssemblies().forEach(function(assembly) {
-    // 类库本身加入搜索索引（按标题/名称/tag/描述可搜）
+    // 类库按 packageId 加入搜索索引（首页「全部」模式下搜类库用）
     searchIndex.push({
       lib: assembly.fileName, name: assembly.name,
-      title: assembly.title, tags: assembly.tags || [],
-      description: assembly.description || '',
       target: 'lib'
     });
 
@@ -310,12 +311,12 @@ function buildIndex() {
     assembly.namespaces.forEach(function(ns) {
       ns.types.forEach(function(type) {
         typeIndex[assembly.fileName][type.name] = { lib: assembly.fileName, ns: ns.name, type: type };
-        // 类型加入搜索索引
+        // 类型加入搜索索引（类库详情页内搜类型用）
         searchIndex.push({
           lib: assembly.fileName, name: type.name, shortName: type.shortName,
           kind: type.category, summary: type.summary || '', target: 'type'
         });
-        // 成员加入搜索索引
+        // 成员加入搜索索引（类库详情页内搜成员用）
         type.members.forEach(function(m) {
           searchIndex.push({
             lib: assembly.fileName, name: type.name, shortName: m.shortName,
@@ -481,6 +482,9 @@ function route() {
     currentTypeKey = '';
     renderHome();
   }
+  // 切换页面后清空搜索框，避免残留上一页作用域的搜索结果
+  if (searchInput) { searchInput.value = ''; }
+  if (searchResults) { searchResults.classList.remove('show'); }
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
@@ -581,7 +585,7 @@ function renderNavTreeHome(tree) {
     var typeCount = 0;
     a.namespaces.forEach(function(ns) { typeCount += ns.types.length; });
     html += '<a class="nav-item nav-lib" href="#/lib/' + encodeURIComponent(a.fileName) + '">' +
-      '<span class="nav-lib-text">' + escapeHtml(getAssemblyTitle(a)) + '</span>' +
+      '<span class="nav-lib-text">' + escapeHtml(stripXmlExt(a.name)) + '</span>' +
       '<span class="nav-count">' + typeCount + '</span></a>';
   });
   tree.innerHTML = html;
@@ -791,6 +795,11 @@ function renderLibrary(lib) {
     html += '</div>';
   }
   html += '</div></div>';
+
+  // 类库 README：构建时渲染好的 HTML 直接注入（内容来自仓库可信 README.md）
+  if (assembly.readme) {
+    html += '<section class="lib-readme"><div class="lib-readme-title">&#128214; README</div><div class="lib-readme-body">' + assembly.readme + '</div></section>';
+  }
 
   assembly.namespaces.forEach(function(ns) {
     html += renderNamespaceSection(ns, lib);
@@ -1056,62 +1065,64 @@ function initSearch() {
     var q = this.value.toLowerCase().trim();
     if (q.length < 2) { searchResults.classList.remove('show'); return; }
 
-    // 匹配：类库(标题/名称/tag/描述)、类型、成员
-    var matched = searchIndex.filter(function(item) {
-      if (item.target === 'lib') {
-        return (item.name && item.name.toLowerCase().indexOf(q) >= 0)
-          || (item.title && item.title.toLowerCase().indexOf(q) >= 0)
-          || (item.description && item.description.toLowerCase().indexOf(q) >= 0)
-          || (item.tags && item.tags.some(function(t) { return t.toLowerCase().indexOf(q) >= 0; }));
-      }
-      return (item.name && item.name.toLowerCase().indexOf(q) >= 0)
-        || (item.summary && item.summary.toLowerCase().indexOf(q) >= 0);
-    });
-
-    // 分组：类库优先展示，其次类型、成员；各组限量避免下拉过长
-    var libs = matched.filter(function(i) { return i.target === 'lib'; }).slice(0, 8);
-    var types = matched.filter(function(i) { return i.target === 'type'; }).slice(0, 15);
-    var members = matched.filter(function(i) { return i.target === 'member'; }).slice(0, 20);
-
-    if (libs.length === 0 && types.length === 0 && members.length === 0) {
-      searchResults.innerHTML = '<div class="search-empty">无匹配结果</div>';
-      searchResults.classList.add('show');
-      return;
-    }
-
-    var kindText = { M: 'Method', P: 'Property', F: 'Field', E: 'Event' };
     var html = '';
 
-    if (libs.length > 0) {
+    // 按当前页面分流：未选类库（首页/全部）→ 搜类库 packageId；
+    // 已进入某类库详情页 → 搜该类库下的类型/成员
+    if (!currentLibrary) {
+      var libs = searchIndex.filter(function(item) {
+        return item.target === 'lib' && (item.name && item.name.toLowerCase().indexOf(q) >= 0);
+      }).slice(0, 30);
+
+      if (libs.length === 0) {
+        searchResults.innerHTML = '<div class="search-empty">无匹配结果</div>';
+        searchResults.classList.add('show');
+        return;
+      }
       html += '<div class="search-group">类库</div>';
       html += libs.map(function(item) {
-        var title = item.title || item.name;
-        var sub = item.description ? '<span class="search-member-of">' + escapeHtml(item.description) + '</span>' : '';
         return '<a class="search-result-item" href="#/lib/' + encodeURIComponent(item.lib) + '">' +
-          '<div class="search-result-name">' + escapeHtml(title) + sub + '</div>' +
+          '<div class="search-result-name">' + escapeHtml(stripXmlExt(item.name)) + '</div>' +
           '<div class="search-result-type">Library</div></a>';
       }).join('');
-    }
+    } else {
+      var kindText = { M: 'Method', P: 'Property', F: 'Field', E: 'Event' };
+      // 仅匹配当前类库（lib === currentLibrary）下的类型/成员
+      var matched = searchIndex.filter(function(item) {
+        if (item.lib !== currentLibrary) return false;
+        if (item.target === 'lib') return false;
+        return (item.name && item.name.toLowerCase().indexOf(q) >= 0)
+          || (item.shortName && item.shortName.toLowerCase().indexOf(q) >= 0)
+          || (item.summary && item.summary.toLowerCase().indexOf(q) >= 0);
+      });
 
-    if (types.length > 0) {
-      html += '<div class="search-group">类型</div>';
-      html += types.map(function(item) {
-        var key = encodeKey(item.lib, item.name);
-        return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
-          '<div class="search-result-name">' + escapeHtml(item.shortName) + '</div>' +
-          '<div class="search-result-type">' + escapeHtml(item.kind) + '</div></a>';
-      }).join('');
-    }
+      var types = matched.filter(function(i) { return i.target === 'type'; }).slice(0, 15);
+      var members = matched.filter(function(i) { return i.target === 'member'; }).slice(0, 20);
 
-    if (members.length > 0) {
-      html += '<div class="search-group">成员</div>';
-      html += members.map(function(item) {
-        var key = encodeKey(item.lib, item.name);
-        return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
-          '<div class="search-result-name">' + escapeHtml(item.shortName) +
-          ' <span class="search-member-of">in ' + escapeHtml(item.name.split('.').slice(-2, -1)[0] || '') + '</span></div>' +
-          '<div class="search-result-type">' + escapeHtml(kindText[item.kind] || item.kind) + '</div></a>';
-      }).join('');
+      if (types.length === 0 && members.length === 0) {
+        searchResults.innerHTML = '<div class="search-empty">当前类库无匹配结果</div>';
+        searchResults.classList.add('show');
+        return;
+      }
+      if (types.length > 0) {
+        html += '<div class="search-group">类型</div>';
+        html += types.map(function(item) {
+          var key = encodeKey(item.lib, item.name);
+          return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
+            '<div class="search-result-name">' + escapeHtml(item.shortName) + '</div>' +
+            '<div class="search-result-type">' + escapeHtml(item.kind) + '</div></a>';
+        }).join('');
+      }
+      if (members.length > 0) {
+        html += '<div class="search-group">成员</div>';
+        html += members.map(function(item) {
+          var key = encodeKey(item.lib, item.name);
+          return '<a class="search-result-item" href="#/type/' + encodeURIComponent(key) + '">' +
+            '<div class="search-result-name">' + escapeHtml(item.shortName) +
+            ' <span class="search-member-of">in ' + escapeHtml(item.name.split('.').slice(-2, -1)[0] || '') + '</span></div>' +
+            '<div class="search-result-type">' + escapeHtml(kindText[item.kind] || item.kind) + '</div></a>';
+        }).join('');
+      }
     }
 
     searchResults.innerHTML = html;
@@ -1310,6 +1321,28 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica Ne
 .lib-count:hover{color:var(--link-color)}
 .lib-grid-empty{grid-column:1/-1;padding:24px;text-align:center;color:var(--text-tertiary);font-size:13px}
 .lib-header-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lib-readme{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:20px 24px;margin-bottom:32px}
+.lib-readme-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+.lib-readme-body{font-size:14px;line-height:1.7;color:var(--text-secondary);word-wrap:break-word;overflow-x:auto}
+.lib-readme-body h1{font-size:22px;font-weight:600;color:var(--text-primary);margin:18px 0 10px}
+.lib-readme-body h2{font-size:19px;font-weight:600;color:var(--text-primary);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border-color)}
+.lib-readme-body h3{font-size:16px;font-weight:600;color:var(--text-primary);margin:16px 0 8px}
+.lib-readme-body h4{font-size:14px;font-weight:600;color:var(--text-primary);margin:14px 0 6px}
+.lib-readme-body h1:first-child,.lib-readme-body h2:first-child,.lib-readme-body h3:first-child{margin-top:0}
+.lib-readme-body p{margin:8px 0}
+.lib-readme-body ul,.lib-readme-body ol{margin:8px 0;padding-left:24px}
+.lib-readme-body li{margin:4px 0}
+.lib-readme-body a{color:var(--link-color);text-decoration:none}
+.lib-readme-body a:hover{text-decoration:underline}
+.lib-readme-body code{background:var(--code-bg);color:var(--text-primary);padding:2px 6px;border-radius:3px;font-family:Consolas,Monaco,monospace;font-size:12.5px}
+.lib-readme-body pre{background:var(--code-bg);border:1px solid var(--border-color);border-radius:6px;padding:12px 14px;margin:10px 0;overflow-x:auto}
+.lib-readme-body pre code{background:transparent;padding:0;font-size:12.5px;line-height:1.5}
+.lib-readme-body blockquote{border-left:3px solid var(--link-color);margin:10px 0;padding:4px 14px;color:var(--text-tertiary);background:var(--bg-tertiary);border-radius:0 4px 4px 0}
+.lib-readme-body table{border-collapse:collapse;margin:10px 0;width:100%;font-size:13px}
+.lib-readme-body th,.lib-readme-body td{border:1px solid var(--border-color);padding:6px 10px;text-align:left}
+.lib-readme-body th{background:var(--bg-tertiary);color:var(--text-primary);font-weight:600}
+.lib-readme-body img{max-width:100%;height:auto;vertical-align:middle}
+.lib-readme-body hr{border:none;border-top:1px solid var(--border-color);margin:16px 0}
 .tag-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .tag-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);background:var(--bg-tertiary);border:1px solid var(--border-color);padding:4px 10px;border-radius:14px;cursor:pointer;transition:all .15s;font-family:inherit}
 .tag-chip:hover{border-color:var(--link-color);color:var(--text-primary)}

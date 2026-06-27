@@ -13,6 +13,7 @@
 - 📱 **响应式** - 支持桌面和移动设备
 - 🔗 **深链分享** - hash 路由（`#/type/...`），天然适配 GitHub Pages 子路径
 - 🎯 **范围精确** - 文档内容严格绑定 `PackPackages.slnx`，不受其他解决方案 build 残留影响
+- 📖 **类库 README 展示** - 构建时读取 `PackPackages.slnx` 内每个类库同目录的 `README.md`（范围与文档同源），渲染成 HTML 在类库详情页展示
 
 ## 本地开发
 
@@ -114,6 +115,7 @@ docs-generator/
 │   ├── index.ts       # 主入口（解析 slnx、收集 XML、生成双产物）
 │   ├── parser.ts      # XML 解析器（两遍扫描，成员归属到类型）
 │   ├── generator.ts   # 文档生成器（输出 index.html 壳 + data.json）
+│   ├── markdown.ts    # Markdown 渲染（README.md → HTML，marked，同步）
 │   └── utils.ts       # 工具函数（分类、转义、压缩）
 ├── dist/              # 编译输出
 ├── docs/              # 生成的文档（index.html + data.json + .nojekyll）
