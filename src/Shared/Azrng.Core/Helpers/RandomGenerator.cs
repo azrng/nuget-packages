@@ -1,4 +1,4 @@
-﻿using Azrng.Core.Model;
+using Azrng.Core.Model;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -283,7 +283,7 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static string GenerateAddress()
         {
-            var province = RandomConfigDto._phonePrefixes[NextInt32(RandomConfigDto._provinces.Length)];
+            var province = RandomConfigDto._provinces[NextInt32(RandomConfigDto._provinces.Length)];
             var city = RandomConfigDto._cities[NextInt32(RandomConfigDto._cities.Length)];
             var district = RandomConfigDto._districts[NextInt32(RandomConfigDto._districts.Length)];
             var street = RandomConfigDto._streets[NextInt32(RandomConfigDto._streets.Length)];
