@@ -69,7 +69,7 @@ namespace Azrng.Core
                 { ".txt", "text/plain" },
                 { ".doc", "application/msword" },
                 { ".xls", "application/vnd.ms-excel" },
-                { ".zip", "aplication/zip" },
+                { ".zip", "application/zip" },
                 { ".csv", "text/csv" },
                 { ".ppt", "application/vnd.ms-powerpoint" },
                 { ".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation" },

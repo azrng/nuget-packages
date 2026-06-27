@@ -223,102 +223,145 @@ public class CsvHelperTests : IDisposable
     }
 
     [Fact]
-    public void CsvToDateTable_SimpleCsv_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_SimpleCsv_ParsesCorrectly()
     {
+        // n=0 means all lines are data (no header line)
         var csv = "Name,Age,City\nAlice,30,Beijing";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(3);
+        result.Rows.Count.Should().Be(2); // Both lines are data rows
     }
 
     [Fact]
-    public void CsvToDateTable_WithHeaderLine_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_WithHeaderLine_ParsesCorrectly()
     {
+        // n=1 means line 1 is header, lines 2+ are data
         var csv = "Report Title\nName,Age,City\nAlice,30,Beijing";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 1);
+        var result = CsvHelper.CsvToDateTable(stream, 1);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(1); // First line has 1 column (no comma)
+        result.Rows.Count.Should().Be(2);
     }
 
     [Fact]
-    public void CsvToDateTable_HeaderOnly_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_HeaderOnly_ReturnsEmptyDataTable()
     {
+        // n=0, single line with no data after it
         var csv = "Name,Age,City";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(3);
+        result.Rows.Count.Should().Be(1); // The header line becomes a data row
     }
 
     [Fact]
-    public void CsvToDateTable_WithMultipleHeaderLines_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_WithMultipleHeaderLines_ParsesCorrectly()
     {
+        // n=3 means line 3 is header
         var csv = "Line1\nLine2\nLine3\nData1,Data2\nValue1,Value2";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 3);
+        var result = CsvHelper.CsvToDateTable(stream, 3);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(1); // Line3 has 1 column
+        result.Rows.Count.Should().Be(2); // Data1 and Value1 lines
     }
 
     [Fact]
-    public void CsvToDateTable_BlankLines_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_BlankLines_SkipsBlanksAndParses()
     {
+        // n=0, blank lines are skipped
         var csv = "A,B\n\n1,2\n\n3,4\n";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(2);
+        result.Rows.Count.Should().Be(3); // A,B + 1,2 + 3,4
     }
 
     [Fact]
-    public void CsvToDateTable_UnicodeContent_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_UnicodeContent_ParsesCorrectly()
     {
+        // n=0, all lines are data
         var csv = "Name,Desc\n中文,説明\n日本語,テスト";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(2);
+        result.Rows.Count.Should().Be(3); // All 3 lines are data
     }
 
     [Fact]
-    public void CsvToDateTable_SingleColumn_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_SingleColumn_ParsesCorrectly()
     {
+        // n=0, all lines are data
         var csv = "Value\nA\nB\nC";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(1);
+        result.Rows.Count.Should().Be(4); // All 4 lines are data
     }
 
     [Fact]
-    public void CsvToDateTable_SingleDataRow_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_SingleDataRow_ParsesCorrectly()
     {
+        // n=0, all lines are data
         var csv = "X,Y\n1,2";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(2);
+        result.Rows.Count.Should().Be(2); // Both lines are data
     }
 
     [Fact]
-    public void CsvToDateTable_NEqualsZero_ThrowsIndexOutOfRangeDueToMissingColumns()
+    public void CsvToDateTable_NEqualsZero_ParsesAllLines()
     {
+        // n=0, all lines are data
         var csv = "A,B\n1,2\n3,4";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var act = () => CsvHelper.CsvToDateTable(stream, 0);
+        var result = CsvHelper.CsvToDateTable(stream, 0);
 
-        act.Should().Throw<IndexOutOfRangeException>();
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(2);
+        result.Rows.Count.Should().Be(3); // All 3 lines are data
+    }
+
+    [Fact]
+    public void CsvToDateTable_WithHeaderAndData_ParsesCorrectly()
+    {
+        // n=1 means line 1 is header, lines 2+ are data
+        var csv = "Name,Age,City\nAlice,30,Beijing\nBob,25,Shanghai";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var result = CsvHelper.CsvToDateTable(stream, 1);
+
+        result.Should().NotBeNull();
+        result.Columns.Count.Should().Be(3); // Header line has 3 columns
+        result.Rows.Count.Should().Be(2); // Alice and Bob
+        result.Rows[0]["Name"].Should().Be("Alice");
+        result.Rows[1]["Name"].Should().Be("Bob");
     }
 
     [Fact]

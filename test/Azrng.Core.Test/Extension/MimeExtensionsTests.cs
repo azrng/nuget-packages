@@ -114,10 +114,9 @@ public class MimeExtensionsTests
     #region GetMimeType - no extension
 
     [Fact]
-    public void GetMimeType_NoExtension_ShouldThrow()
+    public void GetMimeType_NoExtension_ShouldReturnNull()
     {
-        var act = () => "Makefile".GetMimeType();
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        "Makefile".GetMimeType().Should().BeNull();
     }
 
     #endregion

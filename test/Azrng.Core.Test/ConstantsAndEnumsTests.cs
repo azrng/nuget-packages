@@ -274,7 +274,7 @@ public class ConstantsAndEnumsTests
     [InlineData(".txt", "text/plain")]
     [InlineData(".doc", "application/msword")]
     [InlineData(".xls", "application/vnd.ms-excel")]
-    [InlineData(".zip", "aplication/zip")]
+    [InlineData(".zip", "application/zip")]
     [InlineData(".csv", "text/csv")]
     [InlineData(".ppt", "application/vnd.ms-powerpoint")]
     [InlineData(".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation")]

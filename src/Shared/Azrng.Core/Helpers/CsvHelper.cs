@@ -1,3 +1,4 @@
+using System;
 using System.Data;
 using System.IO;
 using System.Text;
@@ -55,6 +56,7 @@ namespace Azrng.Core.Helpers
             var dt = new DataTable();
             var reader = new StreamReader(fileStream, Encoding.UTF8, false);
             var m = 0;
+            var columnsInitialized = false;
             reader.Peek();
             while (reader.Peek() > 0)
             {
@@ -63,15 +65,35 @@ namespace Azrng.Core.Helpers
                     continue;
 
                 m += 1;
-                if (m >= n + 1)
+                if (m == n)
                 {
-                    var split = str.Split(',');
-
-                    var dr = dt.NewRow();
-                    int i;
-                    for (i = 0; i < split.Length; i++)
+                    // 当前行为字段标题行，初始化列
+                    var headers = str.Split(',');
+                    foreach (var header in headers)
                     {
-                        dr[i] = split[i];
+                        dt.Columns.Add(header.Trim(), typeof(string));
+                    }
+                    columnsInitialized = true;
+                }
+                else if (m >= n + 1)
+                {
+                    // 数据行
+                    if (!columnsInitialized)
+                    {
+                        // 如果没有标题行，根据第一行数据初始化列
+                        var split = str.Split(',');
+                        for (int i = 0; i < split.Length; i++)
+                        {
+                            dt.Columns.Add($"Column{i + 1}", typeof(string));
+                        }
+                        columnsInitialized = true;
+                    }
+
+                    var dataSplit = str.Split(',');
+                    var dr = dt.NewRow();
+                    for (int i = 0; i < Math.Min(dataSplit.Length, dt.Columns.Count); i++)
+                    {
+                        dr[i] = dataSplit[i];
                     }
 
                     dt.Rows.Add(dr);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Azrng.Core.Extension
@@ -18,7 +18,11 @@ namespace Azrng.Core.Extension
             if (fileName.IsNullOrWhiteSpace())
                 return null;
 
-            var ext = fileName!.Substring(fileName.LastIndexOf(".", StringComparison.Ordinal));
+            var lastDotIndex = fileName!.LastIndexOf(".", StringComparison.Ordinal);
+            if (lastDotIndex < 0)
+                return null;
+
+            var ext = fileName.Substring(lastDotIndex);
             return MimeTypeDict.GetValueOrDefault(ext.ToLowerInvariant());
         }
 
