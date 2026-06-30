@@ -2,9 +2,6 @@
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
-
-
-
         <AssemblyName>CommonCollect</AssemblyName>
         <RootNamespace>CommonCollect</RootNamespace>
         <LangVersion>12</LangVersion>
