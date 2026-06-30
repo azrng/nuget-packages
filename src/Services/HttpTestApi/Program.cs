@@ -27,18 +27,21 @@ builder.Services.AddDevLogDashboard(options =>
 //     options.ApplicationVersion = "1.0.0";
 // });
 
+// 1) 非命名客户端（默认）：直接注入 IHttpHelper 即可使用
+//    无参重载使用内置默认配置；如需自定义可换成 options => { } 重载。
+builder.Services.AddHttpClientService();
 
-builder.Services.AddHttpClientService(options =>
+// 2) 命名客户端：按业务名称注册，各客户端可独立配置 BaseAddress / 超时 / 重试等
+//    使用时注入 IHttpHelperFactory，调用 CreateClient("名称") 取出对应 IHttpHelper。
+builder.Services.AddHttpClientService("demo", options =>
 {
+    options.BaseAddress = "https://jsonplaceholder.typicode.com";
+    options.Timeout = 30;
+    options.MaxRetryAttempts = 2;
     options.AuditLog = true;
-    options.FailThrowException = false;
-    // options.Timeout = 30; // 现在可以设置自定义超时时间，超时后也会进行重试
-    options.IgnoreUntrustedCertificate = true;
-    options.RetryOnUnauthorized = true;
 });
 
 var app = builder.Build();
-
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

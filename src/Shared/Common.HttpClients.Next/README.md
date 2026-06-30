@@ -17,7 +17,7 @@
 ## 安装
 
 ```bash
-dotnet add package Common.HttpClients --version 3.0.0
+dotnet add package Common.HttpClients --version 3.0.1
 ```
 
 ## 快速开始
@@ -454,6 +454,10 @@ services.AddHttpClientService();
 支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ## 版本更新记录
+
+### 3.0.1
+
+- **[修复]** 移除 `ServiceCollectionExtensions` 中多余的 `TryAddTransient<LoggingHandler>()` 死注册。该注册因 `LoggingHandler` 构造函数首参为 `string clientName` 无法被 DI 容器直接激活，在开启 `ValidateOnBuild` 的环境（如 ASP.NET Core Development 默认行为）下会导致 `builder.Build()` 抛出 `Unable to resolve service for type 'System.String'` 启动异常。实际 `LoggingHandler` 由 `AddHttpMessageHandler` 通过 `ActivatorUtilities` 注入客户端名称创建，不受此改动影响
 
 ### 3.0.0
 

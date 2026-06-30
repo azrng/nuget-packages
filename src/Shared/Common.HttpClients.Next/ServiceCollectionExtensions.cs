@@ -54,7 +54,12 @@ namespace Common.HttpClients
             // 首次注册时添加公共依赖
             services.TryAddSingleton<IHttpHelperFactory, HttpHelperFactory>();
             services.AddHttpContextAccessor();
-            services.TryAddTransient<LoggingHandler>();
+
+            // 注意：不在此处注册 LoggingHandler。
+            // LoggingHandler 构造函数需要 string clientName 参数，无法被 DI 容器直接激活；
+            // 实际由下方 AddHttpMessageHandler 通过 ActivatorUtilities 注入客户端名称创建。
+            // 若直接 TryAddTransient<LoggingHandler>()，在开启 ValidateOnBuild 时会因
+            // 无法解析 System.String 而抛激活异常。
 
             // 配置命名 HttpClient
             var clientBuilder = services.AddHttpClient(name)

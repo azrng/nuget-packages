@@ -1,4 +1,3 @@
-using Azrng.Core.Extension;
 using Common.HttpClients;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,92 +7,41 @@ namespace HttpTestApi.Controllers
     [Route("[controller]/[action]")]
     public class HomeController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-                                                     {
-                                                         "Freezing",
-                                                         "Bracing",
-                                                         "Chilly",
-                                                         "Cool",
-                                                         "Mild",
-                                                         "Warm",
-                                                         "Balmy",
-                                                         "Hot",
-                                                         "Sweltering",
-                                                         "Scorching"
-                                                     };
-
         private readonly ILogger<HomeController> _logger;
-        private readonly IHttpHelper _httpHelper;
+        private readonly IHttpHelper _httpHelper;          // 非命名客户端（default）
+        private readonly IHttpHelper _demoHelper;          // 命名客户端（demo）
 
-        public HomeController(ILogger<HomeController> logger, IHttpHelper httpHelper)
+        public HomeController(ILogger<HomeController> logger,
+                              IHttpHelper httpHelper,
+                              IHttpHelperFactory httpHelperFactory)
         {
             _logger = logger;
             _httpHelper = httpHelper;
+            // 按名称取出对应配置（BaseAddress / 超时 / 重试等）的客户端
+            _demoHelper = httpHelperFactory.CreateClient("demo");
         }
 
         /// <summary>
-        /// 自定义超时重试
+        /// 使用非命名客户端请求（完整 URL，配置走 default）
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
-        public async Task<string> CustomerTimeOutRetry()
+        public async Task<string> DefaultClient()
         {
-            var result = await _httpHelper.GetAsync<string>("http://localhost:5138/home?type=2");
-            _logger.LogInformation($"请求响应：{result}");
-            return result;
+            var result = await _httpHelper.GetAsync<string>("https://jsonplaceholder.typicode.com/todos/1");
+            _logger.LogInformation("非命名客户端请求结果：{Result}", result.IsSuccess ? "成功" : "失败");
+            return result.IsSuccess ? result.RawBody! : $"失败：{result.ErrorMessage}";
         }
 
         /// <summary>
-        /// 默认超时重试
+        /// 使用命名客户端请求（相对路径，自动拼接 demo 的 BaseAddress）
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
-        public async Task<string> DefaultTimeOutRetry()
+        public async Task<string> NamedClient()
         {
-            var result = await _httpHelper.GetAsync<string>("http://localhost:5138/home?type=1");
-            _logger.LogInformation($"请求响应：{result}");
-            return result;
-        }
-
-        /// <summary>
-        /// 401后重试
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        public async Task<string> Status401Retry()
-        {
-            var result = await _httpHelper.GetAsync<string>("http://localhost:5138/home?type=3");
-            _logger.LogInformation($"请求响应：{result}");
-            return result;
-        }
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<WeatherForecast>>> Get(int type)
-        {
-            var requestEventId = Request.Headers.FirstOrDefault(x => x.Key == "X-Trace-Id").Value;
-            _logger.LogInformation($"{DateTime.Now.ToStandardString()}  {requestEventId}  发起请求" + type);
-            if (type == 0) { }
-            else if (type == 1)
-            {
-                await Task.Delay(105 * 1000);
-            }
-            else if (type == 2)
-            {
-                await Task.Delay(35 * 1000);
-            }
-            else if (type == 3)
-            {
-                return Unauthorized("授权失败");
-            }
-
-            return Enumerable.Range(1, 5)
-                             .Select(index => new WeatherForecast
-                                              {
-                                                  Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                                                  TemperatureC = Random.Shared.Next(-20, 55),
-                                                  Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-                                              })
-                             .ToArray();
+            // BaseAddress 已在 Program.cs 中配置为 https://jsonplaceholder.typicode.com
+            var result = await _demoHelper.GetAsync<string>("todos/2");
+            _logger.LogInformation("命名客户端请求结果：{Result}", result.IsSuccess ? "成功" : "失败");
+            return result.IsSuccess ? result.RawBody! : $"失败：{result.ErrorMessage}";
         }
     }
 }
