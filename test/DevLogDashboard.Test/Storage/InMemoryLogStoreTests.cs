@@ -10,14 +10,14 @@ public class InMemoryLogStoreTests
     public async Task InitializeAsync_ShouldComplete()
     {
         var store = new InMemoryLogStore();
-        await store.Invoking(s => s.InitializeAsync()).Should().NotThrowAsync();
+        await store.Awaiting(s => s.InitializeAsync()).Should().NotThrowAsync();
     }
 
     [Fact]
     public async Task AddBatchAsync_NullEntries_ShouldNotThrow()
     {
         var store = new InMemoryLogStore();
-        await store.Invoking(s => s.AddBatchAsync(null!)).Should().NotThrowAsync();
+        await store.Awaiting(s => s.AddBatchAsync(null!)).Should().NotThrowAsync();
     }
 
     [Fact]
@@ -483,7 +483,7 @@ public class InMemoryLogStoreTests
     public async Task GetTraceSummariesAsync_EmptyStore_ShouldReturnEmpty()
     {
         var store = new InMemoryLogStore();
-        var result = await store.GetTraceSummariesAsync();
+        var result = await store.GetTraceSummariesAsync(startTime: null, endTime: null);
 
         result.Should().BeEmpty();
     }
@@ -500,7 +500,7 @@ public class InMemoryLogStoreTests
         };
         await store.AddBatchAsync(entries);
 
-        var result = await store.GetTraceSummariesAsync();
+        var result = await store.GetTraceSummariesAsync(startTime: null, endTime: null);
 
         result.Should().HaveCount(1);
         var summary = result[0];
@@ -524,7 +524,7 @@ public class InMemoryLogStoreTests
         };
         await store.AddBatchAsync(entries);
 
-        var result = await store.GetTraceSummariesAsync(startTime: baseTime.AddHours(-1));
+        var result = await store.GetTraceSummariesAsync(startTime: baseTime.AddHours(-1), endTime: null);
 
         result.Should().HaveCount(1);
         result[0].RequestId.Should().Be("req-new");
@@ -542,7 +542,7 @@ public class InMemoryLogStoreTests
         };
         await store.AddBatchAsync(entries);
 
-        var result = await store.GetTraceSummariesAsync(endTime: baseTime.AddHours(-1));
+        var result = await store.GetTraceSummariesAsync(startTime: null, endTime: baseTime.AddHours(-1));
 
         result.Should().HaveCount(1);
         result[0].RequestId.Should().Be("req-old");
@@ -562,7 +562,7 @@ public class InMemoryLogStoreTests
             .ToList();
         await store.AddBatchAsync(entries);
 
-        var result = await store.GetTraceSummariesAsync();
+        var result = await store.GetTraceSummariesAsync(startTime: null, endTime: null);
 
         result.Should().HaveCount(1000);
     }
@@ -607,7 +607,7 @@ public class InMemoryLogStoreTests
         };
         await store.AddBatchAsync(entries);
 
-        var summaries = await store.GetTraceSummariesAsync();
+        var summaries = await store.GetTraceSummariesAsync(startTime: null, endTime: null);
         summaries.Should().HaveCount(1);
 
         var trace = summaries[0];
