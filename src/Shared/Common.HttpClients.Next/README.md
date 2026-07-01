@@ -8,7 +8,7 @@
 - 支持通过匿名对象、`IDictionary<string, string>`、`NameValueCollection` 自动构建 URL 查询参数
 - 内置文件下载方法 `DownloadFileAsync`
 - 认证信息统一通过 `headers` 传递，不再局限于 Bearer Token
-- 提供 `HttpHelperExtensions` 扩展方法，Bearer Token 场景仍然简便
+- 提供 `HttpHelperExtensions.CreateBearerHeaders` 辅助方法，自动构造 Bearer Token 请求头
 - 智能日志记录和审计（包含请求前后日志）
 - 完整的 Polly 弹性策略（降级、并发限制、重试、熔断器、超时）
 - 分布式追踪支持（X-Trace-Id 自动传播）
@@ -19,6 +19,20 @@
 ```bash
 dotnet add package Common.HttpClients --version 3.0.1
 ```
+
+## 项目结构
+
+```text
+Common.HttpClients.Next/
+├── Abstractions/        # 接口与抽象类型（IHttpHelper、IHttpResult、HttpClientOptions 等）
+├── Client/              # IHttpHelper 默认实现（HttpClientHelper、HttpHelperFactory、HttpResult）
+├── Extensions/          # DI 扩展（AddHttpClientService）与 HttpHelperExtensions
+├── Internal/            # 内部常量（HTTP 头名称、请求选项键）
+├── Logging/             # 审计日志处理器与默认脱敏器
+└── Utils/               # JSON 序列化、查询字符串构建等工具
+```
+
+> 所有类型统一位于 `Common.HttpClients` 命名空间，文件夹仅用于按职责组织源码。
 
 ## 快速开始
 
@@ -327,25 +341,27 @@ var headers = new Dictionary<string, string>
 var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 ```
 
-### 使用扩展方法（Bearer Token 便利重载）
+### 使用 HttpHelperExtensions.CreateBearerHeaders（Bearer Token 便利构造）
+
+3.x 不再为每个 HTTP 方法单独提供 `bearerToken` 重载，而是提供一个静态辅助方法 `HttpHelperExtensions.CreateBearerHeaders(token)`，自动补全 `"Bearer "` 前缀，返回可直接传入 `headers` 参数的字典：
 
 ```csharp
 using Common.HttpClients;
 
-// 直接传递 token 字符串，自动添加 "Bearer " 前缀
-var result = await _httpHelper.GetAsync<User>(url, "your-token-here");
+// CreateBearerHeaders 会自动补 "Bearer " 前缀，返回 Authorization 头字典
+var headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here");
+// => { ["Authorization"] = "Bearer your-token-here" }
 
-// 也支持带查询参数
-var result = await _httpHelper.GetAsync<List<User>>(url, "your-token-here");
+// 已带前缀时不会重复添加
+var headers2 = HttpHelperExtensions.CreateBearerHeaders("Bearer your-token-here");
+// => 同样是 { ["Authorization"] = "Bearer your-token-here" }
 
-// POST + Token
-var result = await _httpHelper.PostAsync<User>(url, data, "your-token-here");
-
-// 下载 + Token
-var result = await _httpHelper.DownloadFileAsync(url, filePath, "your-token-here");
+var result = await _httpHelper.GetAsync<User>(url, headers: headers);
+var result = await _httpHelper.PostAsync<User>(url, data, headers: headers);
+var result = await _httpHelper.DownloadFileAsync(url, filePath, headers: headers);
 ```
 
-扩展方法覆盖了所有 HTTP 方法（GET、POST、PUT、PATCH、DELETE、GetStream、PostFormData、PostSoap、DownloadFile）。
+> 注：`CreateBearerHeaders` 仅为构造请求头的便捷方法，不改变请求行为；它适用于所有接受 `headers` 参数的请求方法。
 
 ## 请求头
 
@@ -383,6 +399,18 @@ var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 | `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头 |
 | `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名 |
 
+> 以上取值范围由内置的 `HttpClientOptionsValidator` 在启动时校验，超出范围会导致 options 校验失败。
+
+### 内置默认脱敏清单
+
+启用日志脱敏（`EnableLogRedaction = true`，默认开启）时，默认脱敏器会自动遮蔽以下内容，无需额外配置：
+
+- 默认敏感请求头：`Authorization`、`Proxy-Authorization`、`Cookie`、`Set-Cookie`、`X-Api-Key`、`Api-Key`、`X-Auth-Token`
+- 默认敏感字段（JSON key 与 `key=value` 文本）：`password`、`passwd`、`pwd`、`secret`、`token`、`access_token`、`refresh_token`、`client_secret`、`api_key`、`api-key`
+- Bearer Token 值（形如 `Bearer xxx` 的字符串）
+
+可通过 `AdditionalSensitiveHeaders` / `AdditionalSensitiveFields` 追加，或注册自定义 `IHttpLogRedactor` 完全替换脱敏逻辑。
+
 ## 异常处理
 
 ### FailThrowException = false（默认）
@@ -413,6 +441,16 @@ catch (HttpRequestException ex)
 }
 ```
 
+## JSON 序列化
+
+请求体序列化与响应反序列化统一基于 `System.Text.Json`，约定如下：
+
+- 序列化使用 camelCase 命名策略，并启用 `UnsafeRelaxedJsonEscaping`（中文等非 ASCII 字符不转义）
+- 反序列化在上述基础上额外启用 `JsonStringEnumConverter`（枚举以字符串形式处理）
+- 容忍注释与尾随逗号
+
+> 与 Newtonsoft.Json 行为有差异，迁移时请注意命名策略与枚举处理。
+
 ## 弹性策略
 
 本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
@@ -442,7 +480,7 @@ var result = await _httpHelper.PostAsync<string>(url, data,
 public sealed class CustomHttpLogRedactor : IHttpLogRedactor
 {
     public string RedactContent(string content) => content;
-    public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers) => headers;
+    public IDictionary<string, string> RedactHeaders(IDictionary<string, string>? headers) => headers ?? new Dictionary<string, string>();
 }
 
 services.AddSingleton<IHttpLogRedactor, CustomHttpLogRedactor>();
@@ -477,14 +515,15 @@ services.AddHttpClientService();
 var user = await _httpHelper.GetAsync<User>(url, bearerToken: "xxx");
 if (user != null) { ... }
 
-// 3.0 - 返回 IHttpResult<T>
+// 3.0 - 返回 IHttpResult<T>，认证统一走 headers
 var result = await _httpHelper.GetAsync<User>(url, headers: new Dictionary<string, string>
 {
     ["Authorization"] = "Bearer xxx"
 });
 if (result.IsSuccess) { var user = result.Data; }
 
-// 3.0 - 使用扩展方法保持简便
-var result = await _httpHelper.GetAsync<User>(url, "xxx");
+// 3.0 - 或用 CreateBearerHeaders 简便构造请求头
+var headers = HttpHelperExtensions.CreateBearerHeaders("xxx");
+var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 if (result.IsSuccess) { var user = result.Data; }
 ```
