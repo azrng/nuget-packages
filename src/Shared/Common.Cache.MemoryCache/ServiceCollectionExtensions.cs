@@ -13,7 +13,7 @@ namespace Azrng.Cache.MemoryCache
         /// <param name="services"></param>
         /// <param name="action"></param>
         public static IServiceCollection AddMemoryCacheStore(this IServiceCollection services,
-                                                             Action<MemoryConfig> action = null)
+                                                             Action<MemoryCacheOptions>? action = null)
         {
             ArgumentNullException.ThrowIfNull(services);
 
@@ -34,7 +34,7 @@ namespace Azrng.Cache.MemoryCache
         /// <param name="action"></param>
         [Obsolete]
         public static IServiceCollection AddMemoryCacheExtension(this IServiceCollection services,
-                                                                 Action<MemoryConfig> action)
+                                                                 Action<MemoryCacheOptions> action)
         {
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(action);

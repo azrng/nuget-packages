@@ -111,7 +111,7 @@ await ((IMemoryCacheProvider)_cacheProvider).RemoveAllKeyAsync();
 
 ## 配置项
 
-`MemoryConfig` 提供以下配置：
+`MemoryCacheOptions` 提供以下配置：
 
 - `DefaultExpiry`: 默认过期时间，默认值为 5 秒
 - `CacheEmptyCollections`: 是否缓存空集合和空字符串，默认值为 `true`
@@ -175,6 +175,16 @@ await _cacheProvider.RemoveMatchKeyAsync("order:2026-03-??");
 - 通过 Provider 删除、覆盖、驱逐的键会同步更新跟踪集合
 - 实现更稳定，不依赖 .NET 运行时内部结构
 
+### 7. `GetAllAsync` 只返回命中的键
+
+`GetAllAsync` 从 2.1.1 起，只返回实际命中的 key，不存在的 key 不会以 `null` 值出现在结果字典中。
+
+```csharp
+await provider.SetAsync("ga:1", "v1");
+var dict = await ((IMemoryCacheProvider)provider).GetAllAsync(new[] { "ga:1", "ga:missing" });
+// dict 只包含 ga:1，不包含 ga:missing
+```
+
 ## 注意事项
 
 - 不建议使用 `IEnumerable<T>`、`IQueryable<T>`、`IAsyncEnumerable<T>` 作为 `GetOrCreateAsync<T>` 的 `T`
@@ -183,6 +193,12 @@ await _cacheProvider.RemoveMatchKeyAsync("order:2026-03-??");
 
 ## 版本更新记录
 
+* 2.1.1
+  * **重命名（破坏性）**：`MemoryConfig` 重命名为 `MemoryCacheOptions`，并补全 XML 注释、启用 nullable
+    * 迁移指引：将原 `Configure<MemoryConfig>` / `new MemoryConfig()` / `Action<MemoryConfig>` 全部替换为 `MemoryCacheOptions`
+  * **修复**：`FailThrowException = false` 时，`GetOrCreateAsync` 不再重复调用工厂方法，改为返回 `default`，对齐文档承诺
+  * **修复**：`GetAllAsync` 不存在的 key 不再以 `null` 进入结果字典，改为只返回命中的 key
+  * **优化**：csproj 补充 `PackageLicenseExpression`、`RepositoryType`、符号包（`snupkg`）等发布元数据
 * 2.1.0
   * **新增**：`FailThrowException` 配置项，允许控制缓存操作失败时的行为
     * `true`（默认）：记录日志并抛出异常，与 2.0.0 行为一致

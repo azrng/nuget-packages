@@ -163,7 +163,37 @@ public class MemoryCacheTest
         Assert.Empty(cached);
     }
 
-    private static TestContext CreateContext(Action<MemoryConfig>? configure = null)
+    [Fact]
+    public async Task GetOrCreateAsync_WhenFailThrowExceptionDisabled_ReturnsDefault()
+    {
+        using var context = CreateContext(options =>
+        {
+            options.FailThrowException = false;
+        });
+
+        var result = await context.Provider.GetOrCreateAsync<string>("broken",
+            () => Task.FromException<string>(new InvalidOperationException("boom")));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_SkipsMissingKeys()
+    {
+        using var context = CreateContext();
+
+        await context.Provider.SetAsync("ga:1", "v1");
+        await context.Provider.SetAsync("ga:2", "v2");
+
+        var dict = await context.Provider.GetAllAsync(new[] { "ga:1", "ga:missing", "ga:2" });
+
+        Assert.Equal(2, dict.Count);
+        Assert.True(dict.ContainsKey("ga:1"));
+        Assert.True(dict.ContainsKey("ga:2"));
+        Assert.False(dict.ContainsKey("ga:missing"));
+    }
+
+    private static TestContext CreateContext(Action<MemoryCacheOptions>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
