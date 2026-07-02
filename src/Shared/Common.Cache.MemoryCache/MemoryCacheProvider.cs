@@ -35,17 +35,13 @@ namespace Azrng.Cache.MemoryCache
         public Task<string> GetAsync(string key)
         {
             EnsureKey(key);
-#pragma warning disable CS8619 // ICacheProvider 接口未启用 nullable，契约约束保持非 null 返回
-            return Task.FromResult(_cache.Get<string>(key));
-#pragma warning restore CS8619
+            return Task.FromResult(_cache.Get<string>(key))!;
         }
 
         public Task<T> GetAsync<T>(string key)
         {
             EnsureKey(key);
-#pragma warning disable CS8619
-            return Task.FromResult(_cache.Get<T>(key));
-#pragma warning restore CS8619
+            return Task.FromResult(_cache.Get<T>(key))!;
         }
 
         public Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)
@@ -176,9 +172,7 @@ namespace Azrng.Cache.MemoryCache
             {
                 if (!string.IsNullOrWhiteSpace(item) && _cache.TryGetValue(item, out var value))
                 {
-#pragma warning disable CS8601 // TryGetValue 的 value 在 nullable 上下文为 object?，接口字典声明为非 null
-                    dict[item] = value;
-#pragma warning restore CS8601
+                    dict[item] = value!;
                 }
             }
 
@@ -208,26 +202,17 @@ namespace Azrng.Cache.MemoryCache
 
             try
             {
-#pragma warning disable CS8600 // ICacheProvider 契约未启用 nullable，TryGetValue 的 out 在本上下文为 T?
-                if (_cache.TryGetValue(key, out T cachedValue))
-#pragma warning restore CS8600
+                if (_cache.TryGetValue(key, out T? cachedValue))
                 {
-#pragma warning disable CS8603 // 命中缓存才会走到此分支，cachedValue 必有值
-                    return cachedValue;
-#pragma warning restore CS8603
+                    return cachedValue!;
                 }
 
                 var effectiveExpiry = expiry ?? _memoryConfig.DefaultExpiry;
-#pragma warning disable CS8603 // T 未约束 notnull，按 ICacheProvider 契约返回 Task<T>
-                return await _keyManager.ExecuteSynchronizedAsync(key, async () =>
+                return (await _keyManager.ExecuteSynchronizedAsync(key, async () =>
                 {
-#pragma warning disable CS8600
-                    if (_cache.TryGetValue(key, out T lockedCachedValue))
-#pragma warning restore CS8600
+                    if (_cache.TryGetValue(key, out T? lockedCachedValue))
                     {
-#pragma warning disable CS8603
-                        return lockedCachedValue;
-#pragma warning restore CS8603
+                        return lockedCachedValue!;
                     }
 
                     var value = await getData();
@@ -240,11 +225,8 @@ namespace Azrng.Cache.MemoryCache
                         _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
                     }
 
-#pragma warning disable CS8603 // value 来自 getData()，按契约返回 T
-                    return value;
-#pragma warning restore CS8603
-                });
-#pragma warning restore CS8603
+                    return value!;
+                }))!;
             }
             catch (Exception ex)
             {
@@ -253,9 +235,7 @@ namespace Azrng.Cache.MemoryCache
                 {
                     throw;
                 }
-#pragma warning disable CS8603 // 接口契约约束返回非 null，此处按文档语义返回默认值
-                return default;
-#pragma warning restore CS8603
+                return default!;
             }
         }
 

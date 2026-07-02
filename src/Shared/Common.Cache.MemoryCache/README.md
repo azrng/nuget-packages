@@ -191,6 +191,33 @@ var dict = await ((IMemoryCacheProvider)provider).GetAllAsync(new[] { "ga:1", "g
 - 如果需要缓存集合，请优先使用 `List<T>` 或数组
 - `SetAsync<T>(key, null)` 会返回 `false`，不会写入缓存
 
+### 同时使用内存缓存与 Redis 缓存
+
+`Common.Cache.MemoryCache` 和 `Common.Cache.Redis` 都会把各自的 Provider 注册到同一个 `ICacheProvider` 抽象上。由于 `ICacheProvider` 在依赖注入容器中只能绑定一个实现（`TryAdd` 不覆盖，先注册者占位），**两个包同时注册时，只有一个会真正绑定到 `ICacheProvider`**，另一个对 `ICacheProvider` 的绑定会被静默忽略。
+
+如果需要在同一个项目里同时使用两种缓存，**不要注入 `ICacheProvider`，改为注入各自的具体接口**：
+
+```csharp
+// 注册两种缓存（顺序无关）
+services.AddMemoryCacheStore();
+services.AddRedisCacheStore();
+
+public class MyService
+{
+    // 直接注入具体接口，两者共存不冲突
+    public MyService(IMemoryCacheProvider memoryCache, IRedisProvider redisCache)
+    {
+        _memoryCache = memoryCache;
+        _redisCache = redisCache;
+    }
+}
+```
+
+- `IMemoryCacheProvider`：内存缓存能力（含 `GetAllKeys`、`GetAllAsync`、`RemoveAllKeyAsync` 等本地特有方法）
+- `IRedisProvider`：Redis 缓存能力（含发布订阅等 Redis 特有方法）
+
+> 注：`ICacheProvider` 适合"项目只用单一缓存"的场景，作为默认抽象使用。两种缓存共存时，请使用上述具体接口。
+
 ## 版本更新记录
 
 * 2.1.1
