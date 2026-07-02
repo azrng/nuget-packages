@@ -128,7 +128,7 @@ namespace Common.Cache.Redis
                 "COUNT",
                 count.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
-            var innerResult = (RedisResult[])result;
+            var innerResult = (RedisResult[]?)result;
             if (innerResult == null || innerResult.Length < 2)
             {
                 return new RedisScanResult(cursor, Array.Empty<RedisKey>());
@@ -142,7 +142,7 @@ namespace Common.Cache.Redis
                 nextCursor = 0;
             }
 
-            var keys = (RedisKey[])innerResult[1] ?? Array.Empty<RedisKey>();
+            var keys = (RedisKey[]?)innerResult[1] ?? Array.Empty<RedisKey>();
             return new RedisScanResult(nextCursor, keys);
         }
     }

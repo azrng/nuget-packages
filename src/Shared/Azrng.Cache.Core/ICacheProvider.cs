@@ -13,15 +13,15 @@ namespace Azrng.Cache.Core
         /// 获取缓存
         /// </summary>
         /// <param name="key">缓存Key</param>
-        /// <returns></returns>
-        Task<string> GetAsync(string key);
+        /// <returns>命中的字符串；未命中返回 <c>null</c></returns>
+        Task<string?> GetAsync(string key);
 
         /// <summary>
         /// 获取缓存,并序列化
         /// </summary>
         /// <param name="key">缓存Key</param>
-        /// <returns></returns>
-        Task<T> GetAsync<T>(string key);
+        /// <returns>命中的反序列化结果；未命中返回 <c>null</c>（值类型为 <c>default</c>）</returns>
+        Task<T?> GetAsync<T>(string key);
 
         /// <summary>
         /// 查询数据,如果不存在就添加

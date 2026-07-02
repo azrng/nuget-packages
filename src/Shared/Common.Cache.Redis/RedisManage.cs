@@ -17,10 +17,10 @@ namespace Common.Cache.Redis
         private readonly IRedisConnectionFactory _connectionFactory;
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
-        private IRedisConnection _connection;
-        private IRedisDatabase _database;
-        private IRedisSubscriber _subscriber;
-        private Exception _lastConnectionException;
+        private IRedisConnection? _connection;
+        private IRedisDatabase? _database;
+        private IRedisSubscriber? _subscriber;
+        private Exception? _lastConnectionException;
         private DateTimeOffset _nextRetryAt = DateTimeOffset.MinValue;
         private bool _disposed;
 
@@ -51,7 +51,7 @@ namespace Common.Cache.Redis
             }
         }
 
-        public ConnectionMultiplexer ConnectionMultiplexer => (_connection as StackExchangeRedisConnection)?.ConnectionMultiplexer;
+        public ConnectionMultiplexer? ConnectionMultiplexer => (_connection as StackExchangeRedisConnection)?.ConnectionMultiplexer;
 
         internal IRedisDatabase Database => EnsureDatabase();
 
@@ -110,7 +110,7 @@ namespace Common.Cache.Redis
         private async Task ConnectAsync()
         {
             await _semaphoreSlim.WaitAsync();
-            IRedisConnection createdConnection = null;
+            IRedisConnection? createdConnection = null;
 
             try
             {
@@ -154,7 +154,7 @@ namespace Common.Cache.Redis
             _nextRetryAt = DateTimeOffset.UtcNow.AddSeconds(retryDelaySeconds);
         }
 
-        private InvalidOperationException CreateUnavailableException(Exception ex = null)
+        private InvalidOperationException CreateUnavailableException(Exception? ex = null)
         {
             return new InvalidOperationException("redis连接不可用", ex ?? _lastConnectionException);
         }

@@ -32,16 +32,16 @@ namespace Azrng.Cache.MemoryCache
             _keyManager = keyManager ?? throw new ArgumentNullException(nameof(keyManager));
         }
 
-        public Task<string> GetAsync(string key)
+        public Task<string?> GetAsync(string key)
         {
             EnsureKey(key);
-            return Task.FromResult(_cache.Get<string>(key))!;
+            return Task.FromResult(_cache.Get<string>(key));
         }
 
-        public Task<T> GetAsync<T>(string key)
+        public Task<T?> GetAsync<T>(string key)
         {
             EnsureKey(key);
-            return Task.FromResult(_cache.Get<T>(key))!;
+            return Task.FromResult(_cache.Get<T>(key));
         }
 
         public Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)

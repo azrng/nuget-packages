@@ -45,7 +45,7 @@ namespace Common.Cache.Redis
             return _subscribers.TryAdd(subscriber.Id, subscriber);
         }
 
-        public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo subscriber, out int remainingCount)
+        public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo? subscriber, out int remainingCount)
         {
             var removed = _subscribers.TryRemove(subscriberId, out subscriber);
             remainingCount = _subscribers.Count;
@@ -103,7 +103,7 @@ namespace Common.Cache.Redis
 
         public Guid Id { get; init; }
 
-        public Action<RedisChannel, RedisValue> Handler { get; init; }
+        public Action<RedisChannel, RedisValue>? Handler { get; init; }
 
         public CancellationToken CancellationToken { get; init; }
 

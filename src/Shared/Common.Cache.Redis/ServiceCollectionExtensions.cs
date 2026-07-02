@@ -13,7 +13,7 @@ namespace Common.Cache.Redis
         /// <param name="services"></param>
         /// <param name="action"></param>
         public static IServiceCollection AddRedisCacheStore(this IServiceCollection services,
-                                                            Action<RedisConfig> action = null)
+                                                            Action<RedisConfig>? action = null)
         {
             if (services == null)
             {

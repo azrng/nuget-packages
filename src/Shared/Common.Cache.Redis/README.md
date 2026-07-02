@@ -361,6 +361,11 @@ public class MyService
 
 ## 版本更新记录
 
+* 3.0.0
+  * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
+  * 启用 `<Nullable>enable</Nullable>`
+  * 补充 `PackageLicenseExpression`、`RepositoryType`、符号包等发布元数据
+  * 依赖升级：`Azrng.Cache.Core` 1.0.0
 * 2.1.0
   * **新增**：`FailThrowException` 配置项，允许控制缓存操作失败时的行为
     * `true`（默认）：记录日志并抛出异常，与 2.0.0 行为一致

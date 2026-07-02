@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
         <Copyright>版权归Azrng所有</Copyright>
-        <Version>0.0.3</Version>
+        <Version>1.0.0</Version>
         <PackageId>Azrng.Cache.Core</PackageId>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
@@ -12,8 +12,14 @@
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <PackageTags>cache;core;interface</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 

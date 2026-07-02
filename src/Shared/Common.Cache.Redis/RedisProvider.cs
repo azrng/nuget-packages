@@ -28,7 +28,7 @@ namespace Common.Cache.Redis
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<string> GetAsync(string key)
+        public async Task<string?> GetAsync(string key)
         {
             EnsureKey(key);
 
@@ -48,14 +48,14 @@ namespace Common.Cache.Redis
             }
         }
 
-        public async Task<T> GetAsync<T>(string key)
+        public async Task<T?> GetAsync<T>(string key)
         {
             EnsureKey(key);
 
             try
             {
                 var redisValue = await _redisManage.Database.StringGetAsync(GetKey(key));
-                return redisValue.HasValue && TryGetObject(redisValue, out T value) ? value : default;
+                return redisValue.HasValue && TryGetObject(redisValue, out T? value) ? value : default;
             }
             catch (Exception ex)
             {
@@ -98,9 +98,9 @@ namespace Common.Cache.Redis
                 var database = _redisManage.Database;
                 var rawValue = await database.StringGetAsync(redisKey);
 
-                if (rawValue.HasValue && TryGetObject(rawValue, out T cachedValue))
+                if (rawValue.HasValue && TryGetObject(rawValue, out T? cachedValue))
                 {
-                    return cachedValue;
+                    return cachedValue!;
                 }
 
                 _logger.LogInformation("redis读取为空，开始执行查询操作：key:{Key}", key);
@@ -340,7 +340,7 @@ namespace Common.Cache.Redis
             return key.StartsWith(fullPrefix, StringComparison.Ordinal) ? key : fullPrefix + key;
         }
 
-        private bool TryGetObject<T>(string str, out T value)
+        private bool TryGetObject<T>(string? str, out T? value)
         {
             if (string.IsNullOrWhiteSpace(str))
             {
@@ -555,9 +555,9 @@ namespace Common.Cache.Redis
                         Id = subscriptionId,
                         Handler = (actualChannel, value) =>
                         {
-                            if (TryGetObject(value, out T message))
+                            if (TryGetObject(value, out T? message))
                             {
-                                handler(actualChannel.ToString(), message);
+                                handler(actualChannel.ToString(), message!);
                             }
                         },
                         CancellationToken = cancellationToken
@@ -573,7 +573,7 @@ namespace Common.Cache.Redis
                     {
                         var registration = cancellationToken.Register(static state =>
                         {
-                            var registrationState = (SubscriptionCancellationState)state;
+                            var registrationState = (SubscriptionCancellationState)state!;
                             registrationState.Provider.RemoveSubscriberSafe(
                                 registrationState.SubscriptionKey,
                                 registrationState.RedisChannel,
@@ -663,7 +663,7 @@ namespace Common.Cache.Redis
                     return Task.CompletedTask;
                 }
 
-                removedSubscriber.Dispose();
+                removedSubscriber!.Dispose();
                 _logger.LogInformation("移除订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，剩余订阅者数量：{Count}",
                     subscriptionKey, subscriberId, remainingCount);
 

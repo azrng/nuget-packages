@@ -220,6 +220,10 @@ public class MyService
 
 ## 版本更新记录
 
+* 3.0.0
+  * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
+  * 移除因旧接口非 null 契约而添加的 `!`（null-forgiving）
+  * 依赖升级：`Azrng.Cache.Core` 1.0.0
 * 2.1.1
   * **重命名（破坏性）**：`MemoryConfig` 重命名为 `MemoryCacheOptions`，并补全 XML 注释、启用 nullable
     * 迁移指引：将原 `Configure<MemoryConfig>` / `new MemoryConfig()` / `Action<MemoryConfig>` 全部替换为 `MemoryCacheOptions`

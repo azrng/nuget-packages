@@ -5,7 +5,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基于内存的缓存实现，适用于单机场景</Description>
-        <Version>2.1.1</Version>
+        <Version>3.0.0</Version>
         <PackageId>Common.Cache.MemoryCache</PackageId>
         <RootNamespace>Azrng.Cache.MemoryCache</RootNamespace>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
