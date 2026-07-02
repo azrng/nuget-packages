@@ -32,7 +32,7 @@ namespace Common.Cache.Redis.Test
         [Fact]
         public async Task RemoveMatchKeyAsync_UsesPrefixedPattern()
         {
-            var provider = CreateProvider(out var database, out _, new RedisConfig
+            var provider = CreateProvider(out var database, out _, new RedisCacheOptions
             {
                 ConnectionString = "localhost:6379,DefaultDatabase=0",
                 KeyPrefix = "tenant",
@@ -83,13 +83,13 @@ namespace Common.Cache.Redis.Test
 
         private static RedisProvider CreateProvider(out FakeRedisDatabase database,
                                                     out FakeRedisSubscriber subscriber,
-                                                    RedisConfig? redisConfig = null)
+                                                    RedisCacheOptions? redisConfig = null)
         {
             database = new FakeRedisDatabase();
             subscriber = new FakeRedisSubscriber();
             var configuredDatabase = database;
             var configuredSubscriber = subscriber;
-            var effectiveConfig = redisConfig ?? new RedisConfig
+            var effectiveConfig = redisConfig ?? new RedisCacheOptions
             {
                 ConnectionString = "localhost:6379,DefaultDatabase=0",
                 KeyPrefix = "default",

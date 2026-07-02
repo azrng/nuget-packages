@@ -14,12 +14,12 @@ namespace Common.Cache.Redis
 {
     public class RedisProvider : IRedisProvider
     {
-        private readonly RedisConfig _redisConfig;
+        private readonly RedisCacheOptions _redisConfig;
         private readonly RedisManage _redisManage;
         private readonly ILogger<RedisProvider> _logger;
         private readonly ConcurrentDictionary<string, ChannelSubscription> _activeSubscriptions = new();
 
-        public RedisProvider(IOptions<RedisConfig> options,
+        public RedisProvider(IOptions<RedisCacheOptions> options,
                              RedisManage redisManage,
                              ILogger<RedisProvider> logger)
         {

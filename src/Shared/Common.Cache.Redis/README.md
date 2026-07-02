@@ -338,7 +338,7 @@ public class MyService
 
 ### 配置选项
 
-[RedisConfig]() 类提供了以下配置选项：
+[RedisCacheOptions]() 类提供了以下配置选项：
 
 - `ConnectionString`: Redis 连接字符串
 - `KeyPrefix`: Key 前缀
@@ -363,6 +363,8 @@ public class MyService
 
 * 3.0.0
   * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
+  * **重命名（破坏性）**：`RedisConfig` 重命名为 `RedisCacheOptions`，与 `Common.Cache.MemoryCache` 的 `MemoryCacheOptions` 命名风格统一
+    * 迁移指引：将原 `Configure<RedisConfig>` / `new RedisConfig()` / `Action<RedisConfig>` 全部替换为 `RedisCacheOptions`
   * 启用 `<Nullable>enable</Nullable>`
   * 补充 `PackageLicenseExpression`、`RepositoryType`、符号包等发布元数据
   * 依赖升级：`Azrng.Cache.Core` 1.0.0

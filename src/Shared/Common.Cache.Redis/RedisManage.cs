@@ -12,7 +12,7 @@ namespace Common.Cache.Redis
     /// </summary>
     public class RedisManage : IDisposable
     {
-        private readonly RedisConfig _redisConfig;
+        private readonly RedisCacheOptions _redisConfig;
         private readonly ILogger<RedisManage> _logger;
         private readonly IRedisConnectionFactory _connectionFactory;
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
@@ -24,13 +24,13 @@ namespace Common.Cache.Redis
         private DateTimeOffset _nextRetryAt = DateTimeOffset.MinValue;
         private bool _disposed;
 
-        public RedisManage(ILogger<RedisManage> logger, IOptions<RedisConfig> options)
+        public RedisManage(ILogger<RedisManage> logger, IOptions<RedisCacheOptions> options)
             : this(logger, options, new StackExchangeRedisConnectionFactory())
         {
         }
 
         internal RedisManage(ILogger<RedisManage> logger,
-                             IOptions<RedisConfig> options,
+                             IOptions<RedisCacheOptions> options,
                              IRedisConnectionFactory connectionFactory)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

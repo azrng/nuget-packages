@@ -16,7 +16,7 @@ namespace Common.Cache.Redis.Test
 
             var redisManage = new RedisManage(
                 NullLogger<RedisManage>.Instance,
-                Options.Create(new RedisConfig
+                Options.Create(new RedisCacheOptions
                 {
                     ConnectionString = "localhost:6379,DefaultDatabase=0",
                     InitErrorIntervalSecond = 1

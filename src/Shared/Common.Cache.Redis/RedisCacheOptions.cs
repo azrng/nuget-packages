@@ -1,9 +1,9 @@
 ﻿namespace Common.Cache.Redis
 {
     /// <summary>
-    /// redis配置信息
+    /// Redis 缓存配置选项
     /// </summary>
-    public class RedisConfig
+    public class RedisCacheOptions
     {
         /// <summary>
         /// 连接字符串
@@ -11,7 +11,7 @@
         public string ConnectionString { get; set; } = "localhost:6379,DefaultDatabase=0";
 
         /// <summary>
-        /// 实例名
+        /// Key 前缀
         /// </summary>
         public string KeyPrefix { get; set; } = "default";
 
@@ -22,7 +22,7 @@
 
         // /// <summary>
         // /// 获取缓存超时时间(默认为5s)
-        // /// </summary>
+        // </summary>
         // public TimeSpan TimeoutTime { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>

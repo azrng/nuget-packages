@@ -13,7 +13,7 @@ namespace Common.Cache.Redis
         /// <param name="services"></param>
         /// <param name="action"></param>
         public static IServiceCollection AddRedisCacheStore(this IServiceCollection services,
-                                                            Action<RedisConfig>? action = null)
+                                                            Action<RedisCacheOptions>? action = null)
         {
             if (services == null)
             {
@@ -34,7 +34,7 @@ namespace Common.Cache.Redis
         /// <param name="action"></param>
         [Obsolete]
         public static IServiceCollection AddRedisCacheService(this IServiceCollection services,
-                                                              Action<RedisConfig> action)
+                                                              Action<RedisCacheOptions> action)
         {
             if (action == null)
             {

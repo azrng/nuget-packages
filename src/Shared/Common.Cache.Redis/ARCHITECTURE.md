@@ -15,7 +15,7 @@
 
 ```
 Common.Cache.Redis/
-├── RedisConfig.cs                    # Redis 配置类
+├── RedisCacheOptions.cs              # Redis 配置类
 ├── RedisManage.cs                    # Redis 连接管理
 ├── RedisTransport.cs                 # Redis 传输抽象与 StackExchange.Redis 适配层
 ├── RedisProvider.cs                  # 缓存提供者核心实现
@@ -27,9 +27,9 @@ Common.Cache.Redis/
 
 ## 核心组件
 
-### 1. RedisConfig - 配置管理
+### 1. RedisCacheOptions - 配置管理
 
-**文件**: [RedisConfig.cs](RedisConfig.cs)
+**文件**: [RedisCacheOptions.cs](RedisCacheOptions.cs)
 
 配置类，封装 Redis 连接和行为配置：
 
@@ -352,7 +352,7 @@ sequenceDiagram
 ```csharp
 public static IServiceCollection AddRedisCacheStore(
     this IServiceCollection services,
-    Action<RedisConfig> action = null)
+    Action<RedisCacheOptions> action = null)
 {
     services.Configure(action ?? (config => { }));
     services.AddSingleton<RedisManage>();
