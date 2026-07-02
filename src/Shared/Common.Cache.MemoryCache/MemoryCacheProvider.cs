@@ -35,13 +35,13 @@ namespace Azrng.Cache.MemoryCache
         public Task<string?> GetAsync(string key)
         {
             EnsureKey(key);
-            return Task.FromResult(_cache.Get<string>(key));
+            return Task.FromResult<string?>(_cache.Get<string>(key));
         }
 
         public Task<T?> GetAsync<T>(string key)
         {
             EnsureKey(key);
-            return Task.FromResult(_cache.Get<T>(key));
+            return Task.FromResult<T?>(_cache.Get<T>(key));
         }
 
         public Task<T> GetOrCreateAsync<T>(string key, Func<T> getData, TimeSpan? expiry = null)
@@ -202,7 +202,7 @@ namespace Azrng.Cache.MemoryCache
 
             try
             {
-                if (_cache.TryGetValue(key, out T? cachedValue))
+                if (TryGetCachedValue(key, out T? cachedValue))
                 {
                     return cachedValue!;
                 }
@@ -210,7 +210,7 @@ namespace Azrng.Cache.MemoryCache
                 var effectiveExpiry = expiry ?? _memoryConfig.DefaultExpiry;
                 return (await _keyManager.ExecuteSynchronizedAsync(key, async () =>
                 {
-                    if (_cache.TryGetValue(key, out T? lockedCachedValue))
+                    if (TryGetCachedValue(key, out T? lockedCachedValue))
                     {
                         return lockedCachedValue!;
                     }
@@ -218,7 +218,7 @@ namespace Azrng.Cache.MemoryCache
                     var value = await getData();
                     if (ShouldCacheValue(value))
                     {
-                        SetCore(key, value, effectiveExpiry);
+                        TrySetCore(key, value, effectiveExpiry);
                     }
                     else
                     {
@@ -231,11 +231,36 @@ namespace Azrng.Cache.MemoryCache
             catch (Exception ex)
             {
                 _logger.LogError(ex, "内存缓存执行失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                if (_memoryConfig.FailThrowException)
+                if (ex is not CacheProviderException || _memoryConfig.FailThrowException)
                 {
                     throw;
                 }
+
                 return default!;
+            }
+        }
+
+        private bool TryGetCachedValue<T>(string key, out T? value)
+        {
+            try
+            {
+                return _cache.TryGetValue(key, out value);
+            }
+            catch (Exception ex)
+            {
+                throw new CacheProviderException("内存缓存读取失败", ex);
+            }
+        }
+
+        private void TrySetCore<T>(string key, T value, TimeSpan expiry)
+        {
+            try
+            {
+                SetCore(key, value, expiry);
+            }
+            catch (Exception ex)
+            {
+                throw new CacheProviderException("内存缓存写入失败", ex);
             }
         }
 
@@ -399,5 +424,12 @@ namespace Azrng.Cache.MemoryCache
         }
 
         private sealed record CacheEntryRegistration(string Key, IMemoryCache Cache, MemoryCacheKeyManager KeyManager);
+
+        private sealed class CacheProviderException : Exception
+        {
+            public CacheProviderException(string message, Exception innerException) : base(message, innerException)
+            {
+            }
+        }
     }
 }

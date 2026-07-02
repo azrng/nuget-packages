@@ -115,7 +115,7 @@ await ((IMemoryCacheProvider)_cacheProvider).RemoveAllKeyAsync();
 
 - `DefaultExpiry`: 默认过期时间，默认值为 5 秒
 - `CacheEmptyCollections`: 是否缓存空集合和空字符串，默认值为 `true`
-- `FailThrowException`: 缓存操作失败时是否抛出异常，默认值为 `true`
+- `FailThrowException`: 缓存读取/写入等缓存操作失败时是否抛出异常，默认值为 `true`。业务工厂方法自身抛出的异常始终透出，不受此配置吞掉。
 
 ## 行为说明
 
@@ -144,11 +144,13 @@ var value = await _cacheProvider.GetAsync<bool>("bool:false"); // false
 - `true`（默认）：记录日志并抛出异常，避免把真实故障误判成”缓存未命中”
 - `false`：记录日志并返回默认值，不抛出异常，提供更灵活的错误处理策略
 
+`FailThrowException` 只控制缓存读取、写入等缓存组件自身异常。`GetOrCreateAsync` 的工厂方法用于加载业务数据，工厂方法抛出的异常会始终原样透出，避免把数据库、远程服务或业务加载失败误判为缓存未命中。
+
 ### 4. 并发访问同一个 Key 时会做单 Key 同步
 
 同一个 Key 在高并发下首次未命中时，Provider 会按 Key 做同步，避免多个线程同时重复执行工厂方法。
 
-这能减少数据库或远程调用的重复压力。
+这能减少数据库或远程调用的重复压力。同步锁会在本次同 Key 等待队列结束后释放并清理，避免高基数 Key 长时间运行时持续占用锁对象。
 
 ### 5. `RemoveMatchKeyAsync` 使用通配符语义
 
@@ -223,11 +225,13 @@ public class MyService
 * 3.0.0
   * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
   * 移除因旧接口非 null 契约而添加的 `!`（null-forgiving）
+  * **修复**：`GetOrCreateAsync` 不再把业务工厂方法异常当作缓存异常吞掉；即使 `FailThrowException = false`，工厂方法异常也会原样透出
+  * **修复**：单 Key 并发同步锁在等待队列结束后及时清理，避免高基数 Key 场景下锁对象持续增长
   * 依赖升级：`Azrng.Cache.Core` 1.0.0
 * 2.1.1
   * **重命名（破坏性）**：`MemoryConfig` 重命名为 `MemoryCacheOptions`，并补全 XML 注释、启用 nullable
     * 迁移指引：将原 `Configure<MemoryConfig>` / `new MemoryConfig()` / `Action<MemoryConfig>` 全部替换为 `MemoryCacheOptions`
-  * **修复**：`FailThrowException = false` 时，`GetOrCreateAsync` 不再重复调用工厂方法，改为返回 `default`，对齐文档承诺
+  * **修复**：缓存组件异常且 `FailThrowException = false` 时，`GetOrCreateAsync` 不再重复调用工厂方法，改为返回 `default`，对齐文档承诺
   * **修复**：`GetAllAsync` 不存在的 key 不再以 `null` 进入结果字典，改为只返回命中的 key
   * **优化**：csproj 补充 `PackageLicenseExpression`、`RepositoryType`、符号包（`snupkg`）等发布元数据
 * 2.1.0

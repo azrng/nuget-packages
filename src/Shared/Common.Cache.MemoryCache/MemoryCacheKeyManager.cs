@@ -10,7 +10,7 @@ namespace Azrng.Cache.MemoryCache
     public sealed class MemoryCacheKeyManager
     {
         private readonly ConcurrentDictionary<string, byte> _trackedKeys = new(StringComparer.Ordinal);
-        private readonly ConcurrentDictionary<string, SemaphoreSlim> _keyLocks = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, KeyLock> _keyLocks = new(StringComparer.Ordinal);
 
         public void TrackKey(string key)
         {
@@ -37,16 +37,63 @@ namespace Azrng.Cache.MemoryCache
         {
             ArgumentNullException.ThrowIfNull(action);
 
-            var keyLock = _keyLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-            await keyLock.WaitAsync();
+            var keyLock = RentKeyLock(key);
+            await keyLock.Semaphore.WaitAsync();
             try
             {
                 return await action();
             }
             finally
             {
-                keyLock.Release();
+                keyLock.Semaphore.Release();
+                ReleaseKeyLock(key, keyLock);
             }
+        }
+
+        internal int SynchronizedKeyCount => _keyLocks.Count;
+
+        private KeyLock RentKeyLock(string key)
+        {
+            while (true)
+            {
+                var keyLock = _keyLocks.GetOrAdd(key, _ => new KeyLock());
+                lock (keyLock.SyncRoot)
+                {
+                    if (!keyLock.Removed)
+                    {
+                        keyLock.RefCount++;
+                        return keyLock;
+                    }
+                }
+            }
+        }
+
+        private void ReleaseKeyLock(string key, KeyLock keyLock)
+        {
+            lock (keyLock.SyncRoot)
+            {
+                keyLock.RefCount--;
+                if (keyLock.RefCount != 0)
+                {
+                    return;
+                }
+
+                keyLock.Removed = true;
+                _keyLocks.TryRemove(new KeyValuePair<string, KeyLock>(key, keyLock));
+            }
+
+            keyLock.Semaphore.Dispose();
+        }
+
+        private sealed class KeyLock
+        {
+            public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+            public object SyncRoot { get; } = new();
+
+            public int RefCount { get; set; }
+
+            public bool Removed { get; set; }
         }
     }
 }

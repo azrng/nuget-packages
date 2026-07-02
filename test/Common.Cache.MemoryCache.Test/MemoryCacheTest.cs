@@ -43,6 +43,19 @@ public class MemoryCacheTest
     }
 
     [Fact]
+    public async Task GetOrCreateAsync_WhenFactoryThrowsAndFailThrowExceptionDisabled_Rethrows()
+    {
+        using var context = CreateContext(options =>
+        {
+            options.FailThrowException = false;
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            context.Provider.GetOrCreateAsync<string>("broken",
+                () => Task.FromException<string>(new InvalidOperationException("boom"))));
+    }
+
+    [Fact]
     public async Task GetOrCreateAsync_PreventsConcurrentFactoryExecution()
     {
         using var context = CreateContext();
@@ -164,17 +177,28 @@ public class MemoryCacheTest
     }
 
     [Fact]
-    public async Task GetOrCreateAsync_WhenFailThrowExceptionDisabled_ReturnsDefault()
+    public async Task GetOrCreateAsync_ReleasesPerKeyLockAfterCompletion()
+    {
+        using var context = CreateContext();
+
+        await context.Provider.GetOrCreateAsync("lock:released", () => "value", TimeSpan.FromMinutes(1));
+
+        Assert.Equal(0, context.KeyManager.SynchronizedKeyCount);
+    }
+
+    [Fact]
+    public async Task GetOrCreateAsync_ReleasesPerKeyLockAfterFactoryThrows()
     {
         using var context = CreateContext(options =>
         {
             options.FailThrowException = false;
         });
 
-        var result = await context.Provider.GetOrCreateAsync<string>("broken",
-            () => Task.FromException<string>(new InvalidOperationException("boom")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            context.Provider.GetOrCreateAsync<string>("lock:failed",
+                () => Task.FromException<string>(new InvalidOperationException("boom"))));
 
-        Assert.Null(result);
+        Assert.Equal(0, context.KeyManager.SynchronizedKeyCount);
     }
 
     [Fact]
@@ -205,14 +229,22 @@ public class MemoryCacheTest
         });
 
         var serviceProvider = services.BuildServiceProvider();
-        return new TestContext(serviceProvider, serviceProvider.GetRequiredService<IMemoryCacheProvider>());
+        return new TestContext(
+            serviceProvider,
+            serviceProvider.GetRequiredService<IMemoryCacheProvider>(),
+            serviceProvider.GetRequiredService<MemoryCacheKeyManager>());
     }
 
-    private sealed class TestContext(IServiceProvider serviceProvider, IMemoryCacheProvider provider) : IDisposable
+    private sealed class TestContext(
+        IServiceProvider serviceProvider,
+        IMemoryCacheProvider provider,
+        MemoryCacheKeyManager keyManager) : IDisposable
     {
         public IServiceProvider ServiceProvider { get; } = serviceProvider;
 
         public IMemoryCacheProvider Provider { get; } = provider;
+
+        public MemoryCacheKeyManager KeyManager { get; } = keyManager;
 
         public void Dispose()
         {
