@@ -339,6 +339,41 @@ public class ExpressionCoverageTest
 
     #endregion
 
+    #region RowGetExpression / 字段访问
+
+    /// <summary>
+    /// PostgreSQL 复合类型 cast 后的多层字段访问应正确解析并往返。
+    /// 对应上游 commit 5b5fe6c2 (issue #2404)。
+    /// </summary>
+    [Fact]
+    public void NestedCompositeFieldAccess_AfterCast_ShouldRoundTrip()
+    {
+        var sql = "SELECT (product_data::product_info_similarity).info.category AS category FROM products";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void NestedCompositeFieldAccess_GroupBy_ShouldRoundTrip()
+    {
+        var sql = "SELECT COUNT(*) FROM products GROUP BY (product_data::product_info_similarity).info.category";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void SimpleFieldAccess_OnParenthesis_ShouldRoundTrip()
+    {
+        var sql = "SELECT (a).b FROM t";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    #endregion
+
     #region InExpression 优先级
 
     /// <summary>

@@ -1334,8 +1334,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitPostfixExpr(JSqlParserGrammar.PostfixExprContext context)
     {
         var expr = (Expression.Expression)Visit(context.primaryExpr());
+
+        // 按出现顺序处理后缀操作符：::dataType（cast）、.identifier（字段访问）。
+        // ANTLR 的 postfixExpr 文法将这些操作符以 * 循环混合，需顺序遍历子节点。
         var dataTypes = context.dataType();
         int dataTypeIdx = 0;
+        var identifiers = context.identifier();
+        int identifierIdx = 0;
 
         for (int i = 0; i < context.ChildCount; i++)
         {
@@ -1350,6 +1355,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     cast.UseCastKeyword = false;
                     dataTypeIdx++;
                     expr = cast;
+                }
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOT && identifierIdx < identifiers.Length)
+                {
+                    // PostgreSQL 复合类型字段访问：(expr).field 或多层 (expr).field1.field2
+                    expr = new RowGetExpression(expr, identifiers[identifierIdx].GetText());
+                    identifierIdx++;
                 }
             }
         }
