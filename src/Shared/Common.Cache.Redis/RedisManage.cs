@@ -34,7 +34,7 @@ namespace Common.Cache.Redis
         private bool _disposed;
 
         public RedisManage(ILogger<RedisManage> logger, IOptions<RedisCacheOptions> options)
-            : this(logger, options, new StackExchangeRedisConnectionFactory())
+            : this(logger, options, new StackExchangeRedisConnectionFactory(logger))
         {
         }
 

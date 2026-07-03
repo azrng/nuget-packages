@@ -77,6 +77,7 @@ classDiagram
    - 连接失败时记录时间戳
    - 在配置的时间间隔内拒绝连接请求，快速失败
    - 超过间隔后自动尝试重连
+   - 已建立的 `ConnectionMultiplexer` 仍依赖 StackExchange.Redis 内部自动重连；本包只记录连接事件日志，不在事件回调中主动重建连接
 
 3. **后台连接 + 首次操作等待**
    - 构造函数启动后台连接（`Task.Run(ConnectAsync)`），不阻塞构造
@@ -93,6 +94,11 @@ classDiagram
    - `RedisManage` 同时支持 `Dispose()` 与 `DisposeAsync()`
    - 释放时会取消并等待正在进行的连接任务，避免连接任务在资源释放后继续写入内部字段
    - 推荐宿主优先走 `DisposeAsync()`；同步 `Dispose()` 会同步等待连接任务结束，若底层连接握手长时间不返回，调用线程也会被阻塞
+
+6. **连接事件日志**
+   - `StackExchangeRedisConnection` 订阅 `ConnectionFailed`、`ConnectionRestored`、`ErrorMessage`、`InternalError`
+   - 事件回调只记录日志，帮助排查连接抖动和 Redis 内部错误
+   - 释放连接时会解绑事件处理器，避免连接包装对象释放后继续收到回调
 
 ### 3. RedisProvider - 缓存核心实现
 

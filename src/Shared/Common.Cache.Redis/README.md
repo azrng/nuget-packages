@@ -313,6 +313,7 @@ await newsService.SubscribeAllNewsAsync(cts.Token);
 
 - 反序列化失败会记录错误日志并按缓存未命中处理，`GetAsync<T>` 返回 `default`，`GetOrCreateAsync<T>` 会继续执行数据工厂。
 - `RedisManage` 同时实现 `IDisposable` 和 `IAsyncDisposable`。应用宿主释放服务提供者时建议优先使用异步释放路径；同步 `Dispose()` 会等待正在进行的连接任务结束，若底层 Redis 连接握手长时间不返回，调用线程也会同步等待。
+- 底层 `ConnectionMultiplexer` 会记录 `ConnectionFailed`、`ConnectionRestored`、`ErrorMessage`、`InternalError` 事件，便于排查连接抖动；这些事件只用于日志观测，不会触发额外的连接重建。
 
 ### 同时使用内存缓存与 Redis 缓存
 

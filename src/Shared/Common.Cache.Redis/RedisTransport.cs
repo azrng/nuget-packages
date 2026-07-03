@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using StackExchange.Redis;
 using System;
 using System.Threading.Tasks;
@@ -46,20 +48,35 @@ namespace Common.Cache.Redis
 
     internal sealed class StackExchangeRedisConnectionFactory : IRedisConnectionFactory
     {
+        private readonly ILogger _logger;
+
+        public StackExchangeRedisConnectionFactory()
+            : this(NullLogger.Instance)
+        {
+        }
+
+        public StackExchangeRedisConnectionFactory(ILogger logger)
+        {
+            _logger = logger ?? NullLogger.Instance;
+        }
+
         public async Task<IRedisConnection> ConnectAsync(ConfigurationOptions configurationOptions)
         {
             var connection = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
-            return new StackExchangeRedisConnection(connection);
+            return new StackExchangeRedisConnection(connection, _logger);
         }
     }
 
     internal sealed class StackExchangeRedisConnection : IRedisConnection
     {
         private readonly ConnectionMultiplexer _connectionMultiplexer;
+        private readonly ILogger _logger;
 
-        public StackExchangeRedisConnection(ConnectionMultiplexer connectionMultiplexer)
+        public StackExchangeRedisConnection(ConnectionMultiplexer connectionMultiplexer, ILogger logger)
         {
             _connectionMultiplexer = connectionMultiplexer ?? throw new ArgumentNullException(nameof(connectionMultiplexer));
+            _logger = logger ?? NullLogger.Instance;
+            SubscribeConnectionEvents();
         }
 
         public ConnectionMultiplexer ConnectionMultiplexer => _connectionMultiplexer;
@@ -76,7 +93,50 @@ namespace Common.Cache.Redis
 
         public void Dispose()
         {
+            UnsubscribeConnectionEvents();
             _connectionMultiplexer.Dispose();
+        }
+
+        private void SubscribeConnectionEvents()
+        {
+            _connectionMultiplexer.ConnectionFailed += OnConnectionFailed;
+            _connectionMultiplexer.ConnectionRestored += OnConnectionRestored;
+            _connectionMultiplexer.ErrorMessage += OnErrorMessage;
+            _connectionMultiplexer.InternalError += OnInternalError;
+        }
+
+        private void UnsubscribeConnectionEvents()
+        {
+            _connectionMultiplexer.ConnectionFailed -= OnConnectionFailed;
+            _connectionMultiplexer.ConnectionRestored -= OnConnectionRestored;
+            _connectionMultiplexer.ErrorMessage -= OnErrorMessage;
+            _connectionMultiplexer.InternalError -= OnInternalError;
+        }
+
+        private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
+        {
+            _logger.LogWarning(e.Exception,
+                "Redis连接失败 endpoint:{EndPoint} failureType:{FailureType} connectionType:{ConnectionType}",
+                e.EndPoint, e.FailureType, e.ConnectionType);
+        }
+
+        private void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
+        {
+            _logger.LogInformation(
+                "Redis连接恢复 endpoint:{EndPoint} failureType:{FailureType} connectionType:{ConnectionType}",
+                e.EndPoint, e.FailureType, e.ConnectionType);
+        }
+
+        private void OnErrorMessage(object? sender, RedisErrorEventArgs e)
+        {
+            _logger.LogWarning("Redis错误消息 endpoint:{EndPoint} message:{Message}", e.EndPoint, e.Message);
+        }
+
+        private void OnInternalError(object? sender, InternalErrorEventArgs e)
+        {
+            _logger.LogError(e.Exception,
+                "Redis内部错误 endpoint:{EndPoint} origin:{Origin}",
+                e.EndPoint, e.Origin);
         }
     }
 
