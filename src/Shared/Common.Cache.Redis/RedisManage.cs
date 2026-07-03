@@ -54,7 +54,8 @@ namespace Common.Cache.Redis
 
         /// <summary>
         /// 启动一个被跟踪的连接任务：把自身登记到 _activeConnectTasks，供 Dispose 等待。
-        /// 任务结束后清除标记。
+        /// 返回原始的 ConnectCoreAsync 任务，调用方可直接 await 感知连接结果与异常；
+        /// 任务结束后通过 fire-and-forget continuation 从集合移除自身。
         /// </summary>
         private Task StartConnectTracked(CancellationToken cancellationToken)
         {
@@ -67,7 +68,8 @@ namespace Common.Cache.Redis
                 }
             }
             // 任务完成后清除标记（无论成功失败）。Dispose 可能在任务进行中读取此字段并 await。
-            return task.ContinueWith(
+            // 此 continuation 不 rethrow，仅做集合移除；原始 task 的异常通过返回值交给调用方观察。
+            task.ContinueWith(
                 _ =>
                 {
                     lock (_activeConnectTasksLock)
@@ -78,6 +80,7 @@ namespace Common.Cache.Redis
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
+            return task;
         }
 
         public ConnectionMultiplexer? ConnectionMultiplexer => (_connection as StackExchangeRedisConnection)?.ConnectionMultiplexer;
@@ -189,6 +192,12 @@ namespace Common.Cache.Redis
                 previousConnection?.Dispose();
                 _logger.LogInformation("redis初始化连接建立成功");
             }
+            catch (OperationCanceledException)
+            {
+                // Dispose 期间的取消：不记为连接失败、不设退避窗口，仅释放本次已建连接后透出。
+                createdConnection?.Dispose();
+                throw;
+            }
             catch (Exception ex)
             {
                 MarkConnectionFailure(ex);
@@ -255,15 +264,14 @@ namespace Common.Cache.Redis
             }
         }
 
-        ~RedisManage()
-        {
-            Dispose(false);
-        }
+        // 不提供终结器：RedisManage 不持有非托管资源，且生产中由 DI Singleton 托管，
+        // ServiceProvider 释放时调用 Dispose()/DisposeAsync()。提供终结器会在终结器线程上
+        // 触发 Dispose(false) 的 sync-over-async 等待（WaitForActiveConnectAsync().GetAwaiter().GetResult()），
+        // 有阻塞终结器线程的风险，故移除。
 
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -316,7 +324,6 @@ namespace Common.Cache.Redis
             _subscriber = null;
             _semaphoreSlim.Dispose();
             _disposeCts.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

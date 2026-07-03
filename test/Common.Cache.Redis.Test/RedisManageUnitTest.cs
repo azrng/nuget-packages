@@ -172,6 +172,150 @@ namespace Common.Cache.Redis.Test
             await Assert.ThrowsAsync<InvalidOperationException>(() => secondReconnect);
         }
 
+        // 验证改动 1：StartConnectTracked 返回原始 task 后，连接失败异常被 EnsureConnectedAsync
+        // 的 catch 捕获并包装成"redis连接不可用"，且 inner exception 是工厂抛出的原始异常
+        // （改动前 catch 是死代码，inner exception 为 null，靠 HasConnection 兜底）。
+        [Fact]
+        public async Task ConnectFailure_WrapsOriginalExceptionAsInner()
+        {
+            var connectException = new InvalidOperationException("factory boom");
+            var connectionFactory = new BlockingRedisConnectionFactory(_ =>
+                Task.FromException<IRedisConnection>(connectException));
+
+            var redisManage = new RedisManage(
+                NullLogger<RedisManage>.Instance,
+                Options.Create(new RedisCacheOptions
+                {
+                    ConnectionString = "localhost:6379,DefaultDatabase=0",
+                    InitErrorIntervalSecond = 60
+                }),
+                connectionFactory);
+
+            var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => redisManage.GetDatabaseAsync());
+            Assert.Equal("redis连接不可用", thrown.Message);
+            // 改动 1 后：EnsureConnectedAsync 的 catch 命中，原始异常作为 inner exception 透出。
+            Assert.Same(connectException, thrown.InnerException);
+
+            redisManage.Dispose();
+        }
+
+        // 验证改动 2：Dispose 期间的取消不会被 MarkConnectionFailure 记录为连接失败。
+        // 构造首次连接失败（_lastConnectionException 设为首次异常）→ 退避窗口过期后重连阻塞 → Dispose 取消重连。
+        // 改动前：ConnectCoreAsync 的 catch(Exception) 会把 OCE 当失败记录，覆盖 _lastConnectionException；
+        // 改动后：catch(OperationCanceledException) 单独处理，不调 MarkConnectionFailure，_lastConnectionException 不变。
+        // 通过反射读取 private _lastConnectionException 验证其仍为首次异常、未被 OCE 覆盖。
+        [Fact]
+        public async Task Dispose_CancelingInProgressReconnect_DoesNotOverwriteLastConnectionFailure()
+        {
+            var firstFailure = new InvalidOperationException("first connect failed");
+            var database = new FakeRedisDatabase();
+            var subscriber = new FakeRedisSubscriber();
+            var connectedConnection = new FakeRedisConnection(database, subscriber);
+            var blockedReconnect = new TaskCompletionSource<IRedisConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var connectEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstAttempt = true;
+
+            var connectionFactory = new BlockingRedisConnectionFactory(_ =>
+            {
+                if (firstAttempt)
+                {
+                    firstAttempt = false;
+                    return Task.FromException<IRedisConnection>(firstFailure);
+                }
+
+                connectEntered.TrySetResult(true);
+                return blockedReconnect.Task;
+            });
+
+            var redisManage = new RedisManage(
+                NullLogger<RedisManage>.Instance,
+                Options.Create(new RedisCacheOptions
+                {
+                    ConnectionString = "localhost:6379,DefaultDatabase=0",
+                    InitErrorIntervalSecond = 1
+                }),
+                connectionFactory);
+
+            // 首次连接失败：_lastConnectionException 被设为 firstFailure。
+            var firstThrown = await Assert.ThrowsAsync<InvalidOperationException>(() => redisManage.GetDatabaseAsync());
+            Assert.Same(firstFailure, firstThrown.InnerException);
+
+            // 等退避窗口过期后发起重连（阻塞在工厂）。
+            await Task.Delay(1100);
+            var reconnectTask = redisManage.GetDatabaseAsync();
+            await connectEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // Dispose 取消重连。用 Task.Run 包裹同步 Dispose，避免 testhost 同步上下文上的 sync-over-async。
+            // Dispose 内 _disposeCts.Cancel() 会让 ConnectCoreAsync 在拿到连接后于 ThrowIfCancellationRequested 抛 OCE。
+            var disposeTask = Task.Run(redisManage.Dispose);
+            // 给 Dispose 时间执行到 _disposed=true + Cancel()（连续同步语句），再让工厂返回连接，
+            // 确保 ConnectCoreAsync 走到 ThrowIfCancellationRequested 时 cts 已取消。
+            await Task.Delay(100);
+            blockedReconnect.SetResult(connectedConnection);
+            await disposeTask.WaitAsync(TimeSpan.FromSeconds(5));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => reconnectTask);
+
+            // 反射读取 _lastConnectionException：改动 2 后应仍为首次异常，未被 Dispose 的 OCE 覆盖。
+            var lastExceptionField = typeof(RedisManage).GetField("_lastConnectionException",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert.NotNull(lastExceptionField);
+            var lastConnectionException = lastExceptionField!.GetValue(redisManage);
+            Assert.Same(firstFailure, lastConnectionException);
+        }
+
+        // 验证 DisposeAsync 路径会等待活动连接任务结束后再释放资源（与同步 Dispose 单任务测试对称）。
+        // 此前 DisposeAsync 零测试覆盖。
+        [Fact]
+        public async Task DisposeAsync_WhenReconnectInProgress_WaitsForConnectTaskBeforeDisposingResources()
+        {
+            var database = new FakeRedisDatabase();
+            var subscriber = new FakeRedisSubscriber();
+            var connectedConnection = new FakeRedisConnection(database, subscriber);
+
+            var blockedReconnect = new TaskCompletionSource<IRedisConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var connectEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstFailure = true;
+
+            var connectionFactory = new BlockingRedisConnectionFactory(_ =>
+            {
+                if (firstFailure)
+                {
+                    firstFailure = false;
+                    return Task.FromException<IRedisConnection>(new InvalidOperationException("connect failed"));
+                }
+
+                connectEntered.TrySetResult(true);
+                return blockedReconnect.Task;
+            });
+
+            var redisManage = new RedisManage(
+                NullLogger<RedisManage>.Instance,
+                Options.Create(new RedisCacheOptions
+                {
+                    ConnectionString = "localhost:6379,DefaultDatabase=0",
+                    InitErrorIntervalSecond = 1
+                }),
+                connectionFactory);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => redisManage.GetDatabaseAsync());
+
+            await Task.Delay(1100);
+            var reconnectTask = redisManage.GetDatabaseAsync();
+            await connectEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var disposeTask = redisManage.DisposeAsync().AsTask();
+            await Task.Delay(100);
+            // 重连任务仍被阻塞，DisposeAsync 不可能完成。
+            Assert.False(disposeTask.IsCompleted);
+
+            blockedReconnect.SetResult(connectedConnection);
+            await disposeTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => reconnectTask);
+            Assert.Equal("redis连接不可用", exception.Message);
+            Assert.Equal(1, connectedConnection.DisposeCallCount);
+        }
+
         private sealed class BlockingRedisConnectionFactory : IRedisConnectionFactory
         {
             private readonly Func<ConfigurationOptions, Task<IRedisConnection>> _connect;
