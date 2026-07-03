@@ -7,7 +7,9 @@ namespace Common.Cache.Redis.Test
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            var connectionString = "127.0.0.1:6379,DefaultDatabase=0";
+            // 默认连本地 Redis；如需连其它实例，设置环境变量 COMMON_CACHE_REDIS_TEST_CONNECTION
+            var connectionString = Environment.GetEnvironmentVariable("COMMON_CACHE_REDIS_TEST_CONNECTION")
+                ?? "127.0.0.1:6379,DefaultDatabase=0";
 
             services.AddRedisCacheStore(x =>
             {
