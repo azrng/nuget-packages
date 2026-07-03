@@ -1381,6 +1381,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.structType() != null) return Visit(context.structType());
         if (context.lambdaExpression() != null) return Visit(context.lambdaExpression());
         if (context.keyExpression() != null) return Visit(context.keyExpression());
+        if (context.fullTextSearch() != null) return Visit(context.fullTextSearch());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -1398,6 +1399,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var inner = (Expression.Expression)Visit(context.columnRef());
         return new KeyExpression(inner);
+    }
+
+    public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
+    {
+        var fts = new FullTextSearch();
+        foreach (var colCtx in context.columnRef())
+        {
+            fts.Columns.Add(((Column)Visit(colCtx)).GetFullyQualifiedName());
+        }
+        fts.MatchExpression = (Expression.Expression)Visit(context.expression());
+
+        if (context.searchModifier() != null)
+        {
+            // 按 token 顺序用空格拼接修饰符文本（如 "IN BOOLEAN MODE"）
+            var modifierCtx = context.searchModifier();
+            fts.SearchModifier = string.Join(' ', modifierCtx.children
+                .OfType<ITerminalNode>().Select(t => t.GetText()));
+        }
+
+        return fts;
     }
 
     public override object VisitLiteral(JSqlParserGrammar.LiteralContext context)

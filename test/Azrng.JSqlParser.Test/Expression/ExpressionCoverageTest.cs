@@ -408,6 +408,50 @@ public class ExpressionCoverageTest
 
     #endregion
 
+    #region FullTextSearch (MATCH ... AGAINST)
+
+    /// <summary>
+    /// MySQL FULLTEXT 搜索的 AGAINST 应支持任意表达式（含 concat、参数等）。
+    /// 对应上游 commit 5788ca06 (issue #2413)。
+    /// </summary>
+    [Fact]
+    public void FullTextSearch_AgainstConcatExpression_ShouldRoundTrip()
+    {
+        var sql = "SELECT MATCH (name) AGAINST (concat('', ?, '') IN BOOLEAN MODE) AS full_text FROM commodity";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void FullTextSearch_AgainstStringLiteral_ShouldRoundTrip()
+    {
+        var sql = "SELECT MATCH (title, body) AGAINST ('database') FROM articles";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void FullTextSearch_InBooleanMode_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM articles WHERE MATCH (title) AGAINST ('+MySQL -YourSQL' IN BOOLEAN MODE)";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void FullTextSearch_InNaturalLanguageMode_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM articles WHERE MATCH (title) AGAINST ('database' IN NATURAL LANGUAGE MODE)";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    #endregion
+
     #region InExpression 优先级
 
     /// <summary>

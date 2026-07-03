@@ -645,6 +645,7 @@ primaryExpr
     | lambdaExpression
     | connectByPriorOperator
     | keyExpression
+    | fullTextSearch
     | OPENING_PAREN expression CLOSING_PAREN
     | columnRef
     | MULTIPLY
@@ -652,6 +653,17 @@ primaryExpr
 
 keyExpression
     : KEY columnRef
+    ;
+
+fullTextSearch
+    : MATCH OPENING_PAREN columnRef (COMMA columnRef)* CLOSING_PAREN
+      AGAINST OPENING_PAREN expression (searchModifier)? CLOSING_PAREN
+    ;
+
+searchModifier
+    : IN NATURAL LANGUAGE MODE (WITH QUERY EXPANSION)?
+    | IN BOOLEAN MODE
+    | WITH QUERY EXPANSION
     ;
 
 literal
