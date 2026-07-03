@@ -44,6 +44,8 @@ namespace Common.Cache.Redis.Test
 
         public FakeRedisSubscriber Subscriber { get; }
 
+        public int DisposeCallCount { get; private set; }
+
         public IRedisDatabase GetDatabase()
         {
             return Database;
@@ -56,6 +58,7 @@ namespace Common.Cache.Redis.Test
 
         public void Dispose()
         {
+            DisposeCallCount++;
         }
     }
 

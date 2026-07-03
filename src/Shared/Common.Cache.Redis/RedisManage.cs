@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,9 +21,10 @@ namespace Common.Cache.Redis
         private readonly Task _initialConnectTask;
         private readonly CancellationTokenSource _disposeCts = new();
 
-        // 跟踪当前正在进行的连接任务（首次或后续重连）。Dispose 时等待它结束，
+        // 跟踪当前正在进行的连接任务（首次或后续重连）。Dispose 时等待它们结束，
         // 避免释放 _semaphoreSlim 后仍有 in-flight 的 ConnectAsync 触碰已释放对象。
-        private Task? _activeConnectTask;
+        private readonly object _activeConnectTasksLock = new();
+        private readonly HashSet<Task> _activeConnectTasks = new();
 
         private IRedisConnection? _connection;
         private IRedisDatabase? _database;
@@ -51,20 +53,28 @@ namespace Common.Cache.Redis
         }
 
         /// <summary>
-        /// 启动一个被跟踪的连接任务：把自身登记到 _activeConnectTask，供 Dispose 等待。
+        /// 启动一个被跟踪的连接任务：把自身登记到 _activeConnectTasks，供 Dispose 等待。
         /// 任务结束后清除标记。
         /// </summary>
         private Task StartConnectTracked(CancellationToken cancellationToken)
         {
             var task = ConnectCoreAsync(cancellationToken);
-            // 仅在未释放时登记；Dispose 期间不再跟踪新的连接任务。
-            if (!_disposed)
+            lock (_activeConnectTasksLock)
             {
-                Interlocked.Exchange(ref _activeConnectTask, task);
+                if (!_disposed)
+                {
+                    _activeConnectTasks.Add(task);
+                }
             }
             // 任务完成后清除标记（无论成功失败）。Dispose 可能在任务进行中读取此字段并 await。
             return task.ContinueWith(
-                _ => Interlocked.CompareExchange(ref _activeConnectTask, null, task),
+                _ =>
+                {
+                    lock (_activeConnectTasksLock)
+                    {
+                        _activeConnectTasks.Remove(task);
+                    }
+                },
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
@@ -192,29 +202,40 @@ namespace Common.Cache.Redis
         }
 
         /// <summary>
-        /// 等待当前正在进行的连接任务（首次或后续重连）结束。
+        /// 等待当前正在进行的连接任务（首次或后续重连）全部结束。
         /// Dispose 调用，确保释放 _semaphoreSlim 前所有 in-flight 的 ConnectAsync 都已退出。
         /// </summary>
         private async Task WaitForActiveConnectAsync()
         {
             while (true)
             {
-                var active = Volatile.Read(ref _activeConnectTask);
-                if (active == null)
+                Task[] activeTasks;
+                lock (_activeConnectTasksLock)
+                {
+                    activeTasks = _activeConnectTasks.Count == 0
+                        ? Array.Empty<Task>()
+                        : new Task[_activeConnectTasks.Count];
+                    if (activeTasks.Length > 0)
+                    {
+                        _activeConnectTasks.CopyTo(activeTasks);
+                    }
+                }
+
+                if (activeTasks.Length == 0)
                 {
                     return;
                 }
 
                 try
                 {
-                    await active.ConfigureAwait(false);
+                    await Task.WhenAll(activeTasks).ConfigureAwait(false);
                 }
                 catch
                 {
                     // 连接任务因取消或失败结束，忽略异常，继续检查是否还有后续任务。
                 }
 
-                // await 返回后，若 _activeConnectTask 已被 ConnectAsync 清除则退出，否则继续等下一个。
+                // await 返回后，若活动任务集合已清空则退出，否则继续等剩余任务。
                 // 由于 Dispose 进入前已置 _disposed，新的 ConnectAsync 会在 ThrowIfDisposed 处退出，不会无限新增。
             }
         }
