@@ -1,4 +1,5 @@
 using Azrng.JSqlParser.Expression;
+using Azrng.JSqlParser.Expression.Operators.Conditional;
 using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
@@ -334,6 +335,41 @@ public class ExpressionCoverageTest
         var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT INTERVAL '1' YEAR FROM users")!;
         var interval = (IntervalExpression)select.SelectItems![0].Expression!;
         Assert.Equal("YEAR", interval.IntervalType);
+    }
+
+    #endregion
+
+    #region InExpression 优先级
+
+    /// <summary>
+    /// IN 表达式的优先级应高于 OR，确保 WHERE a IN (...) OR b = 2 解析为
+    /// (a IN (...)) OR (b = 2) 而非 a IN (... OR b = 2)。
+    /// 对应上游 issue #2244（JavaCC 版曾因 InExpression 右侧用 Expression() 导致贪婪匹配）。
+    /// ANTLR 版文法通过显式括号分组天然规避此问题，此处补充回归测试固化正确行为。
+    /// </summary>
+    [Fact]
+    public void InExpression_WithOrSuffix_ShouldParseOrAtTopLevel()
+    {
+        var sql = "SELECT * FROM T_DEMO WHERE a IN (1, 3, 2) OR b = 2";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        // WHERE 顶层应为 OrExpression，左操作数为 InExpression，右操作数为比较表达式
+        var orExpr = Assert.IsType<OrExpression>(select.Where);
+        Assert.IsType<InExpression>(orExpr.LeftExpression);
+    }
+
+    /// <summary>
+    /// IN 表达式的优先级应高于 AND，确保 WHERE a IN (...) AND b = 2 解析为
+    /// (a IN (...)) AND (b = 2)。
+    /// </summary>
+    [Fact]
+    public void InExpression_WithAndSuffix_ShouldParseAndAtTopLevel()
+    {
+        var sql = "SELECT * FROM T_DEMO WHERE a IN (1, 3, 2) AND b = 2";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var andExpr = Assert.IsType<AndExpression>(select.Where);
+        Assert.IsType<InExpression>(andExpr.LeftExpression);
     }
 
     #endregion
