@@ -22,7 +22,8 @@
 - 子项 10 ✅：5b5fe6c2 PG cast 后复合字段访问 — 新增 RowGetExpression 类；ExpressionVisitor/Adapter 加 Visit 方法；VisitPostfixExpr 补充处理 DOT identifier 后缀(此前仅处理 DOUBLE_COLON cast，字段访问被丢弃)；ExpressionCoverageTest 新增 3 个用例。全量 521 测试通过。
 - 子项 11 ✅：bfcb8b75 KEY 前缀表达式 — 新增 KeyExpression 类；ExpressionVisitor/Adapter 加 Visit 方法；文法 primaryExpr 加 keyExpression 分支(KEY columnRef)；VisitPrimaryExpr/VisitKeyExpression 处理；ExpressionCoverageTest 新增 3 个用例。全量 524 测试通过。
 - 子项 12 ✅：5788ca06 MySQL FULLTEXT AGAINST — Lexer 新增 AGAINST/LANGUAGE/EXPANSION token；文法 primaryExpr 新增 fullTextSearch 规则(MATCH..AGAINST..searchModifier)支持 IN BOOLEAN/NATURAL LANGUAGE MODE 及 WITH QUERY EXPANSION；FullTextSearch 类重构(SearchModifier 属性替代 Filter)；AstBuilder 新增 VisitFullTextSearch；ExpressionCoverageTest 新增 4 个用例。全量 528 测试通过。
-- 已完成步骤：12 个子项的迁移/评估与测试
+- 子项 13 ✅（评估）：bd3ce05f GENERATED ALWAYS AS IDENTITY — bug 在 ANTLR 版不存在（文法用显式 GENERATED (ALWAYS | BY DEFAULT) AS IDENTITY 规则天然规避 JavaCC 版的 ALWAYS token 兜底问题），补 2 个回归测试。全量 530 测试通过。
+- 已完成步骤：13 个子项的迁移/评估与测试
 - 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd 等）
 - 阻塞项：无
 
