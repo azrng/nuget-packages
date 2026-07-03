@@ -89,6 +89,11 @@ classDiagram
    - 连接失败时保留原始异常，并在重试窗口内快速失败
    - `Database` 与 `Subscriber` 共用同一条连接生命周期
 
+5. **释放语义**
+   - `RedisManage` 同时支持 `Dispose()` 与 `DisposeAsync()`
+   - 释放时会取消并等待正在进行的连接任务，避免连接任务在资源释放后继续写入内部字段
+   - 推荐宿主优先走 `DisposeAsync()`；同步 `Dispose()` 会同步等待连接任务结束，若底层连接握手长时间不返回，调用线程也会被阻塞
+
 ### 3. RedisProvider - 缓存核心实现
 
 **文件**: [RedisProvider.cs](RedisProvider.cs)
@@ -434,7 +439,7 @@ flowchart TD
 
 3. **序列化异常**
    - JSON 序列化/反序列化失败记录日志
-   - 反序列化失败时返回未命中语义
+   - 反序列化失败时视为缓存未命中：`GetAsync<T>` 返回 `default`，`GetOrCreateAsync<T>` 继续执行数据工厂
    - 序列化失败时直接抛出异常
    - 日志包含数据预览（前 200 字符）
 

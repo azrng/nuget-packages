@@ -331,10 +331,6 @@ namespace Common.Cache.Redis
             {
                 _logger.LogError(ex, "SCAN命令执行异常，前缀匹配符:{PrefixMatchStr} message:{Message}",
                     prefixMatchStr, ex.GetExceptionAndStack());
-                if (_redisConfig.FailThrowException)
-                {
-                    throw;
-                }
                 throw;
             }
         }

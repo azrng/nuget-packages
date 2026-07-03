@@ -20,11 +20,6 @@
         /// </summary>
         public int InitErrorIntervalSecond { get; set; } = 10;
 
-        // /// <summary>
-        // /// 获取缓存超时时间(默认为5s)
-        // </summary>
-        // public TimeSpan TimeoutTime { get; set; } = TimeSpan.FromSeconds(5);
-
         /// <summary>
         /// 是否缓存空集合和空字符串数据（默认为true，即缓存空集合和空字符串）
         /// </summary>
