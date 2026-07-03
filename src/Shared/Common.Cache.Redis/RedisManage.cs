@@ -212,13 +212,8 @@ namespace Common.Cache.Redis
                 Task[] activeTasks;
                 lock (_activeConnectTasksLock)
                 {
-                    activeTasks = _activeConnectTasks.Count == 0
-                        ? Array.Empty<Task>()
-                        : new Task[_activeConnectTasks.Count];
-                    if (activeTasks.Length > 0)
-                    {
-                        _activeConnectTasks.CopyTo(activeTasks);
-                    }
+                    activeTasks = new Task[_activeConnectTasks.Count];
+                    _activeConnectTasks.CopyTo(activeTasks);
                 }
 
                 if (activeTasks.Length == 0)
