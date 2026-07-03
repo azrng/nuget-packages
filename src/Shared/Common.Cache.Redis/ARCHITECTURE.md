@@ -52,13 +52,18 @@ Common.Cache.Redis/
 classDiagram
     class RedisManage {
         -ConnectionMultiplexer _connection
-        -IDatabase _database
+        -IRedisDatabase _database
+        -IRedisSubscriber _subscriber
         -SemaphoreSlim _semaphoreSlim
-        -DateTime _initConnectErrorTime
+        -Task _initialConnectTask
+        -DateTimeOffset _nextRetryAt
         +ConnectionMultiplexer ConnectionMultiplexer
-        +IDatabase Database
+        +GetDatabaseAsync() Task~IRedisDatabase~
+        +GetSubscriberAsync() Task~IRedisSubscriber~
         -ConnectAsync() Task
+        -EnsureConnectedAsync() Task
         +Dispose() void
+        +DisposeAsync() ValueTask
     }
 ```
 
@@ -73,9 +78,11 @@ classDiagram
    - 在配置的时间间隔内拒绝连接请求，快速失败
    - 超过间隔后自动尝试重连
 
-3. **延迟连接策略**
-   - 构造函数中连接失败不会抛出异常
-   - 后续通过 `Database` 属性访问时触发重连
+3. **后台连接 + 首次操作等待**
+   - 构造函数启动后台连接（`Task.Run(ConnectAsync)`），不阻塞构造
+   - 首次实际操作（`GetDatabaseAsync`/`GetSubscriberAsync`）等待后台连接完成后再执行
+   - 连接失败时抛 `InvalidOperationException("redis连接不可用")`
+   - 消除原构造函数 sync-over-async 在带同步上下文环境中的死锁风险
 
 4. **失败语义修正**
    - 初始化失败不会再记录“连接成功”日志
@@ -159,7 +166,8 @@ private bool ShouldCacheValue<T>(T value)
 public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, TimeSpan? expiry = null)
 {
     var redisKey = GetKey(key);
-    var rawValue = await _redisManage.Database.StringGetAsync(redisKey);
+    var database = await _redisManage.GetDatabaseAsync();
+    var rawValue = await database.StringGetAsync(redisKey);
 
     if (rawValue.HasValue)
         return GetObject<T>(rawValue);
@@ -169,7 +177,7 @@ public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> getData, Time
 
     // 根据配置决定是否缓存
     if (ShouldCacheValue(value))
-        await _redisManage.Database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
+        await database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
 
     return value;
 }

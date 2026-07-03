@@ -34,7 +34,8 @@ namespace Common.Cache.Redis
 
             try
             {
-                var redisValue = await _redisManage.Database.StringGetAsync(GetKey(key));
+                var database = await _redisManage.GetDatabaseAsync();
+                var redisValue = await database.StringGetAsync(GetKey(key));
                 return redisValue.HasValue ? redisValue.ToString() : null;
             }
             catch (Exception ex)
@@ -54,7 +55,8 @@ namespace Common.Cache.Redis
 
             try
             {
-                var redisValue = await _redisManage.Database.StringGetAsync(GetKey(key));
+                var database = await _redisManage.GetDatabaseAsync();
+                var redisValue = await database.StringGetAsync(GetKey(key));
                 return redisValue.HasValue && TryGetObject(redisValue, out T? value) ? value : default;
             }
             catch (Exception ex)
@@ -95,7 +97,7 @@ namespace Common.Cache.Redis
             try
             {
                 var redisKey = GetKey(key);
-                var database = _redisManage.Database;
+                var database = await _redisManage.GetDatabaseAsync();
                 var rawValue = await database.StringGetAsync(redisKey);
 
                 if (rawValue.HasValue && TryGetObject(rawValue, out T? cachedValue))
@@ -139,7 +141,7 @@ namespace Common.Cache.Redis
                     return false;
                 }
 
-                return await _redisManage.Database.StringSetAsync(GetKey(key), value, expiry);
+                return await (await _redisManage.GetDatabaseAsync()).StringSetAsync(GetKey(key), value, expiry);
             }
             catch (Exception ex)
             {
@@ -163,7 +165,7 @@ namespace Common.Cache.Redis
                     return false;
                 }
 
-                return await _redisManage.Database.StringSetAsync(GetKey(key), GetJsonStr(value), expiry);
+                return await (await _redisManage.GetDatabaseAsync()).StringSetAsync(GetKey(key), GetJsonStr(value), expiry);
             }
             catch (Exception ex)
             {
@@ -182,7 +184,7 @@ namespace Common.Cache.Redis
 
             try
             {
-                return await _redisManage.Database.KeyDeleteAsync(GetKey(key));
+                return await (await _redisManage.GetDatabaseAsync()).KeyDeleteAsync(GetKey(key));
             }
             catch (Exception ex)
             {
@@ -216,7 +218,7 @@ namespace Common.Cache.Redis
                     return 0;
                 }
 
-                var deletedCount = await _redisManage.Database.KeyDeleteAsync(redisKeys);
+                var deletedCount = await (await _redisManage.GetDatabaseAsync()).KeyDeleteAsync(redisKeys);
                 _logger.LogInformation("批量删除完成，成功删除 {DeletedCount} 个key，总共 {TotalCount} 个key",
                     deletedCount, redisKeys.Length);
                 return (int)deletedCount;
@@ -244,7 +246,7 @@ namespace Common.Cache.Redis
                     return true;
                 }
 
-                await _redisManage.Database.KeyDeleteAsync(matchedKeys);
+                await (await _redisManage.GetDatabaseAsync()).KeyDeleteAsync(matchedKeys);
                 return true;
             }
             catch (Exception ex)
@@ -264,7 +266,7 @@ namespace Common.Cache.Redis
 
             try
             {
-                return await _redisManage.Database.KeyExpireAsync(GetKey(key), expire);
+                return await (await _redisManage.GetDatabaseAsync()).KeyExpireAsync(GetKey(key), expire);
             }
             catch (Exception ex)
             {
@@ -283,7 +285,7 @@ namespace Common.Cache.Redis
 
             try
             {
-                return await _redisManage.Database.KeyExistsAsync(GetKey(key));
+                return await (await _redisManage.GetDatabaseAsync()).KeyExistsAsync(GetKey(key));
             }
             catch (Exception ex)
             {
@@ -305,7 +307,7 @@ namespace Common.Cache.Redis
                 ulong nextCursor = 0;
                 do
                 {
-                    var scanResult = await _redisManage.Database.ScanAsync(nextCursor, prefixMatchStr, 1000);
+                    var scanResult = await (await _redisManage.GetDatabaseAsync()).ScanAsync(nextCursor, prefixMatchStr, 1000);
                     nextCursor = scanResult.Cursor;
                     keys.UnionWith(scanResult.Keys ?? Array.Empty<RedisKey>());
                 } while (nextCursor != 0);
@@ -467,7 +469,7 @@ namespace Common.Cache.Redis
                     return 0;
                 }
 
-                var result = await _redisManage.Subscriber.PublishAsync(RedisChannel.Literal(channel), jsonMessage);
+                var result = await (await _redisManage.GetSubscriberAsync()).PublishAsync(RedisChannel.Literal(channel), jsonMessage);
                 _logger.LogInformation("发布消息成功，频道：{Channel}，订阅者数量：{SubscriberCount}", channel, result);
                 return result;
             }
@@ -548,7 +550,7 @@ namespace Common.Cache.Redis
             {
                 while (true)
                 {
-                    var subscription = GetOrCreateSubscription(subscriptionKey, redisChannel);
+                    var subscription = await GetOrCreateSubscriptionAsync(subscriptionKey, redisChannel);
                     var subscriptionId = Guid.NewGuid();
                     var subscriberInfo = new SubscriberInfo
                     {
@@ -595,7 +597,7 @@ namespace Common.Cache.Redis
             }
         }
 
-        private ChannelSubscription GetOrCreateSubscription(string subscriptionKey, RedisChannel redisChannel)
+        private async Task<ChannelSubscription> GetOrCreateSubscriptionAsync(string subscriptionKey, RedisChannel redisChannel)
         {
             while (true)
             {
@@ -619,7 +621,8 @@ namespace Common.Cache.Redis
 
                 try
                 {
-                    _redisManage.Subscriber.Subscribe(redisChannel, (channel, value) =>
+                    var subscriber = await _redisManage.GetSubscriberAsync();
+                    subscriber.Subscribe(redisChannel, (channel, value) =>
                     {
                         if (createdSubscription.IsClosing || createdSubscription.CancellationTokenSource.IsCancellationRequested)
                         {
@@ -643,7 +646,7 @@ namespace Common.Cache.Redis
             }
         }
 
-        private Task RemoveSubscriberAsync(string subscriptionKey,
+        private async Task RemoveSubscriberAsync(string subscriptionKey,
                                            RedisChannel redisChannel,
                                            Guid subscriberId,
                                            bool throwOnError)
@@ -653,14 +656,14 @@ namespace Common.Cache.Redis
                 if (!_activeSubscriptions.TryGetValue(subscriptionKey, out var subscription))
                 {
                     _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 不存在或已被移除", subscriptionKey);
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 if (!subscription.RemoveSubscriber(subscriberId, out var removedSubscriber, out var remainingCount))
                 {
                     _logger.LogWarning("尝试移除订阅者失败，频道 {Channel} 中不存在订阅者 {SubscriberId}",
                         subscriptionKey, subscriberId);
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 removedSubscriber!.Dispose();
@@ -669,10 +672,8 @@ namespace Common.Cache.Redis
 
                 if (remainingCount == 0)
                 {
-                    CloseSubscription(subscriptionKey, redisChannel, subscription);
+                    await CloseSubscriptionAsync(subscriptionKey, redisChannel, subscription);
                 }
-
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -683,23 +684,20 @@ namespace Common.Cache.Redis
                 {
                     throw;
                 }
-
-                return Task.CompletedTask;
             }
         }
 
-        private Task UnsubscribeAllCoreAsync(string subscriptionKey, RedisChannel redisChannel, bool throwOnError)
+        private async Task UnsubscribeAllCoreAsync(string subscriptionKey, RedisChannel redisChannel, bool throwOnError)
         {
             try
             {
                 if (!_activeSubscriptions.TryRemove(subscriptionKey, out var subscription))
                 {
-                    return Task.CompletedTask;
+                    return;
                 }
 
-                CloseSubscription(subscriptionKey, redisChannel, subscription);
+                await CloseSubscriptionAsync(subscriptionKey, redisChannel, subscription);
                 _logger.LogInformation("取消订阅成功：{Channel}", subscriptionKey);
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -710,12 +708,10 @@ namespace Common.Cache.Redis
                 {
                     throw;
                 }
-
-                return Task.CompletedTask;
             }
         }
 
-        private void CloseSubscription(string subscriptionKey, RedisChannel redisChannel, ChannelSubscription subscription)
+        private async Task CloseSubscriptionAsync(string subscriptionKey, RedisChannel redisChannel, ChannelSubscription subscription)
         {
             if (!subscription.TryBeginClose())
             {
@@ -732,7 +728,8 @@ namespace Common.Cache.Redis
                 }
 
                 subscription.CancellationTokenSource.Cancel();
-                _redisManage.Subscriber.Unsubscribe(redisChannel);
+                var redisSubscriber = await _redisManage.GetSubscriberAsync();
+                redisSubscriber.Unsubscribe(redisChannel);
                 _logger.LogInformation("频道 {Channel} 没有订阅者了，已取消 Redis 订阅", subscriptionKey);
             }
             finally

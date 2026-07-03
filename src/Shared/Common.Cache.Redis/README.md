@@ -365,6 +365,10 @@ public class MyService
   * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
   * **重命名（破坏性）**：`RedisConfig` 重命名为 `RedisCacheOptions`，与 `Common.Cache.MemoryCache` 的 `MemoryCacheOptions` 命名风格统一
     * 迁移指引：将原 `Configure<RedisConfig>` / `new RedisConfig()` / `Action<RedisConfig>` 全部替换为 `RedisCacheOptions`
+  * **连接管理异步化（破坏性，仅影响直接使用 `RedisManage` 的场景）**：`RedisManage` 构造函数不再同步阻塞建立连接，改为启动后台连接；`Database`/`Subscriber` 同步属性改为 `GetDatabaseAsync()`/`GetSubscriberAsync()` 异步方法，`RedisManage` 新增 `IAsyncDisposable` 实现
+    * 应用启动即开始连接，首次实际操作时等待后台连接结果（连接失败抛 `InvalidOperationException("redis连接不可用")`）
+    * 消除了原构造函数 sync-over-async 在带同步上下文环境（测试宿主等）中的死锁风险
+    * 消费方通过 `IRedisProvider`/`ICacheProvider` 使用，**无感知**；仅直接操作 `RedisManage` 内部属性的代码需适配
   * 启用 `<Nullable>enable</Nullable>`
   * 补充 `PackageLicenseExpression`、`RepositoryType`、符号包等发布元数据
   * 依赖升级：`Azrng.Cache.Core` 1.0.0

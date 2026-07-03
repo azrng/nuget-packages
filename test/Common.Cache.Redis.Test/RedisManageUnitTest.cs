@@ -6,7 +6,7 @@ namespace Common.Cache.Redis.Test
     public class RedisManageUnitTest
     {
         [Fact]
-        public void Database_WhenInitialConnectFails_ThrowsUntilRetryWindowExpires()
+        public async Task Database_WhenInitialConnectFails_ThrowsUntilRetryWindowExpires()
         {
             var database = new FakeRedisDatabase();
             var subscriber = new FakeRedisSubscriber();
@@ -23,17 +23,14 @@ namespace Common.Cache.Redis.Test
                 }),
                 connectionFactory);
 
-            var exception = Assert.Throws<InvalidOperationException>(() =>
-            {
-                _ = redisManage.Database;
-            });
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => redisManage.GetDatabaseAsync());
 
             Assert.Equal("redis连接不可用", exception.Message);
             Assert.Equal(1, connectionFactory.ConnectCallCount);
 
             Thread.Sleep(1100);
 
-            var connectedDatabase = redisManage.Database;
+            var connectedDatabase = await redisManage.GetDatabaseAsync();
             Assert.Same(database, connectedDatabase);
             Assert.Equal(2, connectionFactory.ConnectCallCount);
         }
