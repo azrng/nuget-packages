@@ -17,9 +17,10 @@
 - 子项 5 ✅（既有缺陷）：JOIN USING 序列化丢失 — VisitJoinClause 漏处理 USING 分支，已修复。已提交 0cb2945。
 - 子项 6 ✅：6697c063 LOCK TABLE 语句 — 新增 LockMode/LockStatement 类、StatementVisitor 接口方法、文法 lockStatement/lockMode 规则、AstBuilder VisitLockStatement/VisitLockMode、TablesNamesFinder 表名提取；新增 LockTest 16 个用例。已提交 1d9a08f。
 - 子项 7 ✅：f47a8b30 PG RETURNING OLD/NEW — 新增 ReturningClause/ReturningOutputAlias/ReturningReferenceType 类、Column/AllTableColumns 加 ReturningReference 字段、Insert/Update/Delete 加 Returning 属性、文法 returningClause 扩展 WITH 别名、AstBuilder VisitReturningClause 含 OLD/NEW 归一化；新增 ReturningClauseTest 5 个用例。全量 503 测试通过。
-- 子项 8 ✅：7fc300f7 EXCEPT/MINUS DISTINCT 支持 — 文法 setOperator 加 DISTINCT 支持并分离 EXCEPT/MINUS；SetOperation 加 MINUS 类型、构造函数接收 distinct、ToString 输出 DISTINCT；CreateSetOperation 传入 distinct 并区分 MINUS；SelectStatementTest 新增 13 个用例覆盖 ALL/DISTINCT 往返、修饰符不泄漏、MINUS 类型。全量 516 测试通过。
-- 已完成步骤：8 个子项的迁移/评估与测试
-- 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd、JOIN FETCH 091ef964 等）
+- 子项 8 ✅：7fc300f7 EXCEPT/MINUS DISTINCT 支持 — 文法 setOperator 加 DISTINCT 支持并分离 EXCEPT/MINUS；SetOperation 加 MINUS 类型、构造函数接收 distinct、ToString 输出 DISTINCT；CreateSetOperation 传入 distinct 并区分 MINUS；SelectStatementTest 新增 13 个用例。全量 516 测试通过。
+- 子项 9 ✅：091ef964 JOIN FETCH — Join 加 Fetch 属性并在 ToString 输出 FETCH；文法 joinClause 加 FETCH?；VisitJoinClause 设置 Fetch；SelectStatementTest 新增 2 个用例。全量 518 测试通过。
+- 已完成步骤：9 个子项的迁移/评估与测试
+- 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd 等）
 - 阻塞项：无
 
 ## 最近完成

@@ -130,7 +130,7 @@ subSelect
     ;
 
 joinClause
-    : joinType? JOIN tableOrSubquery joinCondition?
+    : joinType? JOIN FETCH? tableOrSubquery joinCondition?
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?

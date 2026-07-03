@@ -396,6 +396,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             SetJoinType(join, context.joinType());
         }
 
+        if (context.FETCH() != null)
+        {
+            join.Fetch = true;
+        }
+
         join.RightItem = (FromItem)Visit(context.tableOrSubquery());
 
         if (context.joinCondition() != null)

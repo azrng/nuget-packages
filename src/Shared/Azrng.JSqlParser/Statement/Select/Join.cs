@@ -19,6 +19,9 @@ public class Join : ASTNodeAccessImpl
     public bool Cross { get; set; }
     public bool Semi { get; set; }
 
+    /// <summary>是否为 JPQL/HQL 的 JOIN FETCH（预加载关联）。</summary>
+    public bool Fetch { get; set; }
+
     public FromItem RightItem { get; set; } = null!;
     public Expression.Expression? OnExpression { get; set; }
     public List<Column> UsingColumns { get; set; } = new();
@@ -54,6 +57,7 @@ public class Join : ASTNodeAccessImpl
             throw new InvalidOperationException("Join requires a right item.");
 
         sb.Append("JOIN ");
+        if (Fetch) sb.Append("FETCH ");
         sb.Append(RightItem);
 
         if (OnExpression != null)

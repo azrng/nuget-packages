@@ -264,6 +264,30 @@ public class SelectStatementTest
         Assert.Equal(sql, select.ToString());
     }
 
+    /// <summary>
+    /// JPQL/HQL 的 JOIN FETCH 应正确解析 Fetch 标记并往返序列化。
+    /// 对应上游 commit 091ef964。
+    /// </summary>
+    [Fact]
+    public void Select_JoinFetch_ShouldSetFetchAndRoundTrip()
+    {
+        var sql = "SELECT c FROM Customer c LEFT JOIN FETCH c.orders o";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        Assert.NotNull(select.Joins);
+        Assert.True(select.Joins![0].Fetch);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_InnerJoinFetch_ShouldRoundTrip()
+    {
+        var sql = "SELECT a FROM t1 a INNER JOIN FETCH a.b";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.True(select.Joins![0].Fetch);
+        Assert.Equal(sql, select.ToString());
+    }
+
     #endregion
 
     #region 子查询
