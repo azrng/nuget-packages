@@ -36,4 +36,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // JSqlParser 5.4
     public virtual T Visit<S>(SessionStatement sessionStatement, S context) => default!;
+
+    // JSqlParser 5.4+ - LOCK TABLE
+    public virtual T Visit<S>(Lock.LockStatement lockStatement, S context) => default!;
 }

@@ -13,9 +13,11 @@
 - 子项 1 ✅：ForUpdateClause（上游 commit 2b141568）— FOR UPDATE/FOR SHARE 多表 + ORDER BY 支持。已提交 b965f93。
 - 子项 2 ✅（评估）：fff8a081 嵌套括号回溯修复 — 不适用（JavaCC 特定 LOOKAHEAD 优化，ANTLR 用 ALL(*) 无此机制），跳过。
 - 子项 3 ✅（评估）：0f9e4779 InExpression 优先级修复 — bug 在 ANTLR 版不存在（文法通过显式括号分组天然规避），补 2 个回归测试，已提交 a78e7c2。
-- 子项 4 ✅：e4004444 FOR READ ONLY/FETCH ONLY — 扩展 ForMode 枚举 + 文法 + 测试。顺带修复 fetchClause 既有的两处缺陷（VisitSelectStatement 漏赋值 select.Fetch、Fetch.ToString 漏输出 ONLY）。全量 480 测试通过。
-- 已完成步骤：4 个子项的迁移/评估与测试
-- 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd、PG RETURNING OLD/NEW f47a8b30、LOCK 语句 6697c063、JOIN USING 序列化缺陷修复等）
+- 子项 4 ✅：e4004444 FOR READ ONLY/FETCH ONLY — 扩展 ForMode 枚举 + 文法 + 测试。顺带修复 fetchClause 既有的两处缺陷（VisitSelectStatement 漏赋值 select.Fetch、Fetch.ToString 漏输出 ONLY）。已提交 1cb2196。
+- 子项 5 ✅（既有缺陷）：JOIN USING 序列化丢失 — VisitJoinClause 漏处理 USING 分支，已修复。已提交 0cb2945。
+- 子项 6 ✅：6697c063 LOCK TABLE 语句 — 新增 LockMode/LockStatement 类、StatementVisitor 接口方法、文法 lockStatement/lockMode 规则、AstBuilder VisitLockStatement/VisitLockMode、TablesNamesFinder 表名提取；新增 LockTest 16 个用例。全量 498 测试通过。
+- 已完成步骤：6 个子项的迁移/评估与测试
+- 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd、PG RETURNING OLD/NEW f47a8b30 等）
 - 阻塞项：无
 
 ## 最近完成

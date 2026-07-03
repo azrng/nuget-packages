@@ -8,6 +8,7 @@ using Azrng.JSqlParser.Schema;
 using Azrng.JSqlParser.Statement;
 using Azrng.JSqlParser.Statement.Delete;
 using Azrng.JSqlParser.Statement.Insert;
+using Azrng.JSqlParser.Statement.Lock;
 using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Statement.Update;
 using Azrng.JSqlParser.Statement.CreateTable;
@@ -62,6 +63,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.explainStatement() != null) return Visit(context.explainStatement());
         if (context.grantStatement() != null) return Visit(context.grantStatement());
         if (context.sessionStatement() != null) return Visit(context.sessionStatement());
+        if (context.lockStatement() != null) return Visit(context.lockStatement());
 
         return new UnsupportedStatement();
     }
@@ -756,6 +758,43 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return session;
+    }
+
+    public override object VisitLockStatement(JSqlParserGrammar.LockStatementContext context)
+    {
+        var table = (Table)Visit(context.table());
+        var lockMode = (LockMode)Visit(context.lockMode());
+        var stmt = new LockStatement(table, lockMode);
+
+        if (context.NOWAIT() != null)
+        {
+            stmt.NoWait = true;
+        }
+        else if (context.WAIT() != null)
+        {
+            stmt.WaitSeconds = long.Parse(context.LONG_VALUE().GetText());
+        }
+
+        return stmt;
+    }
+
+    public override object VisitLockMode(JSqlParserGrammar.LockModeContext context)
+    {
+        // 按 token 序列判断（与文法 lockMode 分支对应）
+        // 文法分支顺序：ROW SHARE | ROW EXCLUSIVE | SHARE ROW EXCLUSIVE | SHARE UPDATE | SHARE | EXCLUSIVE
+        var tokens = context.children.OfType<ITerminalNode>().Select(t => t.Symbol.Type).ToList();
+
+        if (tokens.SequenceEqual(new[] { JSqlParserGrammarLexer.ROW, JSqlParserGrammarLexer.SHARE }))
+            return LockMode.RowShare;
+        if (tokens.SequenceEqual(new[] { JSqlParserGrammarLexer.ROW, JSqlParserGrammarLexer.EXCLUSIVE }))
+            return LockMode.RowExclusive;
+        if (tokens.SequenceEqual(new[] { JSqlParserGrammarLexer.SHARE, JSqlParserGrammarLexer.ROW, JSqlParserGrammarLexer.EXCLUSIVE }))
+            return LockMode.ShareRowExclusive;
+        if (tokens.SequenceEqual(new[] { JSqlParserGrammarLexer.SHARE, JSqlParserGrammarLexer.UPDATE }))
+            return LockMode.ShareUpdate;
+        if (tokens.Count == 1 && tokens[0] == JSqlParserGrammarLexer.SHARE)
+            return LockMode.Share;
+        return LockMode.Exclusive;
     }
 
     public override object VisitDescribeStatement(JSqlParserGrammar.DescribeStatementContext context)

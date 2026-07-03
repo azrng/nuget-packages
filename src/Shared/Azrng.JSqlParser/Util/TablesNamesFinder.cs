@@ -443,4 +443,11 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
 
     // JSqlParser 5.4
     public object? Visit<S>(Statement.SessionStatement sessionStatement, S context) => null;
+
+    // JSqlParser 5.4+ - LOCK TABLE
+    public object? Visit<S>(Statement.Lock.LockStatement lockStatement, S context)
+    {
+        AddTable(lockStatement.Table);
+        return null;
+    }
 }

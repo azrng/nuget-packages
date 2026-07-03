@@ -49,6 +49,7 @@ statement
     | explainStatement
     | grantStatement
     | sessionStatement
+    | lockStatement
     ;
 
 // ══════════════════════════════════════════════
@@ -527,6 +528,23 @@ sessionStatement
 
 sessionOption
     : identifier EQUALS identifier
+    ;
+
+// ══════════════════════════════════════════════
+// LOCK TABLE statement
+// ══════════════════════════════════════════════
+
+lockStatement
+    : LOCK TABLE table IN lockMode MODE (NOWAIT | WAIT LONG_VALUE)?
+    ;
+
+lockMode
+    : ROW SHARE
+    | ROW EXCLUSIVE
+    | SHARE ROW EXCLUSIVE
+    | SHARE UPDATE
+    | SHARE
+    | EXCLUSIVE
     ;
 
 // ══════════════════════════════════════════════
