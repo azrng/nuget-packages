@@ -101,6 +101,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.Offset = (Offset)Visit(context.offsetClause());
         }
 
+        if (context.forUpdateClause() != null)
+        {
+            VisitForUpdateClause(context.forUpdateClause(), select);
+        }
+
         return select;
     }
 
@@ -266,6 +271,55 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return select;
+    }
+
+    /// <summary>
+    /// 解析 FOR UPDATE / FOR SHARE 子句，填充 Select 基类的 ForMode/ForUpdateTables/Wait/NoWait/SkipLocked
+    /// 以及可选的 OrderByElements + ForUpdateBeforeOrderBy。
+    /// </summary>
+    private void VisitForUpdateClause(JSqlParserGrammar.ForUpdateClauseContext context, Select select)
+    {
+        select.ForMode = (ForMode)Visit(context.forMode());
+
+        if (context.OF() != null)
+        {
+            var tables = context.table();
+            select.ForUpdateTables = new List<Table>();
+            foreach (var tableCtx in tables)
+            {
+                select.ForUpdateTables.Add((Table)Visit(tableCtx));
+            }
+        }
+
+        if (context.WAIT() != null)
+        {
+            select.Wait = new Wait { Timeout = long.Parse(context.LONG_VALUE().GetText()) };
+        }
+
+        if (context.NOWAIT() != null)
+        {
+            select.NoWait = true;
+        }
+        else if (context.SKIP_KW() != null)
+        {
+            select.SkipLocked = true;
+        }
+
+        // FOR UPDATE 内含 ORDER BY（Oracle 风格：FOR UPDATE ... ORDER BY ...）
+        if (context.orderByClause() != null)
+        {
+            select.OrderByElements = (List<OrderByElement>)Visit(context.orderByClause());
+            select.ForUpdateBeforeOrderBy = true;
+        }
+    }
+
+    public override object VisitForMode(JSqlParserGrammar.ForModeContext context)
+    {
+        // NO KEY UPDATE / KEY SHARE 优先判断（多 token 组合）
+        if (context.NO() != null) return ForMode.NO_KEY_UPDATE;
+        if (context.KEY() != null) return ForMode.KEY_SHARE;
+        if (context.UPDATE() != null) return ForMode.UPDATE;
+        return ForMode.SHARE;
     }
 
     public override object VisitSelectItem(JSqlParserGrammar.SelectItemContext context)

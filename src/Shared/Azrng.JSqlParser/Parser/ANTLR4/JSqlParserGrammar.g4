@@ -56,7 +56,7 @@ statement
 // ══════════════════════════════════════════════
 
 selectStatement
-    : withClause? selectBody orderByClause? limitClause? offsetClause? fetchClause?
+    : withClause? selectBody orderByClause? limitClause? offsetClause? fetchClause? forUpdateClause?
     | withClause? fromQuery
     ;
 
@@ -196,6 +196,17 @@ windowFrameBound
 
 qualifyClause
     : QUALIFY expression
+    ;
+
+forUpdateClause
+    : FOR forMode (OF table (COMMA table)*)? (WAIT LONG_VALUE)? (NOWAIT | SKIP_KW LOCKED)? orderByClause?
+    ;
+
+forMode
+    : NO KEY UPDATE
+    | KEY SHARE
+    | UPDATE
+    | SHARE
     ;
 
 preferringClause
