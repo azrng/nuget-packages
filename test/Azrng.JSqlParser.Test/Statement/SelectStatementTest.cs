@@ -236,6 +236,34 @@ public class SelectStatementTest
         Assert.Equal(", orders", result);
     }
 
+    /// <summary>
+    /// JOIN ... USING (columns) 应正确解析 UsingColumns 并完整往返序列化。
+    /// 此前 VisitJoinClause 漏处理 USING（仅处理 ON），导致序列化丢失 USING 子句，已修复。
+    /// </summary>
+    [Fact]
+    public void Select_InnerJoinUsing_ShouldParseAndDeparse()
+    {
+        var sql = "SELECT a.id FROM x a INNER JOIN y b USING (z)";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        Assert.NotNull(select.Joins);
+        Assert.Single(select.Joins);
+        Assert.NotNull(select.Joins![0].OnExpression == null ? select.Joins[0].UsingColumns : null);
+        Assert.Single(select.Joins[0].UsingColumns);
+        Assert.Equal("z", select.Joins[0].UsingColumns[0].ColumnName);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_JoinUsing_MultipleColumns_ShouldParseAndDeparse()
+    {
+        var sql = "SELECT * FROM a LEFT JOIN b USING (c1, c2, c3)";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        Assert.Equal(3, select.Joins![0].UsingColumns.Count);
+        Assert.Equal(sql, select.ToString());
+    }
+
     #endregion
 
     #region 子查询

@@ -403,6 +403,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 join.OnExpression = (Expression.Expression)Visit(cond.expression());
             }
+            else if (cond.USING() != null)
+            {
+                join.UsingColumns = cond.identifierList().identifier()
+                    .Select(id => new Column { ColumnName = id.GetText() }).ToList();
+            }
         }
 
         return join;
