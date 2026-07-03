@@ -603,13 +603,16 @@ namespace Common.Cache.Redis
             {
                 if (_activeSubscriptions.TryGetValue(subscriptionKey, out var existingSubscription))
                 {
-                    if (!existingSubscription.IsClosing)
+                    if (existingSubscription.IsClosing)
                     {
-                        return existingSubscription;
+                        _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                        continue;
                     }
 
-                    _activeSubscriptions.TryRemove(subscriptionKey, out _);
-                    continue;
+                    // 等待底层 Redis 订阅真正建立完成。若首个调用方初始化失败，
+                    // 这里会抛出异常，由上层捕获；循环回到 TryGetValue 时该对象已被清理，可重新创建。
+                    await existingSubscription.Initialization.ConfigureAwait(false);
+                    return existingSubscription;
                 }
 
                 var createdSubscription = new ChannelSubscription(subscriptionKey, new CancellationTokenSource());
@@ -632,11 +635,13 @@ namespace Common.Cache.Redis
                         createdSubscription.Broadcast(channel, value, _logger);
                     });
 
+                    createdSubscription.CompleteInitialization();
                     _logger.LogInformation("创建新订阅，频道：{Channel}", subscriptionKey);
                     return createdSubscription;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    createdSubscription.FailInitialization(ex);
                     _activeSubscriptions.TryRemove(subscriptionKey, out _);
                     createdSubscription.TryBeginClose();
                     createdSubscription.CancellationTokenSource.Cancel();

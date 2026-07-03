@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Common.Cache.Redis
 {
@@ -16,6 +17,11 @@ namespace Common.Cache.Redis
         private int _isClosing;
         private int _disposed;
 
+        // 表示底层 Redis Subscribe 是否完成。并发调用方拿到本对象后必须 await 此 Task，
+        // 才能确认订阅真正建立；失败时此 Task 会带上异常，调用方据此重试。
+        private readonly TaskCompletionSource<ChannelSubscription> _initialization =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public string Channel { get; }
 
         public CancellationTokenSource CancellationTokenSource { get; }
@@ -24,10 +30,25 @@ namespace Common.Cache.Redis
 
         public bool IsClosing => Volatile.Read(ref _isClosing) == 1;
 
+        /// <summary>等待底层 Redis 订阅初始化完成。</summary>
+        public Task<ChannelSubscription> Initialization => _initialization.Task;
+
         public ChannelSubscription(string channel, CancellationTokenSource cancellationTokenSource)
         {
             Channel = channel ?? throw new ArgumentNullException(nameof(channel));
             CancellationTokenSource = cancellationTokenSource ?? throw new ArgumentNullException(nameof(cancellationTokenSource));
+        }
+
+        /// <summary>标记 Redis 订阅初始化成功。</summary>
+        public void CompleteInitialization()
+        {
+            _initialization.TrySetResult(this);
+        }
+
+        /// <summary>标记 Redis 订阅初始化失败。</summary>
+        public void FailInitialization(Exception exception)
+        {
+            _initialization.TrySetException(exception);
         }
 
         public bool TryAddSubscriber(SubscriberInfo subscriber)

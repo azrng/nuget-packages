@@ -18,6 +18,7 @@ namespace Common.Cache.Redis
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
         private readonly Task _initialConnectTask;
+        private readonly CancellationTokenSource _disposeCts = new();
 
         private IRedisConnection? _connection;
         private IRedisDatabase? _database;
@@ -41,7 +42,8 @@ namespace Common.Cache.Redis
 
             // 启动后台连接，不阻塞构造函数；首次操作时由 EnsureConnectedAsync 等待其结果。
             // 这样既保留了"启动即连"的语义，又避免了 sync-over-async 在带同步上下文的环境（如测试宿主）中死锁。
-            _initialConnectTask = Task.Run(ConnectAsync);
+            // _disposeCts 协调后台任务与释放：Dispose 时取消，避免释放后后台任务仍写入连接字段。
+            _initialConnectTask = Task.Run(() => ConnectAsync(_disposeCts.Token));
         }
 
         public ConnectionMultiplexer? ConnectionMultiplexer => (_connection as StackExchangeRedisConnection)?.ConnectionMultiplexer;
@@ -71,10 +73,16 @@ namespace Common.Cache.Redis
             {
                 await _initialConnectTask.ConfigureAwait(false);
             }
+            catch (OperationCanceledException)
+            {
+                // 释放导致的取消，视为连接不可用，交给下方统一处理。
+            }
             catch
             {
                 // 首次连接失败已记录，此处吞掉，避免每次访问都重抛同一个历史异常。
             }
+
+            ThrowIfDisposed();
 
             if (HasConnection)
             {
@@ -92,7 +100,11 @@ namespace Common.Cache.Redis
 
             try
             {
-                await ConnectAsync().ConfigureAwait(false);
+                await ConnectAsync(_disposeCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw CreateUnavailableException();
             }
             catch (Exception ex)
             {
@@ -108,9 +120,9 @@ namespace Common.Cache.Redis
             }
         }
 
-        private async Task ConnectAsync()
+        private async Task ConnectAsync(CancellationToken cancellationToken)
         {
-            await _semaphoreSlim.WaitAsync();
+            await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             IRedisConnection? createdConnection = null;
 
             try
@@ -124,7 +136,12 @@ namespace Common.Cache.Redis
 
                 _logger.LogInformation("redis开始初始化连接");
                 var configurationOptions = ConfigurationOptions.Parse(_redisConfig.ConnectionString);
-                createdConnection = await _connectionFactory.ConnectAsync(configurationOptions);
+                createdConnection = await _connectionFactory.ConnectAsync(configurationOptions).ConfigureAwait(false);
+
+                // 建立连接期间可能被 Dispose，放弃本次结果。
+                cancellationToken.ThrowIfCancellationRequested();
+                ThrowIfDisposed();
+
                 var createdDatabase = createdConnection.GetDatabase();
                 var createdSubscriber = createdConnection.GetSubscriber();
 
@@ -188,12 +205,24 @@ namespace Common.Cache.Redis
                 return;
             }
 
+            // 取消后台连接任务，并等待其结束，避免释放后仍写入连接字段或 fault。
+            _disposeCts.Cancel();
+            try
+            {
+                _initialConnectTask.GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // 后台任务因取消或连接失败而结束，忽略。
+            }
+
             if (disposing)
             {
                 Interlocked.Exchange(ref _connection, null)?.Dispose();
                 _database = null;
                 _subscriber = null;
                 _semaphoreSlim.Dispose();
+                _disposeCts.Dispose();
             }
 
             _disposed = true;
@@ -204,6 +233,17 @@ namespace Common.Cache.Redis
             if (_disposed)
             {
                 return;
+            }
+
+            // 取消后台连接任务，并异步等待其结束。
+            _disposeCts.Cancel();
+            try
+            {
+                await _initialConnectTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                // 后台任务因取消或连接失败而结束，忽略。
             }
 
             var connection = Interlocked.Exchange(ref _connection, null);
@@ -219,6 +259,7 @@ namespace Common.Cache.Redis
             _database = null;
             _subscriber = null;
             _semaphoreSlim.Dispose();
+            _disposeCts.Dispose();
             _disposed = true;
             GC.SuppressFinalize(this);
         }
