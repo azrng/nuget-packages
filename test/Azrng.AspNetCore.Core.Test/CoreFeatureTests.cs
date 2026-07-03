@@ -5,6 +5,7 @@ using Azrng.AspNetCore.Core.JsonConverters;
 using Azrng.AspNetCore.Core.Middleware;
 using Azrng.AspNetCore.Core.Model;
 using Azrng.AspNetCore.Core.PreConfigure;
+using Azrng.Core.DependencyInjection;
 using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
 using FluentAssertions;
@@ -318,6 +319,32 @@ public class CoreFeatureTests
         await completed.Should().NotThrowAsync();
     }
 
+    [Fact]
+    public void RegisterBusinessServices_RegistersConcreteTypeWhenOnlyLifetimeMarkerIsImplemented()
+    {
+        var services = new ServiceCollection();
+
+        services.RegisterBusinessServices(typeof(OnlyScopedDependencyService).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<OnlyScopedDependencyService>().Should().NotBeNull();
+        services.Should().NotContain(descriptor =>
+            descriptor.ServiceType == typeof(IScopedDependency)
+            && descriptor.ImplementationType == typeof(OnlyScopedDependencyService));
+    }
+
+    [Fact]
+    public void RegisterBusinessServices_RegistersBusinessInterfaceWhenImplemented()
+    {
+        var services = new ServiceCollection();
+
+        services.RegisterBusinessServices(typeof(InterfaceScopedDependencyService).Assembly);
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ISampleScopedService>()
+            .Should().BeOfType<InterfaceScopedDependencyService>();
+    }
+
     [Theory]
     [InlineData("Forbidden", StatusCodes.Status401Unauthorized, "401")]
     [InlineData("NotFound", StatusCodes.Status404NotFound, "404")]
@@ -440,6 +467,18 @@ public class SampleOptions
     public string? Name { get; set; }
 
     public List<string> Trace { get; } = new();
+}
+
+internal interface ISampleScopedService
+{
+}
+
+internal class OnlyScopedDependencyService : IScopedDependency
+{
+}
+
+internal class InterfaceScopedDependencyService : IScopedDependency, ISampleScopedService
+{
 }
 
 internal class CustomResult : IResultModel

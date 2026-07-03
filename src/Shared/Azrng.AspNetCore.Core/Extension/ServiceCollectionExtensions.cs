@@ -337,6 +337,9 @@ public static class ServiceCollectionExtensions
         dependencyTypes.ForEach(implementType =>
         {
             var interfaces = implementType.GetInterfaces().ToList();
+            interfaces.RemoveAll(x => x == typeof(ITransientDependency)
+                                      || x == typeof(IScopedDependency)
+                                      || x == typeof(ISingletonDependency));
             interfaces.RemoveAll(x =>
                 ignoreNameSpaces.Any(p => x.FullName is not null && x.FullName.IndexOf(p, StringComparison.Ordinal) == 0));
             if (interfaces.Count > 0)
