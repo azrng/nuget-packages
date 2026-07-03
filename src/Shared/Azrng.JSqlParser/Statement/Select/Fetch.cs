@@ -18,9 +18,9 @@ public class Fetch
         var sb = new System.Text.StringBuilder(" FETCH ");
         sb.Append(FetchFirst ? "FIRST" : "NEXT");
         if (FetchExpression != null) sb.Append(' ').Append(FetchExpression);
-        sb.Append(Percent ? " PERCENT" : "");
+        if (Percent) sb.Append(" PERCENT");
         sb.Append(RowOrRows ? " ROWS" : " ROW");
-        if (WithTies) sb.Append(" WITH TIES");
+        sb.Append(WithTies ? " WITH TIES" : " ONLY");
         return sb.ToString();
     }
 }

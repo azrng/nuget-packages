@@ -1,8 +1,8 @@
 namespace Azrng.JSqlParser.Statement.Select;
 
 /// <summary>
-/// FOR UPDATE / FOR SHARE 锁模式。
-/// 移植自 JSqlParser 5.4 ForMode 枚举。
+/// FOR UPDATE / FOR SHARE / FOR READ ONLY 锁模式。
+/// 移植自 JSqlParser 5.4 ForMode 枚举及 commit e4004444 (FOR READ ONLY/FETCH ONLY)。
 /// </summary>
 public enum ForMode
 {
@@ -16,7 +16,13 @@ public enum ForMode
     NO_KEY_UPDATE,
 
     /// <summary>FOR KEY SHARE — 键级共享锁（PostgreSQL）</summary>
-    KEY_SHARE
+    KEY_SHARE,
+
+    /// <summary>FOR READ ONLY — 只读声明（DB2）</summary>
+    READ_ONLY,
+
+    /// <summary>FOR FETCH ONLY — 只读声明（DB2）</summary>
+    FETCH_ONLY
 }
 
 /// <summary>
@@ -31,6 +37,8 @@ public static class ForModeExtensions
         ForMode.SHARE => "SHARE",
         ForMode.NO_KEY_UPDATE => "NO KEY UPDATE",
         ForMode.KEY_SHARE => "KEY SHARE",
+        ForMode.READ_ONLY => "READ ONLY",
+        ForMode.FETCH_ONLY => "FETCH ONLY",
         _ => mode.ToString()
     };
 }

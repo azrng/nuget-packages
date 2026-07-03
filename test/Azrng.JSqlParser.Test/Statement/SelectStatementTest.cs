@@ -367,4 +367,34 @@ public class SelectStatementTest
     }
 
     #endregion
+
+    #region FETCH 子句
+
+    /// <summary>
+    /// FETCH FIRST n ROWS ONLY 应正确解析并完整往返序列化。
+    /// 此前 VisitSelectStatement 漏处理 fetchClause 且 Fetch.ToString 漏输出 ONLY，已修复。
+    /// </summary>
+    [Fact]
+    public void Select_FetchFirstNRows_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY")!;
+        var select = (PlainSelect)stmt;
+        Assert.NotNull(select.Fetch);
+        Assert.True(select.Fetch!.FetchFirst);
+        Assert.True(select.Fetch.RowOrRows);
+        Assert.Equal("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY", stmt.ToString());
+    }
+
+    [Fact]
+    public void Select_FetchNextRowsWithTies_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH NEXT 10 ROWS WITH TIES")!;
+        var select = (PlainSelect)stmt;
+        Assert.NotNull(select.Fetch);
+        Assert.False(select.Fetch!.FetchFirst);
+        Assert.True(select.Fetch.WithTies);
+        Assert.Equal("SELECT * FROM mytable FETCH NEXT 10 ROWS WITH TIES", stmt.ToString());
+    }
+
+    #endregion
 }

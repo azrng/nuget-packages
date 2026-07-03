@@ -101,6 +101,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.Offset = (Offset)Visit(context.offsetClause());
         }
 
+        if (context.fetchClause() != null)
+        {
+            select.Fetch = (Fetch)Visit(context.fetchClause());
+        }
+
         if (context.forUpdateClause() != null)
         {
             VisitForUpdateClause(context.forUpdateClause(), select);
@@ -313,11 +318,35 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
     }
 
+    public override object VisitFetchClause(JSqlParserGrammar.FetchClauseContext context)
+    {
+        var fetch = new Fetch
+        {
+            FetchFirst = context.FIRST() != null,
+            RowOrRows = context.ROWS() != null,
+            WithTies = context.TIES() != null
+        };
+
+        if (context.expression() != null)
+        {
+            fetch.FetchExpression = (Expression.Expression)Visit(context.expression());
+        }
+
+        if (context.PERCENT() != null)
+        {
+            fetch.Percent = true;
+        }
+
+        return fetch;
+    }
+
     public override object VisitForMode(JSqlParserGrammar.ForModeContext context)
     {
-        // NO KEY UPDATE / KEY SHARE 优先判断（多 token 组合）
+        // NO KEY UPDATE / KEY SHARE / READ ONLY / FETCH ONLY 优先判断（多 token 组合）
         if (context.NO() != null) return ForMode.NO_KEY_UPDATE;
         if (context.KEY() != null) return ForMode.KEY_SHARE;
+        if (context.READ() != null) return ForMode.READ_ONLY;
+        if (context.FETCH() != null) return ForMode.FETCH_ONLY;
         if (context.UPDATE() != null) return ForMode.UPDATE;
         return ForMode.SHARE;
     }

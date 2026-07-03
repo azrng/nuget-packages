@@ -205,6 +205,8 @@ forUpdateClause
 forMode
     : NO KEY UPDATE
     | KEY SHARE
+    | READ ONLY
+    | FETCH ONLY
     | UPDATE
     | SHARE
     ;

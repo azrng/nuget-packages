@@ -178,4 +178,33 @@ public class ForUpdateTest
         Assert.Equal(ForMode.KEY_SHARE, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM users FOR KEY SHARE", stmt.ToString());
     }
+
+    [Fact]
+    public void ForReadOnly_ShouldParseDb2Mode()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR READ ONLY")!;
+        var plainSelect = (PlainSelect)stmt;
+        Assert.Equal(ForMode.READ_ONLY, plainSelect.ForMode);
+        Assert.Equal("SELECT * FROM mytable FOR READ ONLY", stmt.ToString());
+    }
+
+    [Fact]
+    public void ForFetchOnly_ShouldParseDb2Mode()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR FETCH ONLY")!;
+        var plainSelect = (PlainSelect)stmt;
+        Assert.Equal(ForMode.FETCH_ONLY, plainSelect.ForMode);
+        Assert.Equal("SELECT * FROM mytable FOR FETCH ONLY", stmt.ToString());
+    }
+
+    [Fact]
+    public void ForReadOnly_AfterFetchClause_ShouldParseAndDeparse()
+    {
+        // DB2: FETCH FIRST n ROWS ONLY 后跟 FOR READ ONLY
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY")!;
+        var plainSelect = (PlainSelect)stmt;
+        Assert.Equal(ForMode.READ_ONLY, plainSelect.ForMode);
+        Assert.NotNull(plainSelect.Fetch);
+        Assert.Equal("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY", stmt.ToString());
+    }
 }
