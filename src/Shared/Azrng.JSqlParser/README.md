@@ -177,7 +177,13 @@ Console.WriteLine(stmt.ToString());
 
 ### 1.0.0-beta1
 
-从JSqlParser 5.4移植
+从 JSqlParser 5.4 移植。
+
+- 上游版本：JSqlParser 5.4
+- 上游 Tag：`jsqlparser-5.4`
+- 上游 Commit：`7d2e6b65324ce5770681115202c47b6cb5412c1b`
+- 上游提交时间：2025-05-25
+- 上游 Commit 说明：`feat: Session Statement`
 
 ## 许可证
 
