@@ -86,9 +86,10 @@ plainSelect
     ;
 
 setOperator
-    : UNION ALL?
-    | INTERSECT ALL?
-    | (EXCEPT | MINUS_KW) ALL?
+    : UNION (ALL | DISTINCT)?
+    | INTERSECT (ALL | DISTINCT)?
+    | EXCEPT (ALL | DISTINCT)?
+    | MINUS_KW (ALL | DISTINCT)?
     ;
 
 selectColumnList

@@ -318,6 +318,63 @@ public class SelectStatementTest
         Assert.IsType<SetOperationList>(select);
     }
 
+    /// <summary>
+    /// 集合操作的 ALL/DISTINCT 修饰符应正确解析并往返序列化。
+    /// 对应上游 issue #2419（ExceptOp/MinusOp modifier 丢失），ANTLR 版还存在 DISTINCT 完全不支持的问题，已修复。
+    /// </summary>
+    [Theory]
+    [InlineData("SELECT a FROM t1 EXCEPT ALL SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 EXCEPT DISTINCT SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 EXCEPT SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 MINUS ALL SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 MINUS DISTINCT SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 MINUS SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 UNION ALL SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 UNION DISTINCT SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 INTERSECT ALL SELECT a FROM t2")]
+    [InlineData("SELECT a FROM t1 INTERSECT DISTINCT SELECT a FROM t2")]
+    public void SetOperation_AllDistinct_ShouldRoundTrip(string sql)
+    {
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Fact]
+    public void SetOperation_ExceptDistinct_ShouldSetDistinctFlag()
+    {
+        var setOpList = (SetOperationList)CCJSqlParserUtil.Parse(
+            "SELECT a FROM t1 EXCEPT DISTINCT SELECT a FROM t2")!;
+        var op = setOpList.Operations[0];
+        Assert.Equal(SetOperation.OperationType.EXCEPT, op.Type);
+        Assert.False(op.All);
+        Assert.True(op.Distinct);
+    }
+
+    [Fact]
+    public void SetOperation_MinusAll_ShouldSetMinusTypeAndAllFlag()
+    {
+        var setOpList = (SetOperationList)CCJSqlParserUtil.Parse(
+            "SELECT a FROM t1 MINUS ALL SELECT a FROM t2")!;
+        var op = setOpList.Operations[0];
+        Assert.Equal(SetOperation.OperationType.MINUS, op.Type);
+        Assert.True(op.All);
+    }
+
+    /// <summary>
+    /// 混合集合操作时修饰符不应泄漏到下一个操作符。
+    /// 对应上游 issue #2419 的 modifier 泄漏场景。
+    /// </summary>
+    [Fact]
+    public void SetOperation_MixedModifiers_ShouldNotLeak()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "SELECT a FROM t1 UNION ALL SELECT b FROM t2 EXCEPT DISTINCT SELECT c FROM t3")!;
+        var deparsed = stmt.ToString()!;
+        Assert.Contains("UNION ALL", deparsed);
+        Assert.Contains("EXCEPT DISTINCT", deparsed);
+        Assert.DoesNotContain("EXCEPT ALL", deparsed);
+    }
+
     #endregion
 
     #region WITH (CTE)

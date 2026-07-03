@@ -2019,11 +2019,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     private static SetOperation CreateSetOperation(JSqlParserGrammar.SetOperatorContext context)
     {
+        bool all = context.ALL() != null;
+        bool distinct = context.DISTINCT() != null;
+
         if (context.UNION() != null)
-            return new SetOperation(SetOperation.OperationType.UNION, context.ALL() != null);
+            return new SetOperation(SetOperation.OperationType.UNION, all, distinct);
         if (context.INTERSECT() != null)
-            return new SetOperation(SetOperation.OperationType.INTERSECT, context.ALL() != null);
-        return new SetOperation(SetOperation.OperationType.EXCEPT, context.ALL() != null);
+            return new SetOperation(SetOperation.OperationType.INTERSECT, all, distinct);
+        if (context.EXCEPT() != null)
+            return new SetOperation(SetOperation.OperationType.EXCEPT, all, distinct);
+        return new SetOperation(SetOperation.OperationType.MINUS, all, distinct);
     }
 
     private static void SetJoinType(Join join, JSqlParserGrammar.JoinTypeContext context)

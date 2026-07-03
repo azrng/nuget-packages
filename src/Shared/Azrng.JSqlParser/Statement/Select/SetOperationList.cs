@@ -27,7 +27,7 @@ public class SetOperationList : Select
 }
 
 /// <summary>
-/// Represents a set operation (UNION, INTERSECT, EXCEPT).
+/// Represents a set operation (UNION, INTERSECT, EXCEPT, MINUS).
 /// </summary>
 public class SetOperation
 {
@@ -35,7 +35,8 @@ public class SetOperation
     {
         UNION,
         INTERSECT,
-        EXCEPT
+        EXCEPT,
+        MINUS
     }
 
     public OperationType Type { get; set; }
@@ -44,14 +45,17 @@ public class SetOperation
 
     public SetOperation() { }
 
-    public SetOperation(OperationType type, bool all = false)
+    public SetOperation(OperationType type, bool all = false, bool distinct = false)
     {
         Type = type;
         All = all;
+        Distinct = distinct;
     }
 
     public override string ToString()
     {
-        return Type.ToString() + (All ? " ALL" : "");
+        var modifier = All ? " ALL" : (Distinct ? " DISTINCT" : "");
+        var op = Type == OperationType.MINUS ? "MINUS" : Type.ToString();
+        return op + modifier;
     }
 }
