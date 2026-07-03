@@ -69,6 +69,8 @@ namespace Common.Cache.Redis.Test
 
         public Exception? StringGetException { get; set; }
 
+        public Exception? ScanException { get; set; }
+
         public List<(ulong Cursor, string Pattern, int Count)> ScanCalls { get; } = new();
 
         public Task<RedisValue> StringGetAsync(RedisKey key)
@@ -139,6 +141,11 @@ namespace Common.Cache.Redis.Test
 
         public Task<RedisScanResult> ScanAsync(ulong cursor, string pattern, int count)
         {
+            if (ScanException != null)
+            {
+                throw ScanException;
+            }
+
             ScanCalls.Add((cursor, pattern, count));
 
             var matchedKeys = _values.Keys

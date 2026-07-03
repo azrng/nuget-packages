@@ -61,6 +61,49 @@ namespace Common.Cache.Redis.Test
         }
 
         [Fact]
+        public async Task GetOrCreateAsync_WhenFactoryThrows_DoesNotTreatAsCacheFailureOrCallTwice()
+        {
+            var provider = CreateProvider(out _, out _, new RedisCacheOptions
+            {
+                ConnectionString = "localhost:6379,DefaultDatabase=0",
+                KeyPrefix = "default",
+                CacheEmptyCollections = false,
+                InitErrorIntervalSecond = 0,
+                FailThrowException = false
+            });
+            var loadCount = 0;
+            var factoryException = new InvalidOperationException("factory boom");
+
+            var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                provider.GetOrCreateAsync<string>("factory-error", () =>
+                {
+                    loadCount++;
+                    return Task.FromException<string>(factoryException);
+                }));
+
+            Assert.Same(factoryException, thrown);
+            Assert.Equal(1, loadCount);
+        }
+
+        [Fact]
+        public async Task RemoveMatchKeyAsync_WhenScanFailsAndFailThrowExceptionFalse_ReturnsFalse()
+        {
+            var provider = CreateProvider(out var database, out _, new RedisCacheOptions
+            {
+                ConnectionString = "localhost:6379,DefaultDatabase=0",
+                KeyPrefix = "default",
+                CacheEmptyCollections = false,
+                InitErrorIntervalSecond = 0,
+                FailThrowException = false
+            });
+            database.ScanException = new InvalidOperationException("scan failed");
+
+            var removed = await provider.RemoveMatchKeyAsync("user_*");
+
+            Assert.False(removed);
+        }
+
+        [Fact]
         public async Task SubscribeAsync_AllowsDefaultValuePayloads_AndOnlyUnsubscribesOnce()
         {
             var provider = CreateProvider(out _, out var subscriber);

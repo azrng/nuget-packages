@@ -59,14 +59,18 @@ namespace Common.Cache.Redis
         /// </summary>
         private Task StartConnectTracked(CancellationToken cancellationToken)
         {
-            var task = ConnectCoreAsync(cancellationToken);
+            Task task;
             lock (_activeConnectTasksLock)
             {
-                if (!_disposed)
+                if (_disposed)
                 {
-                    _activeConnectTasks.Add(task);
+                    return Task.FromException(new ObjectDisposedException(nameof(RedisManage)));
                 }
+
+                task = ConnectCoreAsync(cancellationToken);
+                _activeConnectTasks.Add(task);
             }
+
             // 任务完成后清除标记（无论成功失败）。Dispose 可能在任务进行中读取此字段并 await。
             // 此 continuation 不 rethrow，仅做集合移除；原始 task 的异常通过返回值交给调用方观察。
             task.ContinueWith(
@@ -264,6 +268,20 @@ namespace Common.Cache.Redis
             }
         }
 
+        private bool TryBeginDispose()
+        {
+            lock (_activeConnectTasksLock)
+            {
+                if (_disposed)
+                {
+                    return false;
+                }
+
+                _disposed = true;
+                return true;
+            }
+        }
+
         // 不提供终结器：RedisManage 不持有非托管资源，且生产中由 DI Singleton 托管，
         // ServiceProvider 释放时调用 Dispose()/DisposeAsync()。提供终结器会在终结器线程上
         // 触发 Dispose(false) 的 sync-over-async 等待（WaitForActiveConnectAsync().GetAwaiter().GetResult()），
@@ -276,13 +294,12 @@ namespace Common.Cache.Redis
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
+            if (!TryBeginDispose())
             {
                 return;
             }
 
             // 先标记释放，阻止新的连接任务进入 ConnectAsync。
-            _disposed = true;
             // 取消所有连接任务（首次 + 后续重连），并等待其结束，避免释放后仍写入连接字段或 fault。
             _disposeCts.Cancel();
             WaitForActiveConnectAsync().GetAwaiter().GetResult();
@@ -299,13 +316,12 @@ namespace Common.Cache.Redis
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed)
+            if (!TryBeginDispose())
             {
                 return;
             }
 
             // 先标记释放，阻止新的连接任务进入 ConnectAsync。
-            _disposed = true;
             // 取消所有连接任务（首次 + 后续重连），并等待其结束。
             _disposeCts.Cancel();
             await WaitForActiveConnectAsync().ConfigureAwait(false);

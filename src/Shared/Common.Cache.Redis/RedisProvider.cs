@@ -94,30 +94,18 @@ namespace Common.Cache.Redis
         {
             EnsureKey(key);
 
+            var redisKey = GetKey(key);
+            IRedisDatabase? database;
+
             try
             {
-                var redisKey = GetKey(key);
-                var database = await _redisManage.GetDatabaseAsync();
+                database = await _redisManage.GetDatabaseAsync();
                 var rawValue = await database.StringGetAsync(redisKey);
 
                 if (rawValue.HasValue && TryGetObject(rawValue, out T? cachedValue))
                 {
                     return cachedValue!;
                 }
-
-                _logger.LogInformation("redis读取为空，开始执行查询操作：key:{Key}", key);
-                var value = await getData();
-
-                if (ShouldCacheValue(value))
-                {
-                    await database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
-                }
-                else
-                {
-                    _logger.LogInformation("{Reason}，不存储到Redis：key:{Key}", GetSkipCacheReason(value), key);
-                }
-
-                return value;
             }
             catch (Exception ex)
             {
@@ -128,6 +116,31 @@ namespace Common.Cache.Redis
                 }
                 return await getData();
             }
+
+            _logger.LogInformation("redis读取为空，开始执行查询操作：key:{Key}", key);
+            var value = await getData();
+
+            try
+            {
+                if (ShouldCacheValue(value))
+                {
+                    await database.StringSetAsync(redisKey, GetJsonStr(value), expiry);
+                }
+                else
+                {
+                    _logger.LogInformation("{Reason}，不存储到Redis：key:{Key}", GetSkipCacheReason(value), key);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "redis缓存GetOrCreate写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                if (_redisConfig.FailThrowException)
+                {
+                    throw;
+                }
+            }
+
+            return value;
         }
 
         public async Task<bool> SetAsync(string key, string value, TimeSpan? expiry = null)
@@ -322,7 +335,7 @@ namespace Common.Cache.Redis
                 {
                     throw;
                 }
-                return Array.Empty<RedisKey>();
+                throw;
             }
         }
 
