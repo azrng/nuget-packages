@@ -644,9 +644,14 @@ primaryExpr
     | structType
     | lambdaExpression
     | connectByPriorOperator
+    | keyExpression
     | OPENING_PAREN expression CLOSING_PAREN
     | columnRef
     | MULTIPLY
+    ;
+
+keyExpression
+    : KEY columnRef
     ;
 
 literal

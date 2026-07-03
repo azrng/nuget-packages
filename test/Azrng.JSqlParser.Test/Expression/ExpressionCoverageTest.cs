@@ -374,6 +374,40 @@ public class ExpressionCoverageTest
 
     #endregion
 
+    #region KeyExpression
+
+    /// <summary>
+    /// MySQL 方言的 KEY 前缀表达式（如 KEY chain.entity）应正确解析并往返。
+    /// 对应上游 commit bfcb8b75 (issue #2409)。
+    /// </summary>
+    [Fact]
+    public void KeyExpression_AsFunctionParameter_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseExpression("aes_decrypt(from_base64(entity), KEY chain.entity)");
+        Assert.NotNull(expr);
+        Assert.Equal("aes_decrypt(from_base64(entity), KEY chain.entity)", expr!.ToString());
+    }
+
+    [Fact]
+    public void KeyExpression_Simple_ShouldBeKeyExpressionType()
+    {
+        var expr = CCJSqlParserUtil.ParseExpression("KEY chain.entity");
+        var keyExpr = Assert.IsType<KeyExpression>(expr);
+        Assert.Equal("chain.entity", keyExpr.Expression!.ToString());
+        Assert.Equal("KEY chain.entity", expr!.ToString());
+    }
+
+    [Fact]
+    public void KeyExpression_InSelect_ShouldRoundTrip()
+    {
+        var sql = "SELECT aes_decrypt(entity, KEY chain.entity) FROM t";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    #endregion
+
     #region InExpression 优先级
 
     /// <summary>

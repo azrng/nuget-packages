@@ -1380,6 +1380,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.subSelect() != null) return Visit(context.subSelect());
         if (context.structType() != null) return Visit(context.structType());
         if (context.lambdaExpression() != null) return Visit(context.lambdaExpression());
+        if (context.keyExpression() != null) return Visit(context.keyExpression());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -1391,6 +1392,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return new NullValue();
+    }
+
+    public override object VisitKeyExpression(JSqlParserGrammar.KeyExpressionContext context)
+    {
+        var inner = (Expression.Expression)Visit(context.columnRef());
+        return new KeyExpression(inner);
     }
 
     public override object VisitLiteral(JSqlParserGrammar.LiteralContext context)

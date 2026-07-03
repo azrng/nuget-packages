@@ -122,6 +122,7 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
     public virtual T Visit<S>(MultiAndExpression multiAndExpression, S context) { foreach (var expr in multiAndExpression.Expressions) expr.Accept(this, context); return default!; }
     public virtual T Visit<S>(ExpressionList expressionList, S context) { foreach (var expr in expressionList.Expressions) expr.Accept(this, context); return default!; }
     public virtual T Visit<S>(RowGetExpression rowGetExpression, S context) { rowGetExpression.Expression?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(KeyExpression keyExpression, S context) { keyExpression.Expression?.Accept(this, context); return default!; }
 
     private T VisitBinary(BinaryExpression binary)
     {

@@ -20,7 +20,8 @@
 - 子项 8 ✅：7fc300f7 EXCEPT/MINUS DISTINCT 支持 — 文法 setOperator 加 DISTINCT 支持并分离 EXCEPT/MINUS；SetOperation 加 MINUS 类型、构造函数接收 distinct、ToString 输出 DISTINCT；CreateSetOperation 传入 distinct 并区分 MINUS；SelectStatementTest 新增 13 个用例。全量 516 测试通过。
 - 子项 9 ✅：091ef964 JOIN FETCH — Join 加 Fetch 属性并在 ToString 输出 FETCH；文法 joinClause 加 FETCH?；VisitJoinClause 设置 Fetch；SelectStatementTest 新增 2 个用例。全量 518 测试通过。
 - 子项 10 ✅：5b5fe6c2 PG cast 后复合字段访问 — 新增 RowGetExpression 类；ExpressionVisitor/Adapter 加 Visit 方法；VisitPostfixExpr 补充处理 DOT identifier 后缀(此前仅处理 DOUBLE_COLON cast，字段访问被丢弃)；ExpressionCoverageTest 新增 3 个用例。全量 521 测试通过。
-- 已完成步骤：10 个子项的迁移/评估与测试
+- 子项 11 ✅：bfcb8b75 KEY 前缀表达式 — 新增 KeyExpression 类；ExpressionVisitor/Adapter 加 Visit 方法；文法 primaryExpr 加 keyExpression 分支(KEY columnRef)；VisitPrimaryExpr/VisitKeyExpression 处理；ExpressionCoverageTest 新增 3 个用例。全量 524 测试通过。
+- 已完成步骤：11 个子项的迁移/评估与测试
 - 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd 等）
 - 阻塞项：无
 
