@@ -14,6 +14,9 @@ public class Update : ASTNodeAccessImpl, Statement
     public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
     public System.Collections.Generic.List<UpdateSet> UpdateSets { get; set; } = new();
 
+    /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
+    public ReturningClause? Returning { get; set; }
+
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -27,6 +30,7 @@ public class Update : ASTNodeAccessImpl, Statement
         sb.Append(" SET ");
         sb.Append(string.Join(", ", UpdateSets));
         if (Where != null) sb.Append(" WHERE ").Append(Where);
+        if (Returning != null) sb.Append(Returning);
         return sb.ToString();
     }
 }

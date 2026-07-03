@@ -11,6 +11,9 @@ public class Delete : ASTNodeAccessImpl, Statement
     public Table? Table { get; set; }
     public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
 
+    /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
+    public ReturningClause? Returning { get; set; }
+
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -18,6 +21,7 @@ public class Delete : ASTNodeAccessImpl, Statement
         var sb = new System.Text.StringBuilder();
         sb.Append("DELETE FROM ").Append(Table);
         if (Where != null) sb.Append(" WHERE ").Append(Where);
+        if (Returning != null) sb.Append(Returning);
         return sb.ToString();
     }
 }

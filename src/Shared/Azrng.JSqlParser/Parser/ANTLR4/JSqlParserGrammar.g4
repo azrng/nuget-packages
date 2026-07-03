@@ -552,7 +552,13 @@ lockMode
 // ══════════════════════════════════════════════
 
 returningClause
-    : RETURNING selectColumnList
+    : (RETURNING | RETURN)
+      (WITH OPENING_PAREN returningOutputAlias (COMMA returningOutputAlias)* CLOSING_PAREN)?
+      selectColumnList
+    ;
+
+returningOutputAlias
+    : identifier AS identifier
     ;
 
 // ══════════════════════════════════════════════

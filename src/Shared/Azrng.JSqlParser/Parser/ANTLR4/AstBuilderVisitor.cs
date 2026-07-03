@@ -517,6 +517,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             insert.UseValues = true;
         }
 
+        if (context.returningClause() != null)
+        {
+            insert.Returning = (ReturningClause)Visit(context.returningClause());
+        }
+
         return insert;
     }
 
@@ -556,6 +561,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             update.Where = (Expression.Expression)Visit(context.whereClause().expression());
         }
 
+        if (context.returningClause() != null)
+        {
+            update.Returning = (ReturningClause)Visit(context.returningClause());
+        }
+
         return update;
     }
 
@@ -569,6 +579,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.whereClause() != null)
         {
             delete.Where = (Expression.Expression)Visit(context.whereClause().expression());
+        }
+
+        if (context.returningClause() != null)
+        {
+            delete.Returning = (ReturningClause)Visit(context.returningClause());
         }
 
         return delete;
@@ -795,6 +810,117 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (tokens.Count == 1 && tokens[0] == JSqlParserGrammarLexer.SHARE)
             return LockMode.Share;
         return LockMode.Exclusive;
+    }
+
+    public override object VisitReturningClause(JSqlParserGrammar.ReturningClauseContext context)
+    {
+        var keyword = context.RETURNING() != null
+            ? ReturningClause.Keyword.RETURNING
+            : ReturningClause.Keyword.RETURN;
+
+        List<ReturningOutputAlias>? outputAliases = null;
+        if (context.WITH() != null)
+        {
+            outputAliases = new List<ReturningOutputAlias>();
+            foreach (var aliasCtx in context.returningOutputAlias())
+            {
+                outputAliases.Add((ReturningOutputAlias)Visit(aliasCtx));
+            }
+        }
+
+        var selectItems = new List<SelectItem>();
+        foreach (var itemCtx in context.selectColumnList().selectItem())
+        {
+            selectItems.Add((SelectItem)Visit(itemCtx));
+        }
+
+        var clause = new ReturningClause(keyword, selectItems, outputAliases);
+
+        // PostgreSQL 18 OLD/NEW 引用归一化：将 old.price / new.* 的限定符
+        // 从 Table 迁移到 ReturningReferenceType + ReturningQualifier。
+        // 若指定了 WITH 别名，按别名映射；否则默认 "old"->OLD, "new"->NEW。
+        NormalizeReturningReferences(clause);
+
+        return clause;
+    }
+
+    public override object VisitReturningOutputAlias(JSqlParserGrammar.ReturningOutputAliasContext context)
+    {
+        var ids = context.identifier();
+        var refType = ReturningReferenceTypeExtensions.From(ids[0].GetText())
+            ?? throw new InvalidOperationException(
+                $"Expected OLD or NEW but found: {ids[0].GetText()}");
+        return new ReturningOutputAlias(refType, ids[1].GetText());
+    }
+
+    /// <summary>
+    /// 将 RETURNING 列表中的 old./new. 限定符（或 WITH 别名定义的别名前缀）
+    /// 从 Table 迁移到 ReturningReferenceType + ReturningQualifier，并清空 Table。
+    /// </summary>
+    private static void NormalizeReturningReferences(ReturningClause clause)
+    {
+        // 构建限定符 -> 引用类型 的映射
+        var qualifierMap = new Dictionary<string, ReturningReferenceType>(StringComparer.OrdinalIgnoreCase);
+        if (clause.OutputAliases != null && clause.OutputAliases.Count > 0)
+        {
+            foreach (var alias in clause.OutputAliases)
+            {
+                if (alias.Alias != null)
+                {
+                    qualifierMap[alias.Alias] = alias.ReferenceType;
+                }
+            }
+        }
+        else
+        {
+            qualifierMap["old"] = ReturningReferenceType.OLD;
+            qualifierMap["new"] = ReturningReferenceType.NEW;
+        }
+
+        foreach (var item in clause.SelectItems)
+        {
+            if (item.Expression is Column col)
+            {
+                NormalizeColumnReference(col, qualifierMap);
+            }
+            else if (item.Expression is AllTableColumns allCols)
+            {
+                NormalizeAllTableColumnsReference(allCols, qualifierMap);
+            }
+        }
+    }
+
+    private static void NormalizeColumnReference(Column col, Dictionary<string, ReturningReferenceType> qualifierMap)
+    {
+        var table = col.Table;
+        // 仅当限定符是简单表名（无 schema/database）时才识别为 OLD/NEW 引用
+        if (table == null || table.SchemaName != null || table.Database != null) return;
+
+        var qualifier = table.Name;
+        if (qualifier == null || qualifier.Contains('@')) return;
+
+        if (qualifierMap.TryGetValue(qualifier, out var refType))
+        {
+            col.ReturningReferenceType = refType;
+            col.ReturningQualifier = qualifier;
+            col.Table = null;
+        }
+    }
+
+    private static void NormalizeAllTableColumnsReference(AllTableColumns allCols, Dictionary<string, ReturningReferenceType> qualifierMap)
+    {
+        var table = allCols.Table;
+        if (table == null || table.SchemaName != null || table.Database != null) return;
+
+        var qualifier = table.Name;
+        if (qualifier == null || qualifier.Contains('@')) return;
+
+        if (qualifierMap.TryGetValue(qualifier, out var refType))
+        {
+            allCols.ReturningReferenceType = refType;
+            allCols.ReturningQualifier = qualifier;
+            allCols.Table = null!;
+        }
     }
 
     public override object VisitDescribeStatement(JSqlParserGrammar.DescribeStatementContext context)

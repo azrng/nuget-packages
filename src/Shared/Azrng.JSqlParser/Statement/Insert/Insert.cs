@@ -35,6 +35,9 @@ public class Insert : ASTNodeAccessImpl, Statement
     /// </summary>
     public string? Overriding { get; set; }
 
+    /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
+    public ReturningClause? Returning { get; set; }
+
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -57,6 +60,7 @@ public class Insert : ASTNodeAccessImpl, Statement
             sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
         if (Select != null) sb.Append(" ").Append(Select);
+        if (Returning != null) sb.Append(Returning);
         return sb.ToString();
     }
 }
