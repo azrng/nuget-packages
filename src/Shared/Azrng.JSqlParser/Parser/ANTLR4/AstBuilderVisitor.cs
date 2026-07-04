@@ -13,6 +13,7 @@ using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Statement.Update;
 using Azrng.JSqlParser.Statement.CreateTable;
 using Azrng.JSqlParser.Statement.Create.Policy;
+using Azrng.JSqlParser.Statement.Create.Sequence;
 using Azrng.JSqlParser.Statement.Alter;
 using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Truncate;
@@ -66,6 +67,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.sessionStatement() != null) return Visit(context.sessionStatement());
         if (context.lockStatement() != null) return Visit(context.lockStatement());
         if (context.createPolicy() != null) return Visit(context.createPolicy());
+        if (context.createSequence() != null) return Visit(context.createSequence());
 
         return new UnsupportedStatement();
     }
@@ -937,6 +939,70 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return policy;
+    }
+
+    public override object VisitCreateSequence(JSqlParserGrammar.CreateSequenceContext context)
+    {
+        var table = (Table)Visit(context.table());
+        var sequence = new Schema.Sequence
+        {
+            Database = table.Database,
+            SchemaName = table.SchemaName,
+            Name = table.Name
+        };
+
+        if (context.sequenceParameter().Length > 0)
+        {
+            sequence.Parameters = new List<SequenceParameter>();
+            foreach (var paramCtx in context.sequenceParameter())
+            {
+                sequence.Parameters.Add(BuildSequenceParameter(paramCtx));
+            }
+        }
+
+        return new CreateSequence { Sequence = sequence };
+    }
+
+    private static SequenceParameter BuildSequenceParameter(JSqlParserGrammar.SequenceParameterContext ctx)
+    {
+        // 有值参数
+        if (ctx.INCREMENT() != null)
+        {
+            var value = long.Parse(ctx.LONG_VALUE().GetText());
+            return new SequenceParameter(
+                ctx.BY() != null ? SequenceParameterType.INCREMENT_BY : SequenceParameterType.INCREMENT)
+                .WithValue(value);
+        }
+        if (ctx.START() != null)
+        {
+            var value = ctx.LONG_VALUE() != null ? long.Parse(ctx.LONG_VALUE().GetText()) : (long?)null;
+            return new SequenceParameter(
+                ctx.WITH() != null ? SequenceParameterType.START_WITH : SequenceParameterType.START)
+                .WithValue(value ?? 0);
+        }
+        if (ctx.RESTART() != null)
+        {
+            var value = ctx.LONG_VALUE() != null ? long.Parse(ctx.LONG_VALUE().GetText()) : (long?)null;
+            var p = new SequenceParameter(SequenceParameterType.RESTART_WITH);
+            if (value != null) p.WithValue(value.Value);
+            return p;
+        }
+        if (ctx.MAXVALUE() != null) return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.MINVALUE() != null) return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.CACHE() != null) return new SequenceParameter(SequenceParameterType.CACHE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+
+        // 无值参数
+        if (ctx.NOMAXVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMAXVALUE);
+        if (ctx.NOMINVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMINVALUE);
+        if (ctx.CYCLE() != null) return new SequenceParameter(SequenceParameterType.CYCLE);
+        if (ctx.NOCYCLE() != null) return new SequenceParameter(SequenceParameterType.NOCYCLE);
+        if (ctx.NOCACHE() != null) return new SequenceParameter(SequenceParameterType.NOCACHE);
+        if (ctx.ORDER() != null) return new SequenceParameter(SequenceParameterType.ORDER);
+        if (ctx.NOORDER() != null) return new SequenceParameter(SequenceParameterType.NOORDER);
+        if (ctx.KEEP() != null) return new SequenceParameter(SequenceParameterType.KEEP);
+        if (ctx.NOKEEP() != null) return new SequenceParameter(SequenceParameterType.NOKEEP);
+
+        return new SequenceParameter();
     }
 
     // ── MERGE ──────────────────────────────────
@@ -1905,6 +1971,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 SchemaName = identifiers[0].GetText(),
                 Name = identifiers[1].GetText()
+            };
+        }
+
+        if (identifiers.Length >= 3)
+        {
+            return new Table
+            {
+                Database = identifiers[0].GetText(),
+                SchemaName = identifiers[1].GetText(),
+                Name = identifiers[2].GetText()
             };
         }
 

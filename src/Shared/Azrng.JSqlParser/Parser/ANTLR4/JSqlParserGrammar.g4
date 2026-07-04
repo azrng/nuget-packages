@@ -51,6 +51,7 @@ statement
     | sessionStatement
     | lockStatement
     | createPolicy
+    | createSequence
     ;
 
 // ══════════════════════════════════════════════
@@ -578,6 +579,34 @@ createPolicy
       (TO identifier (COMMA identifier)*)?
       (USING OPENING_PAREN expression CLOSING_PAREN)?
       (WITH CHECK OPENING_PAREN expression CLOSING_PAREN)?
+    ;
+
+// ══════════════════════════════════════════════
+// CREATE SEQUENCE statement
+// ══════════════════════════════════════════════
+
+createSequence
+    : CREATE SEQUENCE table sequenceParameter*
+    ;
+
+sequenceParameter
+    : INCREMENT BY LONG_VALUE
+    | INCREMENT LONG_VALUE
+    | START WITH LONG_VALUE
+    | START LONG_VALUE
+    | RESTART (WITH LONG_VALUE)?
+    | MAXVALUE LONG_VALUE
+    | NOMAXVALUE
+    | MINVALUE LONG_VALUE
+    | NOMINVALUE
+    | CYCLE
+    | NOCYCLE
+    | CACHE LONG_VALUE
+    | NOCACHE
+    | ORDER
+    | NOORDER
+    | KEEP
+    | NOKEEP
     ;
 
 // ══════════════════════════════════════════════

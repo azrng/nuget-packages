@@ -457,4 +457,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         AddTable(createPolicy.Table);
         return null;
     }
+
+    // JSqlParser 5.4+ - CREATE SEQUENCE
+    public object? Visit<S>(Statement.Create.Sequence.CreateSequence createSequence, S context) => null;
 }
