@@ -15,6 +15,9 @@ public class Insert : ASTNodeAccessImpl, Statement
     public System.Collections.Generic.List<Update.UpdateSet>? SetUpdateSets { get; set; }
     public bool UseValues { get; set; } = true;
 
+    /// <summary>openGauss 的 ON DUPLICATE KEY UPDATE NOTHING 标志。</summary>
+    public bool DuplicateUpdateNothing { get; set; }
+
     /// <summary>
     /// Partition references for INSERT INTO ... PARTITION (...) syntax.
     /// </summary>
@@ -60,6 +63,11 @@ public class Insert : ASTNodeAccessImpl, Statement
             sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
         if (Select != null) sb.Append(" ").Append(Select);
+        if (DuplicateUpdateNothing) sb.Append(" ON DUPLICATE KEY UPDATE NOTHING");
+        else if (DuplicateUpdateSets != null && DuplicateUpdateSets.Count > 0)
+        {
+            sb.Append(" ON DUPLICATE KEY UPDATE ").Append(string.Join(", ", DuplicateUpdateSets));
+        }
         if (Returning != null) sb.Append(Returning);
         return sb.ToString();
     }

@@ -269,7 +269,8 @@ valuesItem
     ;
 
 onDuplicateKey
-    : ON DUPLICATE KEY UPDATE assignmentItem (COMMA assignmentItem)*
+    : ON DUPLICATE KEY UPDATE NOTHING
+    | ON DUPLICATE KEY UPDATE assignmentItem (COMMA assignmentItem)*
     ;
 
 // ══════════════════════════════════════════════

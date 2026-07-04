@@ -458,6 +458,7 @@ NOCACHE         : [Nn][Oo][Cc][Aa][Cc][Hh][Ee] ;
 NOLOCK          : [Nn][Oo][Ll][Oo][Cc][Kk] ;
 NONE            : [Nn][Oo][Nn][Ee] ;
 NOTNULL         : [Nn][Oo][Tt][Nn][Uu][Ll][Ll] ;
+NOTHING         : [Nn][Oo][Tt][Hh][Ii][Nn][Gg] ;
 NULLS           : [Nn][Uu][Ll][Ll][Ss] ;
 NOWAIT          : [Nn][Oo][Ww][Aa][Ii][Tt] ;
 OF              : [Oo][Ff] ;

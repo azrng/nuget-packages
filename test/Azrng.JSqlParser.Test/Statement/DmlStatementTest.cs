@@ -53,6 +53,34 @@ public class DmlStatementTest
         Assert.NotNull(stmt.Table);
     }
 
+    /// <summary>
+    /// openGauss 的 ON DUPLICATE KEY UPDATE NOTHING 应正确解析并往返。
+    /// 对应上游 commit 468aefae。注：用 INSERT...SELECT 规避既有 VALUES 序列化缺陷。
+    /// </summary>
+    [Fact]
+    public void Insert_OnDuplicateKeyUpdateNothing_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO example (num, name) SELECT 1, 'name' ON DUPLICATE KEY UPDATE NOTHING";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.True(insert.DuplicateUpdateNothing);
+        Assert.Equal(sql, insert.ToString());
+    }
+
+    /// <summary>
+    /// 传统 MySQL 的 ON DUPLICATE KEY UPDATE col=val 应正确解析并往返。
+    /// 此前 VisitInsertStatement 漏处理 onDuplicateKey 且 ToString 未输出，已修复。
+    /// 注：用 INSERT...SELECT 规避既有 VALUES 序列化缺陷。
+    /// </summary>
+    [Fact]
+    public void Insert_OnDuplicateKeyUpdate_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO users (id, name) SELECT 1, 'a' ON DUPLICATE KEY UPDATE name = 'b'";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(insert.DuplicateUpdateSets);
+        Assert.Single(insert.DuplicateUpdateSets!);
+        Assert.Equal(sql, insert.ToString());
+    }
+
     #endregion
 
     #region UPDATE

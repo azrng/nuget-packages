@@ -522,6 +522,31 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             insert.UseValues = true;
         }
 
+        if (context.onDuplicateKey() != null)
+        {
+            var dupCtx = context.onDuplicateKey();
+            if (dupCtx.NOTHING() != null)
+            {
+                insert.DuplicateUpdateNothing = true;
+            }
+            else
+            {
+                insert.DuplicateUpdateSets = new List<UpdateSet>();
+                foreach (var assignment in dupCtx.assignmentItem())
+                {
+                    var updateSet = new UpdateSet();
+                    updateSet.Columns = new List<Column>();
+                    foreach (var target in assignment.assignmentTarget())
+                    {
+                        updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
+                    }
+                    updateSet.Values = new List<Expression.Expression>();
+                    updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                    insert.DuplicateUpdateSets.Add(updateSet);
+                }
+            }
+        }
+
         if (context.returningClause() != null)
         {
             insert.Returning = (ReturningClause)Visit(context.returningClause());
