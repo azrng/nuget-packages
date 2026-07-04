@@ -258,6 +258,24 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// MySQL 函数式索引键（表达式索引）应可解析。
+    /// 对应上游 commit 7b87d081 (issue #2405)。
+    /// </summary>
+    [Fact]
+    public void CreateIndex_FunctionalKey_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("CREATE INDEX idx_lower ON employees ((LOWER(name)))");
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void CreateIndex_FunctionalKeyMultiple_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("CREATE INDEX idx_func ON t ((LOWER(a)), (b + 1))");
+        Assert.NotNull(stmt);
+    }
+
     #endregion
 
     #region GENERATED ... AS IDENTITY
