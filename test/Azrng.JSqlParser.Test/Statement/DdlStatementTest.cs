@@ -235,6 +235,17 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// DROP INDEX 带限定表名(schema.table)应可解析。
+    /// 对应上游 commit 8d967803 (issue #2344)。
+    /// </summary>
+    [Fact]
+    public void DropIndex_OnQualifiedTable_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("DROP INDEX idx ON qual.tbl");
+        Assert.NotNull(stmt);
+    }
+
     #endregion
 
     #region GENERATED ... AS IDENTITY
