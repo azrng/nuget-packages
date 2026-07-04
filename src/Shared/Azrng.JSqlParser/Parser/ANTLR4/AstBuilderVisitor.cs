@@ -655,11 +655,65 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitTableConstraint(JSqlParserGrammar.TableConstraintContext context)
     {
         var constraint = new Constraint();
-        if (context.identifier() != null)
+
+        // CONSTRAINT name 中的 name 是第一个 identifier（若有 CONSTRAINT 关键字）
+        var identifiers = context.identifier();
+        if (context.CONSTRAINT() != null && identifiers.Length > 0)
         {
-            constraint.Name = context.identifier().GetText();
+            constraint.Name = identifiers[0].GetText();
         }
+
+        // 判断约束类型并提取列
+        var identifierLists = context.identifierList();
+        JSqlParserGrammar.IdentifierListContext? firstList = identifierLists.Length > 0 ? identifierLists[0] : null;
+
+        if (context.PRIMARY() != null)
+        {
+            constraint.Type = "PRIMARY KEY";
+            constraint.Columns = ExtractIdentifierList(firstList);
+        }
+        else if (context.UNIQUE() != null && context.KEY() == null)
+        {
+            constraint.Type = "UNIQUE";
+            constraint.Columns = ExtractIdentifierList(firstList);
+        }
+        else if (context.KEY() != null)
+        {
+            // [UNIQUE | FULLTEXT | SPATIAL] KEY [name] (cols) — MySQL 索引定义
+            var prefix = context.UNIQUE() != null ? "UNIQUE"
+                : context.FULLTEXT() != null ? "FULLTEXT"
+                : context.SPATIAL() != null ? "SPATIAL" : "";
+            constraint.Type = string.IsNullOrEmpty(prefix) ? "KEY" : $"{prefix} KEY";
+            // 索引名：CONSTRAINT 关键字存在时跳过第一个 identifier
+            int nameIdx = context.CONSTRAINT() != null ? 1 : 0;
+            if (identifiers.Length > nameIdx)
+            {
+                constraint.Name = identifiers[nameIdx].GetText();
+            }
+            constraint.Columns = ExtractIdentifierList(firstList);
+        }
+        else if (context.CHECK() != null)
+        {
+            constraint.Type = "CHECK";
+        }
+        else if (context.FOREIGN() != null)
+        {
+            constraint.Type = "FOREIGN KEY";
+            constraint.Columns = ExtractIdentifierList(firstList);
+        }
+
         return constraint;
+    }
+
+    private static List<string> ExtractIdentifierList(JSqlParserGrammar.IdentifierListContext? list)
+    {
+        var result = new List<string>();
+        if (list == null) return result;
+        foreach (var id in list.identifier())
+        {
+            result.Add(id.GetText());
+        }
+        return result;
     }
 
     // ── ALTER TABLE ────────────────────────────

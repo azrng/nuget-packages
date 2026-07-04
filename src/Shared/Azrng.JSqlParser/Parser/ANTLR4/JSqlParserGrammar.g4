@@ -389,6 +389,8 @@ tableConstraint
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
         (ON (DELETE | UPDATE) referentialAction)*
+      | (UNIQUE | FULLTEXT | SPATIAL)? KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
+      | KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
       )
     ;
 

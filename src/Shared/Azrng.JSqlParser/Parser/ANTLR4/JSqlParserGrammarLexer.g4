@@ -509,6 +509,7 @@ SESSION         : [Ss][Ee][Ss][Ss][Ii][Oo][Nn] ;
 SETTINGS        : [Ss][Ee][Tt][Tt][Ii][Nn][Gg][Ss] ;
 SHOW            : [Ss][Hh][Oo][Ww] ;
 START           : [Ss][Tt][Aa][Rr][Tt] ;
+SPATIAL         : [Ss][Pp][Aa][Tt][Ii][Aa][Ll] ;
 TABLES          : [Tt][Aa][Bb][Ll][Ee][Ss] ;
 TABLESPACE      : [Tt][Aa][Bb][Ll][Ee][Ss][Pp][Aa][Cc][Ee] ;
 TABLESAMPLE     : [Tt][Aa][Bb][Ll][Ee][Ss][Aa][Mm][Pp][Ll][Ee] ;

@@ -76,6 +76,42 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// MySQL SPATIAL KEY 空间索引应可解析。
+    /// 对应上游 commit a019aa01 (issue #2388)。
+    /// </summary>
+    [Fact]
+    public void CreateTable_SpatialKey_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "CREATE TABLE places (id INT NOT NULL, location GEOMETRY NOT NULL, SPATIAL KEY sp_idx_location (location))");
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void CreateTable_FulltextKey_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "CREATE TABLE t (id INT, name TEXT, FULLTEXT KEY idx_name (name))");
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void CreateTable_UniqueKey_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "CREATE TABLE t (id INT, code VARCHAR(100), UNIQUE KEY idx_code (code))");
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void CreateTable_PlainKey_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "CREATE TABLE t (id INT, name VARCHAR(100), KEY idx_name (name))");
+        Assert.NotNull(stmt);
+    }
+
     #endregion
 
     #region CREATE VIEW
