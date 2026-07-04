@@ -277,6 +277,7 @@ DOUBLE          : [Dd][Oo][Uu][Bb][Ll][Ee] ;
 FLOAT           : [Ff][Ll][Oo][Aa][Tt] ;
 INT             : [Ii][Nn][Tt] ;
 INTEGER         : [Ii][Nn][Tt][Ee][Gg][Ee][Rr] ;
+JSON_TABLE      : [Jj][Ss][Oo][Nn]'_'[Tt][Aa][Bb][Ll][Ee] ;
 JSON            : [Jj][Ss][Oo][Nn] ;
 JSONB           : [Jj][Ss][Oo][Nn][Bb] ;
 NCHAR           : [Nn][Cc][Hh][Aa][Rr] ;

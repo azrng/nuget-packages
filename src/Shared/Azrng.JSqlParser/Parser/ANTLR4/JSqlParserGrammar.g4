@@ -124,12 +124,24 @@ fromItem
 tableOrSubquery
     : table alias?
     | subSelect
+    | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
     ;
 
 subSelect
     : OPENING_PAREN selectStatement CLOSING_PAREN alias?
+    ;
+
+jsonTable
+    : JSON_TABLE OPENING_PAREN expression (COMMA S_CHAR_LITERAL)?
+      COLUMNS OPENING_PAREN jsonTableColumn (COMMA jsonTableColumn)* CLOSING_PAREN
+      CLOSING_PAREN
+    ;
+
+jsonTableColumn
+    : identifier FOR ORDINALITY
+    | identifier dataType (PATH S_CHAR_LITERAL)?
     ;
 
 joinClause

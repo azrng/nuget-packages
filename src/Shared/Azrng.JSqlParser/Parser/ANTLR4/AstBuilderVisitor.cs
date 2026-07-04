@@ -469,12 +469,64 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return table;
         }
 
+        if (context.jsonTable() != null)
+        {
+            var jsonTable = (JsonTable)Visit(context.jsonTable());
+            if (context.alias() != null)
+            {
+                jsonTable.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            }
+            return jsonTable;
+        }
+
         if (context.subSelect() != null)
         {
             return Visit(context.subSelect());
         }
 
         return Visit(context.GetChild(0));
+    }
+
+    public override object VisitJsonTable(JSqlParserGrammar.JsonTableContext context)
+    {
+        var jsonTable = new JsonTable
+        {
+            JsonExpression = (Expression.Expression)Visit(context.expression())
+        };
+
+        if (context.S_CHAR_LITERAL() != null)
+        {
+            jsonTable.PathExpression = context.S_CHAR_LITERAL().GetText();
+        }
+
+        foreach (var colCtx in context.jsonTableColumn())
+        {
+            jsonTable.Columns.Add((JsonTableColumn)Visit(colCtx));
+        }
+
+        return jsonTable;
+    }
+
+    public override object VisitJsonTableColumn(JSqlParserGrammar.JsonTableColumnContext context)
+    {
+        var column = new JsonTableColumn { Name = context.identifier().GetText() };
+
+        if (context.FOR() != null)
+        {
+            column.ForOrdinality = true;
+        }
+        else
+        {
+            // dataType 是组合 token，取原始文本
+            column.DataType = context.dataType().GetText();
+            if (context.PATH() != null)
+            {
+                column.Path = context.S_CHAR_LITERAL().GetText();
+            }
+        }
+
+        return column;
     }
 
     public override object VisitSubSelect(JSqlParserGrammar.SubSelectContext context)

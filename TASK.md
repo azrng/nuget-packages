@@ -29,10 +29,10 @@
 - 子项 17 ✅（评估）：8d967803 DROP INDEX 限定表名 — bug 在 ANTLR 版不存在（文法 table 规则 identifier (DOT identifier)* 天然支持多段限定符），补 1 个回归测试。全量 540 测试通过。
 - 子项 18 ✅（评估）：2d83cea9 DATA 作列名 — bug 不存在（DATA 已在 nonReservedKeyword），补 1 个回归测试。
 - 子项 19 ✅（评估）：7b87d081 MySQL 函数式索引键 — bug 不存在（createIndex 用 orderByItem 含 expression 天然支持），补 2 个回归测试。
-- 子项 20 ✅：999cdca2 PostgreSQL Row Level Security — 新增 CreatePolicy 类(PolicyName/Table/Command/Roles/UsingExpression/WithCheckExpression)；Lexer 新增 SECURITY/FORCE token；文法新增 createPolicy 规则(FOR/TO/USING/WITH CHECK)及 alterOperation 的 RLS 分支(ENABLE/DISABLE/FORCE/NO FORCE ROW LEVEL SECURITY)；StatementVisitor/Adapter/TablesNamesFinder 新增 CreatePolicy 访问；AstBuilder 新增 VisitCreatePolicy；CreatePolicyTest 12 个用例 + DdlStatementTest 4 个 ALTER RLS 用例。全量 559 测试通过。
-- 跳过项：40ccf4b8/22da3265 CREATE SEQUENCE（Azrng 无 CREATE SEQUENCE 基础实现，需先建立完整功能）；9de70747 FOR XML PATH（Azrng 无 FOR XML PATH 基础实现）；c5b85abf dollar-quoted 切分（JavaCC 词法特定，不适用 ANTLR）。
-- 已完成步骤：20 个子项的迁移/评估与测试
-- 下一步：剩余大型新功能 JSON_TABLE c5e2fdcd 等
+- 子项 20 ✅：999cdca2 PostgreSQL Row Level Security — 新增 CreatePolicy 类；Lexer 新增 SECURITY/FORCE token；文法新增 createPolicy 规则及 alterOperation 的 RLS 分支；StatementVisitor/Adapter/TablesNamesFinder 新增 CreatePolicy 访问；CreatePolicyTest 12 个用例 + DdlStatementTest 4 个 ALTER RLS 用例。全量 559 测试通过。
+- 子项 21 ✅：c5e2fdcd JSON_TABLE 表函数 — 新增 JsonTable 类(实现 FromItem)+JsonTableColumn；Lexer 新增 JSON_TABLE token(置于 JSON 前以 max-munch 优先)；文法 tableOrSubquery 新增 jsonTable 分支，新增 jsonTable/jsonTableColumn 规则(COLUMNS 在括号内)；AstBuilder VisitTableOrSubquery/VisitJsonTable/VisitJsonTableColumn；JsonTableTest 5 个用例覆盖最简/带类型路径/无路径/JOIN。简化版不含 EXISTS PATH/ON ERROR/FORMAT JSON 等高级子句。全量 564 测试通过。
+- 已完成步骤：21 个子项的迁移/评估与测试
+- 下一步：建议阶段收口
 - 阻塞项：无
 
 ## 最近完成
