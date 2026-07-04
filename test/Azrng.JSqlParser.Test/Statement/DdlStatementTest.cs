@@ -246,6 +246,18 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// DATA 关键字应可用作列名（如 ALTER TABLE DROP COLUMN data）。
+    /// 对应上游 commit 2d83cea9 (issue #2340)。
+    /// ANTLR 版通过 nonReservedKeyword 天然支持 DATA 作标识符。
+    /// </summary>
+    [Fact]
+    public void AlterTable_DropColumnData_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("ALTER TABLE mytable DROP COLUMN data");
+        Assert.NotNull(stmt);
+    }
+
     #endregion
 
     #region GENERATED ... AS IDENTITY
