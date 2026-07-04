@@ -26,7 +26,8 @@
 - 子项 14 ✅：468aefae openGauss ON DUPLICATE KEY UPDATE NOTHING — Lexer 新增 NOTHING token；文法 onDuplicateKey 扩展支持 UPDATE NOTHING 分支；Insert 新增 DuplicateUpdateNothing 标志；VisitInsertStatement 补充 onDuplicateKey 处理(此前完全遗漏，顺带修复 ON DUPLICATE KEY UPDATE 序列化)；Insert ToString 输出 ON DUPLICATE KEY UPDATE；DmlStatementTest 新增 2 个用例。全量 532 测试通过。
 - 子项 15 ✅：a019aa01 MySQL SPATIAL KEY — Lexer 新增 SPATIAL token；文法 tableConstraint 新增 [UNIQUE|FULLTEXT|SPATIAL]? KEY 和 KEY 索引分支；VisitTableConstraint 重构按分支设置 Type/Columns/Name(此前只设 Name)；Constraint.ToString 区分简单约束与 MySQL 索引输出格式；DdlStatementTest 新增 4 个用例。全量 536 测试通过。
 - 子项 16 ✅：c0e1d052 MySQL SELECT INTO OUTFILE/DUMPFILE — Lexer 新增 OUTFILE/DUMPFILE token；文法 intoClause 扩展支持 INTO OUTFILE/DUMPFILE(前置)及 plainSelect 末尾尾部位置；新增 MySqlIntoOutfile 类(Type/FileName/BeforeFrom)；PlainSelect 加 MySqlIntoOutfile 属性并在 AppendSelectBodyTo 按位置输出；VisitPlainSelect 处理前置和尾部 INTO；SelectStatementTest 新增 3 个用例。简化版不含 FIELDS/LINES 格式化子句。全量 539 测试通过。
-- 已完成步骤：16 个子项的迁移/评估与测试
+- 子项 17 ✅（评估）：8d967803 DROP INDEX 限定表名 — bug 在 ANTLR 版不存在（文法 table 规则 identifier (DOT identifier)* 天然支持多段限定符），补 1 个回归测试。全量 540 测试通过。
+- 已完成步骤：17 个子项的迁移/评估与测试
 - 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd 等）
 - 阻塞项：无
 
