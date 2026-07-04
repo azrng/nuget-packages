@@ -27,8 +27,11 @@
 - 子项 15 ✅：a019aa01 MySQL SPATIAL KEY — Lexer 新增 SPATIAL token；文法 tableConstraint 新增 [UNIQUE|FULLTEXT|SPATIAL]? KEY 和 KEY 索引分支；VisitTableConstraint 重构按分支设置 Type/Columns/Name(此前只设 Name)；Constraint.ToString 区分简单约束与 MySQL 索引输出格式；DdlStatementTest 新增 4 个用例。全量 536 测试通过。
 - 子项 16 ✅：c0e1d052 MySQL SELECT INTO OUTFILE/DUMPFILE — Lexer 新增 OUTFILE/DUMPFILE token；文法 intoClause 扩展支持 INTO OUTFILE/DUMPFILE(前置)及 plainSelect 末尾尾部位置；新增 MySqlIntoOutfile 类(Type/FileName/BeforeFrom)；PlainSelect 加 MySqlIntoOutfile 属性并在 AppendSelectBodyTo 按位置输出；VisitPlainSelect 处理前置和尾部 INTO；SelectStatementTest 新增 3 个用例。简化版不含 FIELDS/LINES 格式化子句。全量 539 测试通过。
 - 子项 17 ✅（评估）：8d967803 DROP INDEX 限定表名 — bug 在 ANTLR 版不存在（文法 table 规则 identifier (DOT identifier)* 天然支持多段限定符），补 1 个回归测试。全量 540 测试通过。
-- 已完成步骤：17 个子项的迁移/评估与测试
-- 下一步：等待用户确认是否继续下一项（候选：JSON_TABLE c5e2fdcd 等）
+- 子项 18 ✅（评估）：2d83cea9 DATA 作列名 — bug 不存在（DATA 已在 nonReservedKeyword），补 1 个回归测试。
+- 子项 19 ✅（评估）：7b87d081 MySQL 函数式索引键 — bug 不存在（createIndex 用 orderByItem 含 expression 天然支持），补 2 个回归测试。
+- 跳过项：40ccf4b8/22da3265 CREATE SEQUENCE（Azrng 无 CREATE SEQUENCE 基础实现，需先建立完整功能）；9de70747 FOR XML PATH（Azrng 无 FOR XML PATH 基础实现）；c5b85abf dollar-quoted 切分（JavaCC 词法特定，不适用 ANTLR）。
+- 已完成步骤：19 个子项的迁移/评估与测试
+- 下一步：剩余小项已基本扫尽，建议阶段收口或转向大型新功能(JSON_TABLE 等)
 - 阻塞项：无
 
 ## 最近完成
