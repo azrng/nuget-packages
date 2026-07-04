@@ -27,6 +27,9 @@ public class ReturningClause
     /// <summary>RETURNING 后的列/表达式列表。</summary>
     public List<SelectItem> SelectItems { get; set; } = new();
 
+    /// <summary>RETURNING ... INTO 的目标变量/表列表，未指定时为 null。</summary>
+    public List<string>? DataItems { get; set; }
+
     public ReturningClause() { }
 
     public ReturningClause(Keyword keyword, List<SelectItem> selectItems,
@@ -56,6 +59,16 @@ public class ReturningClause
         {
             if (i > 0) builder.Append(", ");
             builder.Append(SelectItems[i]);
+        }
+
+        if (DataItems != null && DataItems.Count > 0)
+        {
+            builder.Append(" INTO ");
+            for (int i = 0; i < DataItems.Count; i++)
+            {
+                if (i > 0) builder.Append(", ");
+                builder.Append(DataItems[i]);
+            }
         }
 
         return builder;

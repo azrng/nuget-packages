@@ -61,6 +61,36 @@ public class ReturningClauseTest
     }
 
     /// <summary>
+    /// Oracle PL/SQL 的 RETURNING ... INTO 变量绑定应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void Returning_IntoSingleTarget_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO emp (empno) VALUES (1) RETURNING empno INTO x";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void Returning_IntoMultipleTargets_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO emp (empno, ename) VALUES (1, 'a') RETURNING empno, ename INTO x, y";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    [Fact]
+    public void Returning_IntoQualifiedTarget_ShouldRoundTrip()
+    {
+        var sql = "DELETE FROM users WHERE id = 1 RETURNING name INTO pkg.var";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+        Assert.Equal(sql, stmt!.ToString());
+    }
+
+    /// <summary>
     /// PostgreSQL 18: RETURNING old.price AS old_price, new.price AS new_price, new.*
     /// 默认限定符 old/new 应被归一化为 ReturningReferenceType，Table 被清空。
     /// 注：用整数避免浮点字面量归一化(1.10->1.1)干扰往返比较。

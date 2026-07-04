@@ -588,6 +588,7 @@ returningClause
     : (RETURNING | RETURN)
       (WITH OPENING_PAREN returningOutputAlias (COMMA returningOutputAlias)* CLOSING_PAREN)?
       selectColumnList
+      (INTO table (COMMA table)*)?
     ;
 
 returningOutputAlias

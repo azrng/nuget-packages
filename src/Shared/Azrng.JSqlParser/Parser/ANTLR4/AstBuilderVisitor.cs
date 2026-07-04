@@ -1072,6 +1072,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         var clause = new ReturningClause(keyword, selectItems, outputAliases);
 
+        // RETURNING ... INTO target1, target2（Oracle PL/SQL 变量绑定）
+        if (context.INTO() != null)
+        {
+            clause.DataItems = new List<string>();
+            foreach (var tableCtx in context.table())
+            {
+                clause.DataItems.Add(((Table)Visit(tableCtx)).GetFullyQualifiedName());
+            }
+        }
+
         // PostgreSQL 18 OLD/NEW 引用归一化：将 old.price / new.* 的限定符
         // 从 Table 迁移到 ReturningReferenceType + ReturningQualifier。
         // 若指定了 WITH 别名，按别名映射；否则默认 "old"->OLD, "new"->NEW。
