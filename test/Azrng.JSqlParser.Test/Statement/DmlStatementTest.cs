@@ -60,7 +60,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnDuplicateKeyUpdateNothing_ShouldRoundTrip()
     {
-        var sql = "INSERT INTO example (num, name) SELECT 1, 'name' ON DUPLICATE KEY UPDATE NOTHING";
+        var sql = "INSERT INTO example (num, name) VALUES (1, 'name') ON DUPLICATE KEY UPDATE NOTHING";
         var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
         Assert.True(insert.DuplicateUpdateNothing);
         Assert.Equal(sql, insert.ToString());
@@ -69,15 +69,47 @@ public class DmlStatementTest
     /// <summary>
     /// 传统 MySQL 的 ON DUPLICATE KEY UPDATE col=val 应正确解析并往返。
     /// 此前 VisitInsertStatement 漏处理 onDuplicateKey 且 ToString 未输出，已修复。
-    /// 注：用 INSERT...SELECT 规避既有 VALUES 序列化缺陷。
     /// </summary>
     [Fact]
     public void Insert_OnDuplicateKeyUpdate_ShouldRoundTrip()
     {
-        var sql = "INSERT INTO users (id, name) SELECT 1, 'a' ON DUPLICATE KEY UPDATE name = 'b'";
+        var sql = "INSERT INTO users (id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = 'b'";
         var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
         Assert.NotNull(insert.DuplicateUpdateSets);
         Assert.Single(insert.DuplicateUpdateSets!);
+        Assert.Equal(sql, insert.ToString());
+    }
+
+    /// <summary>
+    /// INSERT VALUES 的值数据应正确保存并往返序列化。
+    /// 此前 VisitInsertStatement 仅设 UseValues 标志但未保存值，ToString 丢失 VALUES 子句，已修复。
+    /// </summary>
+    [Fact]
+    public void Insert_Values_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO users (id, name) VALUES (1, 'test')";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(insert.ValuesItems);
+        Assert.Single(insert.ValuesItems!);
+        Assert.Equal(2, insert.ValuesItems![0].Expressions.Count);
+        Assert.Equal(sql, insert.ToString());
+    }
+
+    [Fact]
+    public void Insert_MultipleValues_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO users (id, name) VALUES (1, 'a'), (2, 'b'), (3, 'c')";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(3, insert.ValuesItems!.Count);
+        Assert.Equal(sql, insert.ToString());
+    }
+
+    [Fact]
+    public void Insert_ValuesNoColumns_ShouldRoundTrip()
+    {
+        var sql = "INSERT INTO users VALUES (1, 'test')";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(insert.ValuesItems);
         Assert.Equal(sql, insert.ToString());
     }
 

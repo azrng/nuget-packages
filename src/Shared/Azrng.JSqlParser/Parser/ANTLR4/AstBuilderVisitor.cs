@@ -609,6 +609,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         else if (context.valuesList() != null)
         {
             insert.UseValues = true;
+            insert.ValuesItems = new List<ExpressionList>();
+            foreach (var itemCtx in context.valuesList().valuesItem())
+            {
+                var exprList = new ExpressionList
+                {
+                    Expressions = new List<Expression.Expression>()
+                };
+                foreach (var exprCtx in itemCtx.expression())
+                {
+                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                }
+                insert.ValuesItems.Add(exprList);
+            }
         }
 
         if (context.onDuplicateKey() != null)
