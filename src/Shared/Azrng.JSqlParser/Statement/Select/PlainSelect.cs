@@ -19,6 +19,9 @@ public class PlainSelect : Select
     public GroupByElement? GroupBy { get; set; }
     public Expression.Expression? Having { get; set; }
 
+    /// <summary>MySQL INTO OUTFILE/DUMPFILE 子句（前置或尾部位置），未指定时为 null。</summary>
+    public MySqlIntoOutfile? MySqlIntoOutfile { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -30,6 +33,9 @@ public class PlainSelect : Select
         if (Distinct != null) builder.Append(Distinct).Append(' ');
         else if (All) builder.Append("ALL ");
         if (SelectItems != null) builder.Append(string.Join(", ", SelectItems));
+
+        // MySQL INTO OUTFILE/DUMPFILE 前置位置（FROM 之前）
+        if (MySqlIntoOutfile is { BeforeFrom: true }) builder.Append(' ').Append(MySqlIntoOutfile);
 
         if (FromItem != null)
         {
@@ -48,6 +54,9 @@ public class PlainSelect : Select
         if (Where != null) builder.Append(" WHERE ").Append(Where);
         if (GroupBy != null) builder.Append(' ').Append(GroupBy);
         if (Having != null) builder.Append(" HAVING ").Append(Having);
+
+        // MySQL INTO OUTFILE/DUMPFILE 尾部位置
+        if (MySqlIntoOutfile is { BeforeFrom: false }) builder.Append(' ').Append(MySqlIntoOutfile);
 
         return builder;
     }

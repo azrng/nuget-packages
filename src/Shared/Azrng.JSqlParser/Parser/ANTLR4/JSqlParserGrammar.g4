@@ -83,6 +83,7 @@ plainSelect
       havingClause?
       windowClause?
       qualifyClause?
+      (INTO (OUTFILE | DUMPFILE) S_CHAR_LITERAL)?
     ;
 
 setOperator
@@ -108,6 +109,7 @@ topClause
 
 intoClause
     : INTO (TEMPORARY | TEMP | UNLOGGED)? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+    | INTO (OUTFILE | DUMPFILE) S_CHAR_LITERAL
     ;
 
 fromClause

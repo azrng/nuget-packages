@@ -277,6 +277,41 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.Having = (Expression.Expression)Visit(context.havingClause().expression());
         }
 
+        // MySQL INTO OUTFILE/DUMPFILE（前置位置：SELECT ... INTO OUTFILE ... FROM）
+        var intoClause = context.intoClause();
+        if (intoClause != null && intoClause.OUTFILE() != null)
+        {
+            select.MySqlIntoOutfile = new MySqlIntoOutfile
+            {
+                Type = MySqlIntoOutfile.OutfileType.OUTFILE,
+                FileName = intoClause.S_CHAR_LITERAL().GetText(),
+                BeforeFrom = true
+            };
+        }
+        else if (intoClause != null && intoClause.DUMPFILE() != null)
+        {
+            select.MySqlIntoOutfile = new MySqlIntoOutfile
+            {
+                Type = MySqlIntoOutfile.OutfileType.DUMPFILE,
+                FileName = intoClause.S_CHAR_LITERAL().GetText(),
+                BeforeFrom = true
+            };
+        }
+
+        // MySQL INTO OUTFILE/DUMPFILE（尾部位置：SELECT ... FROM ... INTO OUTFILE ...）
+        // plainSelect 文法末尾的可选 INTO 分支，token 数大于 1 表示存在尾部 INTO
+        if (context.INTO() != null)
+        {
+            select.MySqlIntoOutfile = new MySqlIntoOutfile
+            {
+                Type = context.OUTFILE() != null
+                    ? MySqlIntoOutfile.OutfileType.OUTFILE
+                    : MySqlIntoOutfile.OutfileType.DUMPFILE,
+                FileName = context.S_CHAR_LITERAL().GetText(),
+                BeforeFrom = false
+            };
+        }
+
         return select;
     }
 

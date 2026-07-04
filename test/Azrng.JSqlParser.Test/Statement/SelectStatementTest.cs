@@ -290,6 +290,45 @@ public class SelectStatementTest
 
     #endregion
 
+    #region MySQL INTO OUTFILE / DUMPFILE
+
+    /// <summary>
+    /// MySQL SELECT INTO OUTFILE（尾部位置）应正确解析并往返。
+    /// 对应上游 commit c0e1d052。
+    /// </summary>
+    [Fact]
+    public void Select_IntoOutfileTrailing_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(select.MySqlIntoOutfile);
+        Assert.Equal(MySqlIntoOutfile.OutfileType.OUTFILE, select.MySqlIntoOutfile!.Type);
+        Assert.False(select.MySqlIntoOutfile.BeforeFrom);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfileBeforeFrom_ShouldRoundTrip()
+    {
+        var sql = "SELECT a, b INTO OUTFILE '/tmp/result.txt' FROM test_table";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(select.MySqlIntoOutfile);
+        Assert.True(select.MySqlIntoOutfile!.BeforeFrom);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoDumpfile_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO DUMPFILE '/tmp/users.bin'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(select.MySqlIntoOutfile);
+        Assert.Equal(MySqlIntoOutfile.OutfileType.DUMPFILE, select.MySqlIntoOutfile!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    #endregion
+
     #region 子查询
 
     [Fact]
