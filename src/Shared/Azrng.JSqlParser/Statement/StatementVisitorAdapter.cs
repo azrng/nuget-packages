@@ -39,4 +39,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // JSqlParser 5.4+ - LOCK TABLE
     public virtual T Visit<S>(Lock.LockStatement lockStatement, S context) => default!;
+
+    // JSqlParser 5.4+ - CREATE POLICY (PostgreSQL RLS)
+    public virtual T Visit<S>(Create.Policy.CreatePolicy createPolicy, S context) => default!;
 }

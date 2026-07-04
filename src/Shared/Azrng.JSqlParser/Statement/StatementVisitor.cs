@@ -40,6 +40,9 @@ public interface StatementVisitor<T>
     // JSqlParser 5.4+ - LOCK TABLE
     T Visit<S>(Lock.LockStatement lockStatement, S context);
 
+    // JSqlParser 5.4+ - CREATE POLICY (PostgreSQL RLS)
+    T Visit<S>(Create.Policy.CreatePolicy createPolicy, S context);
+
     // Convenience overloads (no context)
     void Visit(Statements stmts) => Visit<object?>(stmts, default);
     void Visit(Select.Select select) => Visit<object?>(select, default);
@@ -67,4 +70,5 @@ public interface StatementVisitor<T>
     void Visit(Select.ParenthesedUpdate parenthesedUpdate) => Visit<object?>(parenthesedUpdate, default);
     void Visit(Select.ParenthesedDelete parenthesedDelete) => Visit<object?>(parenthesedDelete, default);
     void Visit(Lock.LockStatement lockStatement) => Visit<object?>(lockStatement, default);
+    void Visit(Create.Policy.CreatePolicy createPolicy) => Visit<object?>(createPolicy, default);
 }

@@ -12,6 +12,7 @@ using Azrng.JSqlParser.Statement.Lock;
 using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Statement.Update;
 using Azrng.JSqlParser.Statement.CreateTable;
+using Azrng.JSqlParser.Statement.Create.Policy;
 using Azrng.JSqlParser.Statement.Alter;
 using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Truncate;
@@ -64,6 +65,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.grantStatement() != null) return Visit(context.grantStatement());
         if (context.sessionStatement() != null) return Visit(context.sessionStatement());
         if (context.lockStatement() != null) return Visit(context.lockStatement());
+        if (context.createPolicy() != null) return Visit(context.createPolicy());
 
         return new UnsupportedStatement();
     }
@@ -820,6 +822,56 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             stmt.Name = context.SINGLE_AT_IDENTIFIER().GetText();
         stmt.Value = (Expression.Expression)Visit(context.expression());
         return stmt;
+    }
+
+    public override object VisitCreatePolicy(JSqlParserGrammar.CreatePolicyContext context)
+    {
+        var policy = new CreatePolicy
+        {
+            PolicyName = context.identifier(0).GetText(),
+            Table = (Table)Visit(context.table())
+        };
+
+        // FOR { ALL | SELECT | INSERT | UPDATE | DELETE }
+        if (context.FOR() != null)
+        {
+            policy.Command = context.ALL() != null ? "ALL"
+                : context.SELECT() != null ? "SELECT"
+                : context.INSERT() != null ? "INSERT"
+                : context.UPDATE() != null ? "UPDATE"
+                : context.DELETE() != null ? "DELETE" : null;
+        }
+
+        // TO role1, role2, ...（identifier 列表，跳过第 0 个即 policyName）
+        if (context.TO() != null)
+        {
+            var allIdentifiers = context.identifier();
+            // 第 0 个是 policyName，从第 1 个开始是角色
+            for (int i = 1; i < allIdentifiers.Length; i++)
+            {
+                policy.Roles.Add(allIdentifiers[i].GetText());
+            }
+        }
+
+        // USING ( expression )
+        // 注意：context.expression() 返回所有层级的 expression，USING 的表达式是第 1 个
+        var expressions = context.expression();
+        if (context.USING() != null && expressions.Length > 0)
+        {
+            policy.UsingExpression = (Expression.Expression)Visit(expressions[0]);
+        }
+
+        // WITH CHECK ( expression )
+        if (context.CHECK() != null)
+        {
+            var checkExprIdx = context.USING() != null ? 1 : 0;
+            if (expressions.Length > checkExprIdx)
+            {
+                policy.WithCheckExpression = (Expression.Expression)Visit(expressions[checkExprIdx]);
+            }
+        }
+
+        return policy;
     }
 
     // ── MERGE ──────────────────────────────────

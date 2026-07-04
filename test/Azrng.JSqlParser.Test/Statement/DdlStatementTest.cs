@@ -276,6 +276,21 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// PostgreSQL ALTER TABLE ENABLE/DISABLE/FORCE/NO FORCE ROW LEVEL SECURITY 应可解析。
+    /// 对应上游 commit 999cdca2。
+    /// </summary>
+    [Theory]
+    [InlineData("ALTER TABLE mytable ENABLE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE mytable DISABLE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE mytable FORCE ROW LEVEL SECURITY")]
+    [InlineData("ALTER TABLE mytable NO FORCE ROW LEVEL SECURITY")]
+    public void AlterTable_RowLevelSecurity_ShouldParse(string sql)
+    {
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        Assert.NotNull(stmt);
+    }
+
     #endregion
 
     #region GENERATED ... AS IDENTITY

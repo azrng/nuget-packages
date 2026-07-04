@@ -50,6 +50,7 @@ statement
     | grantStatement
     | sessionStatement
     | lockStatement
+    | createPolicy
     ;
 
 // ══════════════════════════════════════════════
@@ -446,6 +447,8 @@ alterOperation
     | ALTER COLUMN? identifier (SET DEFAULT expression | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE dataType)
     | RENAME COLUMN? identifier TO identifier
     | RENAME TO identifier
+    | (ENABLE | DISABLE | FORCE) ROW LEVEL SECURITY
+    | NO FORCE ROW LEVEL SECURITY
     ;
 
 // ══════════════════════════════════════════════
@@ -551,6 +554,18 @@ lockMode
     | SHARE UPDATE
     | SHARE
     | EXCLUSIVE
+    ;
+
+// ══════════════════════════════════════════════
+// CREATE POLICY statement (PostgreSQL RLS)
+// ══════════════════════════════════════════════
+
+createPolicy
+    : CREATE POLICY identifier ON table
+      (FOR (ALL | SELECT | INSERT | UPDATE | DELETE))?
+      (TO identifier (COMMA identifier)*)?
+      (USING OPENING_PAREN expression CLOSING_PAREN)?
+      (WITH CHECK OPENING_PAREN expression CLOSING_PAREN)?
     ;
 
 // ══════════════════════════════════════════════

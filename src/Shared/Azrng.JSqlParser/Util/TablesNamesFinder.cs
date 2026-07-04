@@ -450,4 +450,11 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         AddTable(lockStatement.Table);
         return null;
     }
+
+    // JSqlParser 5.4+ - CREATE POLICY (PostgreSQL RLS)
+    public object? Visit<S>(Statement.Create.Policy.CreatePolicy createPolicy, S context)
+    {
+        AddTable(createPolicy.Table);
+        return null;
+    }
 }
