@@ -316,7 +316,7 @@ assignmentTarget
 
 deleteStatement
     : DELETE (identifierList FROM)? FROM? table alias?
-      (USING fromItem)?
+      (USING fromItem (COMMA fromItem)*)?
       whereClause?
       returningClause?
       orderByClause?

@@ -214,5 +214,47 @@ public class DmlStatementTest
         Assert.NotNull(stmt.Where);
     }
 
+    [Fact]
+    public void Delete_Using_Single_ShouldHaveUsingItems()
+    {
+        var stmt = (Delete)CCJSqlParserUtil.Parse(
+            "DELETE FROM users USING orders WHERE users.id = orders.uid")!;
+        Assert.NotNull(stmt.UsingItems);
+        Assert.Single(stmt.UsingItems!);
+        Assert.Contains("USING", stmt.ToString()!);
+        Assert.Contains("orders", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Delete_Using_Multiple_ShouldHaveAllItems()
+    {
+        var stmt = (Delete)CCJSqlParserUtil.Parse(
+            "DELETE FROM users USING orders, items WHERE users.id = orders.uid AND orders.item_id = items.id")!;
+        Assert.NotNull(stmt.UsingItems);
+        Assert.Equal(2, stmt.UsingItems!.Count);
+        var sql = stmt.ToString()!;
+        Assert.Contains("USING", sql);
+        Assert.Contains("orders", sql);
+        Assert.Contains("items", sql);
+    }
+
+    [Fact]
+    public void Delete_Using_RoundTrip_ShouldPreserveSyntax()
+    {
+        var sql = "DELETE FROM users USING orders WHERE users.id = orders.uid";
+        var stmt = (Delete)CCJSqlParserUtil.Parse(sql)!;
+        var output = stmt.ToString()!;
+        Assert.Contains("DELETE FROM users", output);
+        Assert.Contains("USING orders", output);
+        Assert.Contains("WHERE users.id = orders.uid", output);
+    }
+
+    [Fact]
+    public void Delete_WithoutUsing_ShouldHaveNullUsingItems()
+    {
+        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
+        Assert.Null(stmt.UsingItems);
+    }
+
     #endregion
 }

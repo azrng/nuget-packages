@@ -372,6 +372,13 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Delete.Delete delete, S context)
     {
         AddTable(delete.Table);
+        if (delete.UsingItems != null)
+        {
+            foreach (var fromItem in delete.UsingItems)
+            {
+                VisitFromItem(fromItem);
+            }
+        }
         delete.Where?.Accept(this);
         return null;
     }

@@ -721,6 +721,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var delete = new Delete();
         delete.Table = (Table)Visit(context.table());
 
+        // DELETE ... USING fromItem (COMMA fromItem)*
+        // PostgreSQL/SQL Server 风格的 DELETE USING 子句，允许引用附加表参与 WHERE 连接
+        var usingItems = context.fromItem();
+        if (context.USING() != null && usingItems.Length > 0)
+        {
+            delete.UsingItems = new List<FromItem>();
+            foreach (var fromCtx in usingItems)
+            {
+                delete.UsingItems.Add((FromItem)Visit(fromCtx.tableOrSubquery()));
+            }
+        }
+
         if (context.whereClause() != null)
         {
             delete.Where = (Expression.Expression)Visit(context.whereClause().expression());

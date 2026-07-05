@@ -57,6 +57,16 @@ public class TablesNamesFinderTest
     }
 
     [Fact]
+    public void FindTables_DeleteUsing_ShouldReturnAllTables()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "DELETE FROM users USING orders WHERE users.id = orders.uid")!;
+        var tables = GetTables(stmt);
+        Assert.Contains("users", tables);
+        Assert.Contains("orders", tables);
+    }
+
+    [Fact]
     public void FindTables_Subquery_ShouldReturnAllTables()
     {
         var stmt = CCJSqlParserUtil.Parse(

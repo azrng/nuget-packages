@@ -6,7 +6,7 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（逐项迁移 + 单元测试验证） | 逐步迁移上游 JSqlParser commit 7d2e6b65(5.4)..2b141568(HEAD) 的高价值功能与 Bug 修复，每项独立验证独立提交 | 阶段 1 后端实现 | DOING | high | 2026-07-03 |
+| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（逐项迁移 + 单元测试验证） | 逐步迁移上游 JSqlParser commit 7d2e6b65(5.4)..2b141568(HEAD) 的高价值功能与 Bug 修复，每项独立验证独立提交 | 阶段 1 后端实现 | DOING | high | 2026-07-05 |
 
 ### T075 进度
 
@@ -39,9 +39,10 @@
 - 子项 27 ✅：8810c016 ORDER BY COLLATE — OrderByElement 加 CollateName 字段；文法 orderByItem 加可选 COLLATE；SelectStatementTest 新增 2 个用例。
 - 子项 28 ✅：e17cdef4 DISTINCTROW — 文法 plainSelect 加 DISTINCTROW 别名。
 - 子项 29 ✅：5fe938bc CORRESPONDING — Lexer 新增 CORRESPONDING token；SetOperation 加 Corresponding 字段；文法 setOperator 加可选 CORRESPONDING；SelectStatementTest 新增 2 个用例。全量 602 测试通过。
-- 已完成步骤：29 个子项的迁移/评估与测试（全量 602 测试通过，净增 139）
+- 子项 30 ✅：157988d1 PG DELETE USING 完整语法 — Delete 新增 UsingItems 字段；文法 deleteStatement 的 USING 扩展为 fromItem (COMMA fromItem)* 支持多表；AstBuilder VisitDeleteStatement 处理 USING 子句填充 UsingItems；Delete.ToString 输出 USING 子句；TablesNamesFinder Visit(Delete) 遍历 UsingItems 提取表名；DmlStatementTest 新增 4 个用例 + TablesNamesFinderTest 新增 1 个用例。修复了 USING 子句解析后丢失的既有缺陷。全量 607 测试通过。
+- 已完成步骤：30 个子项的迁移/评估与测试（全量 607 测试通过，净增 144）
 
-### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 29 个，剩余 58 个）
+### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 30 个，剩余 57 个）
 
 #### 待评估适用性（可能已支持或不适用）
 | commit | 内容 | 初步判断 |
@@ -55,7 +56,6 @@
 #### 通用功能/修复（可迁移）
 | commit | 内容 | 优先级 |
 |--------|------|--------|
-| 157988d1 | PG DELETE USING 完整语法(子查询) | high |
 | f10b52ed | Between 内括号表达式 | high |
 | 4f982e74 | Oracle INSERT ALL/FIRST with WHEN | high |
 | ff28f826 | GROUP_CONCAT SEPARATOR expressions | high |
@@ -95,7 +95,6 @@
 | 6f4c4fb2 | Snowflake time travel |
 | df5e6690 | Databricks Temporal spec |
 | 5fa071ef | BigQuery Historic Version |
-| f10b52ed | Between 括号表达式(通用) |
 - 下一步：按优先级逐项处理剩余通用功能/修复
 - 阻塞项：无
 
