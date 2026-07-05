@@ -46,6 +46,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         if (context.selectStatement() != null) return Visit(context.selectStatement());
         if (context.insertStatement() != null) return Visit(context.insertStatement());
+        if (context.multiInsertStatement() != null) return Visit(context.multiInsertStatement());
         if (context.updateStatement() != null) return Visit(context.updateStatement());
         if (context.deleteStatement() != null) return Visit(context.deleteStatement());
         if (context.createTable() != null) return Visit(context.createTable());
@@ -668,6 +669,82 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return insert;
+    }
+
+    // ── MULTI INSERT (Oracle INSERT ALL/FIRST) ─
+
+    public override object VisitMultiInsertStatement(JSqlParserGrammar.MultiInsertStatementContext context)
+    {
+        var multiInsert = new MultiInsert
+        {
+            // INSERT FIRST 命中即停；INSERT ALL 评估全部 WHEN
+            IsFirst = context.FIRST() != null
+        };
+
+        foreach (var branchCtx in context.multiInsertBranch())
+        {
+            multiInsert.Branches.Add((MultiInsertBranch)Visit(branchCtx));
+        }
+
+        if (context.selectStatement() != null)
+        {
+            multiInsert.Select = (Select)Visit(context.selectStatement());
+        }
+
+        return multiInsert;
+    }
+
+    public override object VisitMultiInsertBranch(JSqlParserGrammar.MultiInsertBranchContext context)
+    {
+        var branch = new MultiInsertBranch
+        {
+            Table = (Table)Visit(context.table())
+        };
+
+        // WHEN expression THEN / ELSE / 无条件 INTO
+        if (context.WHEN() != null && context.expression() != null)
+        {
+            branch.WhenCondition = (Expression.Expression)Visit(context.expression());
+        }
+        else if (context.ELSE() != null)
+        {
+            branch.IsElse = true;
+        }
+
+        if (context.identifierList() != null)
+        {
+            branch.Columns = new List<Column>();
+            foreach (var id in context.identifierList().identifier())
+            {
+                branch.Columns.Add(new Column { ColumnName = id.GetText() });
+            }
+        }
+
+        // VALUES valuesList | selectStatement
+        if (context.valuesList() != null)
+        {
+            branch.UseValues = true;
+            branch.ValuesItems = new List<ExpressionList>();
+            foreach (var itemCtx in context.valuesList().valuesItem())
+            {
+                var exprList = new ExpressionList
+                {
+                    Expressions = new List<Expression.Expression>()
+                };
+                foreach (var exprCtx in itemCtx.expression())
+                {
+                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                }
+                branch.ValuesItems.Add(exprList);
+            }
+        }
+        else if (context.selectStatement() != null)
+        {
+            branch.UseValues = false;
+            branch.Select = (Select)Visit(context.selectStatement());
+        }
+
+        return branch;
     }
 
     // ── UPDATE ─────────────────────────────────

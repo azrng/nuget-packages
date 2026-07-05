@@ -46,6 +46,9 @@ public interface StatementVisitor<T>
     // JSqlParser 5.4+ - CREATE SEQUENCE
     T Visit<S>(Create.Sequence.CreateSequence createSequence, S context);
 
+    // JSqlParser 5.4+ - Oracle INSERT ALL/FIRST (上游 commit 4f982e74)
+    T Visit<S>(Insert.MultiInsert multiInsert, S context);
+
     // Convenience overloads (no context)
     void Visit(Statements stmts) => Visit<object?>(stmts, default);
     void Visit(Select.Select select) => Visit<object?>(select, default);
@@ -75,4 +78,5 @@ public interface StatementVisitor<T>
     void Visit(Lock.LockStatement lockStatement) => Visit<object?>(lockStatement, default);
     void Visit(Create.Policy.CreatePolicy createPolicy) => Visit<object?>(createPolicy, default);
     void Visit(Create.Sequence.CreateSequence createSequence) => Visit<object?>(createSequence, default);
+    void Visit(Insert.MultiInsert multiInsert) => Visit<object?>(multiInsert, default);
 }

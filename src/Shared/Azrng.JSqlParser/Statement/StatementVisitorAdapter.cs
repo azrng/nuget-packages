@@ -45,4 +45,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // JSqlParser 5.4+ - CREATE SEQUENCE
     public virtual T Visit<S>(Create.Sequence.CreateSequence createSequence, S context) => default!;
+
+    // JSqlParser 5.4+ - Oracle INSERT ALL/FIRST (上游 commit 4f982e74)
+    public virtual T Visit<S>(Insert.MultiInsert multiInsert, S context) => default!;
 }

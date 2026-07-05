@@ -30,6 +30,7 @@ expressionEntry
 statement
     : selectStatement
     | insertStatement
+    | multiInsertStatement
     | updateStatement
     | deleteStatement
     | mergeStatement
@@ -274,6 +275,17 @@ insertStatement
       )
       onDuplicateKey?
       returningClause?
+    ;
+
+// Oracle INSERT ALL / INSERT FIRST with WHEN branches
+// 上游 commit 4f982e74 / issue #2394
+multiInsertStatement
+    : INSERT (ALL | FIRST) multiInsertBranch+ selectStatement
+    ;
+
+multiInsertBranch
+    : (WHEN expression THEN | ELSE)? INTO table (OPENING_PAREN identifierList CLOSING_PAREN)?
+      (VALUES valuesList | selectStatement)
     ;
 
 valuesList

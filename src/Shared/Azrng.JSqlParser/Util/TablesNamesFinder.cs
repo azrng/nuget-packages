@@ -362,6 +362,20 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         return null;
     }
 
+    public object? Visit<S>(Statement.Insert.MultiInsert multiInsert, S context)
+    {
+        foreach (var branch in multiInsert.Branches)
+        {
+            AddTable(branch.Table);
+            branch.WhenCondition?.Accept(this);
+            if (branch.Select != null)
+                ((Statement.StatementVisitor<object?>)this).Visit(branch.Select, (object?)null);
+        }
+        if (multiInsert.Select != null)
+            ((Statement.StatementVisitor<object?>)this).Visit(multiInsert.Select, (object?)null);
+        return null;
+    }
+
     public object? Visit<S>(Statement.Update.Update update, S context)
     {
         AddTable(update.Table);
