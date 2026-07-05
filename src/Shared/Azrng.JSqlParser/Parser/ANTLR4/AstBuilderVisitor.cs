@@ -1838,19 +1838,22 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new DoubleValue(double.Parse(context.S_DOUBLE().GetText()));
         if (context.S_CHAR_LITERAL() != null)
         {
+            // S_CHAR_LITERAL 可能含可选前缀（N/E/U/R/B/RB/_utf8），交给 StringValue 构造函数识别
             var text = context.S_CHAR_LITERAL().GetText();
-            return new StringValue(text[1..^1].Replace("''", "'"));
+            return new StringValue(text);
+        }
+        if (context.S_ORACLE_Q_STRING() != null)
+        {
+            // Oracle q'...{...}...' 自定义分隔引号
+            var text = context.S_ORACLE_Q_STRING().GetText();
+            return new StringValue(text);
         }
         if (context.S_DOLLAR_QUOTED_STRING() != null)
         {
             // PostgreSQL dollar-quoted string: $$...$$ 或 $tag$...$tag$
             // 对应上游 commit 95ebda5a
             var text = context.S_DOLLAR_QUOTED_STRING().GetText();
-            // 提取前缀（$$ 或 $tag$）和内容
-            var firstDollarEnd = text.IndexOf('$', 1);
-            var prefix = text[..(firstDollarEnd + 1)];
-            var inner = text[(firstDollarEnd + 1)..^prefix.Length];
-            return new StringValue(inner) { DollarPrefix = prefix };
+            return new StringValue(text);
         }
         if (context.S_HEX() != null)
             return new HexValue { Value = context.S_HEX().GetText() };

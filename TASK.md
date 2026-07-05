@@ -48,6 +48,12 @@
 - 子项 36 ✅（评估）：12489af6 overeager lambda — Azrng 文法 identifier LAMBDA_ARROW expression 较保守不会过度解析；新增 Lambda 单/多参数 2 个回归用例。
 - 已完成步骤：36 个子项的迁移/评估与测试（全量 632 测试通过，净增 169）
 
+### T075 与上游 HEAD 2b141568 直接对比补齐（基于 C:\Work\SourceCode\sqlparser\JSqlParser）
+- 子项 37：StringValue 通用 prefix（N'..'、E'..'、U&'..'、Q'..' 等带前缀字面量）
+- 子项 38：MySQL INSERT 修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY/IGNORE）
+- 子项 39：窗口框架 ROWS/RANGE BETWEEN（WindowDefinition/WindowElement/WindowOffset/WindowRange）
+- 子项 40：PG ON CONFLICT 整套（InsertConflictTarget/InsertConflictAction/ConflictActionType）
+
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
 #### 待评估适用性（可能已支持或不适用）

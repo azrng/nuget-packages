@@ -371,6 +371,72 @@ public class ExpressionBasicTest
     }
 
     /// <summary>
+    /// 带前缀的字符串字面量（N'..'、E'..'、U'..'、R'..'、B'..'、RB'..'）应正确解析并往返。
+    /// </summary>
+    [Theory]
+    [InlineData("N", "abc")]
+    [InlineData("E", "x")]
+    [InlineData("U", "y")]
+    [InlineData("R", "raw")]
+    [InlineData("B", "bit")]
+    [InlineData("RB", "rb")]
+    public void StringValue_WithPrefix_ShouldRoundTrip(string prefix, string content)
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse($"SELECT {prefix}'{content}' FROM t")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal(prefix, sv.Prefix);
+        Assert.Equal(content, sv.Value);
+        Assert.Equal($"{prefix}'{content}'", sv.ToString());
+    }
+
+    [Fact]
+    public void StringValue_NoPrefix_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT 'hello' FROM t")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Null(sv.Prefix);
+        Assert.Equal("hello", sv.Value);
+        Assert.Equal("'hello'", sv.ToString());
+    }
+
+    [Fact]
+    public void StringValue_Utf8Prefix_ShouldParse()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT _utf8'unicode' FROM t")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("_utf8", sv.Prefix);
+        Assert.Equal("unicode", sv.Value);
+    }
+
+    /// <summary>
+    /// Oracle q'...{...}...' 自定义分隔引号应能正确解析。
+    /// </summary>
+    [Fact]
+    public void OracleQString_Bracket_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT q'[abc]' FROM dual")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("abc", sv.Value);
+    }
+
+    [Fact]
+    public void OracleQString_Paren_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT q'(hello)' FROM dual")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("hello", sv.Value);
+    }
+
+    [Fact]
+    public void OracleQString_CanContainSingleQuote()
+    {
+        // Oracle q-string 优势：内容可含单引号而无需转义
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT q'[it''s]' FROM dual")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("it''s", sv.Value);
+    }
+
+    /// <summary>
     /// Lambda 表达式：单参数形式（对应上游 12489af6 关注的 lambda 解析）。
     /// Azrng 文法 identifier LAMBDA_ARROW expression 较保守，不会过度解析。
     /// </summary>

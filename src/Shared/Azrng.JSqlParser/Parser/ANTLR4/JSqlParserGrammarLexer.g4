@@ -104,11 +104,25 @@ S_HEX
     ;
 
 S_CHAR_LITERAL
-    : '\'' (('\'' '\'') | ~['\\] | '\\' .)* '\''
+    : StringPrefix? '\'' (('\'' '\'') | ~['\\] | '\\' .)* '\''
+    ;
+
+// Oracle q'...{...}...' quoting：自定义分隔符，分隔符成对匹配（左右括号、单字符等）
+S_ORACLE_Q_STRING
+    : [qQ] '\'' '[' .*? ']' '\''
+    | [qQ] '\'' '(' .*? ')' '\''
+    | [qQ] '\'' '{' .*? '}' '\''
+    | [qQ] '\'' '<' .*? '>' '\''
+    | [qQ] '\'' . .*? . '\''
     ;
 
 S_DOLLAR_QUOTED_STRING
     : '$' DollarTag? '$' .*? '$' DollarTag? '$'
+    ;
+
+fragment
+StringPrefix
+    : 'N' | 'E' | 'U' | 'R' | 'B' | 'RB' | '_utf8'
     ;
 
 fragment
