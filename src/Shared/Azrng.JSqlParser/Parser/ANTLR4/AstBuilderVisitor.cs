@@ -669,12 +669,83 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
+        if (context.onConflictClause() != null)
+        {
+            var onConflictCtx = context.onConflictClause();
+            if (onConflictCtx.insertConflictTarget() != null)
+            {
+                insert.ConflictTarget = (InsertConflictTarget)Visit(onConflictCtx.insertConflictTarget());
+            }
+            insert.ConflictAction = (InsertConflictAction)Visit(onConflictCtx.insertConflictAction());
+        }
+
         if (context.returningClause() != null)
         {
             insert.Returning = (ReturningClause)Visit(context.returningClause());
         }
 
         return insert;
+    }
+
+    // PostgreSQL ON CONFLICT 冲突目标：(col1, col2) [WHERE pred] 或 ON CONSTRAINT name
+    public override object VisitInsertConflictTarget(JSqlParserGrammar.InsertConflictTargetContext context)
+    {
+        var target = new InsertConflictTarget();
+        var identifiers = context.identifier();
+
+        if (context.CONSTRAINT() != null && identifiers.Length > 0)
+        {
+            // ON CONSTRAINT name 形式：取第一个（也是唯一的）identifier
+            target.ConstraintName = identifiers[0].GetText();
+        }
+        else
+        {
+            // (col1, col2, ...) [WHERE pred] 索引列形式
+            foreach (var id in identifiers)
+            {
+                target.IndexColumnNames.Add(id.GetText());
+            }
+            if (context.whereClause() != null)
+            {
+                target.WhereExpression = (Expression.Expression)Visit(context.whereClause().expression());
+            }
+        }
+
+        return target;
+    }
+
+    // PostgreSQL ON CONFLICT 冲突动作：DO NOTHING | DO UPDATE SET ... [WHERE ...]
+    public override object VisitInsertConflictAction(JSqlParserGrammar.InsertConflictActionContext context)
+    {
+        var action = new InsertConflictAction();
+
+        if (context.NOTHING() != null)
+        {
+            action.ConflictActionType = ConflictActionType.DoNothing;
+        }
+        else if (context.UPDATE() != null)
+        {
+            action.ConflictActionType = ConflictActionType.DoUpdate;
+            action.UpdateSets = new List<UpdateSet>();
+            foreach (var assignment in context.assignmentItem())
+            {
+                var updateSet = new UpdateSet();
+                updateSet.Columns = new List<Column>();
+                foreach (var target in assignment.assignmentTarget())
+                {
+                    updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
+                }
+                updateSet.Values = new List<Expression.Expression>();
+                updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                action.UpdateSets.Add(updateSet);
+            }
+            if (context.whereClause() != null)
+            {
+                action.WhereExpression = (Expression.Expression)Visit(context.whereClause().expression());
+            }
+        }
+
+        return action;
     }
 
     // ── MULTI INSERT (Oracle INSERT ALL/FIRST) ─

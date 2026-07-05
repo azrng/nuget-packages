@@ -271,7 +271,24 @@ insertStatement
       | DEFAULT VALUES
       )
       onDuplicateKey?
+      onConflictClause?
       returningClause?
+    ;
+
+// PostgreSQL ON CONFLICT [(cols) | ON CONSTRAINT name] DO NOTHING | DO UPDATE SET ...
+// 参考 https://www.postgresql.org/docs/current/sql-insert.html
+onConflictClause
+    : ON CONFLICT insertConflictTarget? insertConflictAction
+    ;
+
+insertConflictTarget
+    : OPENING_PAREN identifier (COMMA identifier)* CLOSING_PAREN whereClause?
+    | ON CONSTRAINT identifier
+    ;
+
+insertConflictAction
+    : DO NOTHING
+    | DO UPDATE SET assignmentItem (COMMA assignmentItem)* whereClause?
     ;
 
 // Oracle INSERT ALL / INSERT FIRST with WHEN branches

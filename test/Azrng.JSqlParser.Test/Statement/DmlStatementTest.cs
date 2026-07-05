@@ -295,5 +295,75 @@ public class DmlStatementTest
         Assert.False(stmt.ModifierIgnore);
     }
 
+    /// <summary>
+    /// PostgreSQL ON CONFLICT DO NOTHING 应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void Insert_OnConflictDoNothing_ShouldRoundTrip()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT DO NOTHING")!;
+        Assert.NotNull(stmt.ConflictAction);
+        Assert.Equal(ConflictActionType.DoNothing, stmt.ConflictAction!.ConflictActionType);
+        Assert.Null(stmt.ConflictTarget);
+        Assert.Contains("ON CONFLICT DO NOTHING", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_OnConflictColumnDoNothing_ShouldHaveConflictTarget()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING")!;
+        Assert.NotNull(stmt.ConflictTarget);
+        Assert.Contains("id", stmt.ConflictTarget!.IndexColumnNames);
+        Assert.Null(stmt.ConflictTarget.ConstraintName);
+        Assert.Contains("ON CONFLICT (id) DO NOTHING", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_OnConflictMultiColumn_ShouldHaveAllColumns()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO t (a, b) VALUES (1, 2) ON CONFLICT (a, b) DO NOTHING")!;
+        Assert.Equal(2, stmt.ConflictTarget!.IndexColumnNames.Count);
+    }
+
+    [Fact]
+    public void Insert_OnConflictConstraint_ShouldHaveConstraintName()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO t (a) VALUES (1) ON CONFLICT ON CONSTRAINT uniq_a DO NOTHING")!;
+        Assert.Equal("uniq_a", stmt.ConflictTarget!.ConstraintName);
+        Assert.Contains("ON CONFLICT ON CONSTRAINT uniq_a DO NOTHING", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_OnConflictDoUpdate_ShouldHaveUpdateSets()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = 'b'")!;
+        Assert.Equal(ConflictActionType.DoUpdate, stmt.ConflictAction!.ConflictActionType);
+        Assert.NotNull(stmt.ConflictAction.UpdateSets);
+        Assert.Single(stmt.ConflictAction.UpdateSets!);
+        Assert.Contains("DO UPDATE SET name = 'b'", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_OnConflictDoUpdateWithWhere_ShouldHaveWhere()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = 'b' WHERE users.id > 0")!;
+        Assert.NotNull(stmt.ConflictAction!.WhereExpression);
+        Assert.Contains("WHERE users.id > 0", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_OnConflictTargetWithWhere_ShouldHaveTargetWhere()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse(
+            "INSERT INTO t (a) VALUES (1) ON CONFLICT (a) WHERE a > 0 DO NOTHING")!;
+        Assert.NotNull(stmt.ConflictTarget!.WhereExpression);
+    }
+
     #endregion
 }

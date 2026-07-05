@@ -25,6 +25,12 @@ public class Insert : ASTNodeAccessImpl, Statement
     /// <summary>MySQL INSERT IGNORE 标志。</summary>
     public bool ModifierIgnore { get; set; }
 
+    /// <summary>PostgreSQL ON CONFLICT 的冲突目标，未指定时为 null。</summary>
+    public InsertConflictTarget? ConflictTarget { get; set; }
+
+    /// <summary>PostgreSQL ON CONFLICT 的冲突动作，未指定时为 null。</summary>
+    public InsertConflictAction? ConflictAction { get; set; }
+
     /// <summary>VALUES 子句的多行值列表，每行一个 ExpressionList。仅当使用 VALUES 时填充。</summary>
     public System.Collections.Generic.List<ExpressionList>? ValuesItems { get; set; }
 
@@ -103,6 +109,12 @@ public class Insert : ASTNodeAccessImpl, Statement
         else if (DuplicateUpdateSets != null && DuplicateUpdateSets.Count > 0)
         {
             sb.Append(" ON DUPLICATE KEY UPDATE ").Append(string.Join(", ", DuplicateUpdateSets));
+        }
+        if (ConflictAction != null)
+        {
+            sb.Append(" ON CONFLICT");
+            if (ConflictTarget != null) sb.Append(ConflictTarget);
+            sb.Append(ConflictAction);
         }
         if (Returning != null) sb.Append(Returning);
         return sb.ToString();
