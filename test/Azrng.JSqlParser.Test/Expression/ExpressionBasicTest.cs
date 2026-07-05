@@ -370,6 +370,25 @@ public class ExpressionBasicTest
         Assert.Equal("$tag$", sv.DollarPrefix);
     }
 
+    /// <summary>
+    /// Lambda 表达式：单参数形式（对应上游 12489af6 关注的 lambda 解析）。
+    /// Azrng 文法 identifier LAMBDA_ARROW expression 较保守，不会过度解析。
+    /// </summary>
+    [Fact]
+    public void Lambda_SingleParam_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("x -> x + 1");
+        Assert.NotNull(expr);
+        Assert.Contains("->", expr!.ToString()!);
+    }
+
+    [Fact]
+    public void Lambda_MultiParam_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("(x, y) -> x + y");
+        Assert.NotNull(expr);
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {
