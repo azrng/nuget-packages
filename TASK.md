@@ -40,9 +40,11 @@
 - 子项 28 ✅：e17cdef4 DISTINCTROW — 文法 plainSelect 加 DISTINCTROW 别名。
 - 子项 29 ✅：5fe938bc CORRESPONDING — Lexer 新增 CORRESPONDING token；SetOperation 加 Corresponding 字段；文法 setOperator 加可选 CORRESPONDING；SelectStatementTest 新增 2 个用例。全量 602 测试通过。
 - 子项 30 ✅：157988d1 PG DELETE USING 完整语法 — Delete 新增 UsingItems 字段；文法 deleteStatement 的 USING 扩展为 fromItem (COMMA fromItem)* 支持多表；AstBuilder VisitDeleteStatement 处理 USING 子句填充 UsingItems；Delete.ToString 输出 USING 子句；TablesNamesFinder Visit(Delete) 遍历 UsingItems 提取表名；DmlStatementTest 新增 4 个用例 + TablesNamesFinderTest 新增 1 个用例。修复了 USING 子句解析后丢失的既有缺陷。全量 607 测试通过。
-- 已完成步骤：30 个子项的迁移/评估与测试（全量 607 测试通过，净增 144）
+- 子项 31 ✅（评估）：f10b52ed Between 内括号表达式 — bug 在 ANTLR 版不存在（ALL(*) 解析天然规避 JavaCC LOOKAHEAD(3) 限制），补 2 个回归测试。
+- 子项 32 ✅：4f982e74 Oracle INSERT ALL/FIRST with WHEN — 新增 MultiInsert/MultiInsertBranch 类；StatementVisitor/Adapter 加 Visit 方法；文法新增 multiInsertStatement/multiInsertBranch 规则，支持 WHEN/ELSE/无条件 INTO 分支 + VALUES/子查询；AstBuilder VisitMultiInsertStatement/VisitMultiInsertBranch；TablesNamesFinder 遍历分支表名；MultiInsertTest 6 个用例。全量 615 测试通过。
+- 已完成步骤：32 个子项的迁移/评估与测试（全量 615 测试通过，净增 152）
 
-### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 30 个，剩余 57 个）
+### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 32 个，剩余 55 个）
 
 #### 待评估适用性（可能已支持或不适用）
 | commit | 内容 | 初步判断 |
@@ -56,8 +58,6 @@
 #### 通用功能/修复（可迁移）
 | commit | 内容 | 优先级 |
 |--------|------|--------|
-| f10b52ed | Between 内括号表达式 | high |
-| 4f982e74 | Oracle INSERT ALL/FIRST with WHEN | high |
 | ff28f826 | GROUP_CONCAT SEPARATOR expressions | high |
 | 12489af6 | overeager lambda function parsing | medium |
 | 49958b6b | avoid visiting twice | medium |
