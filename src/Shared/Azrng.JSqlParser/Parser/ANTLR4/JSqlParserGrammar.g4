@@ -812,7 +812,17 @@ intervalExpr
 functionExpr
     : identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       withinGroupClause? filterClause? overClause?
+    | groupConcatFunction
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
+    ;
+
+// MySQL GROUP_CONCAT 函数（对应上游 commit ff28f826）
+groupConcatFunction
+    : GROUP_CONCAT OPENING_PAREN DISTINCT?
+      (expressionList orderByClause? | orderByClause)?
+      (SEPARATOR expression)?
+      CLOSING_PAREN
+      filterClause? overClause?
     ;
 
 withinGroupClause
@@ -901,7 +911,7 @@ nonReservedKeyword
     | RANGE | READ | REBUILD | RECURSIVE | REFRESH | REGEXP
     | REJECT | RENAME | REPLACE | RESET | RESTART | RESUME | RESTRICT
     | RETURN | RETURNS | RETURNING | ROLLBACK | ROLLUP | RLIKE
-    | SAMPLE | SAVEPOINT | SCHEMA | SESSION | SETTINGS | SHOW
+    | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW
     | START | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP
     | TIES | TRAILING | TRIGGER | TRY_CAST | TYPE
     | UNLOGGED | VALIDATE | VERIFY | VISIBLE | VOLATILE

@@ -519,6 +519,7 @@ SAVEPOINT       : [Ss][Aa][Vv][Ee][Pp][Oo][Ii][Nn][Tt] ;
 SCHEMA          : [Ss][Cc][Hh][Ee][Mm][Aa] ;
 SECURITY        : [Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy] ;
 SEQUENCE        : [Ss][Ee][Qq][Uu][Ee][Nn][Cc][Ee] ;
+SEPARATOR       : [Ss][Ee][Pp][Aa][Rr][Aa][Tt][Oo][Rr] ;
 SESSION         : [Ss][Ee][Ss][Ss][Ii][Oo][Nn] ;
 SETTINGS        : [Ss][Ee][Tt][Tt][Ii][Nn][Gg][Ss] ;
 SHOW            : [Ss][Hh][Oo][Ww] ;

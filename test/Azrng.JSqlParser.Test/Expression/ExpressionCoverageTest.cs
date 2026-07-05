@@ -256,6 +256,63 @@ public class ExpressionCoverageTest
         Assert.IsType<Function>(select.SelectItems![0].Expression);
     }
 
+    [Fact]
+    public void Function_GroupConcat_WithSeparator_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT GROUP_CONCAT(name SEPARATOR ', ') FROM users")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.Equal("GROUP_CONCAT", func.Name);
+        Assert.NotNull(func.Separator);
+        var output = func.ToString()!;
+        Assert.Contains("SEPARATOR", output);
+        Assert.Contains("', '", output);
+    }
+
+    [Fact]
+    public void Function_GroupConcat_Distinct_ShouldHaveDistinctFlag()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT GROUP_CONCAT(DISTINCT name SEPARATOR ',') FROM users")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.True(func.Distinct);
+        Assert.Contains("DISTINCT", func.ToString()!);
+    }
+
+    [Fact]
+    public void Function_GroupConcat_WithOrderBy_ShouldHaveOrderByElements()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT GROUP_CONCAT(name ORDER BY id DESC SEPARATOR '|') FROM users")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.OrderByElements);
+        Assert.NotEmpty(func.OrderByElements);
+        var output = func.ToString()!;
+        Assert.Contains("ORDER BY id DESC", output);
+        Assert.Contains("SEPARATOR '|'", output);
+    }
+
+    [Fact]
+    public void Function_GroupConcat_NoClauses_ShouldParse()
+    {
+        // 不带 SEPARATOR/ORDER BY/DISTINCT 的最简 GROUP_CONCAT
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT GROUP_CONCAT(name) FROM users")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.Equal("GROUP_CONCAT", func.Name);
+        Assert.Null(func.Separator);
+    }
+
+    [Fact]
+    public void Function_GroupConcat_MultipleExpressions_ShouldParse()
+    {
+        // GROUP_CONCAT 支持多表达式
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT GROUP_CONCAT(id, name SEPARATOR '|') FROM users")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.Parameters);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression

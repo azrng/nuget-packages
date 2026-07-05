@@ -1931,6 +1931,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitFunctionExpr(JSqlParserGrammar.FunctionExprContext context)
     {
+        // MySQL GROUP_CONCAT 特殊语法分支（独立规则，便于无歧义地访问内部子句）
+        // 对应上游 commit ff28f826。
+        if (context.groupConcatFunction() != null)
+        {
+            return Visit(context.groupConcatFunction());
+        }
+
         var funcName = context.identifier()?.GetText() ?? context.NEXTVAL()?.GetText() ?? "";
 
         ExpressionList? parameters = null;
@@ -2014,6 +2021,48 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             function.FilterExpression =
                 (Expression.Expression)Visit(context.filterClause().whereClause().expression());
         }
+    }
+
+    /// <summary>
+    /// 构建 MySQL GROUP_CONCAT 函数。对应上游 commit ff28f826。
+    /// 语法：GROUP_CONCAT(DISTINCT? expressionList? orderByClause? (SEPARATOR expression)?)
+    /// </summary>
+    public override object VisitGroupConcatFunction(JSqlParserGrammar.GroupConcatFunctionContext context)
+    {
+        var func = new Function { Name = "GROUP_CONCAT" };
+
+        if (context.DISTINCT() != null)
+        {
+            func.Distinct = true;
+        }
+
+        if (context.expressionList() != null)
+        {
+            var parameters = new ExpressionList { Expressions = new List<Expression.Expression>() };
+            foreach (var expr in context.expressionList().expression())
+            {
+                parameters.Expressions.Add((Expression.Expression)Visit(expr));
+            }
+            func.Parameters = parameters;
+        }
+
+        if (context.orderByClause() != null)
+        {
+            func.OrderByElements = (List<OrderByElement>)Visit(context.orderByClause());
+        }
+
+        if (context.SEPARATOR() != null)
+        {
+            func.Separator = (Expression.Expression)Visit(context.expression());
+        }
+
+        if (context.filterClause() != null)
+        {
+            func.FilterExpression =
+                (Expression.Expression)Visit(context.filterClause().whereClause().expression());
+        }
+
+        return func;
     }
 
     private void ApplyFunctionClauses(JSqlParserGrammar.FunctionExprContext context, AnalyticExpression analytic)
