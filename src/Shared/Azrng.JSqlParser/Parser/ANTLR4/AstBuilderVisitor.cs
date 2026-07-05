@@ -1841,6 +1841,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var text = context.S_CHAR_LITERAL().GetText();
             return new StringValue(text[1..^1].Replace("''", "'"));
         }
+        if (context.S_DOLLAR_QUOTED_STRING() != null)
+        {
+            // PostgreSQL dollar-quoted string: $$...$$ 或 $tag$...$tag$
+            // 对应上游 commit 95ebda5a
+            var text = context.S_DOLLAR_QUOTED_STRING().GetText();
+            // 提取前缀（$$ 或 $tag$）和内容
+            var firstDollarEnd = text.IndexOf('$', 1);
+            var prefix = text[..(firstDollarEnd + 1)];
+            var inner = text[(firstDollarEnd + 1)..^prefix.Length];
+            return new StringValue(inner) { DollarPrefix = prefix };
+        }
         if (context.S_HEX() != null)
             return new HexValue { Value = context.S_HEX().GetText() };
         if (context.NULL() != null)

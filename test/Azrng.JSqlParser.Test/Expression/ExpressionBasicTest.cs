@@ -320,6 +320,56 @@ public class ExpressionBasicTest
         Assert.NotNull(between.BetweenExpressionEnd);
     }
 
+    /// <summary>
+    /// WITH AS NOT MATERIALIZED 应能解析（对应上游 commit 2f6afbc3）。
+    /// </summary>
+    [Fact]
+    public void Cte_NotMaterialized_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "WITH cte AS NOT MATERIALIZED (SELECT id FROM src) SELECT * FROM cte");
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void Cte_Materialized_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "WITH cte AS MATERIALIZED (SELECT id FROM src) SELECT * FROM cte");
+        Assert.NotNull(stmt);
+    }
+
+    /// <summary>
+    /// TRY_CAST 已支持（对应上游 9dfa0d68 中提到的 TRY_CONVERT/SAFE_CONVERT 等价物）。
+    /// </summary>
+    [Fact]
+    public void Cast_TryCast_ShouldParse()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("TRY_CAST(id AS INTEGER)");
+        Assert.NotNull(expr);
+    }
+
+    /// <summary>
+    /// PostgreSQL dollar-quoted string body 已支持（对应上游 95ebda5a）。
+    /// </summary>
+    [Fact]
+    public void DollarQuotedString_InExpression_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT $$hello world$$ FROM t")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("hello world", sv.Value);
+        Assert.Equal("$$", sv.DollarPrefix);
+        Assert.Equal("SELECT $$hello world$$ FROM t", select.ToString());
+    }
+
+    [Fact]
+    public void DollarQuotedString_Tagged_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT $tag$body$tag$ FROM t")!;
+        var sv = Assert.IsType<StringValue>(select.SelectItems![0].Expression);
+        Assert.Equal("$tag$", sv.DollarPrefix);
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {

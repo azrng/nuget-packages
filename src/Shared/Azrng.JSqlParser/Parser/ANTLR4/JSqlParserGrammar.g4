@@ -744,6 +744,7 @@ literal
     : LONG_VALUE
     | S_DOUBLE
     | S_CHAR_LITERAL
+    | S_DOLLAR_QUOTED_STRING
     | S_HEX
     | NULL
     | TRUE

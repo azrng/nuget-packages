@@ -108,7 +108,12 @@ S_CHAR_LITERAL
     ;
 
 S_DOLLAR_QUOTED_STRING
-    : '$$' .*? '$$'
+    : '$' DollarTag? '$' .*? '$' DollarTag? '$'
+    ;
+
+fragment
+DollarTag
+    : [a-zA-Z_] [a-zA-Z0-9_]*
     ;
 
 S_PARAMETER
