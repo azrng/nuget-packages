@@ -16,11 +16,15 @@ public class OrderByElement
     public bool AscDescPresent { get; set; }
     public NullOrdering? NullOrder { get; set; }
 
+    /// <summary>COLLATE 排序规则名（含引号），未指定时为 null。</summary>
+    public string? CollateName { get; set; }
+
     public OrderByElement() { }
 
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder(Expression.ToString());
+        if (CollateName != null) sb.Append(" COLLATE ").Append(CollateName);
         if (!Asc) sb.Append(" DESC");
         else if (AscDescPresent) sb.Append(" ASC");
         if (NullOrder.HasValue)

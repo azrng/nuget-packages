@@ -208,7 +208,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var select = new PlainSelect();
 
-        if (context.DISTINCT() != null)
+        if (context.DISTINCT() != null || context.DISTINCTROW() != null)
         {
             select.Distinct = new Distinct();
         }
@@ -568,6 +568,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         item.Expression = (Expression.Expression)Visit(context.expression());
         item.Asc = context.DESC() == null;
         item.AscDescPresent = context.ASC() != null || context.DESC() != null;
+        if (context.COLLATE() != null)
+        {
+            item.CollateName = context.S_CHAR_LITERAL()?.GetText() ?? context.QUOTED_IDENTIFIER()?.GetText();
+        }
         return item;
     }
 
@@ -1429,6 +1433,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             between.BetweenExpressionStart = (Expression.Expression)Visit(suffix.concatenationExpr(0));
             between.BetweenExpressionEnd = (Expression.Expression)Visit(suffix.concatenationExpr(1));
             if (suffix.NOT() != null) between.Not = true;
+            if (suffix.SYMMETRIC() != null) between.UsingSymmetric = true;
+            else if (suffix.ASYMMETRIC() != null) between.UsingAsymmetric = true;
             return between;
         }
 
@@ -2389,14 +2395,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         bool all = context.ALL() != null;
         bool distinct = context.DISTINCT() != null;
+        bool corresponding = context.CORRESPONDING() != null;
 
         if (context.UNION() != null)
-            return new SetOperation(SetOperation.OperationType.UNION, all, distinct);
+            return new SetOperation(SetOperation.OperationType.UNION, all, distinct, corresponding);
         if (context.INTERSECT() != null)
-            return new SetOperation(SetOperation.OperationType.INTERSECT, all, distinct);
+            return new SetOperation(SetOperation.OperationType.INTERSECT, all, distinct, corresponding);
         if (context.EXCEPT() != null)
-            return new SetOperation(SetOperation.OperationType.EXCEPT, all, distinct);
-        return new SetOperation(SetOperation.OperationType.MINUS, all, distinct);
+            return new SetOperation(SetOperation.OperationType.EXCEPT, all, distinct, corresponding);
+        return new SetOperation(SetOperation.OperationType.MINUS, all, distinct, corresponding);
     }
 
     private static void SetJoinType(Join join, JSqlParserGrammar.JoinTypeContext context)

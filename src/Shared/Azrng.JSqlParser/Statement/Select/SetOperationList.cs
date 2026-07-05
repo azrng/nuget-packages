@@ -43,19 +43,24 @@ public class SetOperation
     public bool All { get; set; }
     public bool Distinct { get; set; }
 
+    /// <summary>SQL:2016 CORRESPONDING 修饰符（按匹配列名做集合操作）。</summary>
+    public bool Corresponding { get; set; }
+
     public SetOperation() { }
 
-    public SetOperation(OperationType type, bool all = false, bool distinct = false)
+    public SetOperation(OperationType type, bool all = false, bool distinct = false, bool corresponding = false)
     {
         Type = type;
         All = all;
         Distinct = distinct;
+        Corresponding = corresponding;
     }
 
     public override string ToString()
     {
         var modifier = All ? " ALL" : (Distinct ? " DISTINCT" : "");
+        var corresponding = Corresponding ? " CORRESPONDING" : "";
         var op = Type == OperationType.MINUS ? "MINUS" : Type.ToString();
-        return op + modifier;
+        return op + modifier + corresponding;
     }
 }

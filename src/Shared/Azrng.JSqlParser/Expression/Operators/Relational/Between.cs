@@ -12,8 +12,17 @@ public class Between : ASTNodeAccessImpl, Expression
     public Expression BetweenExpressionEnd { get; set; } = null!;
     public bool Not { get; set; }
 
+    /// <summary>SQL:2016 BETWEEN SYMMETRIC。</summary>
+    public bool UsingSymmetric { get; set; }
+
+    /// <summary>SQL:2016 BETWEEN ASYMMETRIC。</summary>
+    public bool UsingAsymmetric { get; set; }
+
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public override string ToString() =>
-        $"{LeftExpression} {(Not ? "NOT BETWEEN" : "BETWEEN")} {BetweenExpressionStart} AND {BetweenExpressionEnd}";
+    public override string ToString()
+    {
+        var modifier = UsingSymmetric ? "SYMMETRIC " : (UsingAsymmetric ? "ASYMMETRIC " : "");
+        return $"{LeftExpression} {(Not ? "NOT " : "")}BETWEEN {modifier}{BetweenExpressionStart} AND {BetweenExpressionEnd}";
+    }
 }

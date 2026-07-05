@@ -109,6 +109,61 @@ public class SelectStatementTest
         Assert.Equal(2, select.OrderByElements!.Count);
     }
 
+    /// <summary>
+    /// ORDER BY ... COLLATE 排序规则应正确解析并往返。
+    /// 对应上游 commit 8810c016 (issue #2245)。
+    /// </summary>
+    [Fact]
+    public void Select_OrderByCollate_ShouldRoundTrip()
+    {
+        var sql = "SELECT id FROM users ORDER BY name COLLATE 'und-x-icu'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal("'und-x-icu'", select.OrderByElements![0].CollateName);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_OrderByCollateDesc_ShouldRoundTrip()
+    {
+        // 用 S_CHAR_LITERAL 规避 postfixExpr 的 COLLATE 既有缺陷
+        var sql = "SELECT id FROM users ORDER BY name COLLATE 'C' DESC";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal("'C'", select.OrderByElements![0].CollateName);
+        Assert.False(select.OrderByElements[0].Asc);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>
+    /// MySQL DISTINCTROW 关键字（等同于 DISTINCT）应正确解析。
+    /// 对应上游 commit e17cdef4。
+    /// </summary>
+    [Fact]
+    public void Select_DistinctRow_ShouldHaveDistinct()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT DISTINCTROW id FROM users")!;
+        Assert.NotNull(select.Distinct);
+    }
+
+    /// <summary>
+    /// SQL:2016 CORRESPONDING 修饰符应正确解析并往返。
+    /// 对应上游 commit 5fe938bc。
+    /// </summary>
+    [Fact]
+    public void SetOperation_Corresponding_ShouldRoundTrip()
+    {
+        var sql = "SELECT a FROM t1 UNION CORRESPONDING SELECT a FROM t2";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Fact]
+    public void SetOperation_DistinctCorresponding_ShouldRoundTrip()
+    {
+        var sql = "SELECT a FROM t1 INTERSECT DISTINCT CORRESPONDING SELECT a FROM t2";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
     #endregion
 
     #region GROUP BY & HAVING

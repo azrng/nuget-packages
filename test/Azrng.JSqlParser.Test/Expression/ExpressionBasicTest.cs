@@ -274,6 +274,38 @@ public class ExpressionBasicTest
         Assert.NotNull(between.BetweenExpressionEnd);
     }
 
+    /// <summary>
+    /// SQL:2016 BETWEEN SYMMETRIC/ASYMMETRIC 应正确解析并往返。
+    /// 对应上游 commit 001ad1c2 (issue #2250)。
+    /// </summary>
+    [Fact]
+    public void Between_Symmetric_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("a BETWEEN SYMMETRIC 1 AND 10");
+        var between = Assert.IsType<Between>(expr);
+        Assert.True(between.UsingSymmetric);
+        Assert.Equal("a BETWEEN SYMMETRIC 1 AND 10", expr!.ToString());
+    }
+
+    [Fact]
+    public void Between_Asymmetric_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("a BETWEEN ASYMMETRIC 1 AND 10");
+        var between = Assert.IsType<Between>(expr);
+        Assert.True(between.UsingAsymmetric);
+        Assert.Equal("a BETWEEN ASYMMETRIC 1 AND 10", expr!.ToString());
+    }
+
+    [Fact]
+    public void Between_NotSymmetric_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression("a NOT BETWEEN SYMMETRIC 1 AND 10");
+        var between = Assert.IsType<Between>(expr);
+        Assert.True(between.Not);
+        Assert.True(between.UsingSymmetric);
+        Assert.Equal("a NOT BETWEEN SYMMETRIC 1 AND 10", expr!.ToString());
+    }
+
     [Fact]
     public void ExistsExpression_ShouldHaveRightExpression()
     {

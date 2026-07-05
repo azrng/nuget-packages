@@ -76,7 +76,7 @@ selectBody
     ;
 
 plainSelect
-    : SELECT topClause? (DISTINCT | ALL)? selectColumnList
+    : SELECT topClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
       intoClause?
       fromClause?
       whereClause?
@@ -89,10 +89,10 @@ plainSelect
     ;
 
 setOperator
-    : UNION (ALL | DISTINCT)?
-    | INTERSECT (ALL | DISTINCT)?
-    | EXCEPT (ALL | DISTINCT)?
-    | MINUS_KW (ALL | DISTINCT)?
+    : UNION (ALL | DISTINCT)? CORRESPONDING?
+    | INTERSECT (ALL | DISTINCT)? CORRESPONDING?
+    | EXCEPT (ALL | DISTINCT)? CORRESPONDING?
+    | MINUS_KW (ALL | DISTINCT)? CORRESPONDING?
     ;
 
 selectColumnList
@@ -247,7 +247,7 @@ orderByClause
     ;
 
 orderByItem
-    : expression (ASC | DESC)? (NULLS (FIRST | LAST))?
+    : expression (COLLATE (S_CHAR_LITERAL | QUOTED_IDENTIFIER))? (ASC | DESC)? (NULLS (FIRST | LAST))?
     ;
 
 limitClause
@@ -653,7 +653,7 @@ predicate
 predicateSuffix
     : comparisonOperator concatenationExpr
     | NOT? IN OPENING_PAREN (selectStatement | expressionList) CLOSING_PAREN
-    | NOT? BETWEEN concatenationExpr AND concatenationExpr
+    | NOT? BETWEEN (SYMMETRIC | ASYMMETRIC)? concatenationExpr AND concatenationExpr
     | NOT? (LIKE | ILIKE | RLIKE | REGEXP | REGEXP_LIKE | MATCH_ANY | MATCH_ALL | MATCH_PHRASE | MATCH_PHRASE_PREFIX | MATCH_REGEXP) concatenationExpr (ESCAPE concatenationExpr)?
     | IS NOT? (NULL | TRUE | FALSE | UNKNOWN)
     | IS NOT? DISTINCT FROM concatenationExpr
