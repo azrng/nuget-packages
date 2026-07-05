@@ -34,9 +34,69 @@
 - 子项 22 ✅（既有缺陷）：INSERT VALUES 序列化缺失 — Insert 新增 ValuesItems 字段；VisitInsertStatement 解析 valuesList 填充值数据；Insert.ToString 输出 VALUES 子句支持多行；DmlStatementTest 新增 3 个 VALUES 用例。全量 567 测试通过。
 - 子项 23 ✅：RETURNING INTO 子句 — 文法 returningClause 新增可选 INTO 分支；ReturningClause 新增 DataItems 字段；ReturningClauseTest 新增 3 个用例。全量 570 测试通过。
 - 子项 24 ✅：CREATE SEQUENCE 基础实现 — 扩展 Sequence 加参数；新增 CreateSequence 语句类；Lexer 新增 SEQUENCE 等 token；文法新增 createSequence/sequenceParameter 规则；CreateSequenceTest 19 个用例；修复 VisitTable 3 段限定名缺陷。全量 589 测试通过。
-- 子项 25 ✅：FOR XML PATH — PlainSelect 加 ForXmlPath 字段；文法 selectStatement 末尾新增 FOR XML PATH [(name)] 可选分支；VisitSelectStatement 解析 XML PATH；Select.AppendTo 输出 FOR XML PATH；ForXmlPathTest 5 个用例覆盖带名/无名/带 ORDER BY/子查询。全量 594 测试通过。
-- 已完成步骤：25 个子项的迁移/评估与测试
-- 下一步：建议阶段收口
+- 子项 25 ✅：FOR XML PATH — PlainSelect 加 ForXmlPath 字段；文法 selectStatement 末尾新增 FOR XML PATH [(name)] 可选分支；VisitSelectStatement 解析 XML PATH；Select.AppendTo 输出 FOR XML PATH；ForXmlPathTest 5 个用例。全量 594 测试通过。
+- 子项 26 ✅：001ad1c2 BETWEEN SYMMETRIC/ASYMMETRIC — Between 类加 UsingSymmetric/UsingAsymmetric 字段；Lexer 新增 SYMMETRIC/ASYMMETRIC token；文法 predicateSuffix BETWEEN 加可选修饰符；ExpressionBasicTest 新增 3 个用例。
+- 子项 27 ✅：8810c016 ORDER BY COLLATE — OrderByElement 加 CollateName 字段；文法 orderByItem 加可选 COLLATE；SelectStatementTest 新增 2 个用例。
+- 子项 28 ✅：e17cdef4 DISTINCTROW — 文法 plainSelect 加 DISTINCTROW 别名。
+- 子项 29 ✅：5fe938bc CORRESPONDING — Lexer 新增 CORRESPONDING token；SetOperation 加 Corresponding 字段；文法 setOperator 加可选 CORRESPONDING；SelectStatementTest 新增 2 个用例。全量 602 测试通过。
+- 已完成步骤：29 个子项的迁移/评估与测试（全量 602 测试通过，净增 139）
+
+### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 29 个，剩余 58 个）
+
+#### 待评估适用性（可能已支持或不适用）
+| commit | 内容 | 初步判断 |
+|--------|------|----------|
+| 2f6afbc3 | WITH AS NOT MATERIALIZED | 已支持（文法 withItem 第 71 行） |
+| 9dfa0d68 | TRY_CONVERT/SAFE_CONVERT | TRY_CAST 已支持，TRY_CONVERT/SAFE_CONVERT 可能通过 functionExpr 已支持 |
+| b19d556e | EXPLAIN for DML | explainStatement 已存在，需确认 DML 场景 |
+| 528dd722 | array<double> 函数声明 | Azrng 无 CREATE FUNCTION 文法 |
+| 95ebda5a | Dollar quoted as StringValue | S_DOLLAR_QUOTED_STRING 已存在，需确认 |
+
+#### 通用功能/修复（可迁移）
+| commit | 内容 | 优先级 |
+|--------|------|--------|
+| 157988d1 | PG DELETE USING 完整语法(子查询) | high |
+| f10b52ed | Between 内括号表达式 | high |
+| 4f982e74 | Oracle INSERT ALL/FIRST with WHEN | high |
+| ff28f826 | GROUP_CONCAT SEPARATOR expressions | high |
+| 12489af6 | overeager lambda function parsing | medium |
+| 49958b6b | avoid visiting twice | medium |
+| eeb04004 | avoid NPE and expose modifier | medium |
+| 834afe18 | oracle outer join nvl/coalesce | medium |
+| c7b3bdbd | ALTER TABLE USING INDEX clause | medium |
+| 763e92d7 | alter table index descending | medium |
+| ac46c434 | CREATE SCHEMA with catalog | medium |
+| 624a768b | Oracle hierarchical queries | medium |
+| 7c52e7fe | legacy Postgres named parameter | medium |
+| 74607624 | Exasol IMPORT/EXPORT | low |
+| cd71aada | Function keyword arguments | low |
+| c60ff739 | normalised backtick quotes | low |
+| 4fdfa785 | DateUnitExpression | low |
+| 6c98f10f | SessionStatement with options | low |
+
+#### 不适用（JavaCC 特定，ANTLR 无对应机制）
+| commit | 内容 | 原因 |
+|--------|------|------|
+| cf5bbc9a | split CCJSqlParserTokenManager | JavaCC 词法层 |
+| 59dfc3b0 | grammar LOOKAHEAD conflicts | JavaCC LOOKAHEAD |
+| 08d0bcc9 | rework tokens and preserved keywords | JavaCC token 体系重构 |
+| c5b85abf | dollar-quoted CREATE FUNCTION splitting | JavaCC 词法状态机 |
+| 93515149 | remove obsolete Grammar option | JavaCC 配置 |
+| 6049fd72/ac175138/7d42ff61/fe860ddd | 性能优化(JMH/lookahead) | JavaCC 性能优化 |
+
+#### 方言专项（按需取用）
+| commit | 内容 |
+|--------|------|
+| a34db0ce | ClickHouse SELECT SETTINGS |
+| 64542c86 | ClickHouse parametric aggregate |
+| 0e1715e9 | DuckDB CREATE TABLE STRUCT |
+| 297ef846/aaebe591 | DuckDB STRUCT 数据类型 |
+| 6ce95d54 | Trino UDF |
+| 6f4c4fb2 | Snowflake time travel |
+| df5e6690 | Databricks Temporal spec |
+| 5fa071ef | BigQuery Historic Version |
+| f10b52ed | Between 括号表达式(通用) |
+- 下一步：按优先级逐项处理剩余通用功能/修复
 - 阻塞项：无
 
 ## 最近完成
