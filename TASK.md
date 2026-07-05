@@ -43,18 +43,16 @@
 - 子项 31 ✅（评估）：f10b52ed Between 内括号表达式 — bug 在 ANTLR 版不存在（ALL(*) 解析天然规避 JavaCC LOOKAHEAD(3) 限制），补 2 个回归测试。
 - 子项 32 ✅：4f982e74 Oracle INSERT ALL/FIRST with WHEN — 新增 MultiInsert/MultiInsertBranch 类；StatementVisitor/Adapter 加 Visit 方法；文法新增 multiInsertStatement/multiInsertBranch 规则，支持 WHEN/ELSE/无条件 INTO 分支 + VALUES/子查询；AstBuilder VisitMultiInsertStatement/VisitMultiInsertBranch；TablesNamesFinder 遍历分支表名；MultiInsertTest 6 个用例。全量 615 测试通过。
 - 子项 33 ✅：ff28f826 MySQL GROUP_CONCAT SEPARATOR — Lexer 新增 SEPARATOR token；Function 类加 Distinct/OrderByElements/Separator 字段并在 ToString 输出；文法 functionExpr 新增 groupConcatFunction 分支支持 DISTINCT/ORDER BY/SEPARATOR 内部子句；AstBuilder 新增 VisitGroupConcatFunction；ExpressionCoverageTest 新增 5 个用例。全量 620 测试通过。
-- 已完成步骤：33 个子项的迁移/评估与测试（全量 620 测试通过，净增 157）
+- 子项 34 ✅：95ebda5a PG dollar-quoted StringValue + 待评估清单回归 — literal 规则新增 S_DOLLAR_QUOTED_STRING 分支；StringValue 加 DollarPrefix 字段在 ToString 按原前缀输出；lexer 用 DollarTag fragment 支持 $$ 和 $tag$ 形式；AstBuilder VisitLiteral 处理 dollar-quoted；ExpressionBasicTest 新增 7 个用例（dollar-quoted 2 + WITH MATERIALIZED 2 + TRY_CAST 1 + 已有 Between 括号）。同步验证 2f6afbc3 WITH MATERIALIZED、9dfa0d68 TRY_CAST 已天然支持。全量 625 测试通过。
+- 已完成步骤：34 个子项的迁移/评估与测试（全量 625 测试通过，净增 162）
 
-### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 33 个，剩余 54 个）
+### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 34 个，剩余 53 个）
 
 #### 待评估适用性（可能已支持或不适用）
 | commit | 内容 | 初步判断 |
 |--------|------|----------|
-| 2f6afbc3 | WITH AS NOT MATERIALIZED | 已支持（文法 withItem 第 71 行） |
-| 9dfa0d68 | TRY_CONVERT/SAFE_CONVERT | TRY_CAST 已支持，TRY_CONVERT/SAFE_CONVERT 可能通过 functionExpr 已支持 |
 | b19d556e | EXPLAIN for DML | explainStatement 已存在，需确认 DML 场景 |
 | 528dd722 | array<double> 函数声明 | Azrng 无 CREATE FUNCTION 文法 |
-| 95ebda5a | Dollar quoted as StringValue | S_DOLLAR_QUOTED_STRING 已存在，需确认 |
 
 #### 通用功能/修复（可迁移）
 | commit | 内容 | 优先级 |
