@@ -296,6 +296,30 @@ public class ExpressionBasicTest
         Assert.Equal("a BETWEEN ASYMMETRIC 1 AND 10", expr!.ToString());
     }
 
+    /// <summary>
+    /// BETWEEN 内带括号的复杂表达式应能正确解析（对应上游 commit f10b52ed / issue #2288）。
+    /// ANTLR 用 ALL(*) 解析，天然规避 JavaCC LOOKAHEAD 限制。
+    /// </summary>
+    [Fact]
+    public void Between_WithParenthesis_ShouldParse()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression(
+            "ts BETWEEN CAST(CAST((NOW() + INTERVAL '-30 day') AS date) AS timestamp) AND NOW()");
+        var between = Assert.IsType<Between>(expr);
+        Assert.NotNull(between.BetweenExpressionStart);
+        Assert.NotNull(between.BetweenExpressionEnd);
+    }
+
+    [Fact]
+    public void Between_WithParenthesisOnBothSides_ShouldParse()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression(
+            "a BETWEEN (1 + 2) AND (3 * 4)");
+        var between = Assert.IsType<Between>(expr);
+        Assert.NotNull(between.BetweenExpressionStart);
+        Assert.NotNull(between.BetweenExpressionEnd);
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {
