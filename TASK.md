@@ -33,8 +33,9 @@
 - 子项 21 ✅：c5e2fdcd JSON_TABLE 表函数 — 新增 JsonTable 类(实现 FromItem)+JsonTableColumn；Lexer 新增 JSON_TABLE token；文法 tableOrSubquery 新增 jsonTable 分支；JsonTableTest 5 个用例。全量 564 测试通过。
 - 子项 22 ✅（既有缺陷）：INSERT VALUES 序列化缺失 — Insert 新增 ValuesItems 字段；VisitInsertStatement 解析 valuesList 填充值数据；Insert.ToString 输出 VALUES 子句支持多行；DmlStatementTest 新增 3 个 VALUES 用例。全量 567 测试通过。
 - 子项 23 ✅：RETURNING INTO 子句 — 文法 returningClause 新增可选 INTO 分支；ReturningClause 新增 DataItems 字段；ReturningClauseTest 新增 3 个用例。全量 570 测试通过。
-- 子项 24 ✅：CREATE SEQUENCE 基础实现 — 扩展 Sequence 加 Parameters/SequenceParameterType/SequenceParameter；新增 CreateSequence 语句类；Lexer 新增 SEQUENCE/NOMAXVALUE/NOMINVALUE/NOCYCLE/NOORDER/NOKEEP token；文法新增 createSequence/sequenceParameter 规则(含 PG 简写 START n/INCREMENT n)；AstBuilder VisitCreateSequence/BuildSequenceParameter；StatementVisitor/Adapter/TablesNamesFinder 新增 CreateSequence 访问；CreateSequenceTest 19 个用例。顺带修复 VisitTable 3 段限定名(db.schema.table)解析丢失缺陷。全量 589 测试通过。
-- 已完成步骤：24 个子项的迁移/评估与测试
+- 子项 24 ✅：CREATE SEQUENCE 基础实现 — 扩展 Sequence 加参数；新增 CreateSequence 语句类；Lexer 新增 SEQUENCE 等 token；文法新增 createSequence/sequenceParameter 规则；CreateSequenceTest 19 个用例；修复 VisitTable 3 段限定名缺陷。全量 589 测试通过。
+- 子项 25 ✅：FOR XML PATH — PlainSelect 加 ForXmlPath 字段；文法 selectStatement 末尾新增 FOR XML PATH [(name)] 可选分支；VisitSelectStatement 解析 XML PATH；Select.AppendTo 输出 FOR XML PATH；ForXmlPathTest 5 个用例覆盖带名/无名/带 ORDER BY/子查询。全量 594 测试通过。
+- 已完成步骤：25 个子项的迁移/评估与测试
 - 下一步：建议阶段收口
 - 阻塞项：无
 

@@ -117,6 +117,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             VisitForUpdateClause(context.forUpdateClause(), select);
         }
 
+        // SQL Server FOR XML PATH（selectStatement 层，ORDER BY 之后）
+        if (context.XML() != null && select is PlainSelect plainSelect)
+        {
+            plainSelect.ForXmlPath = context.S_CHAR_LITERAL() != null
+                ? context.S_CHAR_LITERAL().GetText() : "";
+        }
+
         return select;
     }
 

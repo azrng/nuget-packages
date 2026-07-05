@@ -59,7 +59,7 @@ statement
 // ══════════════════════════════════════════════
 
 selectStatement
-    : withClause? selectBody orderByClause? limitClause? offsetClause? fetchClause? forUpdateClause?
+    : withClause? selectBody orderByClause? limitClause? offsetClause? fetchClause? forUpdateClause? (FOR XML PATH (OPENING_PAREN S_CHAR_LITERAL CLOSING_PAREN)?)?
     | withClause? fromQuery
     ;
 

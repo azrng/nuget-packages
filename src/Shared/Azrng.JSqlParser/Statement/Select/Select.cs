@@ -119,6 +119,13 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
             AppendOrderByTo(builder);
         }
 
+        // SQL Server FOR XML PATH（selectStatement 层）
+        if (this is PlainSelect ps && ps.ForXmlPath != null)
+        {
+            builder.Append(" FOR XML PATH");
+            if (ps.ForXmlPath.Length > 0) builder.Append("(").Append(ps.ForXmlPath).Append(")");
+        }
+
         return builder;
     }
 

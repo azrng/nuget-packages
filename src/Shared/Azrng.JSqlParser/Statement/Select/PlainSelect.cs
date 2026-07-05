@@ -22,6 +22,9 @@ public class PlainSelect : Select
     /// <summary>MySQL INTO OUTFILE/DUMPFILE 子句（前置或尾部位置），未指定时为 null。</summary>
     public MySqlIntoOutfile? MySqlIntoOutfile { get; set; }
 
+    /// <summary>SQL Server FOR XML PATH('name') 的路径名，无 FOR XML PATH 时为 null，空字符串表示无参数的 FOR XML PATH。</summary>
+    public string? ForXmlPath { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
