@@ -458,7 +458,12 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.UnsupportedStatement unsupportedStatement, S context) => null;
 
     // JSqlParser 5.1 - Parenthesized DML for CTEs
-    public object? Visit<S>(Statement.Select.ParenthesedInsert parenthesedInsert, S context) { ((Statement.StatementVisitor<object?>)this).Visit(parenthesedInsert.Insert, (object?)null); return null; }
+    public object? Visit<S>(Statement.Select.ParenthesedInsert parenthesedInsert, S context)
+    {
+        if (parenthesedInsert.Insert != null)
+            ((Statement.StatementVisitor<object?>)this).Visit(parenthesedInsert.Insert, (object?)null);
+        return null;
+    }
     public object? Visit<S>(Statement.Select.ParenthesedUpdate parenthesedUpdate, S context) { ((Statement.StatementVisitor<object?>)this).Visit(parenthesedUpdate.Update, (object?)null); return null; }
     public object? Visit<S>(Statement.Select.ParenthesedDelete parenthesedDelete, S context) { ((Statement.StatementVisitor<object?>)this).Visit(parenthesedDelete.Delete, (object?)null); return null; }
 
