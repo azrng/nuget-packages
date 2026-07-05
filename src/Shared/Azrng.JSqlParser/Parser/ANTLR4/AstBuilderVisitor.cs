@@ -607,6 +607,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var insert = new Insert();
         insert.Table = (Table)Visit(context.table());
 
+        // MySQL INSERT 修饰符：LOW_PRIORITY / DELAYED / HIGH_PRIORITY / IGNORE
+        if (context.LOW_PRIORITY() != null) insert.ModifierPriority = InsertModifierPriority.LowPriority;
+        else if (context.DELAYED() != null) insert.ModifierPriority = InsertModifierPriority.Delayed;
+        else if (context.HIGH_PRIORITY() != null) insert.ModifierPriority = InsertModifierPriority.HighPriority;
+        if (context.IGNORE() != null) insert.ModifierIgnore = true;
+
         if (context.identifierList() != null)
         {
             insert.Columns = new List<Column>();

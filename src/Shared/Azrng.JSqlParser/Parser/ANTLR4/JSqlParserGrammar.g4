@@ -268,7 +268,7 @@ fetchClause
 // ══════════════════════════════════════════════
 
 insertStatement
-    : INSERT INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+    : INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
       ( selectStatement
       | VALUES valuesList
       | DEFAULT VALUES

@@ -16,6 +16,15 @@ public class Insert : ASTNodeAccessImpl, Statement
     public System.Collections.Generic.List<Update.UpdateSet>? SetUpdateSets { get; set; }
     public bool UseValues { get; set; } = true;
 
+    /// <summary>
+    /// MySQL INSERT 优先级修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY）。
+    /// 与上游 InsertModifierPriority 对齐。None 表示未指定。
+    /// </summary>
+    public InsertModifierPriority ModifierPriority { get; set; } = InsertModifierPriority.None;
+
+    /// <summary>MySQL INSERT IGNORE 标志。</summary>
+    public bool ModifierIgnore { get; set; }
+
     /// <summary>VALUES 子句的多行值列表，每行一个 ExpressionList。仅当使用 VALUES 时填充。</summary>
     public System.Collections.Generic.List<ExpressionList>? ValuesItems { get; set; }
 
@@ -51,6 +60,20 @@ public class Insert : ASTNodeAccessImpl, Statement
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("INSERT ");
+        // 输出 MySQL 修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY/IGNORE）
+        if (ModifierPriority != InsertModifierPriority.None)
+        {
+            // LowPriority -> LOW_PRIORITY
+            var name = ModifierPriority.ToString();
+            var sb2 = new System.Text.StringBuilder();
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(name[i])) sb2.Append('_');
+                sb2.Append(char.ToUpperInvariant(name[i]));
+            }
+            sb.Append(sb2).Append(' ');
+        }
+        if (ModifierIgnore) sb.Append("IGNORE ");
         if (Overwrite) sb.Append("OVERWRITE ");
         else sb.Append("INTO ");
         if (TableKeyword) sb.Append("TABLE ");

@@ -1,4 +1,5 @@
 using Azrng.JSqlParser.Parser;
+using Azrng.JSqlParser.Statement.Insert;
 using Azrng.JSqlParser.Statement.Select;
 using Insert = Azrng.JSqlParser.Statement.Insert.Insert;
 using Update = Azrng.JSqlParser.Statement.Update.Update;
@@ -254,6 +255,44 @@ public class DmlStatementTest
     {
         var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
         Assert.Null(stmt.UsingItems);
+    }
+
+    [Theory]
+    [InlineData("LOW_PRIORITY", InsertModifierPriority.LowPriority)]
+    [InlineData("DELAYED", InsertModifierPriority.Delayed)]
+    [InlineData("HIGH_PRIORITY", InsertModifierPriority.HighPriority)]
+    public void Insert_PriorityModifier_ShouldRoundTrip(string modifier, InsertModifierPriority expected)
+    {
+        var sql = $"INSERT {modifier} INTO users (id) VALUES (1)";
+        var stmt = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(expected, stmt.ModifierPriority);
+        // 往返保留修饰符
+        var output = stmt.ToString()!;
+        Assert.Contains(modifier, output);
+    }
+
+    [Fact]
+    public void Insert_Ignore_ShouldHaveModifierIgnoreFlag()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT IGNORE INTO users (id) VALUES (1)")!;
+        Assert.True(stmt.ModifierIgnore);
+        Assert.Contains("IGNORE", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void Insert_PriorityAndIgnore_ShouldRoundTrip()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT LOW_PRIORITY IGNORE INTO users (id) VALUES (1)")!;
+        Assert.Equal(InsertModifierPriority.LowPriority, stmt.ModifierPriority);
+        Assert.True(stmt.ModifierIgnore);
+    }
+
+    [Fact]
+    public void Insert_NoModifier_ShouldHaveDefaults()
+    {
+        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT INTO users (id) VALUES (1)")!;
+        Assert.Equal(InsertModifierPriority.None, stmt.ModifierPriority);
+        Assert.False(stmt.ModifierIgnore);
     }
 
     #endregion
