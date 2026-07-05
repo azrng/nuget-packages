@@ -2014,6 +2014,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 {
                     analytic.OrderByElements = (List<OrderByElement>)Visit(winSpec.orderByClause());
                 }
+                if (winSpec.windowFrame() != null)
+                {
+                    analytic.WindowFrame = (WindowFrame)Visit(winSpec.windowFrame());
+                }
             }
 
             return analytic;
@@ -2572,5 +2576,65 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.FULL() != null) { join.Full = true; if (context.OUTER() != null) join.Outer = true; return; }
         if (context.SEMI() != null) { join.Semi = true; return; }
         join.Inner = true;
+    }
+
+    // ── 窗口框架 ROWS/RANGE/GROUPS ──────────────
+
+    public override object VisitWindowFrame(JSqlParserGrammar.WindowFrameContext context)
+    {
+        var frame = new WindowFrame();
+
+        // 框架类型：ROWS / RANGE / GROUPS
+        if (context.ROWS() != null) frame.Type = FrameType.Rows;
+        else if (context.RANGE() != null) frame.Type = FrameType.Range;
+        else if (context.GROUPS() != null) frame.Type = FrameType.Groups;
+
+        // 边界：单边界或 BETWEEN ... AND ...
+        var bounds = context.windowFrameBound();
+        if (context.BETWEEN() != null && bounds.Length >= 2)
+        {
+            frame.Start = BuildFrameBound(bounds[0]);
+            frame.End = BuildFrameBound(bounds[1]);
+        }
+        else if (bounds.Length >= 1)
+        {
+            frame.Start = BuildFrameBound(bounds[0]);
+        }
+
+        // EXCLUDE 子句
+        if (context.EXCLUDE() != null)
+        {
+            if (context.GROUP() != null)
+                frame.Exclude = ExcludeType.Group;
+            else if (context.TIES() != null)
+                frame.Exclude = ExcludeType.Ties;
+            else if (context.NO() != null && context.OTHERS() != null)
+                frame.Exclude = ExcludeType.NoOthers;
+            else
+                frame.Exclude = ExcludeType.CurrentRow;
+        }
+
+        return frame;
+    }
+
+    private FrameBound BuildFrameBound(JSqlParserGrammar.WindowFrameBoundContext context)
+    {
+        if (context.UNBOUNDED() != null && context.PRECEDING() != null)
+            return new FrameBound(BoundType.UnboundedPreceding);
+        if (context.UNBOUNDED() != null && context.FOLLOWING() != null)
+            return new FrameBound(BoundType.UnboundedFollowing);
+        if (context.CURRENT() != null)
+            return new FrameBound(BoundType.CurrentRow);
+        if (context.PRECEDING() != null)
+            return new FrameBound(BoundType.Preceding)
+            {
+                Offset = (Expression.Expression)Visit(context.expression())
+            };
+        if (context.FOLLOWING() != null)
+            return new FrameBound(BoundType.Following)
+            {
+                Offset = (Expression.Expression)Visit(context.expression())
+            };
+        return new FrameBound();
     }
 }

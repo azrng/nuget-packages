@@ -196,10 +196,7 @@ windowSpecification
 
 windowFrame
     : (ROWS | RANGE | GROUPS)
-      ( UNBOUNDED PRECEDING
-      | CURRENT ROW
-      | expression PRECEDING
-      | expression FOLLOWING
+      ( windowFrameBound
       | BETWEEN windowFrameBound AND windowFrameBound
       )
       (EXCLUDE (CURRENT ROW | GROUP | TIES | NO OTHERS))?

@@ -22,6 +22,12 @@ public class AnalyticExpression : ASTNodeAccessImpl, Expression
     public List<OrderByElement>? WithinGroupOrderByElements { get; set; }
     public Expression? FilterExpression { get; set; }
 
+    /// <summary>
+    /// OVER 子句中的窗口框架（ROWS/RANGE/GROUPS BETWEEN ...）。
+    /// 未指定时为 null。对应上游 WindowElement。
+    /// </summary>
+    public WindowFrame? WindowFrame { get; set; }
+
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -54,6 +60,11 @@ public class AnalyticExpression : ASTNodeAccessImpl, Expression
                 if (PartitionExpressionList != null && PartitionExpressionList.Count > 0) sb.Append(' ');
                 sb.Append("ORDER BY ").Append(string.Join(", ", OrderByElements));
             }
+        }
+        // 输出窗口框架（ROWS/RANGE/GROUPS BETWEEN ...）
+        if (WindowFrame != null)
+        {
+            sb.Append(' ').Append(WindowFrame);
         }
         sb.Append(')');
 

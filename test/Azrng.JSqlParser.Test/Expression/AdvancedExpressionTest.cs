@@ -1,3 +1,4 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
@@ -95,6 +96,70 @@ public class AdvancedExpressionTest
         var select = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT COUNT(*) OVER (PARTITION BY dept) AS dept_count FROM employees")!;
         Assert.NotNull(select.SelectItems);
+    }
+
+    /// <summary>
+    /// 窗口框架 ROWS BETWEEN ... AND ... 应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void WindowFrame_RowsBetween_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t")!;
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(analytic.WindowFrame);
+        Assert.Equal(FrameType.Rows, analytic.WindowFrame!.Type);
+        Assert.Equal(BoundType.UnboundedPreceding, analytic.WindowFrame.Start.Kind);
+        Assert.NotNull(analytic.WindowFrame.End);
+        Assert.Equal(BoundType.CurrentRow, analytic.WindowFrame.End!.Kind);
+        // 往返
+        var output = analytic.ToString()!;
+        Assert.Contains("ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW", output);
+    }
+
+    [Fact]
+    public void WindowFrame_RowsBetweenNumericOffset_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) FROM t")!;
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(analytic.WindowFrame);
+        Assert.Equal(BoundType.Preceding, analytic.WindowFrame!.Start.Kind);
+        Assert.NotNull(analytic.WindowFrame.Start.Offset);
+        Assert.Equal(BoundType.Following, analytic.WindowFrame.End!.Kind);
+        Assert.Contains("ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING", analytic.ToString()!);
+    }
+
+    [Fact]
+    public void WindowFrame_RangeSingleBound_ShouldRoundTrip()
+    {
+        // 单边界形式：RANGE UNBOUNDED PRECEDING
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT SUM(x) OVER (ORDER BY id RANGE UNBOUNDED PRECEDING) FROM t")!;
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(analytic.WindowFrame);
+        Assert.Equal(FrameType.Range, analytic.WindowFrame!.Type);
+        Assert.Equal(BoundType.UnboundedPreceding, analytic.WindowFrame.Start.Kind);
+        Assert.Null(analytic.WindowFrame.End);
+    }
+
+    [Fact]
+    public void WindowFrame_GroupsBetween_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT SUM(x) OVER (ORDER BY id GROUPS BETWEEN 2 PRECEDING AND 2 FOLLOWING) FROM t")!;
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.Equal(FrameType.Groups, analytic.WindowFrame!.Type);
+    }
+
+    [Fact]
+    public void WindowFrame_WithExclude_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW EXCLUDE TIES) FROM t")!;
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.Equal(ExcludeType.Ties, analytic.WindowFrame!.Exclude);
+        Assert.Contains("EXCLUDE TIES", analytic.ToString()!);
     }
 
     #endregion
