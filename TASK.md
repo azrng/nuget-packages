@@ -49,10 +49,11 @@
 - 已完成步骤：36 个子项的迁移/评估与测试（全量 632 测试通过，净增 169）
 
 ### T075 与上游 HEAD 2b141568 直接对比补齐（基于 C:\Work\SourceCode\sqlparser\JSqlParser）
-- 子项 37：StringValue 通用 prefix（N'..'、E'..'、U&'..'、Q'..' 等带前缀字面量）
-- 子项 38：MySQL INSERT 修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY/IGNORE）
-- 子项 39：窗口框架 ROWS/RANGE BETWEEN（WindowDefinition/WindowElement/WindowOffset/WindowRange）
-- 子项 40：PG ON CONFLICT 整套（InsertConflictTarget/InsertConflictAction/ConflictActionType）
+- 子项 37 ✅：StringValue 通用 prefix — lexer S_CHAR_LITERAL 新增 StringPrefix fragment 支持 N/E/U/R/B/RB/_utf8 前缀；新增 S_ORACLE_Q_STRING token 支持 Oracle q'[...]' 等 5 种自定义分隔引号；StringValue 重构对齐上游字段（Value/Prefix/QuoteStr/DollarPrefix），构造函数自动识别前缀、Oracle q-string、dollar-quoted；ExpressionBasicTest 新增 11 个用例。全量 643 测试通过。
+- 子项 38 ✅：MySQL INSERT 修饰符 — 新增 InsertModifierPriority 枚举（None/LowPriority/Delayed/HighPriority）；Insert 加 ModifierPriority/ModifierIgnore 字段并在 ToString 输出；lexer 新增 LOW_PRIORITY/HIGH_PRIORITY token；文法 insertStatement 新增可选修饰符；AstBuilder VisitInsertStatement 填充；DmlStatementTest 新增 6 个用例。全量 649 测试通过。
+- 子项 39 ✅：窗口框架 ROWS/RANGE/GROUPS BETWEEN — 新增 WindowFrame/FrameBound/FrameType/BoundType/ExcludeType 类型；AnalyticExpression 加 WindowFrame 字段并在 ToString 输出；文法 windowFrame 简化为统一通过 windowFrameBound 处理单边界和 BETWEEN；AstBuilder 新增 VisitWindowFrame + BuildFrameBound；AdvancedExpressionTest 新增 5 个用例。修复 overClause.windowSpecification 中 windowFrame 被丢弃的缺陷。全量 654 测试通过。
+- 子项 40 ✅：PG ON CONFLICT 整套 — 新增 InsertConflictTarget（IndexColumnNames/IndexExpression/WhereExpression/ConstraintName）+ InsertConflictAction（ConflictActionType/UpdateSets/WhereExpression）+ ConflictActionType 枚举；Insert 加 ConflictTarget/ConflictAction 字段并在 ToString 输出 ON CONFLICT 子句；文法新增 onConflictClause/insertConflictTarget/insertConflictAction 规则，支持 (col1, col2) [WHERE] / ON CONSTRAINT name / DO NOTHING / DO UPDATE SET ... [WHERE]；AstBuilder 新增 VisitInsertConflictTarget/VisitInsertConflictAction；DmlStatementTest 新增 7 个用例。全量 661 测试通过。
+- 已完成步骤：40 个子项（全量 661 测试通过，本次会话基于上游 HEAD 直接对比补齐 4 项）
 
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
