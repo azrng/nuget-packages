@@ -44,20 +44,20 @@
 - 子项 32 ✅：4f982e74 Oracle INSERT ALL/FIRST with WHEN — 新增 MultiInsert/MultiInsertBranch 类；StatementVisitor/Adapter 加 Visit 方法；文法新增 multiInsertStatement/multiInsertBranch 规则，支持 WHEN/ELSE/无条件 INTO 分支 + VALUES/子查询；AstBuilder VisitMultiInsertStatement/VisitMultiInsertBranch；TablesNamesFinder 遍历分支表名；MultiInsertTest 6 个用例。全量 615 测试通过。
 - 子项 33 ✅：ff28f826 MySQL GROUP_CONCAT SEPARATOR — Lexer 新增 SEPARATOR token；Function 类加 Distinct/OrderByElements/Separator 字段并在 ToString 输出；文法 functionExpr 新增 groupConcatFunction 分支支持 DISTINCT/ORDER BY/SEPARATOR 内部子句；AstBuilder 新增 VisitGroupConcatFunction；ExpressionCoverageTest 新增 5 个用例。全量 620 测试通过。
 - 子项 34 ✅：95ebda5a PG dollar-quoted StringValue + 待评估清单回归 — literal 规则新增 S_DOLLAR_QUOTED_STRING 分支；StringValue 加 DollarPrefix 字段在 ToString 按原前缀输出；lexer 用 DollarTag fragment 支持 $$ 和 $tag$ 形式；AstBuilder VisitLiteral 处理 dollar-quoted；ExpressionBasicTest 新增 7 个用例（dollar-quoted 2 + WITH MATERIALIZED 2 + TRY_CAST 1 + 已有 Between 括号）。同步验证 2f6afbc3 WITH MATERIALIZED、9dfa0d68 TRY_CAST 已天然支持。全量 625 测试通过。
-- 已完成步骤：34 个子项的迁移/评估与测试（全量 625 测试通过，净增 162）
+- 子项 35 ✅（评估）：b19d556e EXPLAIN for DML — Azrng explainStatement 用 (EXPLAIN|ANALYZE) statement 递归引用任意 statement，天然支持 DML；新增 ExplainStatementTest 5 个用例（SELECT/INSERT/UPDATE/DELETE/ANALYZE）。
+- 子项 36 ✅（评估）：12489af6 overeager lambda — Azrng 文法 identifier LAMBDA_ARROW expression 较保守不会过度解析；新增 Lambda 单/多参数 2 个回归用例。
+- 已完成步骤：36 个子项的迁移/评估与测试（全量 632 测试通过，净增 169）
 
-### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 34 个，剩余 53 个）
+### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
 #### 待评估适用性（可能已支持或不适用）
 | commit | 内容 | 初步判断 |
 |--------|------|----------|
-| b19d556e | EXPLAIN for DML | explainStatement 已存在，需确认 DML 场景 |
 | 528dd722 | array<double> 函数声明 | Azrng 无 CREATE FUNCTION 文法 |
 
 #### 通用功能/修复（可迁移）
 | commit | 内容 | 优先级 |
 |--------|------|--------|
-| 12489af6 | overeager lambda function parsing | medium |
 | 49958b6b | avoid visiting twice | medium |
 | eeb04004 | avoid NPE and expose modifier | medium |
 | 834afe18 | oracle outer join nvl/coalesce | medium |
