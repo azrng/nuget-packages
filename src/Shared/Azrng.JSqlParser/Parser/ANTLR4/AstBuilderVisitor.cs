@@ -2293,15 +2293,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitArrayConstructor(JSqlParserGrammar.ArrayConstructorContext context)
     {
         ExpressionList? exprList = null;
-        if (context.expressionList() != null)
+        if (context.arrayElementList() != null)
         {
             exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
-            foreach (var expr in context.expressionList().expression())
+            foreach (var elem in context.arrayElementList().arrayElement())
             {
-                exprList.Expressions.Add((Expression.Expression)Visit(expr));
+                exprList.Expressions.Add((Expression.Expression)Visit(elem));
             }
         }
         return new ArrayConstructor(exprList, arrayKeyword: context.ARRAY() != null);
+    }
+
+    public override object VisitArrayElement(JSqlParserGrammar.ArrayElementContext context)
+    {
+        var start = (Expression.Expression)Visit(context.expression(0));
+        if (context.COLON() != null)
+        {
+            var end = (Expression.Expression)Visit(context.expression(1));
+            return new RangeExpression(start, end);
+        }
+        return start;
     }
 
     // 行构造器：ROW(1, 2, 3)
