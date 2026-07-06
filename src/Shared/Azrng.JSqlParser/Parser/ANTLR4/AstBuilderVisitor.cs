@@ -483,6 +483,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 table.Alias = new Alias(context.alias().identifier().GetText());
             }
+            // SQL Server 表提示：WITH (INDEX(name) | NOLOCK | ...)
+            if (context.sqlServerHints() != null)
+            {
+                table.SqlServerHints = (SQLServerHints)Visit(context.sqlServerHints());
+            }
             return table;
         }
 
@@ -1919,6 +1924,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new OracleNamedFunctionParameter(name, expr);
         }
         return new PostgresNamedFunctionParameter(name, expr);
+    }
+
+    // SQL Server 表提示：WITH (INDEX(name) | NOLOCK | ...)
+    public override object VisitSqlServerHints(JSqlParserGrammar.SqlServerHintsContext context)
+    {
+        var hints = new SQLServerHints();
+        foreach (var hintCtx in context.sqlServerHint())
+        {
+            if (hintCtx.NOLOCK() != null)
+            {
+                hints.NoLock = true;
+            }
+            else if (hintCtx.INDEX() != null && hintCtx.identifier() != null)
+            {
+                hints.IndexName = hintCtx.identifier().GetText();
+            }
+        }
+        return hints;
     }
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)

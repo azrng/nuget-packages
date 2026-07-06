@@ -124,11 +124,21 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias?
+    : table alias? sqlServerHints?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
+    ;
+
+// SQL Server 表提示：WITH (INDEX(name) | NOLOCK | ...)，出现在表后
+sqlServerHints
+    : WITH OPENING_PAREN sqlServerHint (COMMA sqlServerHint)* CLOSING_PAREN
+    ;
+
+sqlServerHint
+    : INDEX OPENING_PAREN identifier CLOSING_PAREN
+    | NOLOCK
     ;
 
 subSelect

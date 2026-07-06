@@ -1,3 +1,4 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
@@ -12,6 +13,9 @@ public class Table : ASTNodeAccessImpl, FromItem
     public string? SchemaName { get; set; }
     public string Name { get; set; } = "";
     public Alias? Alias { get; set; }
+
+    /// <summary>SQL Server 表提示（WITH (NOLOCK) 等），出现在表后。未指定时为 null。</summary>
+    public SQLServerHints? SqlServerHints { get; set; }
 
     public string GetFullyQualifiedName()
     {
@@ -28,6 +32,8 @@ public class Table : ASTNodeAccessImpl, FromItem
     public override string ToString()
     {
         var name = GetFullyQualifiedName();
-        return Alias != null ? $"{name} {Alias}" : name;
+        var result = Alias != null ? $"{name} {Alias}" : name;
+        if (SqlServerHints != null) result += SqlServerHints;
+        return result;
     }
 }

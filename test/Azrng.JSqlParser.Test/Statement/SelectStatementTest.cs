@@ -600,4 +600,60 @@ public class SelectStatementTest
     }
 
     #endregion
+
+    #region SQL Server 表提示 (WITH NOLOCK)
+
+    [Fact]
+    public void SqlServerHints_NoLock_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users WITH (NOLOCK)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.SqlServerHints);
+        Assert.True(table.SqlServerHints!.NoLock);
+        Assert.Contains("WITH (NOLOCK)", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void SqlServerHints_Index_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users WITH (INDEX(idx_users))")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.SqlServerHints);
+        Assert.Equal("idx_users", table.SqlServerHints!.IndexName);
+        // 上游 INDEX 后有空格：WITH (INDEX (idx_users))
+        Assert.Contains("WITH (INDEX (idx_users))", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void SqlServerHints_IndexAndNoLock_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users WITH (INDEX(idx_users), NOLOCK)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.SqlServerHints);
+        Assert.Equal("idx_users", table.SqlServerHints!.IndexName);
+        Assert.True(table.SqlServerHints.NoLock);
+    }
+
+    [Fact]
+    public void SqlServerHints_WithAlias_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users u WITH (NOLOCK)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.Alias);
+        Assert.Equal("u", table.Alias!.Name);
+        Assert.NotNull(table.SqlServerHints);
+        Assert.True(table.SqlServerHints!.NoLock);
+    }
+
+    [Fact]
+    public void SqlServerHints_None_ShouldBeNull()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.Null(table.SqlServerHints);
+    }
+
+    #endregion
 }
