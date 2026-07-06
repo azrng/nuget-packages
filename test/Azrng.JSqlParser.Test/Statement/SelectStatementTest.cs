@@ -4,7 +4,6 @@ using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Schema;
 using Azrng.JSqlParser.Statement.Select;
-
 namespace Azrng.JSqlParser.Test.Statement;
 
 /// <summary>
@@ -437,6 +436,22 @@ public class SelectStatementTest
     }
 
     /// <summary>
+    /// 回归测试（上游 commit eeb04004）：上游 Java 版 SetOperation.modifier 为 string，
+    /// 默认 null，isAll()/isDistinct() 直接 modifier.contains 会 NPE。Azrng 版用
+    /// bool All/Distinct 属性（默认 false）替代 string modifier，物理上不存在 NPE。
+    /// 此用例固化该结论：默认构造的 SetOperation ToString 不抛异常。
+    /// </summary>
+    [Fact]
+    public void SetOperation_DefaultConstructor_ShouldNotThrow()
+    {
+        var op = new SetOperation();
+        Assert.False(op.All);
+        Assert.False(op.Distinct);
+        var output = op.ToString();
+        Assert.Equal("UNION", output);
+    }
+
+    /// <summary>
     /// 集合操作的 ALL/DISTINCT 修饰符应正确解析并往返序列化。
     /// 对应上游 issue #2419（ExceptOp/MinusOp modifier 丢失），ANTLR 版还存在 DISTINCT 完全不支持的问题，已修复。
     /// </summary>
@@ -491,6 +506,55 @@ public class SelectStatementTest
         Assert.Contains("UNION ALL", deparsed);
         Assert.Contains("EXCEPT DISTINCT", deparsed);
         Assert.DoesNotContain("EXCEPT ALL", deparsed);
+    }
+
+    #endregion
+
+    #region Oracle 老式外连接 (+)
+
+    /// <summary>
+    /// Oracle 老式外连接语法 column(+) 应正确解析并标记 Column.OldOracleJoinSyntax。
+    /// 对应上游 commit 834afe18。
+    /// </summary>
+    [Fact]
+    public void OracleOuterJoin_PlusSuffix_ShouldMarkColumn()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "SELECT * FROM dual d, dual d2 WHERE d.dummy = d2.dummy(+)")!;
+        var deparsed = stmt.ToString()!;
+        Assert.Contains("d2.dummy(+)", deparsed);
+    }
+
+    /// <summary>
+    /// column(+) 出现在 NVL 参数内应可解析并往返序列化（上游 commit 834afe18 的核心场景）。
+    /// </summary>
+    [Fact]
+    public void OracleOuterJoin_WithinNvlArgument_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM dual d, dual d2 WHERE d.dummy = nvl(d2.dummy(+), 'y')";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// column(+) 出现在 COALESCE 参数内应可解析并往返序列化（上游 commit 834afe18 的核心场景）。
+    /// </summary>
+    [Fact]
+    public void OracleOuterJoin_WithinCoalesceArgument_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM dual d, dual d2 WHERE d.dummy = coalesce(d2.dummy(+), 'y')";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// 无 (+) 后缀的普通列 OldOracleJoinSyntax 应为默认值 0。
+    /// </summary>
+    [Fact]
+    public void OracleOuterJoin_AbsentSuffix_ShouldLeaveDefault()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT a FROM t WHERE a = b")!;
+        Assert.DoesNotContain("(+)", stmt.ToString()!);
     }
 
     #endregion

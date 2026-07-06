@@ -40,6 +40,21 @@ public class TablesNamesFinderTest
         Assert.Contains("users", tables);
     }
 
+    /// <summary>
+    /// 回归测试（上游 commit 49958b6b）：上游 Java 版 StatementVisitorAdapter.visit(Insert)
+    /// 曾对 insert.getTable() 调用两次 fromItemVisitor 导致重复访问。Azrng 版 Adapter 为空
+    /// 实现、TablesNamesFinder 用 HashSet 天然去重，不存在此 bug。此用例固化该结论。
+    /// </summary>
+    [Fact]
+    public void FindTables_Insert_ShouldVisitTableOnlyOnce()
+    {
+        var stmt = CCJSqlParserUtil.Parse(
+            "INSERT INTO users (id, name) VALUES (1, 'test')")!;
+        var tables = GetTables(stmt);
+        Assert.Single(tables);
+        Assert.Contains("users", tables);
+    }
+
     [Fact]
     public void FindTables_Update_ShouldReturnTable()
     {

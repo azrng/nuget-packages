@@ -2496,18 +2496,27 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitColumnRef(JSqlParserGrammar.ColumnRefContext context)
     {
         var identifiers = context.identifier();
+        Column column;
         if (identifiers.Length == 1)
         {
-            return new Column { ColumnName = identifiers[0].GetText() };
+            column = new Column { ColumnName = identifiers[0].GetText() };
         }
-
-        if (identifiers.Length == 2)
+        else if (identifiers.Length == 2)
         {
             var table = new Table { Name = identifiers[0].GetText() };
-            return new Column { Table = table, ColumnName = identifiers[1].GetText() };
+            column = new Column { Table = table, ColumnName = identifiers[1].GetText() };
+        }
+        else
+        {
+            column = new Column { ColumnName = context.GetText() };
         }
 
-        return new Column { ColumnName = context.GetText() };
+        // Oracle 老式外连接语法 column(+) — commit 834afe18
+        if (context.oracleOuterJoinSuffix() != null)
+        {
+            column.OldOracleJoinSyntax = OracleJoinSyntax.OracleJoinRight;
+        }
+        return column;
     }
 
     public override object VisitTable(JSqlParserGrammar.TableContext context)

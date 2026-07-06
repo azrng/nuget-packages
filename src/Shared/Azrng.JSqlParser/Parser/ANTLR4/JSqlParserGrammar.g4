@@ -927,7 +927,12 @@ identifierList
     ;
 
 columnRef
-    : identifier (DOT identifier)*
+    : identifier (DOT identifier)* (oracleOuterJoinSuffix)?
+    ;
+
+// Oracle 老式外连接语法：column(+) — commit 834afe18
+oracleOuterJoinSuffix
+    : OPENING_PAREN PLUS CLOSING_PAREN
     ;
 
 comparisonOperator
