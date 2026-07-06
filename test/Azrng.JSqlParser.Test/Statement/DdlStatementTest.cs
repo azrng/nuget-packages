@@ -225,6 +225,40 @@ public class DdlStatementTest
         Assert.Equal(sql, stmt.ToString());
     }
 
+    /// <summary>
+    /// MySQL UNIQUE INDEX 带列 ASC 排序方向应可解析并往返。
+    /// 对应上游 commit 763e92d7。
+    /// </summary>
+    [Fact]
+    public void AlterTable_AddUniqueIndex_AscendingColumn_ShouldRoundTrip()
+    {
+        var sql = "ALTER TABLE t ADD UNIQUE INDEX idx (col ASC)";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// MySQL INDEX 带列 DESC 排序方向应可解析并往返。
+    /// </summary>
+    [Fact]
+    public void AlterTable_AddIndex_DescendingColumn_ShouldRoundTrip()
+    {
+        var sql = "ALTER TABLE t ADD INDEX idx (col DESC)";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// 多列混合 ASC/DESC 的索引应可解析并往返。
+    /// </summary>
+    [Fact]
+    public void AlterTable_AddIndex_MixedSortDirections_ShouldRoundTrip()
+    {
+        var sql = "ALTER TABLE t ADD INDEX idx (a ASC, b DESC, c)";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
     #endregion
 
     #region DROP TABLE

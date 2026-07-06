@@ -450,14 +450,23 @@ tableConstraint
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
         (ON (DELETE | UPDATE) referentialAction)*
-      | (UNIQUE | FULLTEXT | SPATIAL)? KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
-      | KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
+      | (UNIQUE | FULLTEXT | SPATIAL)? (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
+      | (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
       )
     ;
 
 // Oracle/DB2: USING INDEX [index_name] — 约束使用指定索引，commit c7b3bdbd
 usingIndexClause
     : USING INDEX identifier?
+    ;
+
+// MySQL 索引列：col [ASC|DESC]，commit 763e92d7
+indexColumnList
+    : indexColumn (COMMA indexColumn)*
+    ;
+
+indexColumn
+    : identifier (ASC | DESC)?
     ;
 
 likeOption

@@ -12,6 +12,12 @@ public class Constraint : ASTNodeAccessImpl
     public System.Collections.Generic.List<string> Columns { get; set; } = new();
 
     /// <summary>
+    /// MySQL 索引列参数（含 ASC/DESC 排序方向），用于 KEY/INDEX 类型约束。
+    /// 对齐上游 commit 763e92d7。为空时回退到 Columns。
+    /// </summary>
+    public System.Collections.Generic.List<string>? IndexColumnParams { get; set; }
+
+    /// <summary>
     /// Oracle/DB2 USING INDEX 子句的索引名（可空，仅 USING INDEX 无名时为 null 但 HasUsingIndex=true）。
     /// 对齐上游 commit c7b3bdbd。
     /// </summary>
@@ -32,7 +38,8 @@ public class Constraint : ASTNodeAccessImpl
         {
             return $"{constraintPrefix}{Type} ({string.Join(", ", Columns)}){usingIndex}";
         }
-        // MySQL 索引（KEY/UNIQUE KEY/FULLTEXT KEY/SPATIAL KEY）输出索引名
-        return $"{Type} {name}({string.Join(", ", Columns)})";
+        // MySQL 索引（KEY/INDEX/UNIQUE KEY 等）输出索引名，优先用 IndexColumnParams（含 ASC/DESC）
+        var indexCols = IndexColumnParams ?? Columns;
+        return $"{Type} {name}({string.Join(", ", indexCols)})";
     }
 }

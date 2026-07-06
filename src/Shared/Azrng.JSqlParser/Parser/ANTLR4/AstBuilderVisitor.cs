@@ -995,26 +995,31 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             constraint.Columns = ExtractIdentifierList(firstList);
             FillUsingIndex(constraint, context);
         }
-        else if (context.UNIQUE() != null && context.KEY() == null)
+        else if (context.UNIQUE() != null && context.KEY() == null && context.INDEX() == null)
         {
             constraint.Type = "UNIQUE";
             constraint.Columns = ExtractIdentifierList(firstList);
             FillUsingIndex(constraint, context);
         }
-        else if (context.KEY() != null)
+        else if (context.KEY() != null || context.INDEX() != null)
         {
-            // [UNIQUE | FULLTEXT | SPATIAL] KEY [name] (cols) — MySQL 索引定义
+            // [UNIQUE | FULLTEXT | SPATIAL] (KEY|INDEX) [name] (cols [ASC|DESC]) — MySQL 索引定义
             var prefix = context.UNIQUE() != null ? "UNIQUE"
                 : context.FULLTEXT() != null ? "FULLTEXT"
                 : context.SPATIAL() != null ? "SPATIAL" : "";
-            constraint.Type = string.IsNullOrEmpty(prefix) ? "KEY" : $"{prefix} KEY";
+            // 保留原始关键字（KEY 或 INDEX），有前缀时组合为 "UNIQUE INDEX" 等
+            var kw = context.INDEX() != null ? "INDEX" : "KEY";
+            constraint.Type = string.IsNullOrEmpty(prefix) ? kw : $"{prefix} {kw}";
             // 索引名：CONSTRAINT 关键字存在时跳过第一个 identifier
             int nameIdx = context.CONSTRAINT() != null ? 1 : 0;
             if (identifiers.Length > nameIdx)
             {
                 constraint.Name = identifiers[nameIdx].GetText();
             }
-            constraint.Columns = ExtractIdentifierList(firstList);
+            // 索引列（含 ASC/DESC）：写入 IndexColumnParams，同时填充 Columns 保持兼容
+            var (colParams, colNames) = ExtractIndexColumnList(context.indexColumnList());
+            constraint.IndexColumnParams = colParams;
+            constraint.Columns = colNames;
         }
         else if (context.CHECK() != null)
         {
@@ -1055,6 +1060,30 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return result;
     }
 
+    /// <summary>
+    /// 解析 MySQL 索引列列表（含 ASC/DESC 排序方向）。
+    /// 返回 (含方向的列参数如 "col ASC", 纯列名列表)。
+    /// </summary>
+    private static (List<string> colParams, List<string> colNames) ExtractIndexColumnList(
+        JSqlParserGrammar.IndexColumnListContext? list)
+    {
+        var colParams = new List<string>();
+        var colNames = new List<string>();
+        if (list == null) return (colParams, colNames);
+        foreach (var col in list.indexColumn())
+        {
+            var name = col.identifier().GetText();
+            colNames.Add(name);
+            if (col.ASC() != null)
+                colParams.Add($"{name} ASC");
+            else if (col.DESC() != null)
+                colParams.Add($"{name} DESC");
+            else
+                colParams.Add(name);
+        }
+        return (colParams, colNames);
+    }
+
     // ── ALTER TABLE ────────────────────────────
 
     public override object VisitAlterStatement(JSqlParserGrammar.AlterStatementContext context)
@@ -1091,6 +1120,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     expr.PkColumns = constraint.Columns;
                 else if (constraint.Type == "UNIQUE" && constraint.Columns.Count > 0)
                     expr.UkColumns = constraint.Columns;
+                else if (!string.IsNullOrEmpty(constraint.Type))
+                {
+                    // KEY/INDEX 等 MySQL 索引约束：用 Constraint.ToString 作为可选说明符输出
+                    expr.OptionalSpecifier = constraint.ToString();
+                    // 清空 ConstraintType 避免 ToString 重复输出约束关键字
+                    expr.ConstraintType = null;
+                }
                 // USING INDEX 子句
                 expr.HasUsingIndex = constraint.HasUsingIndex;
                 expr.UsingIndex = constraint.UsingIndex;
