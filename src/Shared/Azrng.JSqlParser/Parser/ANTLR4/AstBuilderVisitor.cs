@@ -1852,6 +1852,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
             Expression.Expression right = (Expression.Expression)Visit(suffix.concatenationExpr(0));
 
+            if (op.GEOMETRY_DISTANCE() != null)
+                return new GeometryDistance("<->") { LeftExpression = concat, RightExpression = right };
+            if (op.GEOMETRY_DISTANCE_HASH() != null)
+                return new GeometryDistance("<#>") { LeftExpression = concat, RightExpression = right };
             if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, right);
             if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)
                 return CreateBinary<NotEqualsTo>(concat, right);

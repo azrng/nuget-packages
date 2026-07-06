@@ -64,6 +64,8 @@ TILDE_STAR          : '~*' ;
 NOT_TILDE           : '!~' ;
 NOT_TILDE_STAR      : '!~*' ;
 COSINESIMILARITY    : '<=>' ;
+GEOMETRY_DISTANCE   : '<->' ;
+GEOMETRY_DISTANCE_HASH : '<#>' ;
 DOUBLE_AND          : '&&' ;
 CONTAINS            : '&>' ;
 CONTAINEDBY         : '<&' ;

@@ -241,6 +241,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(LowExpression lowExpression, S context) { lowExpression.Expression?.Accept(this); return null; }
     public object? Visit<S>(Inverse inverse, S context) { inverse.Expression?.Accept(this); return null; }
     public object? Visit<S>(CosineSimilarity cosineSimilarity, S context) => VisitBinary(cosineSimilarity);
+    public object? Visit<S>(GeometryDistance geometryDistance, S context) => VisitBinary(geometryDistance);
     public object? Visit<S>(Plus plus, S context) => VisitBinary(plus);
     public object? Visit<S>(PriorTo priorTo, S context) => VisitBinary(priorTo);
 
