@@ -66,7 +66,10 @@
 - 子项 51 ✅：CollateExpression — 新增 CollateExpression（LeftExpression/Collate）；ExpressionVisitor 加 Visit；文法 concatenationExpr 末尾新增可选 COLLATE 后缀；AstBuilder VisitConcatenationExpr 处理 COLLATE 包装；VisitOrderByItem 兼容从 CollateExpression 提取 CollateName 保持向后兼容；ExpressionCoverageTest 新增 2 个用例（字面量/标识符）。
 - 子项 52 ✅：TimezoneExpression — 新增 TimezoneExpression（LeftExpression/TimeZoneExpression）；ExpressionVisitor 加 Visit；AstBuilder VisitPostfixExpr 处理 AT TIME ZONE 后缀；ExpressionCoverageTest 新增 2 个用例（单/链式）。
 - 子项 53 ✅：NextValExpression — 新增 NextValExpression 类（NameList/UsingNextValueFor）对齐上游；ExpressionVisitor 加 Visit；文法 functionExpr 新增 NEXTVAL FOR columnRef 和 NEXT VALUE FOR columnRef 分支；AstBuilder VisitFunctionExpr 处理；ExpressionCoverageTest 新增 3 个用例（NEXTVAL FOR/NEXT VALUE FOR/多段限定名）。全量 707 测试通过。
-- 已完成步骤：53 个子项（全量 707 测试通过，本次会话基于上游 HEAD 直接对比补齐 17 项）
+- 子项 54 ✅：AnyComparisonExpression — 新增 AnyComparisonExpression（AnyType/Select）+ AnyType 枚举（Any/Some/All）；文法 predicateSuffix 在 comparisonOperator 分支新增 (ANY|SOME|ALL) (subquery) 备选；AstBuilder VisitPredicate 中处理；ExpressionCoverageTest 新增 3 个用例。
+- 子项 55 ✅：ArrayConstructor + ArrayExpression — 新增 ArrayConstructor（Expressions/ArrayKeyword）和 ArrayExpression（ObjExpression/IndexExpression/StartIndexExpression/StopIndexExpression）；lexer QUOTED_IDENTIFIER 的 [...] 形式限制首字符避免与数组字面量冲突；nonReservedKeyword 移除 ARRAY；文法 primaryExpr 新增 arrayConstructor 分支，postfixExpr LBRACKET 分支扩展支持 [start:end]；ExpressionCoverageTest 新增 4 个用例。
+- 子项 56 ✅：RowConstructor — 新增 RowConstructor（Name/Expressions）；文法 primaryExpr 新增 rowConstructor 分支复用 ROW token；AstBuilder 新增 VisitRowConstructor；ExpressionCoverageTest 新增 3 个用例（多值/单值/WHERE IN）。全量 717 测试通过。
+- 已完成步骤：56 个子项（全量 717 测试通过，本次会话基于上游 HEAD 直接对比补齐 20 项）
 
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
