@@ -385,6 +385,8 @@ COMMENTS        : [Cc][Oo][Mm][Mm][Ee][Nn][Tt][Ss] ;
 CONFLICT        : [Cc][Oo][Nn][Ff][Ll][Ii][Cc][Tt] ;
 CONSTRAINTS     : [Cc][Oo][Nn][Ss][Tt][Rr][Aa][Ii][Nn][Tt][Ss] ;
 CONVERT         : [Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;
+TRY_CONVERT     : [Tt][Rr][Yy]'_'[Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;
+SAFE_CONVERT    : [Ss][Aa][Ff][Ee]'_'[Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;
 CORRESPONDING   : [Cc][Oo][Rr][Rr][Ee][Ss][Pp][Oo][Nn][Dd][Ii][Nn][Gg] ;
 COSTS           : [Cc][Oo][Ss][Tt][Ss] ;
 COUNT           : [Cc][Oo][Uu][Nn][Tt] ;

@@ -2534,6 +2534,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.groupConcatFunction());
         }
 
+        // CONVERT / TRY_CONVERT / SAFE_CONVERT 双风格转码函数
+        if (context.transcodingFunction() != null)
+        {
+            return Visit(context.transcodingFunction());
+        }
+
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
         if ((context.NEXTVAL() != null || context.NEXT() != null) && context.FOR() != null)
@@ -2680,6 +2686,38 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     /// 构建 MySQL GROUP_CONCAT 函数。对应上游 commit ff28f826。
     /// 语法：GROUP_CONCAT(DISTINCT? expressionList? orderByClause? (SEPARATOR expression)?)
     /// </summary>
+    // CONVERT / TRY_CONVERT / SAFE_CONVERT 双风格转码函数
+    public override object VisitTranscodingFunction(JSqlParserGrammar.TranscodingFunctionContext context)
+    {
+        var keyword = context.TRY_CONVERT() != null ? "TRY_CONVERT"
+            : context.SAFE_CONVERT() != null ? "SAFE_CONVERT" : "CONVERT";
+
+        var body = (TranscodingFunction)Visit(context.transcodingBody());
+        body.Keyword = keyword;
+        return body;
+    }
+
+    public override object VisitTranscodingTypeStyle(JSqlParserGrammar.TranscodingTypeStyleContext context)
+    {
+        return new TranscodingFunction
+        {
+            IsTranscodeStyle = false,
+            ColDataType = context.dataType().GetText(),
+            Expression = (Expression.Expression)Visit(context.expression()),
+            TranscodingName = context.LONG_VALUE()?.GetText(),
+        };
+    }
+
+    public override object VisitTranscodingTranscodeStyle(JSqlParserGrammar.TranscodingTranscodeStyleContext context)
+    {
+        return new TranscodingFunction
+        {
+            IsTranscodeStyle = true,
+            Expression = (Expression.Expression)Visit(context.expression()),
+            TranscodingName = context.transcodingName().GetText(),
+        };
+    }
+
     public override object VisitGroupConcatFunction(JSqlParserGrammar.GroupConcatFunctionContext context)
     {
         var func = new Function { Name = "GROUP_CONCAT" };

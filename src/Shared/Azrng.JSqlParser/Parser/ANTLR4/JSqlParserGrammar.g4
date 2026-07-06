@@ -931,7 +931,8 @@ intervalExpr
     ;
 
 functionExpr
-    : identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
+    : transcodingFunction
+    | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
       withinGroupClause? filterClause? overClause?
@@ -939,6 +940,22 @@ functionExpr
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
     | NEXTVAL FOR columnRef
     | NEXT VALUE FOR columnRef
+    ;
+
+// CONVERT / TRY_CONVERT / SAFE_CONVERT 双风格转码函数
+//   - 转码风格：CONVERT(expr USING transcodingName)
+//   - 类型转换风格：CONVERT(dataType, expr[, style])
+transcodingFunction
+    : (TRY_CONVERT | SAFE_CONVERT | CONVERT) OPENING_PAREN transcodingBody CLOSING_PAREN
+    ;
+
+transcodingBody
+    : dataType COMMA expression (COMMA LONG_VALUE)?   #transcodingTypeStyle
+    | expression USING transcodingName                 #transcodingTranscodeStyle
+    ;
+
+transcodingName
+    : identifier (DOT identifier)*
     ;
 
 // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
