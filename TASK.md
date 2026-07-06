@@ -60,7 +60,10 @@
 - 子项 45 ✅：Oracle/PG 命名函数参数 — 新增 OracleNamedFunctionParameter（name => expr）和 PostgresNamedFunctionParameter（name := expr）类；ExpressionVisitor 加 Visit 方法；文法 primaryExpr 新增 namedFunctionParameter 分支复用现有 ARROW/ASSIGN token；AstBuilder 新增 VisitNamedFunctionParameter；ExpressionBasicTest 新增 4 个用例（Oracle 单/多参数 + PG + 混合）。全量 678 测试通过。
 - 子项 46 ✅：OracleHint 优化器提示 — lexer 新增 ORACLE_HINT (--+ ...) 和 ORACLE_HINT_ML (/*+ ... */) token 放在 LINE_COMMENT/BLOCK_COMMENT 之前优先匹配；新增 OracleHint 类（Value/SingleLine）+ 正则解析 + ToString 还原；ExpressionVisitor 加 Visit；PlainSelect 加 OracleHint 字段并在 AppendSelectBodyTo 输出；文法 plainSelect 在 SELECT 后加可选 hint；AstBuilder VisitPlainSelect 填充；ExpressionBasicTest 新增 4 个用例。全量 682 测试通过。
 - 子项 47 ✅：SQL Server 表提示 — 新增 SQLServerHints 类（NoLock/IndexName）对齐上游；Table 加 SqlServerHints 字段并在 ToString 输出；文法 tableOrSubquery 中 table alias 后新增 sqlServerHints 可选段；新增 sqlServerHints/sqlServerHint 规则；AstBuilder 新增 VisitSqlServerHints；SelectStatementTest 新增 5 个用例。全量 687 测试通过。
-- 已完成步骤：47 个子项（全量 687 测试通过，本次会话基于上游 HEAD 直接对比补齐 11 项）
+- 子项 48 ✅：MySQL 索引提示 — 新增 MySQLIndexHint 类（Action/IndexQualifier/IndexNames）对齐上游；Table 加 MySqlIndexHint 字段；文法 tableOrSubquery 加 mySqlIndexHint 可选段；AstBuilder 新增 VisitMySqlIndexHint；SelectStatementTest 新增 5 个用例（USE/IGNORE/FORCE INDEX/KEY）。全量 692 测试通过。
+- 子项 49 ✅：Oracle KEEP (DENSE_RANK FIRST/LAST) — 新增 KeepExpression 类（Name/First/OrderByElements）；ExpressionVisitor 加 Visit；Function 加 Keep 字段并在 ToString 输出；文法 functionExpr 新增 keepExpression? 可选段；AstBuilder 新增 VisitKeepExpression；ExpressionCoverageTest 新增 3 个用例（FIRST/LAST/无 KEEP）。全量 695 测试通过。
+- 子项 50 ✅：TRIM 函数规范 — 新增 TrimFunction 类（TrimSpecification/Expression/FromExpression/UsingFromKeyword）+ TrimSpecification 枚举；ExpressionVisitor 加 Visit；lexer 新增 TRIM/BOTH token；nonReservedKeyword 加 TRIM/BOTH；文法 primaryExpr 新增 trimFunction 分支；AstBuilder 新增 VisitTrimFunction；ExpressionCoverageTest 新增 5 个用例（简单/LEADING/TRAILING/BOTH/PostgreSQL 逗号形式）。全量 700 测试通过。
+- 已完成步骤：50 个子项（全量 700 测试通过，本次会话基于上游 HEAD 直接对比补齐 14 项）
 
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
