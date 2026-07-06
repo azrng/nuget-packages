@@ -57,7 +57,10 @@
 - 子项 42 ✅：MultiInsert 重构支持单分支多 INTO 目标 — 新增 MultiInsertClause 类（Table/Columns/ValuesItems/Select）；MultiInsertBranch 移除单目标字段改为 Clauses: List<MultiInsertClause>；WhenCondition/IsElse 通过 backing field 实现互斥维护；文法 multiInsertBranch 改为 multiInsertClause+；AstBuilder 拆分 VisitMultiInsertBranch/VisitMultiInsertClause；MultiInsertTest 重写 7 个用例（含单分支多 INTO 用例）。Breaking change 但仅自身 API 使用。全量 666 测试通过。
 - 子项 43 ✅：DateUnitExpression — 新增 DateUnitExpression 类 + DateUnit 枚举（Century/Decade/Year/Quarter/Month/Week/Day/Hour/Minute/Second/Millisecond/Microsecond/Nanosecond）；ExpressionVisitor 加 Visit 方法；nonReservedKeyword 新增 YEAR/MONTH/DAY/HOUR/MINUTE/SECOND 允许作列名/参数；ExpressionBasicTest 新增 5 个用例（修复 SELECT YEAR FROM t 此前解析失败的缺陷）。全量 671 测试通过。
 - 子项 44 ✅：Function keyword arguments — Function 加 KeywordArguments: List<KeywordArgument> 字段并在 ToString 输出；新增 KeywordArgument 类（Keyword/Expression）；文法 functionExpr 通用分支末尾新增 functionKeywordArgument* 可选段；AstBuilder 新增 VisitFunctionKeywordArgument；ExpressionCoverageTest 新增 3 个用例（SEPARATOR/多参数/IGNORE）。全量 674 测试通过。
-- 已完成步骤：44 个子项（全量 674 测试通过，本次会话基于上游 HEAD 直接对比补齐 8 项）
+- 子项 45 ✅：Oracle/PG 命名函数参数 — 新增 OracleNamedFunctionParameter（name => expr）和 PostgresNamedFunctionParameter（name := expr）类；ExpressionVisitor 加 Visit 方法；文法 primaryExpr 新增 namedFunctionParameter 分支复用现有 ARROW/ASSIGN token；AstBuilder 新增 VisitNamedFunctionParameter；ExpressionBasicTest 新增 4 个用例（Oracle 单/多参数 + PG + 混合）。全量 678 测试通过。
+- 子项 46 ✅：OracleHint 优化器提示 — lexer 新增 ORACLE_HINT (--+ ...) 和 ORACLE_HINT_ML (/*+ ... */) token 放在 LINE_COMMENT/BLOCK_COMMENT 之前优先匹配；新增 OracleHint 类（Value/SingleLine）+ 正则解析 + ToString 还原；ExpressionVisitor 加 Visit；PlainSelect 加 OracleHint 字段并在 AppendSelectBodyTo 输出；文法 plainSelect 在 SELECT 后加可选 hint；AstBuilder VisitPlainSelect 填充；ExpressionBasicTest 新增 4 个用例。全量 682 测试通过。
+- 子项 47 ✅：SQL Server 表提示 — 新增 SQLServerHints 类（NoLock/IndexName）对齐上游；Table 加 SqlServerHints 字段并在 ToString 输出；文法 tableOrSubquery 中 table alias 后新增 sqlServerHints 可选段；新增 sqlServerHints/sqlServerHint 规则；AstBuilder 新增 VisitSqlServerHints；SelectStatementTest 新增 5 个用例。全量 687 测试通过。
+- 已完成步骤：47 个子项（全量 687 测试通过，本次会话基于上游 HEAD 直接对比补齐 11 项）
 
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
