@@ -656,4 +656,60 @@ public class SelectStatementTest
     }
 
     #endregion
+
+    #region MySQL 索引提示 (USE/IGNORE/FORCE INDEX)
+
+    [Fact]
+    public void MySqlIndexHint_UseIndex_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users USE INDEX (idx_name, idx_age)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.MySqlIndexHint);
+        Assert.Equal("USE", table.MySqlIndexHint!.Action);
+        Assert.Equal("INDEX", table.MySqlIndexHint.IndexQualifier);
+        Assert.Equal(2, table.MySqlIndexHint.IndexNames.Count);
+        Assert.Contains("USE INDEX (idx_name,idx_age)", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void MySqlIndexHint_IgnoreKey_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users IGNORE KEY (idx_name)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.Equal("IGNORE", table.MySqlIndexHint!.Action);
+        Assert.Equal("KEY", table.MySqlIndexHint.IndexQualifier);
+    }
+
+    [Fact]
+    public void MySqlIndexHint_ForceIndex_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users FORCE INDEX (pk)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.Equal("FORCE", table.MySqlIndexHint!.Action);
+        Assert.Contains("FORCE INDEX (pk)", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void MySqlIndexHint_WithAlias_ShouldRoundTrip()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM users u USE INDEX (idx)")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.NotNull(table.Alias);
+        Assert.Equal("u", table.Alias!.Name);
+        Assert.NotNull(table.MySqlIndexHint);
+    }
+
+    [Fact]
+    public void MySqlIndexHint_None_ShouldBeNull()
+    {
+        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
+        var table = (Table)stmt.FromItem!;
+        Assert.Null(table.MySqlIndexHint);
+    }
+
+    #endregion
 }

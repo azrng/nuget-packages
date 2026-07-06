@@ -17,6 +17,9 @@ public class Table : ASTNodeAccessImpl, FromItem
     /// <summary>SQL Server 表提示（WITH (NOLOCK) 等），出现在表后。未指定时为 null。</summary>
     public SQLServerHints? SqlServerHints { get; set; }
 
+    /// <summary>MySQL 索引提示（USE/IGNORE/FORCE INDEX/KEY (...)），出现在表后。未指定时为 null。</summary>
+    public MySQLIndexHint? MySqlIndexHint { get; set; }
+
     public string GetFullyQualifiedName()
     {
         var parts = new System.Collections.Generic.List<string>();
@@ -34,6 +37,7 @@ public class Table : ASTNodeAccessImpl, FromItem
         var name = GetFullyQualifiedName();
         var result = Alias != null ? $"{name} {Alias}" : name;
         if (SqlServerHints != null) result += SqlServerHints;
+        if (MySqlIndexHint != null) result += MySqlIndexHint;
         return result;
     }
 }

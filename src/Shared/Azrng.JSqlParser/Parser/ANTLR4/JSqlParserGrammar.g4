@@ -124,7 +124,7 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias? sqlServerHints?
+    : table alias? sqlServerHints? mySqlIndexHint?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
@@ -139,6 +139,11 @@ sqlServerHints
 sqlServerHint
     : INDEX OPENING_PAREN identifier CLOSING_PAREN
     | NOLOCK
+    ;
+
+// MySQL 索引提示：USE|IGNORE|FORCE INDEX|KEY (idx1, idx2, ...)
+mySqlIndexHint
+    : (USE | IGNORE | FORCE) (INDEX | KEY) OPENING_PAREN identifier (COMMA identifier)* CLOSING_PAREN
     ;
 
 subSelect

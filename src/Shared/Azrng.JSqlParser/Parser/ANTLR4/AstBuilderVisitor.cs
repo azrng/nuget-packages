@@ -488,6 +488,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 table.SqlServerHints = (SQLServerHints)Visit(context.sqlServerHints());
             }
+            // MySQL 索引提示：USE|IGNORE|FORCE INDEX|KEY (idx1, ...)
+            if (context.mySqlIndexHint() != null)
+            {
+                table.MySqlIndexHint = (MySQLIndexHint)Visit(context.mySqlIndexHint());
+            }
             return table;
         }
 
@@ -1942,6 +1947,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
         return hints;
+    }
+
+    // MySQL 索引提示：USE|IGNORE|FORCE INDEX|KEY (idx1, ...)
+    public override object VisitMySqlIndexHint(JSqlParserGrammar.MySqlIndexHintContext context)
+    {
+        var action = context.USE() != null ? "USE"
+            : context.IGNORE() != null ? "IGNORE"
+            : context.FORCE() != null ? "FORCE" : "";
+        var qualifier = context.INDEX() != null ? "INDEX"
+            : context.KEY() != null ? "KEY" : "INDEX";
+        var names = context.identifier().Select(id => id.GetText()).ToList();
+        return new MySQLIndexHint(action.ToUpperInvariant(), qualifier.ToUpperInvariant(), names);
     }
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
