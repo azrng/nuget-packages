@@ -866,6 +866,8 @@ functionExpr
       withinGroupClause? filterClause? overClause?
     | groupConcatFunction
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
+    | NEXTVAL FOR columnRef
+    | NEXT VALUE FOR columnRef
     ;
 
 // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)

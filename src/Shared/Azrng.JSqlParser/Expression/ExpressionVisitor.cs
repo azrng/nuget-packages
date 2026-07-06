@@ -174,6 +174,7 @@ public interface ExpressionVisitor<T>
         timezoneExpression.TimeZoneExpression?.Accept(this, context);
         return default!;
     }
+    T Visit<S>(NextValExpression nextValExpression, S context) => default!;
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -263,4 +264,5 @@ public interface ExpressionVisitor<T>
     void Visit(TrimFunction trimFunction) => Visit<object?>(trimFunction, default);
     void Visit(CollateExpression collateExpression) => Visit<object?>(collateExpression, default);
     void Visit(TimezoneExpression timezoneExpression) => Visit<object?>(timezoneExpression, default);
+    void Visit(NextValExpression nextValExpression) => Visit<object?>(nextValExpression, default);
 }

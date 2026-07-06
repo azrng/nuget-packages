@@ -2175,6 +2175,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.groupConcatFunction());
         }
 
+        // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
+        // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
+        if ((context.NEXTVAL() != null || context.NEXT() != null) && context.FOR() != null)
+        {
+            var col = (Column)Visit(context.columnRef());
+            // 序列名可能是多段限定（schema.seq），按 . 拆分
+            var fullName = col.GetFullyQualifiedName();
+            var nameList = fullName.Split('.').ToList();
+            return new NextValExpression(nameList, usingNextValueFor: context.NEXT() != null);
+        }
+
         var funcName = context.identifier()?.GetText() ?? context.NEXTVAL()?.GetText() ?? "";
 
         ExpressionList? parameters = null;

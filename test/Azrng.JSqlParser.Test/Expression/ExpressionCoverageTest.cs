@@ -496,6 +496,41 @@ public class ExpressionCoverageTest
         Assert.Contains("AT TIME ZONE 'PST'", output);
     }
 
+    /// <summary>
+    /// 序列取值表达式 NEXTVAL FOR seq 和 NEXT VALUE FOR seq 应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void NextValExpression_NextvalFor_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT NEXTVAL FOR seq_user FROM t")!;
+        var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
+        Assert.False(nextVal.UsingNextValueFor);
+        Assert.Equal("seq_user", nextVal.Name);
+        Assert.Equal("NEXTVAL FOR seq_user", nextVal.ToString());
+    }
+
+    [Fact]
+    public void NextValExpression_NextValueFor_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT NEXT VALUE FOR seq_user FROM t")!;
+        var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
+        Assert.True(nextVal.UsingNextValueFor);
+        Assert.Contains("NEXT VALUE FOR seq_user", nextVal.ToString());
+    }
+
+    [Fact]
+    public void NextValExpression_QualifiedName_ShouldRoundTrip()
+    {
+        // schema.seq 多段限定名
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT NEXTVAL FOR my_schema.seq_user FROM t")!;
+        var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
+        Assert.Equal("my_schema.seq_user", nextVal.Name);
+        Assert.Equal(2, nextVal.NameList.Count);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression
