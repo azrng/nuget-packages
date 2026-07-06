@@ -455,6 +455,51 @@ public class ExpressionBasicTest
         Assert.NotNull(expr);
     }
 
+    /// <summary>
+    /// 日期单位字段作列名/参数/函数应能解析（对应上游 4fdfa785 DateUnitExpression）。
+    /// </summary>
+    [Fact]
+    public void DateUnit_AsColumnName_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT YEAR FROM t")!;
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void DateUnit_AsFunctionArg_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT TIMESTAMPDIFF(YEAR, a, b) FROM t")!;
+        Assert.NotNull(stmt);
+    }
+
+    [Fact]
+    public void DateUnit_TimestampAdd_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT TIMESTAMPADD(HOUR, 1, ts) FROM t")!;
+        Assert.NotNull(stmt);
+        // 往返
+        Assert.Contains("TIMESTAMPADD(HOUR, 1, ts)", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void DateUnit_MonthDaySecond_ShouldAllParse()
+    {
+        foreach (var unit in new[] { "MONTH", "DAY", "HOUR", "MINUTE", "SECOND" })
+        {
+            var stmt = CCJSqlParserUtil.Parse($"SELECT TIMESTAMPDIFF({unit}, a, b) FROM t")!;
+            Assert.NotNull(stmt);
+        }
+    }
+
+    [Fact]
+    public void DateUnitExpression_Type_ShouldRoundTrip()
+    {
+        var expr = new DateUnitExpression(DateUnit.Year);
+        Assert.Equal("YEAR", expr.ToString());
+        var expr2 = new DateUnitExpression("month");
+        Assert.Equal(DateUnit.Month, expr2.Unit);
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {

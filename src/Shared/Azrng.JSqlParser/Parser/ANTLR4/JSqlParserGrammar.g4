@@ -936,6 +936,7 @@ nonReservedKeyword
     | TIES | TRAILING | TRIGGER | TRY_CAST | TYPE
     | UNLOGGED | VALIDATE | VERIFY | VISIBLE | VOLATILE
     | WITHIN | WORK | ZONE
+    | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     ;
 
 // ══════════════════════════════════════════════

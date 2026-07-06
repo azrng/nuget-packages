@@ -134,6 +134,7 @@ public interface ExpressionVisitor<T>
         keyExpression.Expression?.Accept(this, context);
         return default!;
     }
+    T Visit<S>(DateUnitExpression dateUnitExpression, S context) => default!;
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -215,4 +216,5 @@ public interface ExpressionVisitor<T>
     void Visit(ExpressionList expressionList) => Visit<object?>(expressionList, default);
     void Visit(RowGetExpression rowGetExpression) => Visit<object?>(rowGetExpression, default);
     void Visit(KeyExpression keyExpression) => Visit<object?>(keyExpression, default);
+    void Visit(DateUnitExpression dateUnitExpression) => Visit<object?>(dateUnitExpression, default);
 }
