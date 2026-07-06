@@ -2112,8 +2112,32 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         func.Parameters = parameters;
         func.AllColumns = context.MULTIPLY() != null ||
             (parameters != null && parameters.Expressions.Count == 1 && parameters.Expressions[0] is AllColumns);
+
+        // 通用函数关键字参数（在 ) 之后）
+        var keywordArgs = context.functionKeywordArgument();
+        if (keywordArgs != null && keywordArgs.Length > 0)
+        {
+            func.KeywordArguments = new List<KeywordArgument>();
+            foreach (var kaCtx in keywordArgs)
+            {
+                func.KeywordArguments.Add((KeywordArgument)Visit(kaCtx));
+            }
+        }
+
         ApplyFunctionClauses(context, func);
         return func;
+    }
+
+    // 通用函数关键字参数：nonReservedKeyword expression
+    public override object VisitFunctionKeywordArgument(JSqlParserGrammar.FunctionKeywordArgumentContext context)
+    {
+        var keyword = context.nonReservedKeyword().GetText();
+        var arg = new KeywordArgument { Keyword = keyword };
+        if (context.expression() != null)
+        {
+            arg.Expression = (Expression.Expression)Visit(context.expression());
+        }
+        return arg;
     }
 
     private void ApplyFunctionClauses(JSqlParserGrammar.FunctionExprContext context, Function function)

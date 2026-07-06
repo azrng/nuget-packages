@@ -32,6 +32,17 @@ public class Function : ASTNodeAccessImpl, Expression
     /// </summary>
     public Expression? Separator { get; set; }
 
+    /// <summary>
+    /// 通用关键字参数列表（如 <code>func(expr SEPARATOR ',')</code> 中的 SEPARATOR 部分，
+    /// 或 BigQuery <code>ML.PREDICT(MODEL m, STRUCT(...))</code> 中的关键字参数）。
+    /// 对应上游 commit cd71aada / Function.KeywordArgument。
+    /// <para>
+    /// 注意：<see cref="Separator"/> 字段是 MySQL GROUP_CONCAT 的快捷特例；
+    /// 其他通用关键字参数通过此列表表达。
+    /// </para>
+    /// </summary>
+    public List<KeywordArgument>? KeywordArguments { get; set; }
+
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -63,6 +74,44 @@ public class Function : ASTNodeAccessImpl, Expression
         if (FilterExpression != null)
             sb.Append(" FILTER (WHERE ").Append(FilterExpression).Append(')');
 
+        // 通用关键字参数输出（在 ) 之后，按上游 Function.toString 的顺序）
+        if (KeywordArguments != null)
+        {
+            foreach (var ka in KeywordArguments)
+            {
+                sb.Append(ka);
+            }
+        }
+
+        return sb.ToString();
+    }
+}
+
+/// <summary>
+/// 函数调用的通用关键字参数，如 <code>func(arg1 SEPARATOR ',')</code> 中的 <c>SEPARATOR ','</c>。
+/// 对应上游 commit cd71aada / Function.KeywordArgument。
+/// </summary>
+public class KeywordArgument : ASTNodeAccessImpl, Model
+{
+    /// <summary>关键字名称（如 SEPARATOR、COST、USING）。</summary>
+    public string Keyword { get; set; } = "";
+
+    /// <summary>关键字后的表达式。</summary>
+    public Expression? Expression { get; set; }
+
+    public KeywordArgument() { }
+
+    public KeywordArgument(string keyword, Expression? expression)
+    {
+        Keyword = keyword;
+        Expression = expression;
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append(' ').Append(Keyword);
+        if (Expression != null) sb.Append(' ').Append(Expression);
         return sb.ToString();
     }
 }

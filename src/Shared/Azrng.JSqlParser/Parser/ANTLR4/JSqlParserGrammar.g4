@@ -831,9 +831,17 @@ intervalExpr
 
 functionExpr
     : identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
+      functionKeywordArgument*
       withinGroupClause? filterClause? overClause?
     | groupConcatFunction
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
+    ;
+
+// 通用函数关键字参数（在函数调用的 ) 之后附加）
+// 对应上游 cd71aada / Function.KeywordArgument
+// 例如：foo(arg1) SEPARATOR ',' 或 BigQuery 风格的关键字参数
+functionKeywordArgument
+    : nonReservedKeyword expression
     ;
 
 // MySQL GROUP_CONCAT 函数（对应上游 commit ff28f826）

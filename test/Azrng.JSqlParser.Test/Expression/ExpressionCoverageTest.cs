@@ -313,6 +313,44 @@ public class ExpressionCoverageTest
         Assert.NotNull(func.Parameters);
     }
 
+    /// <summary>
+    /// 通用函数关键字参数（对应上游 cd71aada / Function.KeywordArgument）。
+    /// 应能解析 func(args) SEPARATOR ',' 等形式。
+    /// </summary>
+    [Fact]
+    public void Function_KeywordArgument_ShouldRoundTrip()
+    {
+        // 在普通函数的 ) 之后附加关键字参数
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT my_func(arg) SEPARATOR ',' FROM t")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.KeywordArguments);
+        Assert.Single(func.KeywordArguments!);
+        Assert.Equal("SEPARATOR", func.KeywordArguments![0].Keyword);
+        Assert.Contains("SEPARATOR", func.ToString()!);
+    }
+
+    [Fact]
+    public void Function_MultipleKeywordArguments_ShouldRoundTrip()
+    {
+        // 多个连续关键字参数
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT my_func(arg) SEPARATOR ',' FROM t")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.KeywordArguments);
+    }
+
+    [Fact]
+    public void Function_KeywordArgument_WithIgnore_ShouldRoundTrip()
+    {
+        // IGNORE 作为 nonReservedKeyword 的关键字参数
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT my_func(arg) IGNORE 1 FROM t")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.KeywordArguments);
+        Assert.Equal("IGNORE", func.KeywordArguments![0].Keyword);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression
