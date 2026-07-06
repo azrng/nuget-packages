@@ -489,4 +489,6 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
 
     // JSqlParser 5.4+ - CREATE SEQUENCE
     public object? Visit<S>(Statement.Create.Sequence.CreateSequence createSequence, S context) => null;
+
+    public object? Visit<S>(Statement.Create.Schema.CreateSchema createSchema, S context) => null;
 }

@@ -13,6 +13,7 @@ using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Statement.Update;
 using Azrng.JSqlParser.Statement.CreateTable;
 using Azrng.JSqlParser.Statement.Create.Policy;
+using Azrng.JSqlParser.Statement.Create.Schema;
 using Azrng.JSqlParser.Statement.Create.Sequence;
 using Azrng.JSqlParser.Statement.Alter;
 using Azrng.JSqlParser.Statement.Drop;
@@ -69,6 +70,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.lockStatement() != null) return Visit(context.lockStatement());
         if (context.createPolicy() != null) return Visit(context.createPolicy());
         if (context.createSequence() != null) return Visit(context.createSequence());
+        if (context.createSchema() != null) return Visit(context.createSchema());
 
         return new UnsupportedStatement();
     }
@@ -1414,6 +1416,35 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (ctx.NOKEEP() != null) return new SequenceParameter(SequenceParameterType.NOKEEP);
 
         return new SequenceParameter();
+    }
+
+    // ── CREATE SCHEMA ──────────────────────────
+
+    public override object VisitCreateSchema(JSqlParserGrammar.CreateSchemaContext context)
+    {
+        var schema = new Statement.Create.Schema.CreateSchema();
+        if (context.IF() != null) schema.IfNotExists = true;
+
+        var qCtx = context.schemaQualifiedName();
+        var nameParts = qCtx.identifier();
+        if (nameParts.Length == 1)
+        {
+            schema.SchemaName = nameParts[0].GetText();
+        }
+        else if (nameParts.Length == 2)
+        {
+            // catalog.schema 形式
+            schema.CatalogName = nameParts[0].GetText();
+            schema.SchemaName = nameParts[1].GetText();
+        }
+
+        if (context.AUTHORIZATION() != null)
+        {
+            // createSchema 文法中 AUTHORIZATION 后的 identifier 是唯一直接子节点 identifier
+            var authId = context.identifier();
+            if (authId != null) schema.Authorization = authId.GetText();
+        }
+        return schema;
     }
 
     // ── MERGE ──────────────────────────────────

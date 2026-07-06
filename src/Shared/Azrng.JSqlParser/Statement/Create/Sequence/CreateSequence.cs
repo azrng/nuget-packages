@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Statement.Create.Sequence;
 /// </summary>
 public class CreateSequence : ASTNodeAccessImpl, Statement
 {
-    public Schema.Sequence? Sequence { get; set; }
+    public Azrng.JSqlParser.Schema.Sequence? Sequence { get; set; }
 
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

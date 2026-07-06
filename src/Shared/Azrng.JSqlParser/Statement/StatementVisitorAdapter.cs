@@ -48,4 +48,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // JSqlParser 5.4+ - Oracle INSERT ALL/FIRST (上游 commit 4f982e74)
     public virtual T Visit<S>(Insert.MultiInsert multiInsert, S context) => default!;
+
+    // JSqlParser 5.4+ - CREATE SCHEMA (上游 commit ac46c434)
+    public virtual T Visit<S>(Create.Schema.CreateSchema createSchema, S context) => default!;
 }

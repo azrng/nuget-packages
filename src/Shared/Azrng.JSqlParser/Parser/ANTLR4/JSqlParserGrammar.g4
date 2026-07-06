@@ -53,6 +53,7 @@ statement
     | lockStatement
     | createPolicy
     | createSequence
+    | createSchema
     ;
 
 // ══════════════════════════════════════════════
@@ -666,6 +667,16 @@ sequenceParameter
     | NOORDER
     | KEEP
     | NOKEEP
+    ;
+
+// CREATE SCHEMA [IF NOT EXISTS] [catalog.]schemaName [AUTHORIZATION auth] — commit ac46c434
+createSchema
+    : CREATE SCHEMA (IF NOT EXISTS)? schemaQualifiedName (AUTHORIZATION identifier)?
+    ;
+
+// catalog.schema 形式的限定名
+schemaQualifiedName
+    : identifier (DOT identifier)?
     ;
 
 // ══════════════════════════════════════════════
