@@ -531,6 +531,38 @@ public class ExpressionCoverageTest
         Assert.Equal(2, nextVal.NameList.Count);
     }
 
+    /// <summary>
+    /// ANY/SOME/ALL 比较表达式应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void AnyComparison_EqualAny_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression(
+            "x = ANY (SELECT id FROM t)");
+        Assert.NotNull(expr);
+        var output = expr!.ToString()!;
+        Assert.Contains("ANY", output);
+        Assert.Contains("SELECT id FROM t", output);
+    }
+
+    [Fact]
+    public void AnyComparison_GreaterAll_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression(
+            "x > ALL (SELECT val FROM t)");
+        Assert.NotNull(expr);
+        Assert.Contains("ALL", expr!.ToString()!);
+    }
+
+    [Fact]
+    public void AnyComparison_EqualSome_ShouldRoundTrip()
+    {
+        var expr = CCJSqlParserUtil.ParseCondExpression(
+            "x = SOME (SELECT id FROM t)");
+        Assert.NotNull(expr);
+        Assert.Contains("SOME", expr!.ToString()!);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression

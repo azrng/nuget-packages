@@ -1604,6 +1604,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (suffix.comparisonOperator() != null)
         {
             var op = suffix.comparisonOperator();
+
+            // = ANY/ALL/SOME (subquery) 形式
+            if (suffix.ANY() != null || suffix.SOME() != null || suffix.ALL() != null)
+            {
+                var anyType = suffix.ALL() != null ? AnyType.All
+                    : suffix.SOME() != null ? AnyType.Some : AnyType.Any;
+                var select = (Select)Visit(suffix.selectStatement());
+                // 包装成比较运算符 + ANY/ALL/SOME
+                var anyCompare = new AnyComparisonExpression(anyType, select);
+                Expression.Expression result = anyCompare;
+                if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, result);
+                if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)
+                    return CreateBinary<NotEqualsTo>(concat, result);
+                if (op.GREATER_THAN() != null) return CreateBinary<GreaterThan>(concat, result);
+                if (op.GREATER_THAN_EQUALS() != null) return CreateBinary<GreaterThanEquals>(concat, result);
+                if (op.MINOR_THAN() != null) return CreateBinary<MinorThan>(concat, result);
+                if (op.MINOR_THAN_EQUALS() != null) return CreateBinary<MinorThanEquals>(concat, result);
+                return CreateBinary<EqualsTo>(concat, result);
+            }
+
             Expression.Expression right = (Expression.Expression)Visit(suffix.concatenationExpr(0));
 
             if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, right);

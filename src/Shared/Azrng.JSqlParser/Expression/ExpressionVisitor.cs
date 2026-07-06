@@ -175,6 +175,7 @@ public interface ExpressionVisitor<T>
         return default!;
     }
     T Visit<S>(NextValExpression nextValExpression, S context) => default!;
+    T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => default!;
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -265,4 +266,5 @@ public interface ExpressionVisitor<T>
     void Visit(CollateExpression collateExpression) => Visit<object?>(collateExpression, default);
     void Visit(TimezoneExpression timezoneExpression) => Visit<object?>(timezoneExpression, default);
     void Visit(NextValExpression nextValExpression) => Visit<object?>(nextValExpression, default);
+    void Visit(AnyComparisonExpression anyComparisonExpression) => Visit<object?>(anyComparisonExpression, default);
 }
