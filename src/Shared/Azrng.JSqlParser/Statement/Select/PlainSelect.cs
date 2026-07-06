@@ -25,6 +25,9 @@ public class PlainSelect : Select
     /// <summary>SQL Server FOR XML PATH('name') 的路径名，无 FOR XML PATH 时为 null，空字符串表示无参数的 FOR XML PATH。</summary>
     public string? ForXmlPath { get; set; }
 
+    /// <summary>Oracle 优化器提示（SELECT 关键字后紧跟的 /*+ ... */ 或 --+ ... 注释）。</summary>
+    public OracleHint? OracleHint { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -33,6 +36,7 @@ public class PlainSelect : Select
     public override StringBuilder AppendSelectBodyTo(StringBuilder builder)
     {
         builder.Append("SELECT ");
+        if (OracleHint != null) builder.Append(OracleHint).Append(' ');
         if (Distinct != null) builder.Append(Distinct).Append(' ');
         else if (All) builder.Append("ALL ");
         if (SelectItems != null) builder.Append(string.Join(", ", SelectItems));

@@ -209,6 +209,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var select = new PlainSelect();
 
+        // Oracle Hint：SELECT 关键字后紧跟的 /*+ ... */ 或 --+ ... 注释
+        if (context.ORACLE_HINT() != null || context.ORACLE_HINT_ML() != null)
+        {
+            var hintComment = context.ORACLE_HINT()?.GetText() ?? context.ORACLE_HINT_ML()?.GetText() ?? "";
+            select.OracleHint = new OracleHint(hintComment);
+        }
+
         if (context.DISTINCT() != null || context.DISTINCTROW() != null)
         {
             select.Distinct = new Distinct();

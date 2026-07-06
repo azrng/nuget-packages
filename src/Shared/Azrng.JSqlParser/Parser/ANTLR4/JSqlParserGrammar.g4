@@ -77,7 +77,7 @@ selectBody
     ;
 
 plainSelect
-    : SELECT topClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
+    : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
       intoClause?
       fromClause?
       whereClause?

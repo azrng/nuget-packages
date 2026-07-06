@@ -541,6 +541,47 @@ public class ExpressionBasicTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// Oracle 多行 Hint（/*+ ... */）应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void OracleHint_MultiLine_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT /*+ INDEX(t idx) */ id FROM t")!;
+        var select = (PlainSelect)stmt;
+        Assert.NotNull(select.OracleHint);
+        Assert.Contains("INDEX(t idx)", select.OracleHint!.Value!);
+        Assert.False(select.OracleHint!.SingleLine);
+        // 往返
+        Assert.Contains("/*+ INDEX(t idx) */", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void OracleHint_None_ShouldBeNull()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM t")!;
+        var select = (PlainSelect)stmt;
+        Assert.Null(select.OracleHint);
+    }
+
+    [Fact]
+    public void OracleHint_RegularComment_ShouldNotBeHint()
+    {
+        // 普通块注释不应被识别为 Oracle Hint
+        var stmt = CCJSqlParserUtil.Parse("SELECT /* normal comment */ id FROM t")!;
+        var select = (PlainSelect)stmt;
+        Assert.Null(select.OracleHint);
+    }
+
+    [Fact]
+    public void OracleHint_Type_ShouldRoundTrip()
+    {
+        var hint = new OracleHint("/*+ FIRST_ROWS(100) */");
+        Assert.Equal("FIRST_ROWS(100)", hint.Value);
+        Assert.False(hint.SingleLine);
+        Assert.Equal("/*+ FIRST_ROWS(100) */", hint.ToString());
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {

@@ -20,6 +20,8 @@ namespace Azrng.JSqlParser.Parser.ANTLR4;
 // ──────────────────────────────────────────────
 
 WHITESPACE      : [ \t\r\n]+ -> skip ;
+ORACLE_HINT     : '--+' ~[\r\n]* ;
+ORACLE_HINT_ML  : '/*+' .*? '*/' ;
 LINE_COMMENT    : ('--' | '//') ~[\r\n]* -> skip ;
 BLOCK_COMMENT   : '/*' .*? '*/' -> skip ;
 
