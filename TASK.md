@@ -63,7 +63,10 @@
 - 子项 48 ✅：MySQL 索引提示 — 新增 MySQLIndexHint 类（Action/IndexQualifier/IndexNames）对齐上游；Table 加 MySqlIndexHint 字段；文法 tableOrSubquery 加 mySqlIndexHint 可选段；AstBuilder 新增 VisitMySqlIndexHint；SelectStatementTest 新增 5 个用例（USE/IGNORE/FORCE INDEX/KEY）。全量 692 测试通过。
 - 子项 49 ✅：Oracle KEEP (DENSE_RANK FIRST/LAST) — 新增 KeepExpression 类（Name/First/OrderByElements）；ExpressionVisitor 加 Visit；Function 加 Keep 字段并在 ToString 输出；文法 functionExpr 新增 keepExpression? 可选段；AstBuilder 新增 VisitKeepExpression；ExpressionCoverageTest 新增 3 个用例（FIRST/LAST/无 KEEP）。全量 695 测试通过。
 - 子项 50 ✅：TRIM 函数规范 — 新增 TrimFunction 类（TrimSpecification/Expression/FromExpression/UsingFromKeyword）+ TrimSpecification 枚举；ExpressionVisitor 加 Visit；lexer 新增 TRIM/BOTH token；nonReservedKeyword 加 TRIM/BOTH；文法 primaryExpr 新增 trimFunction 分支；AstBuilder 新增 VisitTrimFunction；ExpressionCoverageTest 新增 5 个用例（简单/LEADING/TRAILING/BOTH/PostgreSQL 逗号形式）。全量 700 测试通过。
-- 已完成步骤：50 个子项（全量 700 测试通过，本次会话基于上游 HEAD 直接对比补齐 14 项）
+- 子项 51 ✅：CollateExpression — 新增 CollateExpression（LeftExpression/Collate）；ExpressionVisitor 加 Visit；文法 concatenationExpr 末尾新增可选 COLLATE 后缀；AstBuilder VisitConcatenationExpr 处理 COLLATE 包装；VisitOrderByItem 兼容从 CollateExpression 提取 CollateName 保持向后兼容；ExpressionCoverageTest 新增 2 个用例（字面量/标识符）。
+- 子项 52 ✅：TimezoneExpression — 新增 TimezoneExpression（LeftExpression/TimeZoneExpression）；ExpressionVisitor 加 Visit；AstBuilder VisitPostfixExpr 处理 AT TIME ZONE 后缀；ExpressionCoverageTest 新增 2 个用例（单/链式）。
+- 子项 53 ✅：NextValExpression — 新增 NextValExpression 类（NameList/UsingNextValueFor）对齐上游；ExpressionVisitor 加 Visit；文法 functionExpr 新增 NEXTVAL FOR columnRef 和 NEXT VALUE FOR columnRef 分支；AstBuilder VisitFunctionExpr 处理；ExpressionCoverageTest 新增 3 个用例（NEXTVAL FOR/NEXT VALUE FOR/多段限定名）。全量 707 测试通过。
+- 已完成步骤：53 个子项（全量 707 测试通过，本次会话基于上游 HEAD 直接对比补齐 17 项）
 
 ### T075 剩余待办清单（5.4..HEAD 共 87 个 feat/fix，已处理 36 个，剩余 51 个）
 
