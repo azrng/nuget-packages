@@ -773,10 +773,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitMultiInsertBranch(JSqlParserGrammar.MultiInsertBranchContext context)
     {
-        var branch = new MultiInsertBranch
-        {
-            Table = (Table)Visit(context.table())
-        };
+        var branch = new MultiInsertBranch();
 
         // WHEN expression THEN / ELSE / 无条件 INTO
         if (context.WHEN() != null && context.expression() != null)
@@ -788,20 +785,36 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             branch.IsElse = true;
         }
 
+        // 收集分支下的所有 INTO 目标子句（一个分支可含多个目标）
+        foreach (var clauseCtx in context.multiInsertClause())
+        {
+            branch.Clauses.Add((MultiInsertClause)Visit(clauseCtx));
+        }
+
+        return branch;
+    }
+
+    public override object VisitMultiInsertClause(JSqlParserGrammar.MultiInsertClauseContext context)
+    {
+        var clause = new MultiInsertClause
+        {
+            Table = (Table)Visit(context.table())
+        };
+
         if (context.identifierList() != null)
         {
-            branch.Columns = new List<Column>();
+            clause.Columns = new List<Column>();
             foreach (var id in context.identifierList().identifier())
             {
-                branch.Columns.Add(new Column { ColumnName = id.GetText() });
+                clause.Columns.Add(new Column { ColumnName = id.GetText() });
             }
         }
 
         // VALUES valuesList | selectStatement
         if (context.valuesList() != null)
         {
-            branch.UseValues = true;
-            branch.ValuesItems = new List<ExpressionList>();
+            clause.UseValues = true;
+            clause.ValuesItems = new List<ExpressionList>();
             foreach (var itemCtx in context.valuesList().valuesItem())
             {
                 var exprList = new ExpressionList
@@ -812,16 +825,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 {
                     exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
                 }
-                branch.ValuesItems.Add(exprList);
+                clause.ValuesItems.Add(exprList);
             }
         }
         else if (context.selectStatement() != null)
         {
-            branch.UseValues = false;
-            branch.Select = (Select)Visit(context.selectStatement());
+            clause.UseValues = false;
+            clause.Select = (Select)Visit(context.selectStatement());
         }
 
-        return branch;
+        return clause;
     }
 
     // ── UPDATE ─────────────────────────────────

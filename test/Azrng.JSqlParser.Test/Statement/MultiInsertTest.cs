@@ -13,13 +13,17 @@ public class MultiInsertTest
     public void MultiInsert_All_Unconditional_ShouldParse()
     {
         // 无 WHEN 条件的 INSERT ALL（每条源行入所有目标表）
+        // 重构后，连续的无条件 INTO 归并到一个分支的多个 clause 中
         var sql = "INSERT ALL INTO a (id) VALUES (id) INTO b (id) VALUES (id) SELECT id FROM src";
         var stmt = (MultiInsert)CCJSqlParserUtil.Parse(sql)!;
         Assert.False(stmt.IsFirst);
-        Assert.Equal(2, stmt.Branches.Count);
+        Assert.Single(stmt.Branches);
         Assert.Null(stmt.Branches[0].WhenCondition);
-        Assert.Equal("a", stmt.Branches[0].Table!.Name);
-        Assert.Equal("b", stmt.Branches[1].Table!.Name);
+        Assert.False(stmt.Branches[0].IsElse);
+        // 单分支含 2 个 INTO 目标
+        Assert.Equal(2, stmt.Branches[0].Clauses.Count);
+        Assert.Equal("a", stmt.Branches[0].Clauses[0].Table!.Name);
+        Assert.Equal("b", stmt.Branches[0].Clauses[1].Table!.Name);
         Assert.NotNull(stmt.Select);
     }
 
@@ -31,9 +35,11 @@ public class MultiInsertTest
         Assert.False(stmt.IsFirst);
         Assert.Equal(2, stmt.Branches.Count);
         Assert.NotNull(stmt.Branches[0].WhenCondition);
-        Assert.Null(stmt.Branches[1].WhenCondition); // ELSE
-        Assert.Equal("adults", stmt.Branches[0].Table!.Name);
-        Assert.Equal("minors", stmt.Branches[1].Table!.Name);
+        Assert.False(stmt.Branches[0].IsElse); // WHEN 分支
+        Assert.Null(stmt.Branches[1].WhenCondition);
+        Assert.True(stmt.Branches[1].IsElse); // ELSE 分支
+        Assert.Equal("adults", stmt.Branches[0].Clauses[0].Table!.Name);
+        Assert.Equal("minors", stmt.Branches[1].Clauses[0].Table!.Name);
     }
 
     [Fact]
@@ -71,11 +77,32 @@ public class MultiInsertTest
     [Fact]
     public void MultiInsert_WithSubSelectBranch_ShouldParse()
     {
-        // 每个 INTO 后面也可以是 SELECT 子查询而非 VALUES（Oracle 多表插入允许）
+        // 每个 INTO 后面也可以是 SELECT 子查询而非 VALUES
         var sql = "INSERT ALL INTO sales_hist SELECT * FROM sales WHERE region = 'US' SELECT * FROM sales";
         var stmt = (MultiInsert)CCJSqlParserUtil.Parse(sql)!;
         Assert.Single(stmt.Branches);
-        Assert.Null(stmt.Branches[0].ValuesItems);
-        Assert.NotNull(stmt.Branches[0].Select);
+        var clause = stmt.Branches[0].Clauses[0];
+        Assert.Null(clause.ValuesItems);
+        Assert.NotNull(clause.Select);
+    }
+
+    /// <summary>
+    /// 重构后支持单分支多 INTO 目标：
+    /// <code>WHEN x THEN INTO a(...) VALUES(...) INTO b(...) VALUES(...)</code>
+    /// </summary>
+    [Fact]
+    public void MultiInsert_SingleBranchMultiTarget_ShouldHaveMultipleClauses()
+    {
+        var sql = "INSERT ALL WHEN age > 18 THEN INTO adults (id) VALUES (id) INTO logs (event) VALUES ('adult') SELECT id, age FROM src";
+        var stmt = (MultiInsert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.Single(stmt.Branches);
+        // 单分支含 2 个 INTO 目标
+        Assert.Equal(2, stmt.Branches[0].Clauses.Count);
+        Assert.Equal("adults", stmt.Branches[0].Clauses[0].Table!.Name);
+        Assert.Equal("logs", stmt.Branches[0].Clauses[1].Table!.Name);
+        // 往返
+        var output = stmt.ToString()!;
+        Assert.Contains("INTO adults (id)", output);
+        Assert.Contains("INTO logs (event)", output);
     }
 }

@@ -298,7 +298,11 @@ multiInsertStatement
     ;
 
 multiInsertBranch
-    : (WHEN expression THEN | ELSE)? INTO table (OPENING_PAREN identifierList CLOSING_PAREN)?
+    : (WHEN expression THEN | ELSE)? multiInsertClause+
+    ;
+
+multiInsertClause
+    : INTO table (OPENING_PAREN identifierList CLOSING_PAREN)?
       (VALUES valuesList | selectStatement)
     ;
 

@@ -8,14 +8,16 @@ namespace Azrng.JSqlParser.Statement.Insert;
 
 /// <summary>
 /// Oracle 多表插入语句（INSERT ALL / INSERT FIRST）。
-/// 对应上游 commit 4f982e74 / issue #2394。
+/// 对应上游 commit 4f982e74 / OracleMultiInsertClause + OracleMultiInsertBranch。
 /// <para>
 /// 语法示例：
 /// <code>
 /// INSERT ALL
-///   WHEN age &gt; 18 THEN INTO adults (id, name) VALUES (id, name)
-///   WHEN age &lt;= 18 THEN INTO minors (id, name) VALUES (id, name)
-///   ELSE INTO others (id) VALUES (id)
+///   WHEN age &gt; 18 THEN
+///     INTO adults (id, name) VALUES (id, name)
+///     INTO logs (event) VALUES ('adult')   -- 单分支多 INTO 目标
+///   ELSE
+///     INTO minors (id, name) VALUES (id, name)
 ///   SELECT id, name, age FROM src;
 /// </code>
 /// </para>
@@ -32,7 +34,7 @@ public class MultiInsert : ASTNodeAccessImpl, Statement
     /// </summary>
     public bool IsFirst { get; set; }
 
-    /// <summary>WHEN/ELSE 分支列表，至少包含一个分支。</summary>
+    /// <summary>WHEN/ELSE 分支列表，至少包含一个分支。每个分支可含一个或多个 INTO 目标。</summary>
     public List<MultiInsertBranch> Branches { get; set; } = new();
 
     /// <summary>
@@ -57,41 +59,46 @@ public class MultiInsert : ASTNodeAccessImpl, Statement
 }
 
 /// <summary>
-/// INSERT ALL/FIRST 中的一个 WHEN condition THEN INTO ... 或 ELSE INTO ... 分支。
+/// INSERT ALL/FIRST 中的一个 WHEN condition THEN ... 或 ELSE ... 分支。
+/// 一个分支可包含多个 INTO 目标子句（<see cref="Clauses"/>）。
+/// 与上游 OracleMultiInsertBranch 对齐。
 /// </summary>
 public class MultiInsertBranch : ASTNodeAccessImpl, Model
 {
     /// <summary>
-    /// WHEN 后的条件表达式；为 null 时可能是 ELSE 分支或无条件 INTO 分支，
-    /// 通过 <see cref="IsElse"/> 区分。
+    /// WHEN 后的条件表达式；为 null 时表示 ELSE 分支。
+    /// 与 <see cref="IsElse"/> 互斥（设置其中一个会清空另一个）。
     /// </summary>
-    public Expression.Expression? WhenCondition { get; set; }
+    public Expression.Expression? WhenCondition
+    {
+        get => _whenCondition;
+        set
+        {
+            _whenCondition = value;
+            if (value != null) _isElse = false;
+        }
+    }
 
-    /// <summary>true 表示这是 ELSE 分支；false 表示 WHEN 分支或无条件 INTO 分支。</summary>
-    public bool IsElse { get; set; }
+    /// <summary>true 表示这是 ELSE 分支；false 表示 WHEN 分支。设置 true 会清空 WhenCondition。</summary>
+    public bool IsElse
+    {
+        get => _isElse;
+        set
+        {
+            _isElse = value;
+            if (value) _whenCondition = null;
+        }
+    }
 
-    /// <summary>分支目标表。</summary>
-    public Table? Table { get; set; }
+    private Expression.Expression? _whenCondition;
+    private bool _isElse;
 
-    /// <summary>列列表，未指定时为 null。</summary>
-    public List<Column>? Columns { get; set; }
-
-    /// <summary>
-    /// 分支数据来源：VALUES (...) 或子查询。两者互斥。
-    /// </summary>
-    public List<ExpressionList>? ValuesItems { get; set; }
-
-    /// <summary>子查询数据源，与 ValuesItems 互斥。</summary>
-    public Select.Select? Select { get; set; }
-
-    /// <summary>是否使用 VALUES 关键字。</summary>
-    public bool UseValues { get; set; } = true;
+    /// <summary>该分支下的所有 INTO 目标子句。一个分支可触发多个目标。</summary>
+    public List<MultiInsertClause> Clauses { get; set; } = new();
 
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
-        // 当 IsElse=true 时输出 ELSE，否则 WhenCondition 不为空输出 WHEN ... THEN，
-        // WhenCondition 为空表示无条件 INTO 分支
         if (IsElse)
         {
             sb.Append("ELSE ");
@@ -100,6 +107,41 @@ public class MultiInsertBranch : ASTNodeAccessImpl, Model
         {
             sb.Append("WHEN ").Append(WhenCondition).Append(" THEN ");
         }
+        foreach (var clause in Clauses)
+        {
+            sb.Append(clause).Append(' ');
+        }
+        return sb.ToString();
+    }
+}
+
+/// <summary>
+/// INSERT ALL/FIRST 分支内的单个 INTO 目标子句：
+/// <c>INTO table (cols) VALUES (...) </c> 或 <c>INTO table (cols) SELECT ...</c>。
+/// 与上游 OracleMultiInsertClause 对齐。
+/// </summary>
+public class MultiInsertClause : ASTNodeAccessImpl, Model
+{
+    /// <summary>分支目标表。</summary>
+    public Table? Table { get; set; }
+
+    /// <summary>列列表，未指定时为 null。</summary>
+    public List<Column>? Columns { get; set; }
+
+    /// <summary>
+    /// VALUES 子句的多行值列表，与 <see cref="Select"/> 互斥。
+    /// </summary>
+    public List<ExpressionList>? ValuesItems { get; set; }
+
+    /// <summary>子查询数据源，与 ValuesItems 互斥。</summary>
+    public Select.Select? Select { get; set; }
+
+    /// <summary>是否使用 VALUES 关键字（仅用于 ToString 输出）。</summary>
+    public bool UseValues { get; set; } = true;
+
+    public override string ToString()
+    {
+        var sb = new System.Text.StringBuilder();
         sb.Append("INTO ").Append(Table);
         if (Columns is { Count: > 0 })
         {
@@ -118,7 +160,6 @@ public class MultiInsertBranch : ASTNodeAccessImpl, Model
                 sb.Append('(').Append(ValuesItems[i]).Append(')');
             }
         }
-        sb.Append(' ');
         return sb.ToString();
     }
 }

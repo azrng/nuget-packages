@@ -366,10 +366,13 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     {
         foreach (var branch in multiInsert.Branches)
         {
-            AddTable(branch.Table);
             branch.WhenCondition?.Accept(this);
-            if (branch.Select != null)
-                ((Statement.StatementVisitor<object?>)this).Visit(branch.Select, (object?)null);
+            foreach (var clause in branch.Clauses)
+            {
+                AddTable(clause.Table);
+                if (clause.Select != null)
+                    ((Statement.StatementVisitor<object?>)this).Visit(clause.Select, (object?)null);
+            }
         }
         if (multiInsert.Select != null)
             ((Statement.StatementVisitor<object?>)this).Visit(multiInsert.Select, (object?)null);
