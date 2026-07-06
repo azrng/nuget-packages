@@ -746,6 +746,7 @@ primaryExpr
     | castExpr
     | extractExpr
     | intervalExpr
+    | trimFunction
     | functionExpr
     | subSelect
     | structType
@@ -757,6 +758,13 @@ primaryExpr
     | OPENING_PAREN expression CLOSING_PAREN
     | columnRef
     | MULTIPLY
+    ;
+
+// TRIM([LEADING|TRAILING|BOTH] [chars] [FROM] str)
+trimFunction
+    : TRIM OPENING_PAREN (LEADING | TRAILING | BOTH)? expression?
+      (FROM | COMMA) expression CLOSING_PAREN
+    | TRIM OPENING_PAREN expression CLOSING_PAREN
     ;
 
 // Oracle/PostgreSQL 命名函数参数（仅在函数参数位置有意义，但作为 primaryExpr 备选以便复用）
@@ -942,7 +950,7 @@ identifier
 nonReservedKeyword
     : ACTION | ACTIVE | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE | ARRAY
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
-    | BEFORE | BEGIN | BIT
+    | BEFORE | BEGIN | BIT | BOTH
     | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
     | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT
     | CONFLICT | CONSTRAINTS | CONVERT | COSTS | COUNT | CREATED | CYCLE
@@ -970,7 +978,7 @@ nonReservedKeyword
     | RETURN | RETURNS | RETURNING | ROLLBACK | ROLLUP | RLIKE
     | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW
     | START | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP
-    | TIES | TRAILING | TRIGGER | TRY_CAST | TYPE
+    | TIES | TRAILING | TRIGGER | TRIM | TRY_CAST | TYPE
     | UNLOGGED | VALIDATE | VERIFY | VISIBLE | VOLATILE
     | WITHIN | WORK | ZONE
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND

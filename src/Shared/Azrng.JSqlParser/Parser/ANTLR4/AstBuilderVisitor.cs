@@ -1899,6 +1899,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.keyExpression() != null) return Visit(context.keyExpression());
         if (context.fullTextSearch() != null) return Visit(context.fullTextSearch());
         if (context.namedFunctionParameter() != null) return Visit(context.namedFunctionParameter());
+        if (context.trimFunction() != null) return Visit(context.trimFunction());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -1929,6 +1930,34 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new OracleNamedFunctionParameter(name, expr);
         }
         return new PostgresNamedFunctionParameter(name, expr);
+    }
+
+    // TRIM([LEADING|TRAILING|BOTH] [chars] [FROM] str) 或 TRIM(str)
+    public override object VisitTrimFunction(JSqlParserGrammar.TrimFunctionContext context)
+    {
+        var trim = new TrimFunction();
+
+        // 规范：LEADING/TRAILING/BOTH
+        if (context.LEADING() != null) trim.TrimSpecification = TrimSpecification.Leading;
+        else if (context.TRAILING() != null) trim.TrimSpecification = TrimSpecification.Trailing;
+        else if (context.BOTH() != null) trim.TrimSpecification = TrimSpecification.Both;
+
+        // 解析所有 expression，按位置赋值
+        var exprs = context.expression();
+        if (context.FROM() != null || context.COMMA() != null)
+        {
+            // [chars] [FROM|,] str 形式（2 个 expression）
+            if (exprs.Length >= 1) trim.Expression = (Expression.Expression)Visit(exprs[0]);
+            if (exprs.Length >= 2) trim.FromExpression = (Expression.Expression)Visit(exprs[1]);
+            trim.UsingFromKeyword = context.FROM() != null;
+        }
+        else if (exprs.Length >= 1)
+        {
+            // TRIM(str) 简单形式（1 个 expression）
+            trim.FromExpression = (Expression.Expression)Visit(exprs[0]);
+        }
+
+        return trim;
     }
 
     // SQL Server 表提示：WITH (INDEX(name) | NOLOCK | ...)

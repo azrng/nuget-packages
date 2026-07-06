@@ -157,6 +157,12 @@ public interface ExpressionVisitor<T>
         }
         return default!;
     }
+    T Visit<S>(TrimFunction trimFunction, S context)
+    {
+        trimFunction.Expression?.Accept(this, context);
+        trimFunction.FromExpression?.Accept(this, context);
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -243,4 +249,5 @@ public interface ExpressionVisitor<T>
     void Visit(PostgresNamedFunctionParameter postgresNamedFunctionParameter) => Visit<object?>(postgresNamedFunctionParameter, default);
     void Visit(OracleHint oracleHint) => Visit<object?>(oracleHint, default);
     void Visit(KeepExpression keepExpression) => Visit<object?>(keepExpression, default);
+    void Visit(TrimFunction trimFunction) => Visit<object?>(trimFunction, default);
 }

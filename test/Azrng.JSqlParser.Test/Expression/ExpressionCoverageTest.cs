@@ -388,6 +388,65 @@ public class ExpressionCoverageTest
         Assert.Null(func.Keep);
     }
 
+    /// <summary>
+    /// TRIM 函数各种形式应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void Trim_Simple_ShouldRoundTrip()
+    {
+        // TRIM(str) 简单形式
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT TRIM('  hello  ') FROM t")!;
+        var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
+        Assert.Null(trim.TrimSpecification);
+        Assert.NotNull(trim.FromExpression);
+    }
+
+    [Fact]
+    public void Trim_LeadingFrom_ShouldRoundTrip()
+    {
+        // TRIM(LEADING ' ' FROM str) 标准形式
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT TRIM(LEADING ' ' FROM '  hello') FROM t")!;
+        var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(TrimSpecification.Leading, trim.TrimSpecification);
+        Assert.NotNull(trim.Expression);
+        Assert.NotNull(trim.FromExpression);
+        Assert.True(trim.UsingFromKeyword);
+        Assert.Contains("LEADING", trim.ToString()!);
+        Assert.Contains("FROM", trim.ToString()!);
+    }
+
+    [Fact]
+    public void Trim_TrailingFrom_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT TRIM(TRAILING ',' FROM 'hello,') FROM t")!;
+        var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(TrimSpecification.Trailing, trim.TrimSpecification);
+    }
+
+    [Fact]
+    public void Trim_BothFrom_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT TRIM(BOTH ',' FROM ',,hello,,') FROM t")!;
+        var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(TrimSpecification.Both, trim.TrimSpecification);
+    }
+
+    [Fact]
+    public void Trim_PostgresCommaForm_ShouldRoundTrip()
+    {
+        // PostgreSQL 风格：TRIM(chars, str)（用逗号而非 FROM）
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT TRIM(' ', '  hello') FROM t")!;
+        var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
+        Assert.NotNull(trim.Expression);
+        Assert.NotNull(trim.FromExpression);
+        Assert.False(trim.UsingFromKeyword);
+        Assert.Contains(",", trim.ToString()!);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression
