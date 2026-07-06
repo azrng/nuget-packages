@@ -533,6 +533,17 @@ public class ExpressionBasicTest
         Assert.Contains(":=", stmt.ToString()!);
     }
 
+    /// <summary>
+    /// PostgreSQL 多命名参数应正确解析并往返（上游 commit 7c52e7fe 核心场景）。
+    /// </summary>
+    [Fact]
+    public void PostgresNamedFunctionParameter_MultipleArgs_ShouldRoundTrip()
+    {
+        var sql = "SELECT concat_lower_or_upper(a := 'Hello', b := 'World')";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
     [Fact]
     public void NamedFunctionParameter_MixedShouldParse()
     {
