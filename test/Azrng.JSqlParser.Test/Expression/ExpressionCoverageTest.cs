@@ -563,6 +563,55 @@ public class ExpressionCoverageTest
         Assert.Contains("SOME", expr!.ToString()!);
     }
 
+    /// <summary>
+    /// 数组构造器和数组下标访问应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void ArrayConstructor_WithKeyword_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ARRAY[1, 2, 3] FROM t")!;
+        var arr = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
+        Assert.True(arr.ArrayKeyword);
+        Assert.NotNull(arr.Expressions);
+        Assert.Equal(3, arr.Expressions!.Expressions.Count);
+        Assert.Equal("ARRAY[1, 2, 3]", arr.ToString());
+    }
+
+    [Fact]
+    public void ArrayExpression_Index_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT arr[1] FROM t")!;
+        var idx = Assert.IsType<ArrayExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(idx.ObjExpression);
+        Assert.NotNull(idx.IndexExpression);
+        Assert.Null(idx.StartIndexExpression);
+        Assert.Null(idx.StopIndexExpression);
+        Assert.Contains("[1]", idx.ToString()!);
+    }
+
+    [Fact]
+    public void ArrayExpression_Range_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT arr[1:3] FROM t")!;
+        var idx = Assert.IsType<ArrayExpression>(select.SelectItems![0].Expression);
+        Assert.Null(idx.IndexExpression);
+        Assert.NotNull(idx.StartIndexExpression);
+        Assert.NotNull(idx.StopIndexExpression);
+        Assert.Contains("[1:3]", idx.ToString()!);
+    }
+
+    [Fact]
+    public void ArrayConstructor_Empty_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ARRAY[] FROM t")!;
+        var arr = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
+        Assert.True(arr.ArrayKeyword);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression

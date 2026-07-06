@@ -1906,6 +1906,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // 跳过 OPENING_PAREN ( ... ) 的子表达式（与 AT TIME ZONE 共用 expression 规则）
         // 通过遍历过程动态判断当前 expression 是属于 AT TIME ZONE 还是函数调用
         bool expectingTimeZoneExpr = false;
+        bool inBracket = false;
+        // 用于范围表达式的临时存储
+        Expression.Expression? pendingStartIndex = null;
 
         for (int i = 0; i < context.ChildCount; i++)
         {
@@ -1931,16 +1934,73 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 {
                     expectingTimeZoneExpr = true;
                 }
-            }
-            else if (child is JSqlParserGrammar.ExpressionContext && expectingTimeZoneExpr && subExprIdx < subExpressions.Length)
-            {
-                expr = new TimezoneExpression
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.LBRACKET)
                 {
-                    LeftExpression = expr,
-                    TimeZoneExpression = (Expression.Expression)Visit(child)
-                };
-                subExprIdx++;
-                expectingTimeZoneExpr = false;
+                    inBracket = true;
+                    pendingStartIndex = null;
+                }
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.COLON && inBracket)
+                {
+                    // 范围表达式：[start:end]，start 已存于 pendingStartIndex
+                    // 不做处理，等待结束 expression
+                }
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.RBRACKET && inBracket)
+                {
+                    inBracket = false;
+                    pendingStartIndex = null;
+                }
+            }
+            else if (child is JSqlParserGrammar.ExpressionContext)
+            {
+                if (expectingTimeZoneExpr && subExprIdx < subExpressions.Length)
+                {
+                    expr = new TimezoneExpression
+                    {
+                        LeftExpression = expr,
+                        TimeZoneExpression = (Expression.Expression)Visit(child)
+                    };
+                    subExprIdx++;
+                    expectingTimeZoneExpr = false;
+                }
+                else if (inBracket && subExprIdx < subExpressions.Length)
+                {
+                    var idxExpr = (Expression.Expression)Visit(child);
+                    subExprIdx++;
+
+                    // 检查下一个非终结符是否为 COLON（范围表达式）
+                    int nextIdx = i + 1;
+                    while (nextIdx < context.ChildCount && context.GetChild(nextIdx) is not ITerminalNode)
+                        nextIdx++;
+                    bool nextIsColon = nextIdx < context.ChildCount
+                        && context.GetChild(nextIdx) is ITerminalNode nextTerminal
+                        && nextTerminal.Symbol.Type == JSqlParserGrammarLexer.COLON;
+
+                    if (nextIsColon && pendingStartIndex == null)
+                    {
+                        // 当前是 range 的 start
+                        pendingStartIndex = idxExpr;
+                    }
+                    else if (pendingStartIndex != null)
+                    {
+                        // 当前是 range 的 end
+                        expr = new ArrayExpression
+                        {
+                            ObjExpression = expr,
+                            StartIndexExpression = pendingStartIndex,
+                            StopIndexExpression = idxExpr
+                        };
+                        pendingStartIndex = null;
+                    }
+                    else
+                    {
+                        // 单索引
+                        expr = new ArrayExpression
+                        {
+                            ObjExpression = expr,
+                            IndexExpression = idxExpr
+                        };
+                    }
+                }
             }
         }
 
@@ -1963,6 +2023,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.fullTextSearch() != null) return Visit(context.fullTextSearch());
         if (context.namedFunctionParameter() != null) return Visit(context.namedFunctionParameter());
         if (context.trimFunction() != null) return Visit(context.trimFunction());
+        if (context.arrayConstructor() != null) return Visit(context.arrayConstructor());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -1993,6 +2054,21 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new OracleNamedFunctionParameter(name, expr);
         }
         return new PostgresNamedFunctionParameter(name, expr);
+    }
+
+    // 数组构造器：ARRAY[1, 2, 3] 或 [1, 2, 3]
+    public override object VisitArrayConstructor(JSqlParserGrammar.ArrayConstructorContext context)
+    {
+        ExpressionList? exprList = null;
+        if (context.expressionList() != null)
+        {
+            exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+            foreach (var expr in context.expressionList().expression())
+            {
+                exprList.Expressions.Add((Expression.Expression)Visit(expr));
+            }
+        }
+        return new ArrayConstructor(exprList, arrayKeyword: context.ARRAY() != null);
     }
 
     // TRIM([LEADING|TRAILING|BOTH] [chars] [FROM] str) 或 TRIM(str)

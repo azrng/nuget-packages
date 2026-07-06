@@ -735,7 +735,8 @@ postfixExpr
         withinGroupClause? filterClause? overClause?
       | AT TIME ZONE expression
       | DOUBLE_COLON dataType
-      | LBRACKET expression RBRACKET
+      | LBRACKET expression (COLON expression)? RBRACKET
+      | LBRACKET COLON expression RBRACKET
       )*
     ;
 
@@ -755,9 +756,16 @@ primaryExpr
     | keyExpression
     | fullTextSearch
     | namedFunctionParameter
+    | arrayConstructor
     | OPENING_PAREN expression CLOSING_PAREN
     | columnRef
     | MULTIPLY
+    ;
+
+// PostgreSQL 数组构造器：ARRAY[1, 2, 3]
+// 注意：纯 [...] 形式与 SQL Server 的 QUOTED_IDENTIFIER 冲突，仅支持 ARRAY 关键字形式
+arrayConstructor
+    : ARRAY LBRACKET expressionList? RBRACKET
     ;
 
 // TRIM([LEADING|TRAILING|BOTH] [chars] [FROM] str)
@@ -950,7 +958,7 @@ identifier
     ;
 
 nonReservedKeyword
-    : ACTION | ACTIVE | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE | ARRAY
+    : ACTION | ACTIVE | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
     | BEFORE | BEGIN | BIT | BOTH
     | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE

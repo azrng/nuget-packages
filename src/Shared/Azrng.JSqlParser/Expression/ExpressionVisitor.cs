@@ -176,6 +176,25 @@ public interface ExpressionVisitor<T>
     }
     T Visit<S>(NextValExpression nextValExpression, S context) => default!;
     T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => default!;
+    T Visit<S>(ArrayConstructor arrayConstructor, S context)
+    {
+        if (arrayConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in arrayConstructor.Expressions.Expressions)
+            {
+                expr.Accept(this, context);
+            }
+        }
+        return default!;
+    }
+    T Visit<S>(ArrayExpression arrayExpression, S context)
+    {
+        arrayExpression.ObjExpression?.Accept(this, context);
+        arrayExpression.IndexExpression?.Accept(this, context);
+        arrayExpression.StartIndexExpression?.Accept(this, context);
+        arrayExpression.StopIndexExpression?.Accept(this, context);
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -267,4 +286,6 @@ public interface ExpressionVisitor<T>
     void Visit(TimezoneExpression timezoneExpression) => Visit<object?>(timezoneExpression, default);
     void Visit(NextValExpression nextValExpression) => Visit<object?>(nextValExpression, default);
     void Visit(AnyComparisonExpression anyComparisonExpression) => Visit<object?>(anyComparisonExpression, default);
+    void Visit(ArrayConstructor arrayConstructor) => Visit<object?>(arrayConstructor, default);
+    void Visit(ArrayExpression arrayExpression) => Visit<object?>(arrayExpression, default);
 }
