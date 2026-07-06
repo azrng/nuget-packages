@@ -130,4 +130,51 @@ public class JsonFunctionTest
         Assert.Equal("UTF16", func.ReturningEncoding);
         Assert.Equal(sql, select.ToString());
     }
+
+    [Fact]
+    public void JsonValue_Simple_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_VALUE(payload, '$.customer.id') FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.FunctionType.VALUE, func.Type);
+        Assert.Equal("'$.customer.id'", func.JsonPathExpression?.ToString());
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonValue_ReturningAndOnError_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_VALUE(payload, '$.x' RETURNING VARCHAR NULL ON ERROR) FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.OnErrorBehavior);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, func.OnErrorBehavior!.Type);
+        Assert.Equal("VARCHAR", func.ReturningType);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonExists_Simple_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_EXISTS(payload, '$.children[2]') FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.FunctionType.EXISTS, func.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonExists_OnErrorUnknown_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_EXISTS(payload, '$.children[2]' UNKNOWN ON ERROR) FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.UNKNOWN, func.OnErrorBehavior!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
 }

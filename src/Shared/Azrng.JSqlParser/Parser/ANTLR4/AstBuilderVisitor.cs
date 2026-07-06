@@ -2595,7 +2595,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.transcodingFunction());
         }
 
-        // JSON 标量函数 JSON_OBJECT / JSON_ARRAY
+        // JSON 标量函数 JSON_OBJECT / JSON_ARRAY / JSON_VALUE / JSON_EXISTS
         if (context.jsonObjectFunction() != null)
         {
             return Visit(context.jsonObjectFunction());
@@ -2603,6 +2603,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.jsonArrayFunction() != null)
         {
             return Visit(context.jsonArrayFunction());
+        }
+        if (context.jsonValueFunction() != null)
+        {
+            return Visit(context.jsonValueFunction());
+        }
+        if (context.jsonExistsFunction() != null)
+        {
+            return Visit(context.jsonExistsFunction());
         }
 
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
@@ -2908,6 +2916,89 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         FillJsonReturning(func, context.jsonReturningClause());
 
         return func;
+    }
+
+    // JSON 函数输入表达式：expression [FORMAT JSON [ENCODING x]]
+    public override object VisitJsonFunctionInput(JSqlParserGrammar.JsonFunctionInputContext context)
+    {
+        var input = new JsonFunctionExpression
+        {
+            Expression = (Expression.Expression)Visit(context.expression())
+        };
+        if (context.FORMAT() != null)
+        {
+            input.UsingFormatJson = true;
+            if (context.ENCODING() != null)
+            {
+                input.Encoding = context.identifier().GetText();
+            }
+        }
+        return input;
+    }
+
+    // JSON_VALUE(input, path, ...)
+    public override object VisitJsonValueFunction(JSqlParserGrammar.JsonValueFunctionContext context)
+    {
+        var func = new JsonFunction(JsonFunction.FunctionType.VALUE);
+        func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
+        // jsonFunctionInput 之后的第一个 expression 即 path
+        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+        FillJsonReturning(func, context.jsonReturningClause());
+
+        // ON EMPTY / ON ERROR：根据 EMPTY_KW clause 是否存在判断 behavior 归属
+        // grammar: (jsonValueBehavior ON EMPTY_KW)? (jsonValueBehavior ON ERROR)?
+        var behaviors = context.jsonValueBehavior();
+        bool hasEmpty = context.EMPTY_KW() != null;
+        if (behaviors.Length == 1)
+        {
+            // 只有 1 个 behavior：归属 ON EMPTY 或 ON ERROR 之一
+            if (hasEmpty)
+                func.OnEmptyBehavior = ParseJsonValueBehavior(behaviors[0]);
+            else
+                func.OnErrorBehavior = ParseJsonValueBehavior(behaviors[0]);
+        }
+        else if (behaviors.Length >= 2)
+        {
+            func.OnEmptyBehavior = ParseJsonValueBehavior(behaviors[0]);
+            func.OnErrorBehavior = ParseJsonValueBehavior(behaviors[1]);
+        }
+        return func;
+    }
+
+    // JSON_EXISTS(input, path, ...)
+    public override object VisitJsonExistsFunction(JSqlParserGrammar.JsonExistsFunctionContext context)
+    {
+        var func = new JsonFunction(JsonFunction.FunctionType.EXISTS);
+        func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
+        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+
+        if (context.jsonExistsBehavior() != null)
+        {
+            var b = context.jsonExistsBehavior();
+            var type = b.TRUE() != null ? JsonFunction.OnResponseBehaviorType.TRUE
+                : b.FALSE() != null ? JsonFunction.OnResponseBehaviorType.FALSE
+                : b.UNKNOWN() != null ? JsonFunction.OnResponseBehaviorType.UNKNOWN
+                : JsonFunction.OnResponseBehaviorType.ERROR;
+            func.OnErrorBehavior = new JsonFunction.JsonOnResponseBehavior(type);
+        }
+        return func;
+    }
+
+    private JsonFunction.JsonOnResponseBehavior ParseJsonValueBehavior(JSqlParserGrammar.JsonValueBehaviorContext b)
+    {
+        if (b.DEFAULT() != null)
+        {
+            return new JsonFunction.JsonOnResponseBehavior(
+                JsonFunction.OnResponseBehaviorType.DEFAULT,
+                (Expression.Expression)Visit(b.expression()));
+        }
+        if (b.EMPTY_KW() != null)
+        {
+            // EMPTY 行为输出 "EMPTY "（带尾空格，上游 JsonOnResponseBehavior 特性）
+            return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY);
+        }
+        if (b.ERROR() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.ERROR);
+        return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
     }
 
     private void FillJsonReturning(JsonFunction func, JSqlParserGrammar.JsonReturningClauseContext? ret)

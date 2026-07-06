@@ -178,12 +178,68 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
             case FunctionType.ARRAY:
                 AppendArray(sb);
                 break;
+            case FunctionType.VALUE:
+                AppendValue(sb);
+                break;
+            case FunctionType.EXISTS:
+                AppendExists(sb);
+                break;
             default:
-                // VALUE/QUERY/EXISTS 在 F7b 补全
+                // QUERY 在 F7c 补全
                 sb.Append("JSON_").Append(Type);
                 break;
         }
         return sb.ToString();
+    }
+
+    private void AppendValue(StringBuilder sb)
+    {
+        // JSON_VALUE(input, path [PASSING ...] [RETURNING ...] [ON EMPTY ...] [ON ERROR ...])
+        sb.Append("JSON_VALUE(");
+        AppendInputAndPath(sb);
+        AppendPassing(sb);
+        if (ReturningType != null)
+        {
+            sb.Append(" RETURNING ").Append(ReturningType);
+        }
+        AppendOnResponse(sb, OnEmptyBehavior, "ON EMPTY");
+        AppendOnResponse(sb, OnErrorBehavior, "ON ERROR");
+        sb.Append(')');
+    }
+
+    private void AppendExists(StringBuilder sb)
+    {
+        // JSON_EXISTS(input, path [PASSING ...] [ON ERROR ...])
+        sb.Append("JSON_EXISTS(");
+        AppendInputAndPath(sb);
+        AppendPassing(sb);
+        AppendOnResponse(sb, OnErrorBehavior, "ON ERROR");
+        sb.Append(')');
+    }
+
+    private void AppendInputAndPath(StringBuilder sb)
+    {
+        if (InputExpression != null)
+        {
+            InputExpression.AppendTo(sb);
+        }
+        sb.Append(", ").Append(JsonPathExpression);
+    }
+
+    private void AppendPassing(StringBuilder sb)
+    {
+        if (PassingExpressions.Count > 0)
+        {
+            sb.Append(" PASSING ").Append(string.Join(", ", PassingExpressions));
+        }
+    }
+
+    private void AppendOnResponse(StringBuilder sb, JsonOnResponseBehavior? behavior, string clause)
+    {
+        if (behavior != null)
+        {
+            sb.Append(' ').Append(behavior).Append(' ').Append(clause);
+        }
     }
 
     private void AppendObject(StringBuilder sb)

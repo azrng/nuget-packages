@@ -953,6 +953,8 @@ functionExpr
     : transcodingFunction
     | jsonObjectFunction
     | jsonArrayFunction
+    | jsonValueFunction
+    | jsonExistsFunction
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -1019,6 +1021,46 @@ uniqueKeysClause
 
 jsonReturningClause
     : RETURNING dataType (FORMAT JSON (ENCODING identifier)?)?
+    ;
+
+// JSON_VALUE(input, path [PASSING ...] [RETURNING ...] [ON EMPTY ...] [ON ERROR ...])
+jsonValueFunction
+    : JSON_VALUE OPENING_PAREN
+      jsonFunctionInput COMMA expression
+      (PASSING expression (COMMA expression)*)?
+      (jsonReturningClause)?
+      (jsonValueBehavior ON EMPTY_KW)?
+      (jsonValueBehavior ON ERROR)?
+      CLOSING_PAREN
+    ;
+
+// JSON_EXISTS(input, path [PASSING ...] [ON ERROR ...])
+jsonExistsFunction
+    : JSON_EXISTS OPENING_PAREN
+      jsonFunctionInput COMMA expression
+      (PASSING expression (COMMA expression)*)?
+      (jsonExistsBehavior ON ERROR)?
+      CLOSING_PAREN
+    ;
+
+jsonFunctionInput
+    : expression (FORMAT JSON (ENCODING identifier)?)?
+    ;
+
+// JSON_VALUE 的 ON EMPTY / ON ERROR 行为：ERROR | NULL | DEFAULT expr | EMPTY
+jsonValueBehavior
+    : ERROR
+    | NULL
+    | EMPTY_KW
+    | DEFAULT expression
+    ;
+
+// JSON_EXISTS 的 ON ERROR 行为：TRUE | FALSE | UNKNOWN | ERROR
+jsonExistsBehavior
+    : TRUE
+    | FALSE
+    | UNKNOWN
+    | ERROR
     ;
 
 // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
