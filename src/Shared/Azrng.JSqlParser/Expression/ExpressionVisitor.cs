@@ -135,6 +135,16 @@ public interface ExpressionVisitor<T>
         return default!;
     }
     T Visit<S>(DateUnitExpression dateUnitExpression, S context) => default!;
+    T Visit<S>(OracleNamedFunctionParameter oracleNamedFunctionParameter, S context)
+    {
+        oracleNamedFunctionParameter.Expression?.Accept(this, context);
+        return default!;
+    }
+    T Visit<S>(PostgresNamedFunctionParameter postgresNamedFunctionParameter, S context)
+    {
+        postgresNamedFunctionParameter.Expression?.Accept(this, context);
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -217,4 +227,6 @@ public interface ExpressionVisitor<T>
     void Visit(RowGetExpression rowGetExpression) => Visit<object?>(rowGetExpression, default);
     void Visit(KeyExpression keyExpression) => Visit<object?>(keyExpression, default);
     void Visit(DateUnitExpression dateUnitExpression) => Visit<object?>(dateUnitExpression, default);
+    void Visit(OracleNamedFunctionParameter oracleNamedFunctionParameter) => Visit<object?>(oracleNamedFunctionParameter, default);
+    void Visit(PostgresNamedFunctionParameter postgresNamedFunctionParameter) => Visit<object?>(postgresNamedFunctionParameter, default);
 }

@@ -738,9 +738,17 @@ primaryExpr
     | connectByPriorOperator
     | keyExpression
     | fullTextSearch
+    | namedFunctionParameter
     | OPENING_PAREN expression CLOSING_PAREN
     | columnRef
     | MULTIPLY
+    ;
+
+// Oracle/PostgreSQL 命名函数参数（仅在函数参数位置有意义，但作为 primaryExpr 备选以便复用）
+// 对应上游 commit 834afe18 / OracleNamedFunctionParameter + PostgresNamedFunctionParameter
+namedFunctionParameter
+    : identifier ARROW expression
+    | identifier ASSIGN expression
     ;
 
 keyExpression

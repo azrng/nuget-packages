@@ -500,6 +500,47 @@ public class ExpressionBasicTest
         Assert.Equal(DateUnit.Month, expr2.Unit);
     }
 
+    /// <summary>
+    /// Oracle 命名函数参数（name => value）应正确解析并往返。
+    /// 对应上游 commit 834afe18 / OracleNamedFunctionParameter。
+    /// </summary>
+    [Fact]
+    public void OracleNamedFunctionParameter_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT my_func(arg1 => 'x', arg2 => 42) FROM t")!;
+        Assert.NotNull(stmt);
+        var output = stmt.ToString()!;
+        Assert.Contains("arg1 => 'x'", output);
+        Assert.Contains("arg2 => 42", output);
+    }
+
+    [Fact]
+    public void OracleNamedFunctionParameter_Single_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT my_func(name => col) FROM t")!;
+        Assert.NotNull(stmt);
+        Assert.Contains("=>", stmt.ToString()!);
+    }
+
+    /// <summary>
+    /// PostgreSQL 命名函数参数（name := value）应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void PostgresNamedFunctionParameter_ShouldRoundTrip()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT my_func(arg1 := 'x') FROM t")!;
+        Assert.NotNull(stmt);
+        Assert.Contains(":=", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void NamedFunctionParameter_MixedShouldParse()
+    {
+        // 混合命名参数和位置参数（命名参数通常在后面）
+        var stmt = CCJSqlParserUtil.Parse("SELECT my_func(1, 2, opt => 3) FROM t")!;
+        Assert.NotNull(stmt);
+    }
+
     [Fact]
     public void Between_NotSymmetric_ShouldRoundTrip()
     {

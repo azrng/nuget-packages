@@ -1881,6 +1881,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.lambdaExpression() != null) return Visit(context.lambdaExpression());
         if (context.keyExpression() != null) return Visit(context.keyExpression());
         if (context.fullTextSearch() != null) return Visit(context.fullTextSearch());
+        if (context.namedFunctionParameter() != null) return Visit(context.namedFunctionParameter());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -1898,6 +1899,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var inner = (Expression.Expression)Visit(context.columnRef());
         return new KeyExpression(inner);
+    }
+
+    // Oracle/PostgreSQL 命名函数参数：name => expr 或 name := expr
+    public override object VisitNamedFunctionParameter(JSqlParserGrammar.NamedFunctionParameterContext context)
+    {
+        var name = context.identifier().GetText();
+        var expr = (Expression.Expression)Visit(context.expression());
+        // ARROW (=>) 为 Oracle 形式，ASSIGN (:=) 为 PostgreSQL 形式
+        if (context.ARROW() != null)
+        {
+            return new OracleNamedFunctionParameter(name, expr);
+        }
+        return new PostgresNamedFunctionParameter(name, expr);
     }
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
