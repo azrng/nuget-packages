@@ -6,14 +6,14 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（逐项迁移 + 单元测试验证） | 逐步迁移上游 JSqlParser commit 7d2e6b65(5.4)..2b141568(HEAD) 的高价值功能与 Bug 修复，每项独立验证独立提交 | 阶段 1 后端实现 | DOING | high | 2026-07-06 |
+| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（逐项迁移 + 单元测试验证） | 逐步迁移上游 JSqlParser commit 7d2e6b65(5.4)..2b141568(HEAD) 的高价值功能与 Bug 修复，每项独立验证独立提交 | 阶段 1 后端实现 | REVIEW | high | 2026-07-06 |
 
 ### T075 概况
 
 - 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
 - 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
-- 已完成：子项 1-67（全量 745 测试通过，净增 197）。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
-- 下一步：按优先级处理剩余通用功能/修复（子项 57-77），方言专项按需取用。
+- 已完成：子项 1-77 全部处理完毕（迁移实现 + 评估结论）。全量 745 测试通过，净增 197。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
+- 下一步：T075 评估闭环完成。通用功能/修复（medium+low 优先级）已全部迁移或评估；方言专项（子项 69-77 除 72/73 外）保留为"按需取用"，需具体业务场景驱动时再单独迁移。
 - 阻塞项：无
 
 ### T075 剩余子项清单
@@ -46,15 +46,15 @@
 
 | 子项 | commit | 内容 | 状态 |
 |------|--------|------|------|
-| 69 | a34db0ce | ClickHouse SELECT SETTINGS | TODO |
-| 70 | 64542c86 | ClickHouse parametric aggregate | TODO |
-| 71 | 0e1715e9 | DuckDB CREATE TABLE STRUCT | TODO |
-| 72 | 297ef846 | DuckDB STRUCT 数据类型 | TODO |
-| 73 | aaebe591 | DuckDB STRUCT 数据类型（解析修复） | TODO |
-| 74 | 6ce95d54 | Trino UDF | TODO |
-| 75 | 6f4c4fb2 | Snowflake time travel | TODO |
-| 76 | df5e6690 | Databricks Temporal spec | TODO |
-| 77 | 5fa071ef | BigQuery Historic Version | TODO |
+| 69 | a34db0ce | ClickHouse SELECT SETTINGS（方言专项，暂不迁移，需新增 PlainSelect SETTINGS 子句） | 评估完成 |
+| 70 | 64542c86 | ClickHouse parametric aggregate（方言专项，暂不迁移） | 评估完成 |
+| 71 | 0e1715e9 | DuckDB CREATE TABLE STRUCT（方言专项，暂不迁移，Azrng 无 CREATE TABLE 列类型 STRUCT 支持） | 评估完成 |
+| 72 | 297ef846 | DuckDB STRUCT 字段名引号（评估：已支持，Azrng structArgument 已含 S_CHAR_LITERAL 分支） | DONE |
+| 73 | aaebe591 | DuckDB STRUCT 解析修复（评估：已支持，Azrng StructType 文法已覆盖） | DONE |
+| 74 | 6ce95d54 | Trino UDF（方言专项，暂不迁移，476行改动含 WITH FUNCTION 体系） | 评估完成 |
+| 75 | 6f4c4fb2 | Snowflake time travel（方言专项，暂不迁移，259行 Table AT/BEFORE 子句） | 评估完成 |
+| 76 | df5e6690 | Databricks Temporal spec（方言专项，暂不迁移，80行 TimeTravel 扩展） | 评估完成 |
+| 77 | 5fa071ef | BigQuery Historic Version（方言专项，暂不迁移，73行 FOR SYSTEM_TIME 子句） | 评估完成 |
 
 #### 已评估为不适用（JavaCC 特定机制，ANTLR 版无对应项，不再跟踪）
 
