@@ -2257,6 +2257,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.trimFunction() != null) return Visit(context.trimFunction());
         if (context.arrayConstructor() != null) return Visit(context.arrayConstructor());
         if (context.rowConstructor() != null) return Visit(context.rowConstructor());
+        if (context.timeKeyExpression() != null) return Visit(context.timeKeyExpression());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -2313,6 +2314,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new RangeExpression(start, end);
         }
         return start;
+    }
+
+    // 时间关键字表达式：CURRENT_DATE / CURRENT_TIMESTAMP 等
+    public override object VisitTimeKeyExpression(JSqlParserGrammar.TimeKeyExpressionContext context)
+    {
+        // 取原始文本（保留大小写），与上游 TimeKeyExpression 行为一致
+        return new TimeKeyExpression(context.GetText());
     }
 
     // 行构造器：ROW(1, 2, 3)

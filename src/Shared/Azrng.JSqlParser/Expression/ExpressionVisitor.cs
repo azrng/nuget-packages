@@ -105,6 +105,7 @@ public interface ExpressionVisitor<T>
     T Visit<S>(LowExpression lowExpression, S context);
     T Visit<S>(Inverse inverse, S context);
     T Visit<S>(RangeExpression rangeExpression, S context);
+    T Visit<S>(TimeKeyExpression timeKeyExpression, S context);
     T Visit<S>(Operators.Relational.CosineSimilarity cosineSimilarity, S context);
     T Visit<S>(Operators.Relational.GeometryDistance geometryDistance, S context);
     T Visit<S>(Operators.Relational.Plus plus, S context);
@@ -283,6 +284,7 @@ public interface ExpressionVisitor<T>
     void Visit(LowExpression lowExpression) => Visit<object?>(lowExpression, default);
     void Visit(Inverse inverse) => Visit<object?>(inverse, default);
     void Visit(RangeExpression rangeExpression) => Visit<object?>(rangeExpression, default);
+    void Visit(TimeKeyExpression timeKeyExpression) => Visit<object?>(timeKeyExpression, default);
     void Visit(Operators.Relational.CosineSimilarity cosineSimilarity) => Visit<object?>(cosineSimilarity, default);
     void Visit(Operators.Relational.GeometryDistance geometryDistance) => Visit<object?>(geometryDistance, default);
     void Visit(Operators.Relational.Plus plus) => Visit<object?>(plus, default);

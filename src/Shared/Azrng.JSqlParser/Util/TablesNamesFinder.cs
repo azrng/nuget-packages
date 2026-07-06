@@ -248,6 +248,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         rangeExpression.EndExpression?.Accept(this);
         return null;
     }
+    public object? Visit<S>(TimeKeyExpression timeKeyExpression, S context) => null;
     public object? Visit<S>(Plus plus, S context) => VisitBinary(plus);
     public object? Visit<S>(PriorTo priorTo, S context) => VisitBinary(priorTo);
 
