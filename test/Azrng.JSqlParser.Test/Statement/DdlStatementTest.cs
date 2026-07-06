@@ -191,6 +191,40 @@ public class DdlStatementTest
         Assert.NotNull(stmt);
     }
 
+    /// <summary>
+    /// ALTER TABLE ADD CONSTRAINT ... PRIMARY KEY (...) USING INDEX name 应可解析。
+    /// 对应上游 commit c7b3bdbd。
+    /// </summary>
+    [Fact]
+    public void AlterTable_AddConstraintPrimaryKey_UsingIndexName_ShouldRoundTrip()
+    {
+        var sql = "ALTER TABLE TNWAV ADD CONSTRAINT PK_TNWAV PRIMARY KEY (NWNAME, ZEILE, BESTGRU) USING INDEX PK_TNWAV";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// 无名 USING INDEX 也应可解析。
+    /// </summary>
+    [Fact]
+    public void AlterTable_AddConstraintPrimaryKey_UsingIndexAnonymous_ShouldRoundTrip()
+    {
+        var sql = "ALTER TABLE t ADD CONSTRAINT pk PRIMARY KEY (id) USING INDEX";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// UNIQUE 约束也支持 USING INDEX。
+    /// </summary>
+    [Fact]
+    public void CreateTable_UniqueConstraint_UsingIndex_ShouldRoundTrip()
+    {
+        var sql = "CREATE TABLE t (id INT, CONSTRAINT uk_t UNIQUE (id) USING INDEX idx_uk)";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
     #endregion
 
     #region DROP TABLE

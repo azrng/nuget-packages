@@ -20,10 +20,16 @@ public class CreateTable : ASTNodeAccessImpl, Statement
         var sb = new System.Text.StringBuilder("CREATE TABLE ");
         if (IfNotExists) sb.Append("IF NOT EXISTS ");
         sb.Append(Table);
+        // 合并列定义与表级约束（按列在先、约束在后的顺序），保持括号内逗号分隔
+        var items = new List<string>();
         if (ColumnDefinitions != null)
+            items.AddRange(ColumnDefinitions.Select(c => c.ToString()));
+        if (Constraints != null)
+            items.AddRange(Constraints.Select(c => c.ToString()));
+        if (items.Count > 0)
         {
             sb.Append(" (");
-            sb.Append(string.Join(", ", ColumnDefinitions));
+            sb.Append(string.Join(", ", items));
             sb.Append(')');
         }
         return sb.ToString();

@@ -993,11 +993,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             constraint.Type = "PRIMARY KEY";
             constraint.Columns = ExtractIdentifierList(firstList);
+            FillUsingIndex(constraint, context);
         }
         else if (context.UNIQUE() != null && context.KEY() == null)
         {
             constraint.Type = "UNIQUE";
             constraint.Columns = ExtractIdentifierList(firstList);
+            FillUsingIndex(constraint, context);
         }
         else if (context.KEY() != null)
         {
@@ -1027,6 +1029,21 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return constraint;
     }
 
+    /// <summary>
+    /// 解析约束的 USING INDEX [name] 子句（Oracle/DB2，commit c7b3bdbd）。
+    /// </summary>
+    private static void FillUsingIndex(Constraint constraint, JSqlParserGrammar.TableConstraintContext context)
+    {
+        var usingCtx = context.usingIndexClause();
+        if (usingCtx == null) return;
+        constraint.HasUsingIndex = true;
+        var nameId = usingCtx.identifier();
+        if (nameId != null)
+        {
+            constraint.UsingIndex = nameId.GetText();
+        }
+    }
+
     private static List<string> ExtractIdentifierList(JSqlParserGrammar.IdentifierListContext? list)
     {
         var result = new List<string>();
@@ -1044,7 +1061,147 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var alter = new Alter();
         alter.Table = (Table)Visit(context.table());
+
+        foreach (var opCtx in context.alterOperation())
+        {
+            alter.AlterExpressions.Add(BuildAlterExpression(opCtx));
+        }
         return alter;
+    }
+
+    /// <summary>
+    /// 将 alterOperation 文法节点转换为 AlterExpression。修复此前 alterOperation 完全未解析的缺陷。
+    /// </summary>
+    private AlterExpression BuildAlterExpression(JSqlParserGrammar.AlterOperationContext context)
+    {
+        var expr = new AlterExpression();
+        var identifiers = context.identifier();
+
+        // ADD COLUMN? columnDefinition | ADD tableConstraint
+        if (context.ADD() != null)
+        {
+            expr.Operation = AlterOperation.ADD;
+            if (context.tableConstraint() != null)
+            {
+                // ADD 约束：约束类型/列/USING INDEX 写入结构化字段
+                var constraint = (Constraint)Visit(context.tableConstraint());
+                expr.ConstraintType = constraint.Type;
+                if (constraint.Name != null) expr.ConstraintSymbol = constraint.Name;
+                if (constraint.Type == "PRIMARY KEY" && constraint.Columns.Count > 0)
+                    expr.PkColumns = constraint.Columns;
+                else if (constraint.Type == "UNIQUE" && constraint.Columns.Count > 0)
+                    expr.UkColumns = constraint.Columns;
+                // USING INDEX 子句
+                expr.HasUsingIndex = constraint.HasUsingIndex;
+                expr.UsingIndex = constraint.UsingIndex;
+            }
+            else if (context.columnDefinition() != null)
+            {
+                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
+                expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
+                {
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                };
+            }
+            return expr;
+        }
+
+        // DROP COLUMN? (IF EXISTS)? identifier
+        if (context.DROP() != null)
+        {
+            expr.Operation = AlterOperation.DROP;
+            if (identifiers.Length > 0)
+                expr.ColumnName = identifiers[0].GetText();
+            return expr;
+        }
+
+        // MODIFY COLUMN? columnDefinition
+        if (context.MODIFY() != null)
+        {
+            expr.Operation = AlterOperation.MODIFY;
+            if (context.columnDefinition() != null)
+            {
+                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
+                expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
+                {
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                };
+            }
+            return expr;
+        }
+
+        // CHANGE COLUMN? identifier columnDefinition
+        if (context.CHANGE() != null)
+        {
+            expr.Operation = AlterOperation.CHANGE;
+            if (identifiers.Length > 0)
+                expr.ColumnOldName = identifiers[0].GetText();
+            if (context.columnDefinition() != null)
+            {
+                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
+                expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
+                {
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                };
+            }
+            return expr;
+        }
+
+        // ALTER COLUMN? identifier (SET DEFAULT ... | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE ...)
+        if (context.ALTER() != null)
+        {
+            expr.Operation = AlterOperation.ALTER;
+            if (identifiers.Length > 0)
+                expr.ColumnName = identifiers[0].GetText();
+            return expr;
+        }
+
+        // RENAME COLUMN? identifier TO identifier | RENAME TO identifier
+        if (context.RENAME() != null)
+        {
+            if (context.TO() != null)
+            {
+                if (identifiers.Length >= 2)
+                {
+                    // RENAME COLUMN? old TO new
+                    expr.Operation = AlterOperation.RENAME;
+                    expr.ColumnOldName = identifiers[0].GetText();
+                    expr.ColumnName = identifiers[1].GetText();
+                }
+                else if (identifiers.Length == 1)
+                {
+                    // RENAME TO new_table
+                    expr.Operation = AlterOperation.RENAME_TABLE;
+                    expr.NewTableName = identifiers[0].GetText();
+                }
+            }
+            return expr;
+        }
+
+        // ROW LEVEL SECURITY 分支
+        if (context.ENABLE() != null)
+        {
+            expr.Operation = AlterOperation.ENABLE_ROW_LEVEL_SECURITY;
+            return expr;
+        }
+        if (context.DISABLE() != null)
+        {
+            expr.Operation = AlterOperation.DISABLE_ROW_LEVEL_SECURITY;
+            return expr;
+        }
+        if (context.FORCE() != null)
+        {
+            expr.Operation = AlterOperation.FORCE_ROW_LEVEL_SECURITY;
+            return expr;
+        }
+        if (context.NO() != null)
+        {
+            expr.Operation = AlterOperation.NO_FORCE_ROW_LEVEL_SECURITY;
+            return expr;
+        }
+
+        expr.Operation = AlterOperation.UNSPECIFIC;
+        return expr;
     }
 
     // ── DROP TABLE ─────────────────────────────

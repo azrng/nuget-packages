@@ -59,6 +59,10 @@ public class AlterExpression : ASTNodeAccessImpl
     public List<string>? UkColumns { get; set; }
     public string? UkName { get; set; }
 
+    /// <summary>Oracle/DB2 USING INDEX [name] 子句（约束级），commit c7b3bdbd。</summary>
+    public string? UsingIndex { get; set; }
+    public bool HasUsingIndex { get; set; }
+
     /// <summary>
     /// Parameters for SET operations.
     /// </summary>
@@ -72,10 +76,23 @@ public class AlterExpression : ASTNodeAccessImpl
         if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
         if (ColDataTypeList != null && ColDataTypeList.Count > 0)
             sb.Append(' ').Append(string.Join(", ", ColDataTypeList));
+
+        // 约束分支：输出完整 CONSTRAINT name TYPE (cols) [USING INDEX ...]
+        if (!string.IsNullOrEmpty(ConstraintType))
+        {
+            if (!string.IsNullOrEmpty(ConstraintSymbol))
+                sb.Append(" CONSTRAINT ").Append(ConstraintSymbol);
+            sb.Append(' ').Append(ConstraintType);
+        }
         if (PkColumns != null && PkColumns.Count > 0)
             sb.Append(" (").Append(string.Join(", ", PkColumns)).Append(')');
         if (UkColumns != null && UkColumns.Count > 0)
             sb.Append(" (").Append(string.Join(", ", UkColumns)).Append(')');
+        if (HasUsingIndex)
+        {
+            sb.Append(" USING INDEX");
+            if (UsingIndex != null) sb.Append(' ').Append(UsingIndex);
+        }
         if (PartitionDefinitions != null)
         {
             sb.Append(" (");

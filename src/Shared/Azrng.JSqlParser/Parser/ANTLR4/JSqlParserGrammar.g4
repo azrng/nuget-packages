@@ -444,8 +444,8 @@ columnOptions
 
 tableConstraint
     : (CONSTRAINT identifier)? (
-        PRIMARY KEY OPENING_PAREN identifierList CLOSING_PAREN
-      | UNIQUE OPENING_PAREN identifierList CLOSING_PAREN
+        PRIMARY KEY OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause?
+      | UNIQUE OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause?
       | CHECK OPENING_PAREN expression CLOSING_PAREN
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
@@ -453,6 +453,11 @@ tableConstraint
       | (UNIQUE | FULLTEXT | SPATIAL)? KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
       | KEY identifier? OPENING_PAREN identifierList CLOSING_PAREN
       )
+    ;
+
+// Oracle/DB2: USING INDEX [index_name] — 约束使用指定索引，commit c7b3bdbd
+usingIndexClause
+    : USING INDEX identifier?
     ;
 
 likeOption
