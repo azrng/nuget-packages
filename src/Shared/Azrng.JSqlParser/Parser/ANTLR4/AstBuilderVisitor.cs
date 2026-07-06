@@ -308,6 +308,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 FileName = intoClause.S_CHAR_LITERAL().GetText(),
                 BeforeFrom = true
             };
+            FillOutfileTail(select.MySqlIntoOutfile, intoClause.outfileTail());
         }
         else if (intoClause != null && intoClause.DUMPFILE() != null)
         {
@@ -320,7 +321,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         // MySQL INTO OUTFILE/DUMPFILE（尾部位置：SELECT ... FROM ... INTO OUTFILE ...）
-        // plainSelect 文法末尾的可选 INTO 分支，token 数大于 1 表示存在尾部 INTO
+        // plainSelect 文法末尾的可选 INTO 分支
         if (context.INTO() != null)
         {
             select.MySqlIntoOutfile = new MySqlIntoOutfile
@@ -331,9 +332,63 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 FileName = context.S_CHAR_LITERAL().GetText(),
                 BeforeFrom = false
             };
+            FillOutfileTail(select.MySqlIntoOutfile, context.outfileTail());
         }
 
         return select;
+    }
+
+    /// <summary>
+    /// 把 outfileTail/fieldsClause/linesClause 的解析结果填充到 MySqlIntoOutfile。
+    /// 前置与尾部两种位置共用，避免重复逻辑。
+    /// </summary>
+    private void FillOutfileTail(MySqlIntoOutfile outfile, JSqlParserGrammar.OutfileTailContext? tail)
+    {
+        if (tail == null) return;
+
+        if (tail.CHARACTER() != null)
+        {
+            outfile.CharacterSet = tail.identifier()?.GetText() ?? (tail.BINARY() != null ? "BINARY" : null);
+        }
+
+        if (tail.outfileFieldsClause() != null)
+        {
+            var fields = tail.outfileFieldsClause();
+            outfile.FieldsKeywordValue = fields.FIELDS() != null
+                ? MySqlIntoOutfile.FieldsKeyword.FIELDS
+                : MySqlIntoOutfile.FieldsKeyword.COLUMNS;
+            // S_CHAR_LITERAL 按 TERMINATED / ENCLOSED / ESCAPED 的出现顺序填充
+            var literals = fields.S_CHAR_LITERAL();
+            int idx = 0;
+            if (fields.TERMINATED() != null && literals.Length > idx)
+            {
+                outfile.FieldsTerminatedBy = literals[idx++].GetText();
+            }
+            outfile.FieldsOptionallyEnclosed = fields.OPTIONALLY() != null;
+            if (fields.ENCLOSED() != null && literals.Length > idx)
+            {
+                outfile.FieldsEnclosedBy = literals[idx++].GetText();
+            }
+            if (fields.ESCAPED() != null && literals.Length > idx)
+            {
+                outfile.FieldsEscapedBy = literals[idx++].GetText();
+            }
+        }
+
+        if (tail.outfileLinesClause() != null)
+        {
+            var lines = tail.outfileLinesClause();
+            var literals = lines.S_CHAR_LITERAL();
+            int idx = 0;
+            if (lines.STARTING() != null && literals.Length > idx)
+            {
+                outfile.LinesStartingBy = literals[idx++].GetText();
+            }
+            if (lines.TERMINATED() != null && literals.Length > idx)
+            {
+                outfile.LinesTerminatedBy = literals[idx++].GetText();
+            }
+        }
     }
 
     /// <summary>

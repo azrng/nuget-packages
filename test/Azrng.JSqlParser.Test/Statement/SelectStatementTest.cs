@@ -393,6 +393,87 @@ public class SelectStatementTest
         Assert.Equal(sql, select.ToString());
     }
 
+    [Fact]
+    public void Select_IntoOutfile_FieldsAndLinesClauses_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '\\\\' LINES STARTING BY '>' TERMINATED BY '\\n'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.Equal(MySqlIntoOutfile.FieldsKeyword.FIELDS, outfile.FieldsKeywordValue);
+        Assert.Equal("','", outfile.FieldsTerminatedBy);
+        Assert.True(outfile.FieldsOptionallyEnclosed);
+        Assert.Equal("'\"'", outfile.FieldsEnclosedBy);
+        Assert.Equal("'\\\\'", outfile.FieldsEscapedBy);
+        Assert.Equal("'>'", outfile.LinesStartingBy);
+        Assert.Equal("'\\n'", outfile.LinesTerminatedBy);
+        Assert.True(outfile.HasFieldsClause);
+        Assert.True(outfile.HasLinesClause);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfile_CharacterSet_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' CHARACTER SET utf8mb4";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.Equal("utf8mb4", outfile.CharacterSet);
+        Assert.False(outfile.HasFieldsClause);
+        Assert.False(outfile.HasLinesClause);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfile_CharacterSetAndFields_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' CHARACTER SET utf8mb4 FIELDS TERMINATED BY '|'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.Equal("utf8mb4", outfile.CharacterSet);
+        Assert.Equal("'|'", outfile.FieldsTerminatedBy);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfile_ColumnsKeyword_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' COLUMNS TERMINATED BY ','";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.Equal(MySqlIntoOutfile.FieldsKeyword.COLUMNS, outfile.FieldsKeywordValue);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfile_OnlyLines_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' LINES TERMINATED BY '\\r\\n'";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.False(outfile.HasFieldsClause);
+        Assert.True(outfile.HasLinesClause);
+        Assert.Equal("'\\r\\n'", outfile.LinesTerminatedBy);
+        Assert.Null(outfile.LinesStartingBy);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void Select_IntoOutfile_BeforeFrom_WithFields_ShouldRoundTrip()
+    {
+        var sql = "SELECT a, b INTO OUTFILE '/tmp/r.txt' FIELDS TERMINATED BY ',' FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var outfile = select.MySqlIntoOutfile!;
+        Assert.True(outfile.BeforeFrom);
+        Assert.Equal("','", outfile.FieldsTerminatedBy);
+        Assert.Equal(sql, select.ToString());
+    }
+
     #endregion
 
     #region 子查询

@@ -87,7 +87,7 @@ plainSelect
       havingClause?
       windowClause?
       qualifyClause?
-      (INTO (OUTFILE | DUMPFILE) S_CHAR_LITERAL)?
+      (INTO OUTFILE S_CHAR_LITERAL outfileTail? | INTO DUMPFILE S_CHAR_LITERAL)?
     ;
 
 setOperator
@@ -113,7 +113,26 @@ topClause
 
 intoClause
     : INTO (TEMPORARY | TEMP | UNLOGGED)? table (OPENING_PAREN identifierList CLOSING_PAREN)?
-    | INTO (OUTFILE | DUMPFILE) S_CHAR_LITERAL
+    | INTO OUTFILE S_CHAR_LITERAL outfileTail?
+    | INTO DUMPFILE S_CHAR_LITERAL
+    ;
+
+// MySQL OUTFILE 格式化子句（CHARACTER SET / FIELDS / LINES，DUMPFILE 不支持）
+outfileTail
+    : CHARACTER SET (identifier | BINARY) outfileFieldsClause? (LINES outfileLinesClause)?
+    | outfileFieldsClause (LINES outfileLinesClause)?
+    | LINES outfileLinesClause
+    ;
+
+outfileFieldsClause
+    : (FIELDS | COLUMNS)
+      (TERMINATED BY S_CHAR_LITERAL)?
+      (OPTIONALLY? ENCLOSED BY S_CHAR_LITERAL)?
+      (ESCAPED BY S_CHAR_LITERAL)?
+    ;
+
+outfileLinesClause
+    : (STARTING BY S_CHAR_LITERAL)? (TERMINATED BY S_CHAR_LITERAL)?
     ;
 
 fromClause
