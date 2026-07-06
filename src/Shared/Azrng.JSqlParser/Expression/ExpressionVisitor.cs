@@ -195,6 +195,17 @@ public interface ExpressionVisitor<T>
         arrayExpression.StopIndexExpression?.Accept(this, context);
         return default!;
     }
+    T Visit<S>(RowConstructor rowConstructor, S context)
+    {
+        if (rowConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in rowConstructor.Expressions.Expressions)
+            {
+                expr.Accept(this, context);
+            }
+        }
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -288,4 +299,5 @@ public interface ExpressionVisitor<T>
     void Visit(AnyComparisonExpression anyComparisonExpression) => Visit<object?>(anyComparisonExpression, default);
     void Visit(ArrayConstructor arrayConstructor) => Visit<object?>(arrayConstructor, default);
     void Visit(ArrayExpression arrayExpression) => Visit<object?>(arrayExpression, default);
+    void Visit(RowConstructor rowConstructor) => Visit<object?>(rowConstructor, default);
 }

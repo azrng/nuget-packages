@@ -2024,6 +2024,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.namedFunctionParameter() != null) return Visit(context.namedFunctionParameter());
         if (context.trimFunction() != null) return Visit(context.trimFunction());
         if (context.arrayConstructor() != null) return Visit(context.arrayConstructor());
+        if (context.rowConstructor() != null) return Visit(context.rowConstructor());
         if (context.columnRef() != null) return Visit(context.columnRef());
         if (context.MULTIPLY() != null) return new AllColumns();
 
@@ -2069,6 +2070,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
         return new ArrayConstructor(exprList, arrayKeyword: context.ARRAY() != null);
+    }
+
+    // 行构造器：ROW(1, 2, 3)
+    public override object VisitRowConstructor(JSqlParserGrammar.RowConstructorContext context)
+    {
+        var exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+        foreach (var expr in context.expressionList().expression())
+        {
+            exprList.Expressions.Add((Expression.Expression)Visit(expr));
+        }
+        return new RowConstructor("ROW", exprList);
     }
 
     // TRIM([LEADING|TRAILING|BOTH] [chars] [FROM] str) 或 TRIM(str)

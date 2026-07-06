@@ -612,6 +612,40 @@ public class ExpressionCoverageTest
         Assert.True(arr.ArrayKeyword);
     }
 
+    /// <summary>
+    /// 行构造器 ROW(...) 应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void RowConstructor_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ROW(1, 2, 3) FROM t")!;
+        var row = Assert.IsType<RowConstructor>(select.SelectItems![0].Expression);
+        Assert.Equal("ROW", row.Name);
+        Assert.NotNull(row.Expressions);
+        Assert.Equal(3, row.Expressions!.Expressions.Count);
+        Assert.Equal("ROW(1, 2, 3)", row.ToString());
+    }
+
+    [Fact]
+    public void RowConstructor_SingleValue_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ROW(1) FROM t")!;
+        var row = Assert.IsType<RowConstructor>(select.SelectItems![0].Expression);
+        Assert.Single(row.Expressions!.Expressions);
+    }
+
+    [Fact]
+    public void RowConstructor_InWhere_ShouldRoundTrip()
+    {
+        // WHERE (a, b) IN (SELECT x, y FROM t) 形式
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT * FROM t WHERE ROW(a, b) IN (SELECT x, y FROM t2)")!;
+        Assert.NotNull(select.Where);
+        Assert.Contains("ROW(a, b)", select.ToString()!);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression
