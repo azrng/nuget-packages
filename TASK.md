@@ -6,66 +6,26 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（逐项迁移 + 单元测试验证） | 逐步迁移上游 JSqlParser commit 7d2e6b65(5.4)..2b141568(HEAD) 的高价值功能与 Bug 修复，每项独立验证独立提交 | 阶段 1 后端实现 | REVIEW | high | 2026-07-06 |
+| _无活跃任务_ | | | | | | |
 
-### T075 概况
-
-- 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
-- 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
-- 已完成：子项 1-77 全部处理完毕（迁移实现 + 评估结论）。全量 745 测试通过，净增 197。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
-- 下一步：T075 评估闭环完成。通用功能/修复（medium+low 优先级）已全部迁移或评估；方言专项（子项 69-77 除 72/73 外）保留为"按需取用"，需具体业务场景驱动时再单独迁移。
-- 阻塞项：无
-
-### T075 剩余子项清单
-
-> 每条独立迁移或评估，完成即提交。优先级：high > medium > low；方言专项默认 low，按需取用。
-
-#### 通用功能/修复 — medium 优先级
-
-| 子项 | commit | 内容 | 状态 |
-|------|--------|------|------|
-| 57 | 49958b6b | avoid visiting twice — visitor 重复访问修复（评估：Azrng Adapter 空实现 + HashSet 天然规避，补 1 回归测试） | DONE |
-| 58 | eeb04004 | avoid NPE and expose modifier（评估：Azrng 用 bool 属性替代 string modifier，无 NPE 风险，补 1 回归测试） | DONE |
-| 59 | 834afe18 | Oracle outer join nvl/coalesce — Column 加 OldOracleJoinSyntax + 文法 columnRef(+) + ToString + 4 测试 | DONE |
-| 60 | c7b3bdbd | ALTER TABLE USING INDEX clause — 文法 usingIndexClause + Constraint/AlterExpression 加 UsingIndex 字段 + 修复 ALTER alterOperation 未解析与 CREATE TABLE 约束未输出两处既有缺陷 + 4 测试 | DONE |
-| 61 | 763e92d7 | alter table index descending — 文法 KEY/INDEX 分支用 indexColumnList 支持 col ASC/DESC + 保留 INDEX 关键字 + Constraint 加 IndexColumnParams + 3 测试 | DONE |
-| 62 | ac46c434 | CREATE SCHEMA with catalog — 新增 CreateSchema 类 + 文法 createSchema 规则（含 catalog.schema 限定）+ Visitor 分派 + 5 测试 | DONE |
-| 63 | 624a768b | Oracle hierarchical queries — 新增 ConnectByRootOperator 类 + lexer CONNECT_BY_ROOT token + 文法 connectByRootOperator 规则 + VisitPrimaryExpr 补 connectBy 分派（修复既有缺陷）+ 3 测试 | DONE |
-| 64 | 7c52e7fe | legacy Postgres named parameter（评估：PostgresNamedFunctionParameter 已在子项 45 实现，补 1 个多参数回归测试） | DONE |
-
-#### 通用功能/修复 — low 优先级
-
-| 子项 | commit | 内容 | 状态 |
-|------|--------|------|------|
-| 65 | 74607624 | Exasol IMPORT/EXPORT（评估：暂不迁移，3552 行/48 文件的 Exasol 专属方言，Azrng 无前置支持，投入产出比低） | DONE |
-| 66 | c60ff739 | normalised backtick quotes（评估：不适用，Azrng 保留原引号形式输出，多段名在 VisitColumnRef 显式处理，补 1 回归测试） | DONE |
-| 67 | 6c98f10f | SessionStatement with options — KEEP 已在 nonReservedKeyword 天然支持；扩展 sessionOptionValue 接受 true/false/on/off/no/数字/字符串 + 新增 SessionStatementTest 6 测试 | DONE |
-| 68 | 528dd722 | array<double> 函数声明（评估：暂不迁移，BigQuery 专属 WITH FUNCTION 声明，Azrng 无前置 WITH FUNCTION 支持，属方言专项） | DONE |
-
-#### 方言专项（按需取用）
-
-| 子项 | commit | 内容 | 状态 |
-|------|--------|------|------|
-| 69 | a34db0ce | ClickHouse SELECT SETTINGS（方言专项，暂不迁移，需新增 PlainSelect SETTINGS 子句） | 评估完成 |
-| 70 | 64542c86 | ClickHouse parametric aggregate（方言专项，暂不迁移） | 评估完成 |
-| 71 | 0e1715e9 | DuckDB CREATE TABLE STRUCT（方言专项，暂不迁移，Azrng 无 CREATE TABLE 列类型 STRUCT 支持） | 评估完成 |
-| 72 | 297ef846 | DuckDB STRUCT 字段名引号（评估：已支持，Azrng structArgument 已含 S_CHAR_LITERAL 分支） | DONE |
-| 73 | aaebe591 | DuckDB STRUCT 解析修复（评估：已支持，Azrng StructType 文法已覆盖） | DONE |
-| 74 | 6ce95d54 | Trino UDF（方言专项，暂不迁移，476行改动含 WITH FUNCTION 体系） | 评估完成 |
-| 75 | 6f4c4fb2 | Snowflake time travel（方言专项，暂不迁移，259行 Table AT/BEFORE 子句） | 评估完成 |
-| 76 | df5e6690 | Databricks Temporal spec（方言专项，暂不迁移，80行 TimeTravel 扩展） | 评估完成 |
-| 77 | 5fa071ef | BigQuery Historic Version（方言专项，暂不迁移，73行 FOR SYSTEM_TIME 子句） | 评估完成 |
-
-#### 已评估为不适用（JavaCC 特定机制，ANTLR 版无对应项，不再跟踪）
-
-cf5bbc9a、59dfc3b0、08d0bcc9、c5b85abf、93515149、6049fd72、ac175138、7d42ff61、fe860ddd、fff8a081、0f9e4779、5b5fe6c2（注：这些已在前序子项中评估或在 ANTLR 版天然规避，详见 git history）
+> 当前无活跃任务。下一个任务待用户指定。
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（77 子项全部处理闭环，全量 745 测试通过） | DONE | 2026-07-06 |
 | T074 | Azrng.JSqlParser README 补充上游溯源信息（标注基于 jsqlparser-5.4 tag / commit 7d2e6b65） | DONE | 2026-07-03 |
 | T073 | Common.Cache.Redis 连接事件日志增强（订阅 StackExchange.Redis 连接事件并记录日志，不改变现有重连策略） | DONE | 2026-07-03 |
 | T072 | Azrng.AspNetCore.Core 修复发包版本号递增（1.3.1 -> 1.3.2 + Release 包构建验证） | DONE | 2026-07-03 |
 | T071 | Azrng.AspNetCore.Core DI 标记接口过滤修复（过滤生命周期标记接口 + 仅标记服务按自身类型注册 + 补回归测试） | DONE | 2026-07-03 |
-| T070 | Common.Cache.Redis 审查建议清理（删除死代码 + 清理残留注释 + 简化 SCAN 异常分支 + 补充行为说明） | DONE | 2026-07-03 |
+
+### T075 归档说明
+
+- 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
+- 完成情况：77 个子项全部处理（迁移实现 + 评估结论），全量 745 测试通过（净增 197）。逐项实现记录见 `git log --grep="T075"`。
+- 真实功能迁移（28 项）：Oracle 外连接(+)、ALTER USING INDEX、MySQL 索引 ASC/DESC、CREATE SCHEMA、CONNECT_BY_ROOT、SessionStatement options 等
+- 评估不适用/已支持（19 项）：Azrng 架构天然规避或前序子项已实现
+- 方言专项暂不迁移（7 项，子项 69-77 除 72/73）：ClickHouse/DuckDB CREATE TABLE/Trino/Snowflake/Databricks/BigQuery，保留按需取用，需具体业务场景驱动时再单独迁移
+- 顺带修复的既有缺陷：ALTER alterOperation 未解析、CREATE TABLE 约束未输出、VisitPrimaryExpr 遗漏 connectBy 分派
