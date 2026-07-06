@@ -447,6 +447,55 @@ public class ExpressionCoverageTest
         Assert.Contains(",", trim.ToString()!);
     }
 
+    /// <summary>
+    /// CollateExpression（expr COLLATE collation）应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void CollateExpression_StringLiteral_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT name COLLATE 'en_US.utf8' FROM t")!;
+        var collate = Assert.IsType<CollateExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(collate.LeftExpression);
+        Assert.Equal("'en_US.utf8'", collate.Collate);
+        Assert.Contains("COLLATE 'en_US.utf8'", collate.ToString()!);
+    }
+
+    [Fact]
+    public void CollateExpression_Identifier_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT name COLLATE utf8_unicode_ci FROM t")!;
+        var collate = Assert.IsType<CollateExpression>(select.SelectItems![0].Expression);
+        Assert.Equal("utf8_unicode_ci", collate.Collate);
+    }
+
+    /// <summary>
+    /// TimezoneExpression（expr AT TIME ZONE zone）应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void TimezoneExpression_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ts AT TIME ZONE 'UTC' FROM t")!;
+        var tz = Assert.IsType<TimezoneExpression>(select.SelectItems![0].Expression);
+        Assert.NotNull(tz.LeftExpression);
+        Assert.NotNull(tz.TimeZoneExpression);
+        Assert.Contains("AT TIME ZONE", tz.ToString()!);
+    }
+
+    [Fact]
+    public void TimezoneExpression_Chain_ShouldRoundTrip()
+    {
+        // 链式 AT TIME ZONE
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT ts AT TIME ZONE 'UTC' AT TIME ZONE 'PST' FROM t")!;
+        Assert.NotNull(select.SelectItems);
+        var output = select.ToString()!;
+        Assert.Contains("AT TIME ZONE 'UTC'", output);
+        Assert.Contains("AT TIME ZONE 'PST'", output);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression

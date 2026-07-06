@@ -163,6 +163,17 @@ public interface ExpressionVisitor<T>
         trimFunction.FromExpression?.Accept(this, context);
         return default!;
     }
+    T Visit<S>(CollateExpression collateExpression, S context)
+    {
+        collateExpression.LeftExpression?.Accept(this, context);
+        return default!;
+    }
+    T Visit<S>(TimezoneExpression timezoneExpression, S context)
+    {
+        timezoneExpression.LeftExpression?.Accept(this, context);
+        timezoneExpression.TimeZoneExpression?.Accept(this, context);
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -250,4 +261,6 @@ public interface ExpressionVisitor<T>
     void Visit(OracleHint oracleHint) => Visit<object?>(oracleHint, default);
     void Visit(KeepExpression keepExpression) => Visit<object?>(keepExpression, default);
     void Visit(TrimFunction trimFunction) => Visit<object?>(trimFunction, default);
+    void Visit(CollateExpression collateExpression) => Visit<object?>(collateExpression, default);
+    void Visit(TimezoneExpression timezoneExpression) => Visit<object?>(timezoneExpression, default);
 }

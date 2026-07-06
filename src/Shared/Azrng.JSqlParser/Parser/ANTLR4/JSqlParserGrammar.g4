@@ -711,7 +711,7 @@ predicateSuffix
     ;
 
 concatenationExpr
-    : additiveExpr ((CONCAT | PIPE) additiveExpr)*
+    : additiveExpr ((CONCAT | PIPE) additiveExpr)* (COLLATE (S_CHAR_LITERAL | identifier))?
     ;
 
 additiveExpr
@@ -732,7 +732,6 @@ postfixExpr
       ( DOT identifier
       | OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
         withinGroupClause? filterClause? overClause?
-      | COLLATE identifier
       | AT TIME ZONE expression
       | DOUBLE_COLON dataType
       | LBRACKET expression RBRACKET

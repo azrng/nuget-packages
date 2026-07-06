@@ -583,13 +583,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitOrderByItem(JSqlParserGrammar.OrderByItemContext context)
     {
         var item = new OrderByElement();
-        item.Expression = (Expression.Expression)Visit(context.expression());
-        item.Asc = context.DESC() == null;
-        item.AscDescPresent = context.ASC() != null || context.DESC() != null;
+        var expr = (Expression.Expression)Visit(context.expression());
+
+        // 兼容：当 COLLATE 由 concatenationExpr 解析后，从表达式层提取 Collate 信息
+        if (expr is CollateExpression collateExpr)
+        {
+            item.CollateName = collateExpr.Collate;
+            expr = collateExpr.LeftExpression!;
+        }
+
+        // 兼容：当 ORDER BY 文法直接消费 COLLATE 时（向后兼容）
         if (context.COLLATE() != null)
         {
             item.CollateName = context.S_CHAR_LITERAL()?.GetText() ?? context.QUOTED_IDENTIFIER()?.GetText();
         }
+
+        item.Expression = expr;
+        item.Asc = context.DESC() == null;
+        item.AscDescPresent = context.ASC() != null || context.DESC() != null;
         return item;
     }
 
@@ -1735,19 +1746,30 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitConcatenationExpr(JSqlParserGrammar.ConcatenationExprContext context)
     {
         var additiveExprs = context.additiveExpr();
+        Expression.Expression result;
         if (additiveExprs.Length == 1)
         {
-            return Visit(additiveExprs[0]);
+            result = (Expression.Expression)Visit(additiveExprs[0]);
+        }
+        else
+        {
+            result = (Expression.Expression)Visit(additiveExprs[0]);
+            for (int i = 1; i < additiveExprs.Length; i++)
+            {
+                var concat = new Concat();
+                concat.LeftExpression = result;
+                concat.RightExpression = (Expression.Expression)Visit(additiveExprs[i]);
+                result = concat;
+            }
         }
 
-        Expression.Expression result = (Expression.Expression)Visit(additiveExprs[0]);
-        for (int i = 1; i < additiveExprs.Length; i++)
+        // COLLATE 后缀（仅当存在且非 ORDER BY 上下文已消化时）
+        if (context.COLLATE() != null)
         {
-            var concat = new Concat();
-            concat.LeftExpression = result;
-            concat.RightExpression = (Expression.Expression)Visit(additiveExprs[i]);
-            result = concat;
+            var collateName = context.S_CHAR_LITERAL()?.GetText() ?? context.identifier().GetText();
+            return new CollateExpression(result, collateName);
         }
+
         return result;
     }
 
@@ -1851,12 +1873,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var expr = (Expression.Expression)Visit(context.primaryExpr());
 
-        // 按出现顺序处理后缀操作符：::dataType（cast）、.identifier（字段访问）。
+        // 按出现顺序处理后缀操作符：::dataType（cast）、.identifier（字段访问）、
+        // COLLATE collation、AT TIME ZONE expr。
         // ANTLR 的 postfixExpr 文法将这些操作符以 * 循环混合，需顺序遍历子节点。
         var dataTypes = context.dataType();
         int dataTypeIdx = 0;
         var identifiers = context.identifier();
         int identifierIdx = 0;
+        // postfixExpr 内部的 expression 子节点（用于 AT TIME ZONE）
+        var subExpressions = context.expression();
+        int subExprIdx = 0;
+        // 跳过 OPENING_PAREN ( ... ) 的子表达式（与 AT TIME ZONE 共用 expression 规则）
+        // 通过遍历过程动态判断当前 expression 是属于 AT TIME ZONE 还是函数调用
+        bool expectingTimeZoneExpr = false;
 
         for (int i = 0; i < context.ChildCount; i++)
         {
@@ -1878,6 +1907,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     expr = new RowGetExpression(expr, identifiers[identifierIdx].GetText());
                     identifierIdx++;
                 }
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.AT)
+                {
+                    expectingTimeZoneExpr = true;
+                }
+            }
+            else if (child is JSqlParserGrammar.ExpressionContext && expectingTimeZoneExpr && subExprIdx < subExpressions.Length)
+            {
+                expr = new TimezoneExpression
+                {
+                    LeftExpression = expr,
+                    TimeZoneExpression = (Expression.Expression)Visit(child)
+                };
+                subExprIdx++;
+                expectingTimeZoneExpr = false;
             }
         }
 
