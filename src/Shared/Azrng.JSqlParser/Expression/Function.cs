@@ -43,6 +43,12 @@ public class Function : ASTNodeAccessImpl, Expression
     /// </summary>
     public List<KeywordArgument>? KeywordArguments { get; set; }
 
+    /// <summary>
+    /// Oracle KEEP 子句：<c>MAX(x) KEEP (DENSE_RANK FIRST ORDER BY ...)</c>。
+    /// 未指定时为 null。对应上游 KeepExpression。
+    /// </summary>
+    public KeepExpression? Keep { get; set; }
+
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -70,6 +76,8 @@ public class Function : ASTNodeAccessImpl, Expression
 
         if (WithinGroupOrderByElements != null && WithinGroupOrderByElements.Count > 0)
             sb.Append(" WITHIN GROUP (ORDER BY ").Append(string.Join(", ", WithinGroupOrderByElements)).Append(')');
+
+        if (Keep != null) sb.Append(' ').Append(Keep);
 
         if (FilterExpression != null)
             sb.Append(" FILTER (WHERE ").Append(FilterExpression).Append(')');

@@ -351,6 +351,43 @@ public class ExpressionCoverageTest
         Assert.Equal("IGNORE", func.KeywordArguments![0].Keyword);
     }
 
+    /// <summary>
+    /// Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...) 应正确解析并往返。
+    /// </summary>
+    [Fact]
+    public void Function_Keep_First_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT MAX(salary) KEEP (DENSE_RANK FIRST ORDER BY hire_date DESC) FROM employees")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.Keep);
+        Assert.Equal("DENSE_RANK", func.Keep!.Name);
+        Assert.True(func.Keep.First);
+        Assert.NotNull(func.Keep.OrderByElements);
+        var output = func.ToString()!;
+        Assert.Contains("KEEP (DENSE_RANK FIRST ORDER BY", output);
+    }
+
+    [Fact]
+    public void Function_Keep_Last_ShouldRoundTrip()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT MIN(salary) KEEP (DENSE_RANK LAST ORDER BY hire_date) FROM employees")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.Keep);
+        Assert.False(func.Keep!.First);
+        Assert.Contains("KEEP (DENSE_RANK LAST", func.ToString()!);
+    }
+
+    [Fact]
+    public void Function_NoKeep_ShouldHaveNullKeep()
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+            "SELECT MAX(salary) FROM employees")!;
+        var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
+        Assert.Null(func.Keep);
+    }
+
     #endregion
 
     #region ExcludesExpression / IncludesExpression

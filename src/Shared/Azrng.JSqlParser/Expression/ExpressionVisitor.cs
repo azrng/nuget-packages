@@ -146,6 +146,17 @@ public interface ExpressionVisitor<T>
         return default!;
     }
     T Visit<S>(OracleHint oracleHint, S context) => default!;
+    T Visit<S>(KeepExpression keepExpression, S context)
+    {
+        if (keepExpression.OrderByElements != null)
+        {
+            foreach (var obe in keepExpression.OrderByElements)
+            {
+                obe.Expression?.Accept(this, context);
+            }
+        }
+        return default!;
+    }
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
@@ -231,4 +242,5 @@ public interface ExpressionVisitor<T>
     void Visit(OracleNamedFunctionParameter oracleNamedFunctionParameter) => Visit<object?>(oracleNamedFunctionParameter, default);
     void Visit(PostgresNamedFunctionParameter postgresNamedFunctionParameter) => Visit<object?>(postgresNamedFunctionParameter, default);
     void Visit(OracleHint oracleHint) => Visit<object?>(oracleHint, default);
+    void Visit(KeepExpression keepExpression) => Visit<object?>(keepExpression, default);
 }

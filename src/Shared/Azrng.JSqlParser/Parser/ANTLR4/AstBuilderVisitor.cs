@@ -2185,8 +2185,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
+        // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
+        if (context.keepExpression() != null)
+        {
+            func.Keep = (KeepExpression)Visit(context.keepExpression());
+        }
+
         ApplyFunctionClauses(context, func);
         return func;
+    }
+
+    // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
+    public override object VisitKeepExpression(JSqlParserGrammar.KeepExpressionContext context)
+    {
+        var keep = new KeepExpression
+        {
+            Name = context.identifier().GetText(),
+            First = context.FIRST() != null,
+            OrderByElements = (List<OrderByElement>)Visit(context.orderByClause())
+        };
+        return keep;
     }
 
     // 通用函数关键字参数：nonReservedKeyword expression

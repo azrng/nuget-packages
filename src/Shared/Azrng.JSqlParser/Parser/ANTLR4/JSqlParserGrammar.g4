@@ -855,9 +855,15 @@ intervalExpr
 functionExpr
     : identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
+      keepExpression?
       withinGroupClause? filterClause? overClause?
     | groupConcatFunction
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
+    ;
+
+// Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
+keepExpression
+    : KEEP OPENING_PAREN identifier (FIRST | LAST) orderByClause CLOSING_PAREN
     ;
 
 // 通用函数关键字参数（在函数调用的 ) 之后附加）
