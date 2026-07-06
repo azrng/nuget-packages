@@ -184,12 +184,61 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
             case FunctionType.EXISTS:
                 AppendExists(sb);
                 break;
+            case FunctionType.QUERY:
+                AppendQuery(sb);
+                break;
             default:
-                // QUERY 在 F7c 补全
                 sb.Append("JSON_").Append(Type);
                 break;
         }
         return sb.ToString();
+    }
+
+    private void AppendQuery(StringBuilder sb)
+    {
+        // JSON_QUERY(input, path [PASSING ...] [RETURNING ...] [WRAPPER ...] [QUOTES ...] [ON EMPTY ...] [ON ERROR ...])
+        sb.Append("JSON_QUERY(");
+        AppendInputAndPath(sb);
+        AppendPassing(sb);
+        AppendReturning(sb);
+        AppendWrapper(sb);
+        AppendQuotes(sb);
+        AppendOnResponse(sb, OnEmptyBehavior, "ON EMPTY");
+        AppendOnResponse(sb, OnErrorBehavior, "ON ERROR");
+        sb.Append(')');
+    }
+
+    private void AppendWrapper(StringBuilder sb)
+    {
+        if (Wrapper == null) return;
+        sb.Append(' ');
+        if (Wrapper == WrapperType.WITHOUT)
+        {
+            sb.Append("WITHOUT");
+        }
+        else
+        {
+            sb.Append("WITH");
+            if (WrapperModeValue != null)
+            {
+                sb.Append(' ').Append(WrapperModeValue.ToString().ToUpper());
+            }
+        }
+        if (WrapperArray)
+        {
+            sb.Append(" ARRAY");
+        }
+        sb.Append(" WRAPPER");
+    }
+
+    private void AppendQuotes(StringBuilder sb)
+    {
+        if (Quotes == null) return;
+        sb.Append(' ').Append(Quotes == QuotesType.KEEP ? "KEEP" : "OMIT").Append(" QUOTES");
+        if (QuotesOnScalarString)
+        {
+            sb.Append(" ON SCALAR STRING");
+        }
     }
 
     private void AppendValue(StringBuilder sb)

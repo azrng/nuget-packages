@@ -955,6 +955,7 @@ functionExpr
     | jsonArrayFunction
     | jsonValueFunction
     | jsonExistsFunction
+    | jsonQueryFunction
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -1045,6 +1046,41 @@ jsonExistsFunction
 
 jsonFunctionInput
     : expression (FORMAT JSON (ENCODING identifier)?)?
+    ;
+
+// JSON_QUERY(input, path [PASSING ...] [RETURNING ...] [WRAPPER ...] [QUOTES ...] [ON EMPTY ...] [ON ERROR ...])
+jsonQueryFunction
+    : JSON_QUERY OPENING_PAREN
+      jsonFunctionInput COMMA expression
+      (PASSING expression (COMMA expression)*)?
+      (jsonReturningClause)?
+      (jsonWrapperClause)?
+      (jsonQuotesClause)?
+      (jsonQueryBehavior ON EMPTY_KW)?
+      (jsonQueryBehavior ON ERROR)?
+      CLOSING_PAREN
+    ;
+
+// WRAPPER 子句：WITHOUT [ARRAY] WRAPPER | WITH [CONDITIONAL|UNCONDITIONAL] [ARRAY] WRAPPER
+jsonWrapperClause
+    : WITHOUT ARRAY? WRAPPER
+    | WITH (CONDITIONAL | UNCONDITIONAL)? ARRAY? WRAPPER
+    ;
+
+// QUOTES 子句：(KEEP | OMIT) QUOTES [ON SCALAR STRING]
+jsonQuotesClause
+    : (KEEP | OMIT) QUOTES (ON SCALAR STRING)?
+    ;
+
+// JSON_QUERY 的 ON EMPTY / ON ERROR 行为（比 VALUE 多 TRUE/FALSE/EMPTY ARRAY/EMPTY OBJECT）
+jsonQueryBehavior
+    : ERROR
+    | NULL
+    | TRUE
+    | FALSE
+    | EMPTY_KW ARRAY?
+    | EMPTY_KW OBJECT
+    | DEFAULT expression
     ;
 
 // JSON_VALUE 的 ON EMPTY / ON ERROR 行为：ERROR | NULL | DEFAULT expr | EMPTY

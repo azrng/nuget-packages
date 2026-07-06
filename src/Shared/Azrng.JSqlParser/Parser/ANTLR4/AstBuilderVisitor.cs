@@ -2612,6 +2612,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             return Visit(context.jsonExistsFunction());
         }
+        if (context.jsonQueryFunction() != null)
+        {
+            return Visit(context.jsonQueryFunction());
+        }
 
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
@@ -2982,6 +2986,65 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             func.OnErrorBehavior = new JsonFunction.JsonOnResponseBehavior(type);
         }
         return func;
+    }
+
+    // JSON_QUERY(input, path, ...)
+    public override object VisitJsonQueryFunction(JSqlParserGrammar.JsonQueryFunctionContext context)
+    {
+        var func = new JsonFunction(JsonFunction.FunctionType.QUERY);
+        func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
+        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+        FillJsonReturning(func, context.jsonReturningClause());
+
+        if (context.jsonWrapperClause() != null)
+        {
+            var w = context.jsonWrapperClause();
+            func.Wrapper = w.WITHOUT() != null
+                ? JsonFunction.WrapperType.WITHOUT
+                : JsonFunction.WrapperType.WITH;
+            if (w.CONDITIONAL() != null) func.WrapperModeValue = JsonFunction.WrapperMode.CONDITIONAL;
+            if (w.UNCONDITIONAL() != null) func.WrapperModeValue = JsonFunction.WrapperMode.UNCONDITIONAL;
+            if (w.ARRAY() != null) func.WrapperArray = true;
+        }
+
+        if (context.jsonQuotesClause() != null)
+        {
+            var q = context.jsonQuotesClause();
+            func.Quotes = q.KEEP() != null ? JsonFunction.QuotesType.KEEP : JsonFunction.QuotesType.OMIT;
+            if (q.SCALAR() != null) func.QuotesOnScalarString = true;
+        }
+
+        // ON EMPTY / ON ERROR
+        var behaviors = context.jsonQueryBehavior();
+        bool hasEmpty = context.EMPTY_KW() != null;
+        if (behaviors.Length == 1)
+        {
+            if (hasEmpty) func.OnEmptyBehavior = ParseJsonQueryBehavior(behaviors[0]);
+            else func.OnErrorBehavior = ParseJsonQueryBehavior(behaviors[0]);
+        }
+        else if (behaviors.Length >= 2)
+        {
+            func.OnEmptyBehavior = ParseJsonQueryBehavior(behaviors[0]);
+            func.OnErrorBehavior = ParseJsonQueryBehavior(behaviors[1]);
+        }
+        return func;
+    }
+
+    private JsonFunction.JsonOnResponseBehavior ParseJsonQueryBehavior(JSqlParserGrammar.JsonQueryBehaviorContext b)
+    {
+        if (b.DEFAULT() != null)
+        {
+            return new JsonFunction.JsonOnResponseBehavior(
+                JsonFunction.OnResponseBehaviorType.DEFAULT,
+                (Expression.Expression)Visit(b.expression()));
+        }
+        if (b.TRUE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.TRUE);
+        if (b.FALSE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.FALSE);
+        if (b.ARRAY() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY_ARRAY);
+        if (b.OBJECT() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY_OBJECT);
+        if (b.EMPTY_KW() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY);
+        if (b.ERROR() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.ERROR);
+        return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
     }
 
     private JsonFunction.JsonOnResponseBehavior ParseJsonValueBehavior(JSqlParserGrammar.JsonValueBehaviorContext b)

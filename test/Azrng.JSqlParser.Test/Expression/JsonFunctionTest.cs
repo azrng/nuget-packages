@@ -177,4 +177,40 @@ public class JsonFunctionTest
         Assert.Equal(JsonFunction.OnResponseBehaviorType.UNKNOWN, func.OnErrorBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
+
+    [Fact]
+    public void JsonQuery_Simple_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_QUERY(payload, '$.items') FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.FunctionType.QUERY, func.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonQuery_WithWrapperAndQuotes_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_QUERY(payload, '$.items' WITH ARRAY WRAPPER KEEP QUOTES) FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.WrapperType.WITH, func.Wrapper);
+        Assert.True(func.WrapperArray);
+        Assert.Equal(JsonFunction.QuotesType.KEEP, func.Quotes);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonQuery_OnErrorEmptyArray_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_QUERY(payload, '$.items' EMPTY ARRAY ON EMPTY) FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.OnEmptyBehavior);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.EMPTY_ARRAY, func.OnEmptyBehavior!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
 }
