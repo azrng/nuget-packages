@@ -517,6 +517,7 @@ PERCENT         : [Pp][Ee][Rr][Cc][Ee][Nn][Tt] ;
 PLACING         : [Pp][Ll][Aa][Cc][Ii][Nn][Gg] ;
 PLAN            : [Pp][Ll][Aa][Nn] ;
 POLICY          : [Pp][Oo][Ll][Ii][Cc][Yy] ;
+CONNECT_BY_ROOT : [Cc][Oo][Nn][Nn][Ee][Cc][Tt]'_'[Bb][Yy]'_'[Rr][Oo][Oo][Tt] ;
 PRIOR           : [Pp][Rr][Ii][Oo][Rr] ;
 PRIVILEGES      : [Pp][Rr][Ii][Vv][Ii][Ll][Ee][Gg][Ee][Ss] ;
 PROCEDURE       : [Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee] ;

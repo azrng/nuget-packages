@@ -778,6 +778,7 @@ primaryExpr
     | structType
     | lambdaExpression
     | connectByPriorOperator
+    | connectByRootOperator
     | keyExpression
     | fullTextSearch
     | namedFunctionParameter
@@ -872,6 +873,11 @@ structArgument
 
 connectByPriorOperator
     : PRIOR expression
+    ;
+
+// Oracle CONNECT_BY_ROOT expression（commit 624a768b）
+connectByRootOperator
+    : CONNECT_BY_ROOT expression
     ;
 
 caseExpr

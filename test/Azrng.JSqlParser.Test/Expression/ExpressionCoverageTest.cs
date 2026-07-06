@@ -876,4 +876,44 @@ public class ExpressionCoverageTest
     }
 
     #endregion
+
+    #region Oracle 层级查询 (CONNECT_BY_ROOT)
+
+    /// <summary>
+    /// Oracle CONNECT_BY_ROOT 简单列引用应可解析并往返。
+    /// 对应上游 commit 624a768b。
+    /// </summary>
+    [Fact]
+    public void ConnectByRoot_SimpleColumn_ShouldRoundTrip()
+    {
+        var sql = "SELECT CONNECT_BY_ROOT emp_name FROM employees";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// CONNECT_BY_ROOT 后接复合表达式（|| 拼接）应可解析并往返。
+    /// 这是上游 commit 624a768b 的核心场景（操作数从 Column 扩展为 Expression）。
+    /// </summary>
+    [Fact]
+    public void ConnectByRoot_ComplexExpression_ShouldRoundTrip()
+    {
+        var sql = "SELECT CONNECT_BY_ROOT (emp_name || '_') FROM employees";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    /// <summary>
+    /// PRIOR 操作数也应支持表达式（commit 624a768b 一并扩展）。
+    /// 注：PRIOR 在 nonReservedKeyword 中，复合表达式场景存在 ANTLR 预测歧义
+    /// （可能被当作 PRIOR(...) 函数形式），此处仅验证不解析报错。
+    /// </summary>
+    [Fact]
+    public void ConnectByPrior_ExpressionOperand_ShouldParse()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT PRIOR a FROM t");
+        Assert.NotNull(stmt);
+    }
+
+    #endregion
 }

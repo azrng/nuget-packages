@@ -2243,6 +2243,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.subSelect() != null) return Visit(context.subSelect());
         if (context.structType() != null) return Visit(context.structType());
         if (context.lambdaExpression() != null) return Visit(context.lambdaExpression());
+        if (context.connectByPriorOperator() != null) return Visit(context.connectByPriorOperator());
+        if (context.connectByRootOperator() != null) return Visit(context.connectByRootOperator());
         if (context.keyExpression() != null) return Visit(context.keyExpression());
         if (context.fullTextSearch() != null) return Visit(context.fullTextSearch());
         if (context.namedFunctionParameter() != null) return Visit(context.namedFunctionParameter());
@@ -2901,6 +2903,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitConnectByPriorOperator(JSqlParserGrammar.ConnectByPriorOperatorContext context)
     {
         return new ConnectByPriorOperator((Expression.Expression)Visit(context.expression()));
+    }
+
+    public override object VisitConnectByRootOperator(JSqlParserGrammar.ConnectByRootOperatorContext context)
+    {
+        return new ConnectByRootOperator((Expression.Expression)Visit(context.expression()));
     }
 
     // ── Helpers ────────────────────────────────

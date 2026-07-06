@@ -236,6 +236,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     // JSqlParser 5.1 new expressions
     public object? Visit<S>(BooleanValue booleanValue, S context) => null;
     public object? Visit<S>(ConnectByPriorOperator connectByPriorOperator, S context) { connectByPriorOperator.Expression?.Accept(this); return null; }
+    public object? Visit<S>(ConnectByRootOperator connectByRootOperator, S context) { connectByRootOperator.Expression?.Accept(this); return null; }
     public object? Visit<S>(HighExpression highExpression, S context) { highExpression.Expression?.Accept(this); return null; }
     public object? Visit<S>(LowExpression lowExpression, S context) { lowExpression.Expression?.Accept(this); return null; }
     public object? Visit<S>(Inverse inverse, S context) { inverse.Expression?.Accept(this); return null; }

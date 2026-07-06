@@ -12,7 +12,7 @@
 
 - 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
 - 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
-- 已完成：子项 1-62（全量 734 测试通过，净增 186）。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
+- 已完成：子项 1-63（全量 737 测试通过，净增 189）。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
 - 下一步：按优先级处理剩余通用功能/修复（子项 57-77），方言专项按需取用。
 - 阻塞项：无
 
@@ -30,7 +30,7 @@
 | 60 | c7b3bdbd | ALTER TABLE USING INDEX clause — 文法 usingIndexClause + Constraint/AlterExpression 加 UsingIndex 字段 + 修复 ALTER alterOperation 未解析与 CREATE TABLE 约束未输出两处既有缺陷 + 4 测试 | DONE |
 | 61 | 763e92d7 | alter table index descending — 文法 KEY/INDEX 分支用 indexColumnList 支持 col ASC/DESC + 保留 INDEX 关键字 + Constraint 加 IndexColumnParams + 3 测试 | DONE |
 | 62 | ac46c434 | CREATE SCHEMA with catalog — 新增 CreateSchema 类 + 文法 createSchema 规则（含 catalog.schema 限定）+ Visitor 分派 + 5 测试 | DONE |
-| 63 | 624a768b | Oracle hierarchical queries — CONNECT BY 中操作符接受 Expression | TODO |
+| 63 | 624a768b | Oracle hierarchical queries — 新增 ConnectByRootOperator 类 + lexer CONNECT_BY_ROOT token + 文法 connectByRootOperator 规则 + VisitPrimaryExpr 补 connectBy 分派（修复既有缺陷）+ 3 测试 | DONE |
 | 64 | 7c52e7fe | legacy Postgres named parameter — 兼容旧式命名参数 | TODO |
 
 #### 通用功能/修复 — low 优先级

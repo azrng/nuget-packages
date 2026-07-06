@@ -100,6 +100,7 @@ public interface ExpressionVisitor<T>
     // JSqlParser 5.1 new expressions
     T Visit<S>(BooleanValue booleanValue, S context);
     T Visit<S>(ConnectByPriorOperator connectByPriorOperator, S context);
+    T Visit<S>(ConnectByRootOperator connectByRootOperator, S context);
     T Visit<S>(HighExpression highExpression, S context);
     T Visit<S>(LowExpression lowExpression, S context);
     T Visit<S>(Inverse inverse, S context);
@@ -275,6 +276,7 @@ public interface ExpressionVisitor<T>
     void Visit(Operators.Relational.IncludesExpression includesExpression) => Visit<object?>(includesExpression, default);
     void Visit(BooleanValue booleanValue) => Visit<object?>(booleanValue, default);
     void Visit(ConnectByPriorOperator connectByPriorOperator) => Visit<object?>(connectByPriorOperator, default);
+    void Visit(ConnectByRootOperator connectByRootOperator) => Visit<object?>(connectByRootOperator, default);
     void Visit(HighExpression highExpression) => Visit<object?>(highExpression, default);
     void Visit(LowExpression lowExpression) => Visit<object?>(lowExpression, default);
     void Visit(Inverse inverse) => Visit<object?>(inverse, default);

@@ -107,6 +107,7 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
     // JSqlParser 5.1 new expressions
     public virtual T Visit<S>(BooleanValue booleanValue, S context) => default!;
     public virtual T Visit<S>(ConnectByPriorOperator connectByPriorOperator, S context) { connectByPriorOperator.Expression?.Accept(this); return default!; }
+    public virtual T Visit<S>(ConnectByRootOperator connectByRootOperator, S context) { connectByRootOperator.Expression?.Accept(this); return default!; }
     public virtual T Visit<S>(HighExpression highExpression, S context) { highExpression.Expression?.Accept(this); return default!; }
     public virtual T Visit<S>(LowExpression lowExpression, S context) { lowExpression.Expression?.Accept(this); return default!; }
     public virtual T Visit<S>(Inverse inverse, S context) { inverse.Expression?.Accept(this); return default!; }
