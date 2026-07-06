@@ -12,7 +12,7 @@
 
 - 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
 - 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
-- 已完成：子项 1-64（全量 738 测试通过，净增 190）。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
+- 已完成：子项 1-67（全量 745 测试通过，净增 197）。逐项实现记录见 `git log --grep="T075"` 与本文件历史版本。
 - 下一步：按优先级处理剩余通用功能/修复（子项 57-77），方言专项按需取用。
 - 阻塞项：无
 
@@ -37,10 +37,10 @@
 
 | 子项 | commit | 内容 | 状态 |
 |------|--------|------|------|
-| 65 | 74607624 | Exasol IMPORT/EXPORT — Exasol 导入导出语句 | TODO |
-| 66 | c60ff739 | normalised backtick quotes — 反引号标识符规范化输出 | TODO |
-| 67 | 6c98f10f | SessionStatement with options — Session 语句带选项 | TODO |
-| 68 | 528dd722 | array<double> 函数声明（需评估，Azrng 无 CREATE FUNCTION 文法） | TODO |
+| 65 | 74607624 | Exasol IMPORT/EXPORT（评估：暂不迁移，3552 行/48 文件的 Exasol 专属方言，Azrng 无前置支持，投入产出比低） | DONE |
+| 66 | c60ff739 | normalised backtick quotes（评估：不适用，Azrng 保留原引号形式输出，多段名在 VisitColumnRef 显式处理，补 1 回归测试） | DONE |
+| 67 | 6c98f10f | SessionStatement with options — KEEP 已在 nonReservedKeyword 天然支持；扩展 sessionOptionValue 接受 true/false/on/off/no/数字/字符串 + 新增 SessionStatementTest 6 测试 | DONE |
+| 68 | 528dd722 | array<double> 函数声明（评估：暂不迁移，BigQuery 专属 WITH FUNCTION 声明，Azrng 无前置 WITH FUNCTION 支持，属方言专项） | DONE |
 
 #### 方言专项（按需取用）
 

@@ -609,7 +609,16 @@ sessionStatement
     ;
 
 sessionOption
-    : identifier EQUALS identifier
+    : identifier EQUALS sessionOptionValue
+    ;
+
+// SESSION option 值侧：接受标识符、布尔/开关关键字、数字、字符串
+// 对齐上游 commit 6c98f10f（值侧支持 true/false/on/off/yes/no 等）
+sessionOptionValue
+    : identifier
+    | TRUE | FALSE | ON | OFF | NO
+    | LONG_VALUE
+    | S_CHAR_LITERAL
     ;
 
 // ══════════════════════════════════════════════

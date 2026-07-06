@@ -342,6 +342,18 @@ public class SelectStatementTest
         Assert.Equal(sql, select.ToString());
     }
 
+    /// <summary>
+    /// MySQL 反引号标识符应正确解析并往返（上游 commit c60ff739 反引号规范化相关）。
+    /// Azrng 保留原始反引号形式输出，不做双引号规范化。
+    /// </summary>
+    [Fact]
+    public void BacktickIdentifier_ShouldRoundTrip()
+    {
+        var sql = "SELECT `id`, `name` FROM `users` WHERE `id` = 1";
+        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        Assert.Equal(sql, stmt.ToString());
+    }
+
     #endregion
 
     #region MySQL INTO OUTFILE / DUMPFILE

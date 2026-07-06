@@ -1511,8 +1511,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         foreach (var optCtx in context.sessionOption())
         {
-            var key = optCtx.identifier(0).GetText();
-            var value = optCtx.identifier(1).GetText();
+            var key = optCtx.identifier().GetText();
+            var valueCtx = optCtx.sessionOptionValue();
+            // 值侧可能是 identifier 或 TRUE/FALSE/ON/OFF/NO/LONG_VALUE/S_CHAR_LITERAL
+            var value = valueCtx.GetText();
             session.PutOption(key, value);
         }
 
