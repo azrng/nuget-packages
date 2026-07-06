@@ -123,6 +123,27 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
         transcodingFunction.Expression?.Accept(this);
         return default!;
     }
+    public virtual T Visit<S>(JsonFunction jsonFunction, S context)
+    {
+        foreach (var kvp in jsonFunction.KeyValuePairs)
+        {
+            if (kvp.Key is Expression ke) ke.Accept(this);
+            if (kvp.Value is Expression ve) ve.Accept(this);
+        }
+        foreach (var expr in jsonFunction.Expressions)
+        {
+            expr.Expression?.Accept(this);
+        }
+        foreach (var expr in jsonFunction.PassingExpressions)
+        {
+            expr.Accept(this);
+        }
+        jsonFunction.InputExpression?.Expression?.Accept(this);
+        jsonFunction.JsonPathExpression?.Accept(this);
+        jsonFunction.OnEmptyBehavior?.Expression?.Accept(this);
+        jsonFunction.OnErrorBehavior?.Expression?.Accept(this);
+        return default!;
+    }
     public virtual T Visit<S>(Operators.Relational.CosineSimilarity cosineSimilarity, S context) => VisitBinary(cosineSimilarity);
     public virtual T Visit<S>(Operators.Relational.GeometryDistance geometryDistance, S context) => VisitBinary(geometryDistance);
     public virtual T Visit<S>(Operators.Relational.Plus plus, S context) => VisitBinary(plus);

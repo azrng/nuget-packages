@@ -2595,6 +2595,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.transcodingFunction());
         }
 
+        // JSON 标量函数 JSON_OBJECT / JSON_ARRAY
+        if (context.jsonObjectFunction() != null)
+        {
+            return Visit(context.jsonObjectFunction());
+        }
+        if (context.jsonArrayFunction() != null)
+        {
+            return Visit(context.jsonArrayFunction());
+        }
+
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
         if ((context.NEXTVAL() != null || context.NEXT() != null) && context.FOR() != null)
@@ -2771,6 +2781,147 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             Expression = (Expression.Expression)Visit(context.expression()),
             TranscodingName = context.transcodingName().GetText(),
         };
+    }
+
+    // JSON_OBJECT( [KEY] k (VALUE|:|,) v [FORMAT JSON] ... )
+    public override object VisitJsonObjectFunction(JSqlParserGrammar.JsonObjectFunctionContext context)
+    {
+        var func = new JsonFunction(JsonFunction.FunctionType.OBJECT);
+
+        foreach (var kvpCtx in context.jsonKeyValuePair())
+        {
+            func.KeyValuePairs.Add((JsonKeyValuePair)Visit(kvpCtx));
+        }
+
+        if (context.onNullClause() != null)
+        {
+            func.OnNull = context.onNullClause().ABSENT() != null
+                ? JsonFunction.OnNullType.ABSENT
+                : JsonFunction.OnNullType.NULL;
+        }
+
+        if (context.STRICT() != null)
+        {
+            func.Strict = true;
+        }
+
+        if (context.uniqueKeysClause() != null)
+        {
+            func.UniqueKeys = context.uniqueKeysClause().WITH() != null
+                ? JsonFunction.UniqueKeysType.WITH
+                : JsonFunction.UniqueKeysType.WITHOUT;
+        }
+
+        FillJsonReturning(func, context.jsonReturningClause());
+
+        return func;
+    }
+
+    public override object VisitJsonKeyValuePair(JSqlParserGrammar.JsonKeyValuePairContext context)
+    {
+        var kvp = new JsonKeyValuePair { UsingKeyKeyword = context.KEY() != null };
+
+        // key：S_CHAR_LITERAL 或 columnRef
+        kvp.Key = context.S_CHAR_LITERAL(0) != null
+            ? (object)new StringValue(context.S_CHAR_LITERAL(0).GetText())
+            : Visit(context.columnRef(0));
+
+        // 分隔符
+        if (context.VALUE() != null)
+        {
+            kvp.Separator = JsonKeyValuePair.SeparatorKind.VALUE;
+        }
+        else if (context.DOUBLE_COLON() != null || context.COLON() != null)
+        {
+            kvp.Separator = JsonKeyValuePair.SeparatorKind.COLON;
+        }
+        else
+        {
+            kvp.Separator = JsonKeyValuePair.SeparatorKind.COMMA;
+        }
+
+        // value：分隔符存在时，取其后的 S_CHAR_LITERAL / columnRef / expression
+        // 注意 key 可能是 S_CHAR_LITERAL 或 columnRef，value 的索引需根据 key 实际用法调整
+        var charLits = context.S_CHAR_LITERAL();
+        var colRefs = context.columnRef();
+        if (charLits.Length > 1)
+        {
+            // key 是 S_CHAR_LITERAL(0)，value 是 S_CHAR_LITERAL(1)
+            kvp.Value = new StringValue(charLits[1].GetText());
+        }
+        else if (colRefs.Length > 1)
+        {
+            // key 是 columnRef(0)，value 是 columnRef(1)
+            kvp.Value = Visit(colRefs[1]);
+        }
+        else if (colRefs.Length == 1 && charLits.Length == 1)
+        {
+            // key 是 S_CHAR_LITERAL(0)，value 是 columnRef(0)
+            kvp.Value = Visit(colRefs[0]);
+        }
+        else if (context.expression() != null)
+        {
+            kvp.Value = Visit(context.expression());
+        }
+
+        if (context.FORMAT() != null)
+        {
+            kvp.UsingFormatJson = true;
+            if (context.ENCODING() != null)
+            {
+                kvp.Encoding = context.identifier().GetText();
+            }
+        }
+
+        return kvp;
+    }
+
+    // JSON_ARRAY( expr [FORMAT JSON] ... )
+    public override object VisitJsonArrayFunction(JSqlParserGrammar.JsonArrayFunctionContext context)
+    {
+        var func = new JsonFunction(JsonFunction.FunctionType.ARRAY);
+
+        foreach (var elemCtx in context.jsonArrayElement())
+        {
+            var elem = new JsonFunctionExpression
+            {
+                Expression = (Expression.Expression)Visit(elemCtx.expression())
+            };
+            if (elemCtx.FORMAT() != null)
+            {
+                elem.UsingFormatJson = true;
+                if (elemCtx.ENCODING() != null)
+                {
+                    elem.Encoding = elemCtx.identifier().GetText();
+                }
+            }
+            func.Expressions.Add(elem);
+        }
+
+        if (context.onNullClause() != null)
+        {
+            func.OnNull = context.onNullClause().ABSENT() != null
+                ? JsonFunction.OnNullType.ABSENT
+                : JsonFunction.OnNullType.NULL;
+        }
+
+        FillJsonReturning(func, context.jsonReturningClause());
+
+        return func;
+    }
+
+    private void FillJsonReturning(JsonFunction func, JSqlParserGrammar.JsonReturningClauseContext? ret)
+    {
+        if (ret == null) return;
+        func.ReturningType = ret.dataType().GetText();
+        if (ret.FORMAT() != null)
+        {
+            func.ReturningFormatJson = true;
+            if (ret.ENCODING() != null)
+            {
+                func.ReturningEncoding = ret.identifier().GetText();
+            }
+        }
     }
 
     public override object VisitGroupConcatFunction(JSqlParserGrammar.GroupConcatFunctionContext context)

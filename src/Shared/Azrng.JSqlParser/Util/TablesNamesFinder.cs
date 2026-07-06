@@ -254,6 +254,25 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         transcodingFunction.Expression?.Accept(this);
         return null;
     }
+    public object? Visit<S>(JsonFunction jsonFunction, S context)
+    {
+        foreach (var kvp in jsonFunction.KeyValuePairs)
+        {
+            if (kvp.Key is Expression.Expression ke) ke.Accept(this);
+            if (kvp.Value is Expression.Expression ve) ve.Accept(this);
+        }
+        foreach (var expr in jsonFunction.Expressions)
+        {
+            expr.Expression?.Accept(this);
+        }
+        foreach (var expr in jsonFunction.PassingExpressions)
+        {
+            expr.Accept(this);
+        }
+        jsonFunction.InputExpression?.Expression?.Accept(this);
+        jsonFunction.JsonPathExpression?.Accept(this);
+        return null;
+    }
     public object? Visit<S>(Plus plus, S context) => VisitBinary(plus);
     public object? Visit<S>(PriorTo priorTo, S context) => VisitBinary(priorTo);
 

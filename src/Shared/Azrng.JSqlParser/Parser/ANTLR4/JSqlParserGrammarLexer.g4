@@ -236,6 +236,7 @@ SHARE           : [Ss][Hh][Aa][Rr][Ee] ;
 SKIP_KW         : [Ss][Kk][Ii][Pp] ;
 SOME            : [Ss][Oo][Mm][Ee] ;
 STARTING        : [Ss][Tt][Aa][Rr][Tt][Ii][Nn][Gg] ;
+STRICT          : [Ss][Tt][Rr][Ii][Cc][Tt] ;
 SYMMETRIC       : [Ss][Yy][Mm][Mm][Ee][Tt][Rr][Ii][Cc] ;
 TABLE           : [Tt][Aa][Bb][Ll][Ee] ;
 TERMINATED      : [Tt][Ee][Rr][Mm][Ii][Nn][Aa][Tt][Ee][Dd] ;
@@ -261,6 +262,7 @@ WHERE           : [Ww][Hh][Ee][Rr][Ee] ;
 WINDOW          : [Ww][Ii][Nn][Dd][Oo][Ww] ;
 WITH            : [Ww][Ii][Tt][Hh] ;
 WITHIN          : [Ww][Ii][Tt][Hh][Ii][Nn] ;
+WITHOUT         : [Ww][Ii][Tt][Hh][Oo][Uu][Tt] ;
 XOR             : [Xx][Oo][Rr] ;
 
 // ── DML / DDL extras ─────────────────────────
@@ -312,6 +314,10 @@ FLOAT           : [Ff][Ll][Oo][Aa][Tt] ;
 INT             : [Ii][Nn][Tt] ;
 INTEGER         : [Ii][Nn][Tt][Ee][Gg][Ee][Rr] ;
 JSON_TABLE      : [Jj][Ss][Oo][Nn]'_'[Tt][Aa][Bb][Ll][Ee] ;
+JSON_OBJECT     : [Jj][Ss][Oo][Nn]'_'[Oo][Bb][Jj][Ee][Cc][Tt] ;
+JSON_OBJECTAGG  : [Jj][Ss][Oo][Nn]'_'[Oo][Bb][Jj][Ee][Cc][Tt][Aa][Gg][Gg] ;
+JSON_ARRAY      : [Jj][Ss][Oo][Nn]'_'[Aa][Rr][Rr][Aa][Yy] ;
+JSON_ARRAYAGG   : [Jj][Ss][Oo][Nn]'_'[Aa][Rr][Rr][Aa][Yy][Aa][Gg][Gg] ;
 JSON            : [Jj][Ss][Oo][Nn] ;
 JSONB           : [Jj][Ss][Oo][Nn][Bb] ;
 NCHAR           : [Nn][Cc][Hh][Aa][Rr] ;
@@ -357,6 +363,7 @@ OTHERS          : [Oo][Tt][Hh][Ee][Rr][Ss] ;
 
 ACTION          : [Aa][Cc][Tt][Ii][Oo][Nn] ;
 ACTIVE          : [Aa][Cc][Tt][Ii][Vv][Ee] ;
+ABSENT          : [Aa][Bb][Ss][Ee][Nn][Tt] ;
 ADD             : [Aa][Dd][Dd] ;
 AGGREGATE       : [Aa][Gg][Gg][Rr][Ee][Gg][Aa][Tt][Ee] ;
 AGAINST         : [Aa][Gg][Aa][Ii][Nn][Ss][Tt] ;

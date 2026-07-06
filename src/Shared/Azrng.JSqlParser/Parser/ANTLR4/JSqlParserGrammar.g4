@@ -951,6 +951,8 @@ intervalExpr
 
 functionExpr
     : transcodingFunction
+    | jsonObjectFunction
+    | jsonArrayFunction
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -975,6 +977,48 @@ transcodingBody
 
 transcodingName
     : identifier (DOT identifier)*
+    ;
+
+// JSON_OBJECT 标量函数
+jsonObjectFunction
+    : JSON_OBJECT OPENING_PAREN
+      (jsonKeyValuePair (COMMA jsonKeyValuePair)*)?
+      (onNullClause)?
+      (STRICT)?
+      (uniqueKeysClause)?
+      (jsonReturningClause)?
+      CLOSING_PAREN
+    ;
+
+jsonKeyValuePair
+    : (KEY)? (S_CHAR_LITERAL | columnRef)
+      ((VALUE | DOUBLE_COLON | COLON | COMMA) (S_CHAR_LITERAL | columnRef | expression))?
+      (FORMAT JSON (ENCODING identifier)?)?
+    ;
+
+// JSON_ARRAY 标量函数
+jsonArrayFunction
+    : JSON_ARRAY OPENING_PAREN
+      (jsonArrayElement (COMMA jsonArrayElement)*)?
+      (onNullClause)?
+      (jsonReturningClause)?
+      CLOSING_PAREN
+    ;
+
+jsonArrayElement
+    : expression (FORMAT JSON (ENCODING identifier)?)?
+    ;
+
+onNullClause
+    : (NULL | ABSENT) ON NULL
+    ;
+
+uniqueKeysClause
+    : (WITH | WITHOUT) UNIQUE KEYS
+    ;
+
+jsonReturningClause
+    : RETURNING dataType (FORMAT JSON (ENCODING identifier)?)?
     ;
 
 // Oracle KEEP (DENSE_RANK FIRST|LAST ORDER BY ...)
@@ -1063,7 +1107,7 @@ identifier
     ;
 
 nonReservedKeyword
-    : ACTION | ACTIVE | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
+    : ACTION | ACTIVE | ABSENT | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
     | BEFORE | BEGIN | BIT | BOTH
     | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
@@ -1092,10 +1136,10 @@ nonReservedKeyword
     | REJECT | RENAME | REPLACE | RESET | RESTART | RESUME | RESTRICT
     | RETURN | RETURNS | RETURNING | ROLLBACK | ROLLUP | RLIKE
     | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW
-    | START | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP
+    | START | STRICT | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP
     | TIES | TRAILING | TRIGGER | TRIM | TRY_CAST | TYPE
     | UNLOGGED | VALIDATE | VERIFY | VISIBLE | VOLATILE
-    | WITHIN | WORK | ZONE
+    | WITHIN | WITHOUT | WORK | ZONE
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     ;
 
