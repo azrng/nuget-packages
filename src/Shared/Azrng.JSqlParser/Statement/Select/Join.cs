@@ -19,6 +19,9 @@ public class Join : ASTNodeAccessImpl
     public bool Cross { get; set; }
     public bool Semi { get; set; }
 
+    /// <summary>ClickHouse/MySQL STRAIGHT_JOIN（强制连接顺序）。</summary>
+    public bool Straight { get; set; }
+
     /// <summary>是否为 JPQL/HQL 的 JOIN FETCH（预加载关联）。</summary>
     public bool Fetch { get; set; }
 
@@ -56,7 +59,8 @@ public class Join : ASTNodeAccessImpl
         if (RightItem == null)
             throw new InvalidOperationException("Join requires a right item.");
 
-        sb.Append("JOIN ");
+        // STRAIGHT_JOIN 是独立关键字（非 INNER/LEFT 等 join 类型修饰）
+        sb.Append(Straight ? "STRAIGHT_JOIN " : "JOIN ");
         if (Fetch) sb.Append("FETCH ");
         sb.Append(RightItem);
 

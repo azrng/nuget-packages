@@ -555,7 +555,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var join = new Join();
 
-        if (context.CROSS() != null)
+        // STRAIGHT_JOIN（ClickHouse/MySQL 强制连接顺序）
+        if (context.STRAIGHT_JOIN() != null)
+        {
+            join.Straight = true;
+        }
+        else if (context.CROSS() != null)
         {
             join.Cross = true;
         }
@@ -2331,6 +2336,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             like.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
             if (suffix.NOT() != null) like.Not = true;
             return like;
+        }
+
+        // SIMILAR TO / NOT SIMILAR TO
+        if (suffix.SIMILAR() != null)
+        {
+            var similar = new SimilarToExpression();
+            similar.LeftExpression = concat;
+            similar.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            if (suffix.NOT() != null) similar.Not = true;
+            return similar;
         }
 
         if (suffix.IS() != null)

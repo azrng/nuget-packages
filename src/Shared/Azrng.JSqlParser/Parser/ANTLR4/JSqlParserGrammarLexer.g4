@@ -609,6 +609,7 @@ TRIM            : [Tt][Rr][Ii][Mm] ;
 TRIGGER         : [Tt][Rr][Ii][Gg][Gg][Ee][Rr] ;
 TRY_CAST        : [Tt][Rr][Yy]'_'[Cc][Aa][Ss][Tt] ;
 SAFE_CAST       : [Ss][Aa][Ff][Ee]'_'[Cc][Aa][Ss][Tt] ;
+SIMILAR         : [Ss][Ii][Mm][Ii][Ll][Aa][Rr] ;
 TYPE            : [Tt][Yy][Pp][Ee] ;
 UNLOGGED        : [Uu][Nn][Ll][Oo][Gg][Gg][Ee][Dd] ;
 VALIDATE        : [Vv][Aa][Ll][Ii][Dd][Aa][Tt][Ee] ;
