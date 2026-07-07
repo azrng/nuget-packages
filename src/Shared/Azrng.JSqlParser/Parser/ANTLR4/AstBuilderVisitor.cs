@@ -2561,13 +2561,22 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var caseExpr = new CaseExpression();
 
-        if (context.expression().Length > 0 && context.whenExpr().Length > 0)
+        // 仅当 CASE 后直接跟 switch 表达式时（switch 形式）才赋值 SwitchExpression。
+        // 不能用 context.expression().Length 或 GetChild<ExpressionContext>(0) 判断：
+        //   - context.expression() 会递归收集 whenExpr 内嵌的 cond/then 及 ELSE 表达式
+        //   - GetChild<ExpressionContext>(0) 返回首个 ExpressionContext 类型的直接子节点，
+        //     在 searched 形式下那其实是 ELSE 表达式，会被错误地当作 switch 表达式，
+        //     round-trip 输出形如 "CASE 'small' WHEN a > 1 THEN 'big' ... END"（语义错误）。
+        // 正确判断：CASE 关键字（child[0]）之后的 child[1] 是否为 ExpressionContext。
+        //   - switch 形式：child[1] = ExpressionContext（switch 操作数）
+        //   - searched 形式：child[1] = WhenExprContext（首个 WHEN）
+        var switchExprChild = context.GetChild(1) as JSqlParserGrammar.ExpressionContext;
+        if (switchExprChild != null)
         {
-            caseExpr.SwitchExpression = (Expression.Expression)Visit(context.expression(0));
+            caseExpr.SwitchExpression = (Expression.Expression)Visit(switchExprChild);
         }
 
         caseExpr.WhenClauses = new List<WhenClause>();
-        int exprOffset = caseExpr.SwitchExpression != null ? 1 : 0;
 
         foreach (var whenCtx in context.whenExpr())
         {

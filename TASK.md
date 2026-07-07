@@ -14,11 +14,28 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T077 | Azrng.JSqlParser 客户反馈问题核查与修复（CASE WHEN 序列化 Bug + 6 项现状固化测试，全量 830 测试通过） | DONE | 2026-07-07 |
 | T076 | Azrng.JSqlParser 继续迁移上游 5.4-SNAPSHOT 剩余缺口 F1-F8（8 项特性 + 全量 799 测试通过，净增 54） | DONE | 2026-07-07 |
 | T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（77 子项全部处理闭环，全量 745 测试通过） | DONE | 2026-07-06 |
 | T074 | Azrng.JSqlParser README 补充上游溯源信息（标注基于 jsqlparser-5.4 tag / commit 7d2e6b65） | DONE | 2026-07-03 |
 | T073 | Common.Cache.Redis 连接事件日志增强（订阅 StackExchange.Redis 连接事件并记录日志，不改变现有重连策略） | DONE | 2026-07-03 |
-| T072 | Azrng.AspNetCore.Core 修复发包版本号递增（1.3.1 -> 1.3.2 + Release 包构建验证） | DONE | 2026-07-03 |
+
+### T077 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：逐项核查客户迁移反馈的 8 个问题，真 Bug 修复，非 Bug 项补测试固化现状
+- **完成情况**：8 项反馈逐项核查，1 项真 Bug 修复（CASE WHEN），6 项补 round-trip / AST 测试固化现状，1 项（#1 格式化）按用户明确指示忽略。全量 830 测试通过（799 → 830，净增 31）。
+- **核查结论（8 项）**：
+  - #1 `!=`/`||` 格式化（全角/空格）：用户已明确为格式化问题，**忽略**
+  - #3 CASE WHEN：**真 Bug 已修复**。searched 形式 `CASE WHEN a>1 THEN 'big' ELSE 'small' END` round-trip 错成 `CASE 'small' WHEN ... END`。根因 `AstBuilderVisitor.VisitCaseExpr` 误用 `context.expression()`（ANTLR 递归收集 whenExpr/ELSE 内嵌表达式）+ `GetChild<ExpressionContext>(0)` 在 searched 形式下返回 ELSE 表达式。改为判断 `child[1]`（CASE 后首个直接子节点）类型。
+  - #4 `--` 行注释：实测不抛错，与 `/* */` 一致地被 lexer `-> skip` 丢弃，**与上游一致**，补测试固化
+  - #5 NULL AS 字段名：round-trip 正常，补测试固化
+  - #6 `'0' || 字段` 拼接：round-trip 正常（Concat 节点），补测试固化
+  - #7 UNION ALL：round-trip 正常（SetOperationList），补测试固化
+  - #8 `a.qty::varchar(20)`：round-trip 正常（CastExpression UseCastKeyword=false），补测试固化
+- **新增测试**：`CaseExpressionTest`（10）、`CustomerReportedRegressionTest`（21），覆盖 searched/switch/嵌套 CASE、-- 注释、/* */、NULL AS、||、UNION ALL/UNION、:: 与 CAST、客户综合场景
+- **阻塞项**：无
+- **未做的事**：不实现注释保留（上游也不保留，属新特性）；不改 `NotEqualsTo` 的 `<>` 标准化（#1 是格式化问题）；不改 lexer/grammar
 
 ### T076 归档说明
 
