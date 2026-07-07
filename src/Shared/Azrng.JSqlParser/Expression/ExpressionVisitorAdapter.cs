@@ -85,7 +85,8 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
     public virtual T Visit<S>(ContainedBy containedBy, S context) => default!;
     public virtual T Visit<S>(Matches matches, S context) => default!;
     public virtual T Visit<S>(RegExpMatchOperator regExpMatchOperator, S context) => default!;
-    public virtual T Visit<S>(MemberOfExpression memberOfExpression, S context) => default!;
+    public virtual T Visit<S>(MemberOfExpression memberOfExpression, S context) { memberOfExpression.LeftExpression?.Accept(this); memberOfExpression.RightExpression?.Accept(this); return default!; }
+    public virtual T Visit<S>(OverlapsCondition overlapsCondition, S context) { overlapsCondition.LeftExpression?.Accept(this, context); overlapsCondition.RightExpression?.Accept(this, context); return default!; }
 
     public virtual T Visit<S>(Column column, S context) => default!;
 

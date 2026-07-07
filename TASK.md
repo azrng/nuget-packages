@@ -14,15 +14,7 @@
 
 > 以下事项已识别为未做或差异，当前无业务需求驱动，**不进入活跃任务**。出现具体业务场景时按触发条件择项启动，新建对应 `T-` 编号任务并引用本表 `BL-` 编号。
 
-> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。`BL-07~13` 为本次对比新发现项。
-
-### P0 静默丢弃缺陷（语法已接受但 AST 丢语义，round-trip 丢数据，建议优先处理）
-
-| BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
-|---------|------|------|------|----------|------|
-| BL-07 | `OVERLAPS` 谓词（`a OVERLAPS b`） | **静默丢弃** | BL-15 全量对比 | 立即应修：grammar `g4:774` 已有产生式，`VisitPredicateSuffix` 漏实现分支，SQL 解析后 OVERLAPS 子句被丢弃 | 类、grammar、visitor 三处接线，验证范围小 |
-| BL-08 | `MEMBER OF` 谓词（`val MEMBER OF json_arr`） | **静默丢弃** | BL-15 全量对比 | 立即应修：grammar `g4:773` 有产生式，`MemberOfExpression.cs` 类已存在，但 `VisitPredicateSuffix` 未接线 | 类已存在，仅缺 visitor 分派 |
-| BL-09 | `SELECT TOP n` 量词 | **静默丢弃 + README 误声明** | BL-15 全量对比 | 立即应修：grammar `g4:81,110` 有 `topClause`，但 `VisitPlainSelect` 不读、`PlainSelect` 无字段；README 第 164 行误声明已支持 | 需同时修 README 第 164 行，移除或落实 TOP |
+> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。`BL-07/08/09` 静默丢弃缺陷已由 T080 修复并移出本表。
 
 ### P1 真缺口（经验证确认，非架构差异）
 
@@ -66,11 +58,23 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
 | T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
 | T078 | Azrng.JSqlParser 修复嵌套块注释词法（对齐上游 /* /* */ */ 嵌套支持，全量 845 测试通过） | DONE | 2026-07-07 |
 | T077 | Azrng.JSqlParser 客户反馈问题核查与修复（CASE WHEN 序列化 Bug + 6 项现状固化测试，全量 830 测试通过） | DONE | 2026-07-07 |
 | T076 | Azrng.JSqlParser 继续迁移上游 5.4-SNAPSHOT 剩余缺口 F1-F8（8 项特性 + 全量 799 测试通过，净增 54） | DONE | 2026-07-07 |
-| T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（77 子项全部处理闭环，全量 745 测试通过） | DONE | 2026-07-06 |
+
+### T080 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：修复 BL-15 全量对比发现的 3 个 P0 静默丢弃缺陷（grammar 已接受但 `AstBuilderVisitor` 漏接线，导致 round-trip 丢语义）
+- **完成情况**：3 项全部修复，新增 2 个测试文件（`OverlapsAndMemberOfTest` 7 项 + `SelectTopTest` 9 项），全量 861 测试通过（845 → 861，净增 16）
+- **逐项修复**：
+  - **BL-08 MEMBER OF**：`MemberOfExpression.cs` 加 `Not` 字段、`ToString` 去错误括号对齐上游 `MEMBER OF expr` 格式；grammar `g4:773` 加 `NOT?`；`VisitPredicateSuffix` 新增 MEMBER 分支
+  - **BL-07 OVERLAPS**：新建 `OverlapsCondition.cs`（左右各一 `ExpressionList`，对齐上游）；`ExpressionVisitor` + `ExpressionVisitorAdapter` + `TablesNamesFinder` 补 Visit 方法；`VisitPredicateSuffix` 新增 OVERLAPS 分支
+  - **BL-09 SELECT TOP**：新建 `Top.cs`（`HasParenthesis`/`IsPercentage`/`IsWithTies`/`Expression` 4 字段，对齐上游 `Top.java`）；`PlainSelect` 加 `Top` 字段并在 `AppendSelectBodyTo` 序列化；`VisitPlainSelect` 读取 `context.topClause()`；lexer/grammar 已具备无需改
+- **阻塞项**：无
+- **未做的事**：OVERLAPS 多元素列表形式 `(a,b) OVERLAPS (c,d)`（需改 grammar 支持括号列表，当前仅支持单元素两侧）；BL-10~14 其它 P1 真缺口（后续批次）
 
 ### T079 归档说明
 
@@ -127,13 +131,3 @@
   - F8 JSON_TABLE 高级子句（PASSING/ON ERROR/NESTED PATH）
 - 已核实**无需迁移**：窗口函数族（PartitionByClause 等 5 类，Azrng 已扁平化覆盖且更强）、集合运算 op 类（UnionOp 等 4 类，不同建模功能等价，CORRESPONDING 处理更强）
 - 暂未迁移（按需再补）：JSON_QUERY 的 Legacy 额外 path 参数、JSON_TABLE 的 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 等 Oracle/Trino 方言子句、聚合函数的 OVER 窗口子句
-
-### T075 归档说明
-
-- 目标仓库：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
-- 上游对照：`C:\Work\SourceCode\sqlparser\JSqlParser`，范围 commit `7d2e6b65`(5.4) → `2b141568`(HEAD)
-- 完成情况：77 个子项全部处理（迁移实现 + 评估结论），全量 745 测试通过（净增 197）。逐项实现记录见 `git log --grep="T075"`。
-- 真实功能迁移（28 项）：Oracle 外连接(+)、ALTER USING INDEX、MySQL 索引 ASC/DESC、CREATE SCHEMA、CONNECT_BY_ROOT、SessionStatement options 等
-- 评估不适用/已支持（19 项）：Azrng 架构天然规避或前序子项已实现
-- 方言专项暂不迁移（7 项，子项 69-77 除 72/73）：ClickHouse/DuckDB CREATE TABLE/Trino/Snowflake/Databricks/BigQuery，保留按需取用，需具体业务场景驱动时再单独迁移
-- 顺带修复的既有缺陷：ALTER alterOperation 未解析、CREATE TABLE 约束未输出、VisitPrimaryExpr 遗漏 connectBy 分派

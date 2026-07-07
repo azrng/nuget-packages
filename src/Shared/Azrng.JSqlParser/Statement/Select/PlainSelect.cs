@@ -11,6 +11,9 @@ public class PlainSelect : Select
 {
     public Distinct? Distinct { get; set; }
     public bool All { get; set; }
+
+    /// <summary>SQL Server / Informix 风格的 SELECT TOP n 量词，未指定时为 null。</summary>
+    public Top? Top { get; set; }
     public List<SelectItem>? SelectItems { get; set; }
     public FromItem? FromItem { get; set; }
     public List<Join>? Joins { get; set; }
@@ -37,6 +40,7 @@ public class PlainSelect : Select
     {
         builder.Append("SELECT ");
         if (OracleHint != null) builder.Append(OracleHint).Append(' ');
+        if (Top != null) builder.Append(Top).Append(' ');
         if (Distinct != null) builder.Append(Distinct).Append(' ');
         else if (All) builder.Append("ALL ");
         if (SelectItems != null) builder.Append(string.Join(", ", SelectItems));

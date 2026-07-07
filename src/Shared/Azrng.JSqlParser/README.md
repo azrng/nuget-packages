@@ -161,7 +161,7 @@ Console.WriteLine(stmt.ToString());
 
 ### 语句
 
-- `SELECT` — DISTINCT/ALL、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH、FOR UPDATE/SHARE（OF 多表、WAIT/NOWAIT/SKIP LOCKED）
+- `SELECT` — DISTINCT/ALL、TOP（PERCENT/WITH TIES）、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH、FOR UPDATE/SHARE（OF 多表、WAIT/NOWAIT/SKIP LOCKED）、`OVERLAPS`、`MEMBER OF`
 - 管道查询 — `FROM table \|> WHERE ... \|> SELECT ...`（BigQuery 风格，17 种操作符）
 - `INSERT` — 列列表、VALUES、INSERT...SELECT、INSERT OVERWRITE、PARTITION、ON DUPLICATE KEY、RETURNING
 - `UPDATE` — SET、JOIN、FROM、WHERE、RETURNING
@@ -189,8 +189,12 @@ Console.WriteLine(stmt.ToString());
 - **行为变更（破坏性）**：
   - 修复 `CASE WHEN searched` 形式序列化错误（`CASE WHEN a>1 THEN 'big' ELSE 'small' END` 此前被错误输出为 `CASE 'small' WHEN ... END`）
   - 修复嵌套块注释词法支持任意深度嵌套（`/* 外 /* 内 */ 外 */` 此前会抛 `JSqlParserException`）
-- **全量测试**：845 通过（0 失败 0 跳过）
-- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01 ~ BL-14，其中 BL-07~09（OVERLAPS / MEMBER OF / SELECT TOP）为静默丢弃缺陷，BL-12/13 为按需迁移的语句/子特性缺口
+- **全量测试**：861 通过（0 失败 0 跳过）
+- **修复的静默丢弃缺陷**（grammar 此前已接受但 AST 丢语义，round-trip 会丢数据）：
+  - `OVERLAPS` 谓词（`a OVERLAPS b`）—— 新增 `OverlapsCondition` 类并接线 visitor
+  - `MEMBER OF` 谓词（`val MEMBER OF json_arr`）—— 补齐 visitor 分派、加 `NOT` 支持
+  - `SELECT TOP n [PERCENT] [WITH TIES]` —— 新增 `Top` 类、`PlainSelect.Top` 字段并接线 visitor
+- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01~06、BL-10~14（BL-07~09 已由 T080 修复）
 
 ### 1.0.0-beta1
 

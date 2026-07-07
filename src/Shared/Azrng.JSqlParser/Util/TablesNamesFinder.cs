@@ -172,6 +172,13 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         return null;
     }
 
+    public object? Visit<S>(OverlapsCondition overlapsCondition, S context)
+    {
+        overlapsCondition.LeftExpression.Accept(this, context);
+        overlapsCondition.RightExpression.Accept(this, context);
+        return null;
+    }
+
     public object? Visit<S>(Column column, S context)
     {
         if (column.Table != null)

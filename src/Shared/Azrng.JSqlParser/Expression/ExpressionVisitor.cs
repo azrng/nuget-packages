@@ -76,6 +76,7 @@ public interface ExpressionVisitor<T>
     T Visit<S>(Matches matches, S context);
     T Visit<S>(RegExpMatchOperator regExpMatchOperator, S context);
     T Visit<S>(MemberOfExpression memberOfExpression, S context);
+    T Visit<S>(OverlapsCondition overlapsCondition, S context);
 
     // Schema types
     T Visit<S>(Column column, S context);
@@ -268,6 +269,7 @@ public interface ExpressionVisitor<T>
     void Visit(Matches matches) => Visit<object?>(matches, default);
     void Visit(RegExpMatchOperator regExpMatchOperator) => Visit<object?>(regExpMatchOperator, default);
     void Visit(MemberOfExpression memberOfExpression) => Visit<object?>(memberOfExpression, default);
+    void Visit(OverlapsCondition overlapsCondition) => Visit<object?>(overlapsCondition, default);
     void Visit(Column column) => Visit<object?>(column, default);
     void Visit(Azrng.JSqlParser.Statement.Select.AllColumns allColumns) => Visit<object?>(allColumns, default);
     void Visit(Azrng.JSqlParser.Statement.Select.AllTableColumns allTableColumns) => Visit<object?>(allTableColumns, default);

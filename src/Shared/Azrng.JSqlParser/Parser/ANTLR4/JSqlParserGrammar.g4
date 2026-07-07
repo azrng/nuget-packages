@@ -770,7 +770,7 @@ predicateSuffix
     | IS NOT? DISTINCT FROM concatenationExpr
     | ISNULL
     | NOTNULL
-    | MEMBER OF concatenationExpr
+    | NOT? MEMBER OF concatenationExpr
     | OVERLAPS concatenationExpr
     | EXCLUDES OPENING_PAREN expressionList CLOSING_PAREN
     | INCLUDES OPENING_PAREN expressionList CLOSING_PAREN

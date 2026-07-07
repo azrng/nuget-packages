@@ -218,6 +218,25 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.OracleHint = new OracleHint(hintComment);
         }
 
+        // SELECT TOP n [PERCENT] [WITH TIES]
+        if (context.topClause() != null)
+        {
+            var topCtx = context.topClause();
+            var top = new Top();
+            if (topCtx.OPENING_PAREN() != null)
+            {
+                top.HasParenthesis = true;
+                top.Expression = (Expression.Expression)Visit(topCtx.expression());
+            }
+            else
+            {
+                top.Expression = new LongValue(topCtx.LONG_VALUE().GetText());
+            }
+            if (topCtx.PERCENT() != null) top.IsPercentage = true;
+            if (topCtx.TIES() != null) top.IsWithTies = true;
+            select.Top = top;
+        }
+
         if (context.DISTINCT() != null || context.DISTINCTROW() != null)
         {
             select.Distinct = new Distinct();
@@ -2081,6 +2100,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             includes.LeftExpression = concat;
             includes.RightExpression = (Expression.Expression)Visit(suffix.expressionList());
             return includes;
+        }
+
+        if (suffix.MEMBER() != null)
+        {
+            var memberOf = new MemberOfExpression();
+            memberOf.LeftExpression = concat;
+            memberOf.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            if (suffix.NOT() != null) memberOf.Not = true;
+            return memberOf;
+        }
+
+        if (suffix.OVERLAPS() != null)
+        {
+            // 左侧：当前 Azrng grammar 不支持括号列表，按单元素 ExpressionList 包装
+            var left = new ExpressionList { Expressions = new() { concat } };
+            var right = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            var rightList = new ExpressionList { Expressions = new() { right } };
+            return new OverlapsCondition { LeftExpression = left, RightExpression = rightList };
         }
 
         return concat;
