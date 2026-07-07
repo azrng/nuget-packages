@@ -44,6 +44,9 @@ statement
     | executeStatement
     | purgeStatement
     | alterViewStatement
+    | alterSessionStatement
+    | alterSystemStatement
+    | createSynonymStatement
     | dropStatement
     | truncateStatement
     | commitStatement
@@ -584,6 +587,23 @@ purgeStatement
 // ALTER VIEW / REPLACE VIEW v [(cols)] AS SELECT ...
 alterViewStatement
     : (ALTER | REPLACE) VIEW table (OPENING_PAREN identifierList CLOSING_PAREN)? AS selectStatement
+    ;
+
+// ALTER SESSION operation params（Oracle）
+alterSessionStatement
+    : ALTER SESSION (SET identifier (EQUALS expression)? (COMMA identifier (EQUALS expression)?)*
+                    | identifier (identifier)*)
+    ;
+
+// ALTER SYSTEM operation params（Oracle）
+alterSystemStatement
+    : ALTER SYSTEM (SET identifier (EQUALS expression)? (COMMA identifier (EQUALS expression)?)*
+                    | identifier (identifier)*)
+    ;
+
+// CREATE [OR REPLACE] [PUBLIC] SYNONYM name FOR target
+createSynonymStatement
+    : CREATE (OR REPLACE)? PUBLIC? SYNONYM identifier (FOR identifier (DOT identifier)?)?
     ;
 
 alterOperation

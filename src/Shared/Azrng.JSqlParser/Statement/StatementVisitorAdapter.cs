@@ -22,6 +22,9 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(Execute.Execute execute, S context) => default!;
     public virtual T Visit<S>(PurgeStatement purge, S context) => default!;
     public virtual T Visit<S>(Alter.AlterView alterView, S context) => default!;
+    public virtual T Visit<S>(Alter.AlterSession alterSession, S context) => default!;
+    public virtual T Visit<S>(Alter.AlterSystemStatement alterSystem, S context) => default!;
+    public virtual T Visit<S>(Create.Synonym.CreateSynonym createSynonym, S context) => default!;
     public virtual T Visit<S>(Drop.Drop drop, S context) => default!;
     public virtual T Visit<S>(Truncate.Truncate truncate, S context) => default!;
     public virtual T Visit<S>(CommitStatement commitStatement, S context) => default!;

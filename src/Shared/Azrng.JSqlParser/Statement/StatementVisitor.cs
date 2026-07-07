@@ -22,6 +22,9 @@ public interface StatementVisitor<T>
     T Visit<S>(Execute.Execute execute, S context);
     T Visit<S>(PurgeStatement purge, S context);
     T Visit<S>(Alter.AlterView alterView, S context);
+    T Visit<S>(Alter.AlterSession alterSession, S context);
+    T Visit<S>(Alter.AlterSystemStatement alterSystem, S context);
+    T Visit<S>(Create.Synonym.CreateSynonym createSynonym, S context);
     T Visit<S>(Drop.Drop drop, S context);
     T Visit<S>(Truncate.Truncate truncate, S context);
     T Visit<S>(CommitStatement commitStatement, S context);
@@ -79,6 +82,9 @@ public interface StatementVisitor<T>
     void Visit(Execute.Execute execute) => Visit<object?>(execute, default);
     void Visit(PurgeStatement purge) => Visit<object?>(purge, default);
     void Visit(Alter.AlterView alterView) => Visit<object?>(alterView, default);
+    void Visit(Alter.AlterSession alterSession) => Visit<object?>(alterSession, default);
+    void Visit(Alter.AlterSystemStatement alterSystem) => Visit<object?>(alterSystem, default);
+    void Visit(Create.Synonym.CreateSynonym createSynonym) => Visit<object?>(createSynonym, default);
     void Visit(Drop.Drop drop) => Visit<object?>(drop, default);
     void Visit(Truncate.Truncate truncate) => Visit<object?>(truncate, default);
     void Visit(CommitStatement commitStatement) => Visit<object?>(commitStatement, default);

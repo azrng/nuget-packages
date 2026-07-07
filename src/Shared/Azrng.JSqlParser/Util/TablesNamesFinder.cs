@@ -496,6 +496,9 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Execute.Execute execute, S context) => null;
     public object? Visit<S>(Statement.PurgeStatement purge, S context) { if (purge.Table != null) AddTable(purge.Table); return null; }
     public object? Visit<S>(Statement.Alter.AlterView alterView, S context) { AddTable(alterView.View); return null; }
+    public object? Visit<S>(Statement.Alter.AlterSession alterSession, S context) => null;
+    public object? Visit<S>(Statement.Alter.AlterSystemStatement alterSystem, S context) => null;
+    public object? Visit<S>(Statement.Create.Synonym.CreateSynonym createSynonym, S context) => null;
 
     public object? Visit<S>(Statement.Drop.Drop drop, S context)
     {

@@ -589,6 +589,8 @@ SECURITY        : [Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy] ;
 SEQUENCE        : [Ss][Ee][Qq][Uu][Ee][Nn][Cc][Ee] ;
 SEPARATOR       : [Ss][Ee][Pp][Aa][Rr][Aa][Tt][Oo][Rr] ;
 SESSION         : [Ss][Ee][Ss][Ss][Ii][Oo][Nn] ;
+SYSTEM          : [Ss][Yy][Ss][Tt][Ee][Mm] ;
+SYNONYM         : [Ss][Yy][Nn][Oo][Nn][Yy][Mm] ;
 SETTINGS        : [Ss][Ee][Tt][Tt][Ii][Nn][Gg][Ss] ;
 SHOW            : [Ss][Hh][Oo][Ww] ;
 START           : [Ss][Tt][Aa][Rr][Tt] ;

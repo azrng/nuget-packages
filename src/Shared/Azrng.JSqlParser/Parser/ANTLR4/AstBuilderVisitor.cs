@@ -20,6 +20,7 @@ using Azrng.JSqlParser.Statement.Alter;
 using Azrng.JSqlParser.Statement.Analyze;
 using Azrng.JSqlParser.Statement.Comment;
 using Azrng.JSqlParser.Statement.Execute;
+using Azrng.JSqlParser.Statement.Create.Synonym;
 using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Truncate;
 using Azrng.JSqlParser.Statement.CreateView;
@@ -64,6 +65,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.executeStatement() != null) return Visit(context.executeStatement());
         if (context.purgeStatement() != null) return Visit(context.purgeStatement());
         if (context.alterViewStatement() != null) return Visit(context.alterViewStatement());
+        if (context.alterSessionStatement() != null) return Visit(context.alterSessionStatement());
+        if (context.alterSystemStatement() != null) return Visit(context.alterSystemStatement());
+        if (context.createSynonymStatement() != null) return Visit(context.createSynonymStatement());
         if (context.dropStatement() != null) return Visit(context.dropStatement());
         if (context.truncateStatement() != null) return Visit(context.truncateStatement());
         if (context.commitStatement() != null) return Visit(context.commitStatement());
@@ -1336,6 +1340,63 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             Select = (Select)Visit(context.selectStatement())
         };
         return view;
+    }
+
+    public override object VisitAlterSessionStatement(JSqlParserGrammar.AlterSessionStatementContext context)
+    {
+        var stmt = new AlterSession();
+        var ids = context.identifier();
+        if (context.SET() != null)
+        {
+            stmt.Operation = "SET";
+            foreach (var id in ids) stmt.Parameters.Add(id.GetText());
+        }
+        else if (ids.Length > 0)
+        {
+            stmt.Operation = ids[0].GetText();
+            for (var i = 1; i < ids.Length; i++) stmt.Parameters.Add(ids[i].GetText());
+        }
+        return stmt;
+    }
+
+    public override object VisitAlterSystemStatement(JSqlParserGrammar.AlterSystemStatementContext context)
+    {
+        var stmt = new AlterSystemStatement();
+        var ids = context.identifier();
+        if (context.SET() != null)
+        {
+            stmt.Operation = "SET";
+            foreach (var id in ids) stmt.Parameters.Add(id.GetText());
+        }
+        else if (ids.Length > 0)
+        {
+            stmt.Operation = ids[0].GetText();
+            for (var i = 1; i < ids.Length; i++) stmt.Parameters.Add(ids[i].GetText());
+        }
+        return stmt;
+    }
+
+    public override object VisitCreateSynonymStatement(JSqlParserGrammar.CreateSynonymStatementContext context)
+    {
+        var stmt = new CreateSynonym
+        {
+            OrReplace = context.OR() != null && context.REPLACE() != null,
+            PublicSynonym = context.PUBLIC() != null,
+            Name = context.identifier(0).GetText()
+        };
+        // FOR target：grammar FOR identifier (DOT identifier)?
+        if (context.FOR() != null)
+        {
+            var forIds = context.identifier();
+            // 第 0 个是 synonym 名，FOR 后的从 index 1 开始
+            if (forIds.Length > 1)
+            {
+                var target = forIds[1].GetText();
+                if (forIds.Length > 2) target += $".{forIds[2].GetText()}";
+                stmt.ForList.Add(target);
+            }
+        }
+        return stmt;
     }
 
     /// <summary>
