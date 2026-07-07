@@ -172,9 +172,10 @@ public class OtherStatementTest
     [Fact]
     public void Show_Tables_ShouldParse()
     {
-        var stmt = (ShowStatement)CCJSqlParserUtil.Parse("SHOW TABLES")!;
+        // SHOW TABLES 现在返回 ShowTablesStatement（BL-12 分批 3 新增）
+        var stmt = CCJSqlParserUtil.Parse("SHOW TABLES")!;
         Assert.NotNull(stmt);
-        Assert.Equal("TABLES", stmt.Name);
+        Assert.IsType<Azrng.JSqlParser.Statement.Show.ShowTablesStatement>(stmt);
     }
 
     [Fact]

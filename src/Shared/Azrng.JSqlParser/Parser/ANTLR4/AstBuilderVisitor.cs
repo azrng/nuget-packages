@@ -6,6 +6,7 @@ using Azrng.JSqlParser.Expression.Operators.Conditional;
 using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Schema;
 using Azrng.JSqlParser.Statement;
+using Azrng.JSqlParser.Statement.Show;
 using Azrng.JSqlParser.Statement.Delete;
 using Azrng.JSqlParser.Statement.Insert;
 using Azrng.JSqlParser.Statement.Lock;
@@ -1854,12 +1855,38 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitShowStatement(JSqlParserGrammar.ShowStatementContext context)
     {
-        var show = new ShowStatement();
+        // SHOW [FULL] COLUMNS FROM table [LIKE expr | WHERE expr]
+        if (context.COLUMNS() != null)
+        {
+            return new ShowColumnsStatement
+            {
+                Full = context.FULL() != null,
+                Table = (Table)Visit(context.table())
+            };
+        }
+
+        // SHOW INDEX FROM table
+        if (context.INDEX() != null || context.INDEXES() != null)
+        {
+            return new ShowIndexStatement { Table = (Table)Visit(context.table()) };
+        }
+
+        // SHOW TABLES [FROM db] [LIKE expr | WHERE expr]
         if (context.TABLES() != null)
-            show.Name = "TABLES";
-        else if (context.identifier()?.Length > 0)
-            show.Name = string.Join(" ", context.identifier().Select(id => id.GetText()));
-        return show;
+        {
+            var show = new ShowTablesStatement();
+            var ids = context.identifier();
+            if (ids != null && ids.Length > 0)
+                show.DbName = ids[0].GetText();
+            return show;
+        }
+
+        // 兜底：通用 SHOW identifier
+        var generic = new ShowStatement();
+        var identifiers = context.identifier();
+        if (identifiers != null && identifiers.Length > 0)
+            generic.Name = string.Join(" ", identifiers.Select(i => i.GetText()));
+        return generic;
     }
 
     public override object VisitExplainStatement(JSqlParserGrammar.ExplainStatementContext context)

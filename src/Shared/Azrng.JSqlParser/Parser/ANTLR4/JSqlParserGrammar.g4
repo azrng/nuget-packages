@@ -615,7 +615,11 @@ resetStatement
     ;
 
 showStatement
-    : SHOW (TABLES | identifier | identifier identifier)
+    : SHOW (FULL? COLUMNS FROM table (LIKE expression | WHERE expression)?)
+    | SHOW (INDEX | INDEXES) FROM table
+    | SHOW TABLES (FROM identifier)? (LIKE expression | WHERE expression)?
+    | SHOW identifier
+    | SHOW identifier identifier
     ;
 
 describeStatement

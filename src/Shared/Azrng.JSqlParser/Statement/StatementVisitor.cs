@@ -26,6 +26,9 @@ public interface StatementVisitor<T>
     T Visit<S>(SetStatement set, S context);
     T Visit<S>(ResetStatement reset, S context);
     T Visit<S>(ShowStatement show, S context);
+    T Visit<S>(Show.ShowColumnsStatement showColumns, S context);
+    T Visit<S>(Show.ShowIndexStatement showIndex, S context);
+    T Visit<S>(Show.ShowTablesStatement showTables, S context);
     T Visit<S>(DescribeStatement describe, S context);
     T Visit<S>(ExplainStatement explain, S context);
     T Visit<S>(GrantStatement grant, S context);
@@ -75,6 +78,9 @@ public interface StatementVisitor<T>
     void Visit(SetStatement set) => Visit<object?>(set, default);
     void Visit(ResetStatement reset) => Visit<object?>(reset, default);
     void Visit(ShowStatement show) => Visit<object?>(show, default);
+    void Visit(Show.ShowColumnsStatement showColumns) => Visit<object?>(showColumns, default);
+    void Visit(Show.ShowIndexStatement showIndex) => Visit<object?>(showIndex, default);
+    void Visit(Show.ShowTablesStatement showTables) => Visit<object?>(showTables, default);
     void Visit(DescribeStatement describe) => Visit<object?>(describe, default);
     void Visit(ExplainStatement explain) => Visit<object?>(explain, default);
     void Visit(GrantStatement grant) => Visit<object?>(grant, default);

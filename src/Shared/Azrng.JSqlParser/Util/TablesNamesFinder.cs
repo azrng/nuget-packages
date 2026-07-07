@@ -510,6 +510,9 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.SetStatement set, S context) => null;
     public object? Visit<S>(Statement.ResetStatement reset, S context) => null;
     public object? Visit<S>(Statement.ShowStatement show, S context) => null;
+    public object? Visit<S>(Statement.Show.ShowColumnsStatement showColumns, S context) { if (showColumns.Table != null) AddTable(showColumns.Table); return null; }
+    public object? Visit<S>(Statement.Show.ShowIndexStatement showIndex, S context) { if (showIndex.Table != null) AddTable(showIndex.Table); return null; }
+    public object? Visit<S>(Statement.Show.ShowTablesStatement showTables, S context) => null;
     public object? Visit<S>(Statement.DescribeStatement describe, S context) => null;
     public object? Visit<S>(Statement.ExplainStatement explain, S context) => null;
     public object? Visit<S>(Statement.GrantStatement grant, S context)

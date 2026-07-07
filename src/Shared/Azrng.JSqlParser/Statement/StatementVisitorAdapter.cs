@@ -26,6 +26,9 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(SetStatement set, S context) => default!;
     public virtual T Visit<S>(ResetStatement reset, S context) => default!;
     public virtual T Visit<S>(ShowStatement show, S context) => default!;
+    public virtual T Visit<S>(Show.ShowColumnsStatement showColumns, S context) => default!;
+    public virtual T Visit<S>(Show.ShowIndexStatement showIndex, S context) => default!;
+    public virtual T Visit<S>(Show.ShowTablesStatement showTables, S context) => default!;
     public virtual T Visit<S>(DescribeStatement describe, S context) => default!;
     public virtual T Visit<S>(ExplainStatement explain, S context) => default!;
     public virtual T Visit<S>(GrantStatement grant, S context) => default!;
