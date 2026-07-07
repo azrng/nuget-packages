@@ -38,6 +38,7 @@ statement
     | createView
     | createIndex
     | alterStatement
+    | renameTableStatement
     | dropStatement
     | truncateStatement
     | commitStatement
@@ -541,6 +542,12 @@ createIndex
 
 alterStatement
     : ALTER TABLE table alterOperation (COMMA alterOperation)*
+    ;
+
+// RENAME [TABLE] [IF EXISTS] old TO new [, old TO new]* [WAIT n | NOWAIT]
+renameTableStatement
+    : RENAME TABLE? IF? EXISTS? table (WAIT LONG_VALUE | NOWAIT)? TO table
+      (COMMA table TO table)*
     ;
 
 alterOperation

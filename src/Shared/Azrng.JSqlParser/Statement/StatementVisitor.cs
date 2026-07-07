@@ -16,6 +16,7 @@ public interface StatementVisitor<T>
     T Visit<S>(CreateView.CreateView createView, S context);
     T Visit<S>(CreateIndex.CreateIndex createIndex, S context);
     T Visit<S>(Alter.Alter alter, S context);
+    T Visit<S>(Alter.RenameTableStatement rename, S context);
     T Visit<S>(Drop.Drop drop, S context);
     T Visit<S>(Truncate.Truncate truncate, S context);
     T Visit<S>(CommitStatement commitStatement, S context);
@@ -64,6 +65,7 @@ public interface StatementVisitor<T>
     void Visit(CreateView.CreateView createView) => Visit<object?>(createView, default);
     void Visit(CreateIndex.CreateIndex createIndex) => Visit<object?>(createIndex, default);
     void Visit(Alter.Alter alter) => Visit<object?>(alter, default);
+    void Visit(Alter.RenameTableStatement rename) => Visit<object?>(rename, default);
     void Visit(Drop.Drop drop) => Visit<object?>(drop, default);
     void Visit(Truncate.Truncate truncate) => Visit<object?>(truncate, default);
     void Visit(CommitStatement commitStatement) => Visit<object?>(commitStatement, default);

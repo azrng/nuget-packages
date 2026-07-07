@@ -16,6 +16,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(CreateView.CreateView createView, S context) => default!;
     public virtual T Visit<S>(CreateIndex.CreateIndex createIndex, S context) => default!;
     public virtual T Visit<S>(Alter.Alter alter, S context) => default!;
+    public virtual T Visit<S>(Alter.RenameTableStatement rename, S context) => default!;
     public virtual T Visit<S>(Drop.Drop drop, S context) => default!;
     public virtual T Visit<S>(Truncate.Truncate truncate, S context) => default!;
     public virtual T Visit<S>(CommitStatement commitStatement, S context) => default!;

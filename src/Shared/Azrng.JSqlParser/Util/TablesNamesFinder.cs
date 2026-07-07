@@ -481,6 +481,16 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         return null;
     }
 
+    public object? Visit<S>(Statement.Alter.RenameTableStatement rename, S context)
+    {
+        foreach (var pair in rename.TableNames)
+        {
+            AddTable(pair.Key);
+            AddTable(pair.Value);
+        }
+        return null;
+    }
+
     public object? Visit<S>(Statement.Drop.Drop drop, S context)
     {
         AddTable(drop.Name);

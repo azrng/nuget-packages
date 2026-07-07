@@ -54,6 +54,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createView() != null) return Visit(context.createView());
         if (context.createIndex() != null) return Visit(context.createIndex());
         if (context.alterStatement() != null) return Visit(context.alterStatement());
+        if (context.renameTableStatement() != null) return Visit(context.renameTableStatement());
         if (context.dropStatement() != null) return Visit(context.dropStatement());
         if (context.truncateStatement() != null) return Visit(context.truncateStatement());
         if (context.commitStatement() != null) return Visit(context.commitStatement());
@@ -1227,6 +1228,33 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             alter.AlterExpressions.Add(BuildAlterExpression(opCtx));
         }
         return alter;
+    }
+
+    public override object VisitRenameTableStatement(JSqlParserGrammar.RenameTableStatementContext context)
+    {
+        var stmt = new RenameTableStatement
+        {
+            UsingTableKeyword = context.TABLE() != null,
+            UsingIfExistsKeyword = context.IF() != null && context.EXISTS() != null
+        };
+
+        // WAIT/NOWAIT 指令
+        if (context.WAIT() != null && context.LONG_VALUE() != null)
+            stmt.WaitDirective = $"WAIT {context.LONG_VALUE().GetText()}";
+        else if (context.NOWAIT() != null)
+            stmt.WaitDirective = "NOWAIT";
+
+        // 首对 old TO new（grammar 里 table 的索引：[0]=old, [1]=new, [2..]=后续对的 old/new）
+        var tables = context.table();
+        stmt.AddTableNames((Table)Visit(tables[0]), (Table)Visit(tables[1]));
+
+        // 后续多对（grammar: COMMA table TO table，每对占 2 个 table 节点）
+        for (var i = 2; i + 1 < tables.Length; i += 2)
+        {
+            stmt.AddTableNames((Table)Visit(tables[i]), (Table)Visit(tables[i + 1]));
+        }
+
+        return stmt;
     }
 
     /// <summary>
