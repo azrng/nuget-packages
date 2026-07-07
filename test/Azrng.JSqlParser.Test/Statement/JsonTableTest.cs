@@ -66,4 +66,38 @@ public class JsonTableTest
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
+
+    [Fact]
+    public void JsonTable_WithPassingClause_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' PASSING 5 AS x COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Single(jsonTable.PassingClauses);
+        Assert.Equal("x", jsonTable.PassingClauses[0].ParameterName);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonTable_WithOnErrorNull_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' NULL ON ERROR COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Equal("NULL", jsonTable.OnErrorBehavior);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonTable_WithNestedPath_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id FOR ORDINALITY, NESTED PATH '$.items' COLUMNS (item_id INT PATH '$.id'))) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Equal(2, jsonTable.Columns.Count);
+        Assert.True(jsonTable.Columns[1].IsNested);
+        Assert.Single(jsonTable.Columns[1].NestedColumns!);
+        Assert.Equal("'$.items'", jsonTable.Columns[1].Path);
+        Assert.Equal(sql, select.ToString());
+    }
 }

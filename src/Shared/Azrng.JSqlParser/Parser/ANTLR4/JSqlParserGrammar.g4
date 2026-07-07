@@ -172,12 +172,24 @@ subSelect
 
 jsonTable
     : JSON_TABLE OPENING_PAREN expression (COMMA S_CHAR_LITERAL)?
+      (PASSING jsonTablePassingItem (COMMA jsonTablePassingItem)*)?
+      (jsonTableOnError)?
       COLUMNS OPENING_PAREN jsonTableColumn (COMMA jsonTableColumn)* CLOSING_PAREN
       CLOSING_PAREN
     ;
 
+jsonTableOnError
+    : NULL ON ERROR
+    | ERROR ON ERROR
+    ;
+
+jsonTablePassingItem
+    : expression AS identifier
+    ;
+
 jsonTableColumn
-    : identifier FOR ORDINALITY
+    : NESTED PATH S_CHAR_LITERAL COLUMNS OPENING_PAREN jsonTableColumn (COMMA jsonTableColumn)* CLOSING_PAREN
+    | identifier FOR ORDINALITY
     | identifier dataType (PATH S_CHAR_LITERAL)?
     ;
 

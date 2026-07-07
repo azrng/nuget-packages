@@ -579,9 +579,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             JsonExpression = (Expression.Expression)Visit(context.expression())
         };
 
-        if (context.S_CHAR_LITERAL() != null)
+        // path：第二个参数的 S_CHAR_LITERAL（在 expression 之后、PASSING 之前）
+        // 用 COMMA 数量判断是否有 path 参数
+        if (context.COMMA().Length > 0 && context.S_CHAR_LITERAL() != null)
         {
             jsonTable.PathExpression = context.S_CHAR_LITERAL().GetText();
+        }
+
+        // PASSING 子句
+        foreach (var p in context.jsonTablePassingItem())
+        {
+            jsonTable.PassingClauses.Add((JsonTablePassingClause)Visit(p));
+        }
+
+        // ON ERROR
+        if (context.jsonTableOnError() != null)
+        {
+            jsonTable.OnErrorBehavior = context.jsonTableOnError().NULL() != null ? "NULL" : "ERROR";
         }
 
         foreach (var colCtx in context.jsonTableColumn())
@@ -592,8 +606,32 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return jsonTable;
     }
 
+    public override object VisitJsonTablePassingItem(JSqlParserGrammar.JsonTablePassingItemContext context)
+    {
+        return new JsonTablePassingClause
+        {
+            ValueExpression = (Expression.Expression)Visit(context.expression()),
+            ParameterName = context.identifier().GetText()
+        };
+    }
+
     public override object VisitJsonTableColumn(JSqlParserGrammar.JsonTableColumnContext context)
     {
+        // NESTED PATH 分支
+        if (context.NESTED() != null)
+        {
+            var nested = new JsonTableColumn
+            {
+                Path = context.S_CHAR_LITERAL().GetText(),
+                NestedColumns = new List<JsonTableColumn>()
+            };
+            foreach (var inner in context.jsonTableColumn())
+            {
+                nested.NestedColumns.Add((JsonTableColumn)Visit(inner));
+            }
+            return nested;
+        }
+
         var column = new JsonTableColumn { Name = context.identifier().GetText() };
 
         if (context.FOR() != null)

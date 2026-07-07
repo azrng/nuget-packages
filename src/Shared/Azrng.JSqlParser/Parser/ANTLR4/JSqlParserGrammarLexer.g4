@@ -210,6 +210,7 @@ LIMIT           : [Ll][Ii][Mm][Ii][Tt] ;
 MERGE           : [Mm][Ee][Rr][Gg][Ee] ;
 MINUS_KW        : [Mm][Ii][Nn][Uu][Ss] ;
 NATURAL         : [Nn][Aa][Tt][Uu][Rr][Aa][Ll] ;
+NESTED          : [Nn][Ee][Ss][Tt][Ee][Dd] ;
 NOT             : [Nn][Oo][Tt] ;
 NULL            : [Nn][Uu][Ll][Ll] ;
 OFFSET          : [Oo][Ff][Ff][Ss][Ee][Tt] ;
