@@ -21,6 +21,8 @@ using Azrng.JSqlParser.Statement.Analyze;
 using Azrng.JSqlParser.Statement.Comment;
 using Azrng.JSqlParser.Statement.Execute;
 using Azrng.JSqlParser.Statement.Create.Synonym;
+using Azrng.JSqlParser.Statement.Create.Function;
+using Azrng.JSqlParser.Statement.Create.Procedure;
 using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Truncate;
 using Azrng.JSqlParser.Statement.CreateView;
@@ -68,6 +70,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.alterSessionStatement() != null) return Visit(context.alterSessionStatement());
         if (context.alterSystemStatement() != null) return Visit(context.alterSystemStatement());
         if (context.createSynonymStatement() != null) return Visit(context.createSynonymStatement());
+        if (context.blockStatement() != null) return Visit(context.blockStatement());
+        if (context.declareStatement() != null) return Visit(context.declareStatement());
+        if (context.ifElseStatement() != null) return Visit(context.ifElseStatement());
+        if (context.createFunctionStatement() != null) return Visit(context.createFunctionStatement());
         if (context.dropStatement() != null) return Visit(context.dropStatement());
         if (context.truncateStatement() != null) return Visit(context.truncateStatement());
         if (context.commitStatement() != null) return Visit(context.commitStatement());
@@ -1397,6 +1403,63 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
         return stmt;
+    }
+
+    public override object VisitBlockStatement(JSqlParserGrammar.BlockStatementContext context)
+    {
+        var block = new Block();
+        foreach (var stmtCtx in context.statement())
+        {
+            block.Statements.StatementList.Add((Azrng.JSqlParser.Statement.Statement)Visit(stmtCtx));
+        }
+        return block;
+    }
+
+    public override object VisitDeclareStatement(JSqlParserGrammar.DeclareStatementContext context)
+    {
+        var stmt = new DeclareStatement();
+        foreach (var itemCtx in context.declareItem())
+        {
+            // 变量名可能来自 identifier、SINGLE_AT_IDENTIFIER 或 S_AT_IDENTIFIER
+            var varName = itemCtx.identifier()?.GetText()
+                ?? itemCtx.SINGLE_AT_IDENTIFIER()?.GetText()
+                ?? itemCtx.S_AT_IDENTIFIER()?.GetText() ?? "";
+            var item = new TypeDefExpr
+            {
+                UserVariable = varName,
+                Type = itemCtx.dataType().GetText()
+            };
+            if (itemCtx.expression() != null)
+                item.DefaultExpression = (Expression.Expression)Visit(itemCtx.expression());
+            stmt.TypeDefExprList.Add(item);
+        }
+        return stmt;
+    }
+
+    public override object VisitIfElseStatement(JSqlParserGrammar.IfElseStatementContext context)
+    {
+        var stmt = new IfElseStatement
+        {
+            Condition = (Expression.Expression)Visit(context.expression()),
+            IfStatement = (Azrng.JSqlParser.Statement.Statement)Visit(context.statement(0))
+        };
+        if (context.statement().Length > 1)
+            stmt.ElseStatement = (Azrng.JSqlParser.Statement.Statement)Visit(context.statement(1));
+        return stmt;
+    }
+
+    public override object VisitCreateFunctionStatement(JSqlParserGrammar.CreateFunctionStatementContext context)
+    {
+        var orReplace = context.OR() != null && context.REPLACE() != null;
+        // 收集 functionBodyTokens 的原始文本（对齐上游 captureFunctionBody 容器式行为）
+        var parts = new List<string> { context.identifier().GetText() };
+        parts.AddRange(context.functionBodyTokens().GetText().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+        if (context.FUNCTION() != null)
+        {
+            return new CreateFunction(parts) { OrReplace = orReplace };
+        }
+        return new CreateProcedure(parts) { OrReplace = orReplace };
     }
 
     /// <summary>

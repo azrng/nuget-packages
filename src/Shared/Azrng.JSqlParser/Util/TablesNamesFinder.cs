@@ -499,6 +499,11 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Alter.AlterSession alterSession, S context) => null;
     public object? Visit<S>(Statement.Alter.AlterSystemStatement alterSystem, S context) => null;
     public object? Visit<S>(Statement.Create.Synonym.CreateSynonym createSynonym, S context) => null;
+    public object? Visit<S>(Statement.Block block, S context) { if (block.Statements?.StatementList != null) foreach (var s in block.Statements.StatementList) s.Accept(this); return null; }
+    public object? Visit<S>(Statement.DeclareStatement declare, S context) => null;
+    public object? Visit<S>(Statement.IfElseStatement ifElse, S context) { ifElse.IfStatement?.Accept(this); ifElse.ElseStatement?.Accept(this); return null; }
+    public object? Visit<S>(Statement.Create.Function.CreateFunction createFunction, S context) => null;
+    public object? Visit<S>(Statement.Create.Procedure.CreateProcedure createProcedure, S context) => null;
 
     public object? Visit<S>(Statement.Drop.Drop drop, S context)
     {

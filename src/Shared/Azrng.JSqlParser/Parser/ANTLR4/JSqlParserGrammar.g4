@@ -47,6 +47,10 @@ statement
     | alterSessionStatement
     | alterSystemStatement
     | createSynonymStatement
+    | blockStatement
+    | declareStatement
+    | ifElseStatement
+    | createFunctionStatement
     | dropStatement
     | truncateStatement
     | commitStatement
@@ -604,6 +608,35 @@ alterSystemStatement
 // CREATE [OR REPLACE] [PUBLIC] SYNONYM name FOR target
 createSynonymStatement
     : CREATE (OR REPLACE)? PUBLIC? SYNONYM identifier (FOR identifier (DOT identifier)?)?
+    ;
+
+// BEGIN ... END 块（PL/SQL / T-SQL）
+blockStatement
+    : BEGIN statement (SEMICOLON statement)* SEMICOLON? END
+    ;
+
+// DECLARE var [= expr] [, var2 [= expr2]]
+declareStatement
+    : DECLARE declareItem (COMMA declareItem)*
+    ;
+
+declareItem
+    : (identifier | SINGLE_AT_IDENTIFIER | S_AT_IDENTIFIER) dataType (EQUALS expression)?
+    ;
+
+// IF condition statement [ELSE statement]
+ifElseStatement
+    : IF expression statement (ELSE statement)?
+    ;
+
+// CREATE [OR REPLACE] FUNCTION|PROCEDURE name ... ;（body 作为 token 流保留）
+createFunctionStatement
+    : CREATE (OR REPLACE)? (FUNCTION | PROCEDURE) identifier functionBodyTokens
+    ;
+
+// 函数/过程体：简化为收集到分号前的所有 token 文本（对齐上游 captureFunctionBody 的容器式行为）
+functionBodyTokens
+    : ~(SEMICOLON)+
     ;
 
 alterOperation
