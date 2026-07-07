@@ -895,6 +895,12 @@ literal
     | NULL
     | TRUE
     | FALSE
+    | dateTimeLiteral
+    ;
+
+// 日期时间类型前缀字面量：DATE '2024-01-01'、TIMESTAMP '2024-01-01 10:00:00' 等
+dateTimeLiteral
+    : (DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ) (S_CHAR_LITERAL | QUOTED_IDENTIFIER)
     ;
 
 parameter

@@ -2591,8 +2591,28 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new BooleanValue(true);
         if (context.FALSE() != null)
             return new BooleanValue(false);
+        if (context.dateTimeLiteral() != null)
+            return Visit(context.dateTimeLiteral());
 
         return new NullValue();
+    }
+
+    public override object VisitDateTimeLiteral(JSqlParserGrammar.DateTimeLiteralContext context)
+    {
+        // 取类型 token：DATE / DATETIME / TIME / TIMESTAMP / TIMESTAMPTZ
+        var typeText = context.DATE()?.GetText()
+            ?? context.DATETIME()?.GetText()
+            ?? context.TIME()?.GetText()
+            ?? context.TIMESTAMP()?.GetText()
+            ?? context.TIMESTAMPTZ()?.GetText() ?? "";
+        // 取值：保留原始 token 文本（含引号），对齐上游 expr.setValue(t.image) 的存储行为
+        var value = (context.S_CHAR_LITERAL() ?? context.QUOTED_IDENTIFIER()).GetText();
+
+        return new DateTimeLiteralExpression
+        {
+            Type = Enum.Parse<DateTimeType>(typeText.ToUpperInvariant(), ignoreCase: false),
+            Value = value
+        };
     }
 
     public override object VisitParameter(JSqlParserGrammar.ParameterContext context)
