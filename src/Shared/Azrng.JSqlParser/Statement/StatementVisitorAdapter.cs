@@ -23,6 +23,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(SavepointStatement savepointStatement, S context) => default!;
     public virtual T Visit<S>(UseStatement use, S context) => default!;
     public virtual T Visit<S>(SetStatement set, S context) => default!;
+    public virtual T Visit<S>(ResetStatement reset, S context) => default!;
     public virtual T Visit<S>(ShowStatement show, S context) => default!;
     public virtual T Visit<S>(DescribeStatement describe, S context) => default!;
     public virtual T Visit<S>(ExplainStatement explain, S context) => default!;

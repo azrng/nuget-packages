@@ -61,6 +61,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.savepointStatement() != null) return Visit(context.savepointStatement());
         if (context.useStatement() != null) return Visit(context.useStatement());
         if (context.setStatement() != null) return Visit(context.setStatement());
+        if (context.resetStatement() != null) return Visit(context.resetStatement());
         if (context.mergeStatement() != null) return Visit(context.mergeStatement());
         if (context.describeStatement() != null) return Visit(context.describeStatement());
         if (context.showStatement() != null) return Visit(context.showStatement());
@@ -1430,6 +1431,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             stmt.Name = context.SINGLE_AT_IDENTIFIER().GetText();
         stmt.Value = (Expression.Expression)Visit(context.expression());
         return stmt;
+    }
+
+    public override object VisitResetStatement(JSqlParserGrammar.ResetStatementContext context)
+    {
+        // RESET name | RESET ALL
+        if (context.ALL() != null)
+            return new ResetStatement { Name = "ALL" };
+        return new ResetStatement { Name = context.identifier().GetText() };
     }
 
     public override object VisitCreatePolicy(JSqlParserGrammar.CreatePolicyContext context)

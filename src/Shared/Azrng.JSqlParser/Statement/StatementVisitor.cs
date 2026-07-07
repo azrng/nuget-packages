@@ -23,6 +23,7 @@ public interface StatementVisitor<T>
     T Visit<S>(SavepointStatement savepointStatement, S context);
     T Visit<S>(UseStatement use, S context);
     T Visit<S>(SetStatement set, S context);
+    T Visit<S>(ResetStatement reset, S context);
     T Visit<S>(ShowStatement show, S context);
     T Visit<S>(DescribeStatement describe, S context);
     T Visit<S>(ExplainStatement explain, S context);
@@ -70,6 +71,7 @@ public interface StatementVisitor<T>
     void Visit(SavepointStatement savepointStatement) => Visit<object?>(savepointStatement, default);
     void Visit(UseStatement use) => Visit<object?>(use, default);
     void Visit(SetStatement set) => Visit<object?>(set, default);
+    void Visit(ResetStatement reset) => Visit<object?>(reset, default);
     void Visit(ShowStatement show) => Visit<object?>(show, default);
     void Visit(DescribeStatement describe) => Visit<object?>(describe, default);
     void Visit(ExplainStatement explain) => Visit<object?>(explain, default);

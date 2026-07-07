@@ -45,6 +45,7 @@ statement
     | savepointStatement
     | useStatement
     | setStatement
+    | resetStatement
     | showStatement
     | describeStatement
     | explainStatement
@@ -598,6 +599,12 @@ useStatement
 
 setStatement
     : SET (SESSION | LOCAL)? (identifier | S_AT_IDENTIFIER | SINGLE_AT_IDENTIFIER) (EQUALS | TO) expression
+    ;
+
+// RESET 语句：RESET name | RESET ALL
+// 注意：TIME ZONE 形式因 TIME 是关键字而非 identifier，暂不支持（需单独处理）
+resetStatement
+    : RESET (identifier | ALL)
     ;
 
 showStatement
