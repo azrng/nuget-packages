@@ -34,7 +34,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta1" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta2" />
 ```
 
 **依赖项：**
@@ -161,7 +161,7 @@ Console.WriteLine(stmt.ToString());
 
 ### 语句
 
-- `SELECT` — DISTINCT/ALL、TOP、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH
+- `SELECT` — DISTINCT/ALL、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH、FOR UPDATE/SHARE（OF 多表、WAIT/NOWAIT/SKIP LOCKED）
 - 管道查询 — `FROM table \|> WHERE ... \|> SELECT ...`（BigQuery 风格，17 种操作符）
 - `INSERT` — 列列表、VALUES、INSERT...SELECT、INSERT OVERWRITE、PARTITION、ON DUPLICATE KEY、RETURNING
 - `UPDATE` — SET、JOIN、FROM、WHERE、RETURNING
@@ -174,6 +174,23 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta2
+
+增量对齐上游 5.4 → 5.4-SNAPSHOT HEAD，并修复两个影响 round-trip 的行为缺陷。
+
+- **对齐上游 Commit**：`2b141568`（5.4-SNAPSHOT，2026-04-12）
+- **对齐日期**：2026-07-07（见 `TASK.md` BL-15 对齐基线说明）
+- **新增特性**：
+  - 上游 5.4..HEAD 高价值变更 28 项（Oracle 外连接(+)、ALTER USING INDEX、MySQL 索引 ASC/DESC、CREATE SCHEMA、CONNECT_BY_ROOT、SessionStatement options 等）
+  - F1-F8：PostGIS 几何距离算子（`<->`/`<#>`）、RangeExpression、TimeKeyExpression（CURRENT_DATE 等）、RawFunction、TranscodingFunction（CONVERT/TRY_CONVERT/SAFE_CONVERT）、INTO OUTFILE 格式化子句、JSON 表达式族（OBJECT/ARRAY/VALUE/EXISTS/QUERY/OBJECTAGG/ARRAYAGG）、JSON_TABLE 高级子句（PASSING/ON ERROR/NESTED PATH）
+  - `FOR UPDATE` 多表 + ORDER BY 支持（ForUpdateClause）
+  - 嵌套块注释词法（任意深度嵌套）
+- **行为变更（破坏性）**：
+  - 修复 `CASE WHEN searched` 形式序列化错误（`CASE WHEN a>1 THEN 'big' ELSE 'small' END` 此前被错误输出为 `CASE 'small' WHEN ... END`）
+  - 修复嵌套块注释词法支持任意深度嵌套（`/* 外 /* 内 */ 外 */` 此前会抛 `JSqlParserException`）
+- **全量测试**：845 通过（0 失败 0 跳过）
+- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01 ~ BL-14，其中 BL-07~09（OVERLAPS / MEMBER OF / SELECT TOP）为静默丢弃缺陷，BL-12/13 为按需迁移的语句/子特性缺口
 
 ### 1.0.0-beta1
 

@@ -14,6 +14,28 @@
 
 > 以下事项已识别为未做或差异，当前无业务需求驱动，**不进入活跃任务**。出现具体业务场景时按触发条件择项启动，新建对应 `T-` 编号任务并引用本表 `BL-` 编号。
 
+> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。`BL-07~13` 为本次对比新发现项。
+
+### P0 静默丢弃缺陷（语法已接受但 AST 丢语义，round-trip 丢数据，建议优先处理）
+
+| BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
+|---------|------|------|------|----------|------|
+| BL-07 | `OVERLAPS` 谓词（`a OVERLAPS b`） | **静默丢弃** | BL-15 全量对比 | 立即应修：grammar `g4:774` 已有产生式，`VisitPredicateSuffix` 漏实现分支，SQL 解析后 OVERLAPS 子句被丢弃 | 类、grammar、visitor 三处接线，验证范围小 |
+| BL-08 | `MEMBER OF` 谓词（`val MEMBER OF json_arr`） | **静默丢弃** | BL-15 全量对比 | 立即应修：grammar `g4:773` 有产生式，`MemberOfExpression.cs` 类已存在，但 `VisitPredicateSuffix` 未接线 | 类已存在，仅缺 visitor 分派 |
+| BL-09 | `SELECT TOP n` 量词 | **静默丢弃 + README 误声明** | BL-15 全量对比 | 立即应修：grammar `g4:81,110` 有 `topClause`，但 `VisitPlainSelect` 不读、`PlainSelect` 无字段；README 第 164 行误声明已支持 | 需同时修 README 第 164 行，移除或落实 TOP |
+
+### P1 真缺口（经验证确认，非架构差异）
+
+| BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
+|---------|------|------|------|----------|------|
+| BL-10 | `LATERAL` 子查询（FROM `LATERAL (subq)`） | 半成品 | BL-15 全量对比 | 业务需 LATERAL JOIN | grammar `g4:151` 接受但 AST 退化为普通子查询，LATERAL 标志丢失；需新增标志字段或 `LateralSubSelect` 类 |
+| BL-11 | `DATE`/`TIMESTAMP`/`TIME` 类型前缀字面量（`DATE '2024-01-01'`） | 功能缺口 | BL-15 全量对比 | 业务需 SQL 标准日期字面量 | `DateValue`/`TimestampValue`/`TimeValue.cs` 是死代码（零实例化），`literal` 规则不含类型前缀分支 |
+| BL-12 | 上游缺失的语句类型（按需迁移） | 语句缺口 | BL-15 全量对比 | 业务需其中任一语句 | 涵盖：`COMMENT ON`、独立 `ANALYZE`、`RENAME TABLE` 顶层语句、`ALTER VIEW`、`ALTER SESSION/SYSTEM`、`CREATE SYNONYM`、`CREATE FUNCTION/PROCEDURE`、`EXECUTE/CALL` 过程调用、`PURGE`、`RESET`、`SHOW COLUMNS/INDEX/TABLES` 子类、`BLOCK`/`DECLARE`/`IF`（PL/SQL）。详见 BL-15 对齐记录 |
+| BL-13 | 上游缺失的 Select/Schema 子特性（按需迁移） | 特性缺口 | BL-15 全量对比 | 业务需其中任一特性 | 涵盖：FROM 子句 `PIVOT/UNPIVOT/PIVOT XML`、`TABLESAMPLE`/`SAMPLE`、通用表函数作 FromItem、`OPTIMIZE FOR n ROWS`、Informix `FIRST`/`SKIP`、Join 多 ON、ClickHouse `GLOBAL/ANY/ALL/STRAIGHT_JOIN`、Table 时间旅行（Snowflake AT/BEFORE）、`Table` 多部分名/Pivot/SampleClause 字段、`SAFE_CAST`、`SIMILAR TO`、`NumericBind`（`:1` 数值绑定，已有 `$1` 替代）。详见 BL-15 对齐记录 |
+| BL-14 | `ALTER` 操作覆盖度不足（11/47） | 特性缺口 | BL-15 全量对比 | 业务需 ALTER 高级操作 | Azrng 仅 11 个 alterOperation，缺 REMOVE/REORGANIZE/REPAIR/REGISTER PARTITION、PARTITION BY、DROP PRIMARY/FOREIGN/UNIQUE KEY、RENAME INDEX/CONSTRAINT 等；且仅 `ALTER TABLE`，无 `ALTER INDEX/VIEW/SEQUENCE/SCHEMA` |
+
+### P2 已知差异（保持现状，按需启动）
+
 | BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
 |---------|------|------|------|----------|------|
 | BL-01 | JSON_QUERY Legacy 额外 path 参数（`additionalQueryPathArguments`） | 功能补全 | T076 | 业务需解析 MySQL/Oracle legacy `JSON_QUERY(expr, path1, path2...)` 多 path 参数 | 上游用 `additionalQueryPathArguments` 字段承载额外 path，Azrng 当前未实现 |
@@ -22,6 +44,16 @@
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出） | 输出差异 | T076 F7 | 业务需 OBJECTAGG 按逗号分隔输出（与上游一致） | 当前按冒号分隔输出；上游 `MYSQL_OBJECT` 用逗号，需新增类型或开关 |
 | BL-05 | JSON_OBJECT/OBJECTAGG 冒号分隔 lexer 歧义 | 词法限制 | T076 F7 | 业务需支持无空格 `:bar` 形式的键值对 | ANTLR 无上下文 lexer 与上游 JavaCC LOOKAHEAD 本质差异：无空格 `:bar` 会被识别为命名参数，需 lexer 层改造 |
 | BL-06 | 方言专项 CREATE TABLE 等方言特性（ClickHouse/DuckDB/Trino/Snowflake/Databricks/BigQuery） | 方言补全 | T075（子项 69-77 除 72/73） | 业务出现上述方言的 CREATE TABLE 或专属语法场景 | 工作量最大，建议按出现的具体方言逐项迁移，不一次性铺开 |
+
+### BL-15 对齐基线说明
+
+- **对比时间**：2026-07-07
+- **上游仓库**：`C:/Work/SourceCode/sqlparser/JSqlParser`
+- **上游对照点**：commit `2b141568`（5.4-SNAPSHOT，2026-04-12），`feat: add ForUpdateClause class with multi-table and ORDER BY support (#2426)`
+- **上游无新提交**：`2b141568` 即上游 HEAD，无后续 commit 需追赶
+- **对比维度**：Expression 类、Statement 类、Select/Schema 子类、grammar 关键字、ALTER 操作
+- **已验证为等价实现（不计入缺口）**：`ArrayExpression`（合入 ArrayConstructor.cs）、`MySQLGroupConcat`（合入 Function.cs）、`UserVariable`（合入 JdbcNamedParameter + S_AT_IDENTIFIER）、`VariableAssignment`（由 SetStatement 承载）、`AllValue`（合入 AnyType.All 枚举）、`ON CONFLICT`（由 Insert.cs + InsertConflictAction/Target 承载）、`ForUpdateClause`（已完整移植）、命名参数三合一（Oracle/Postgres/统一 NamedFunctionParameter）
+- **上游本身不支持（非 Azrng 缺口）**：`REVOKE`、`ROLE`、`VACUUM`、`FLASHBACK`、`ATTACH/DETACH`（SQLite）、`BULK COLLECT/FORALL`、`TIMESTAMPLTZ`
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
