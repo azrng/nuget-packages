@@ -583,6 +583,22 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return jsonTable;
         }
 
+        if (context.LATERAL() != null)
+        {
+            // LATERAL 子查询：保留 LateralSubSelect 类型，避免退化为 ParenthesedSelect 导致前缀丢失
+            // 注意：subSelect 规则自身包含 alias（g4:170），需从 subSelect 上下文取
+            var subSelectCtx = context.subSelect();
+            var lateral = new LateralSubSelect
+            {
+                Select = (Select)Visit(subSelectCtx.selectStatement())
+            };
+            if (subSelectCtx.alias() != null)
+            {
+                lateral.Alias = new Alias(subSelectCtx.alias().identifier().GetText());
+            }
+            return lateral;
+        }
+
         if (context.subSelect() != null)
         {
             return Visit(context.subSelect());
