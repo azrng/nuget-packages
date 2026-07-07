@@ -17,6 +17,11 @@ public interface StatementVisitor<T>
     T Visit<S>(CreateIndex.CreateIndex createIndex, S context);
     T Visit<S>(Alter.Alter alter, S context);
     T Visit<S>(Alter.RenameTableStatement rename, S context);
+    T Visit<S>(Analyze.Analyze analyze, S context);
+    T Visit<S>(Comment.Comment comment, S context);
+    T Visit<S>(Execute.Execute execute, S context);
+    T Visit<S>(PurgeStatement purge, S context);
+    T Visit<S>(Alter.AlterView alterView, S context);
     T Visit<S>(Drop.Drop drop, S context);
     T Visit<S>(Truncate.Truncate truncate, S context);
     T Visit<S>(CommitStatement commitStatement, S context);
@@ -69,6 +74,11 @@ public interface StatementVisitor<T>
     void Visit(CreateIndex.CreateIndex createIndex) => Visit<object?>(createIndex, default);
     void Visit(Alter.Alter alter) => Visit<object?>(alter, default);
     void Visit(Alter.RenameTableStatement rename) => Visit<object?>(rename, default);
+    void Visit(Analyze.Analyze analyze) => Visit<object?>(analyze, default);
+    void Visit(Comment.Comment comment) => Visit<object?>(comment, default);
+    void Visit(Execute.Execute execute) => Visit<object?>(execute, default);
+    void Visit(PurgeStatement purge) => Visit<object?>(purge, default);
+    void Visit(Alter.AlterView alterView) => Visit<object?>(alterView, default);
     void Visit(Drop.Drop drop) => Visit<object?>(drop, default);
     void Visit(Truncate.Truncate truncate) => Visit<object?>(truncate, default);
     void Visit(CommitStatement commitStatement) => Visit<object?>(commitStatement, default);

@@ -17,6 +17,9 @@ using Azrng.JSqlParser.Statement.Create.Policy;
 using Azrng.JSqlParser.Statement.Create.Schema;
 using Azrng.JSqlParser.Statement.Create.Sequence;
 using Azrng.JSqlParser.Statement.Alter;
+using Azrng.JSqlParser.Statement.Analyze;
+using Azrng.JSqlParser.Statement.Comment;
+using Azrng.JSqlParser.Statement.Execute;
 using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Truncate;
 using Azrng.JSqlParser.Statement.CreateView;
@@ -56,6 +59,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createIndex() != null) return Visit(context.createIndex());
         if (context.alterStatement() != null) return Visit(context.alterStatement());
         if (context.renameTableStatement() != null) return Visit(context.renameTableStatement());
+        if (context.analyzeStatement() != null) return Visit(context.analyzeStatement());
+        if (context.commentStatement() != null) return Visit(context.commentStatement());
+        if (context.executeStatement() != null) return Visit(context.executeStatement());
+        if (context.purgeStatement() != null) return Visit(context.purgeStatement());
+        if (context.alterViewStatement() != null) return Visit(context.alterViewStatement());
         if (context.dropStatement() != null) return Visit(context.dropStatement());
         if (context.truncateStatement() != null) return Visit(context.truncateStatement());
         if (context.commitStatement() != null) return Visit(context.commitStatement());
@@ -1256,6 +1264,78 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return stmt;
+    }
+
+    public override object VisitAnalyzeStatement(JSqlParserGrammar.AnalyzeStatementContext context)
+    {
+        return new Analyze { Table = (Table)Visit(context.table()) };
+    }
+
+    public override object VisitCommentStatement(JSqlParserGrammar.CommentStatementContext context)
+    {
+        var comment = new Comment();
+        if (context.table() != null)
+            comment.Table = (Table)Visit(context.table());
+        else if (context.identifier() != null)
+            comment.Column = new Column { ColumnName = context.identifier().GetText() };
+        comment.CommentText = new StringValue(context.S_CHAR_LITERAL().GetText());
+        return comment;
+    }
+
+    public override object VisitExecuteStatement(JSqlParserGrammar.ExecuteStatementContext context)
+    {
+        var execType = context.CALL() != null ? ExecType.CALL
+            : context.EXEC() != null ? ExecType.EXEC : ExecType.EXECUTE;
+        var exec = new Execute { ExecType = execType, Name = context.identifier().GetText() };
+        if (context.expressionList() != null)
+        {
+            var list = (ExpressionList)Visit(context.expressionList());
+            exec.ExprList = list;
+        }
+        return exec;
+    }
+
+    public override object VisitPurgeStatement(JSqlParserGrammar.PurgeStatementContext context)
+    {
+        var purge = new PurgeStatement();
+        if (context.TABLE() != null)
+        {
+            purge.PurgeObjectType = PurgeObjectType.TABLE;
+            purge.Table = (Table)Visit(context.table());
+        }
+        else if (context.INDEX() != null)
+        {
+            purge.PurgeObjectType = PurgeObjectType.INDEX;
+            // INDEX 形式：table.identifier，取 table 作为宿主
+            purge.Table = (Table)Visit(context.table());
+        }
+        else if (context.RECYCLEBIN() != null)
+        {
+            purge.PurgeObjectType = PurgeObjectType.RECYCLEBIN;
+        }
+        else if (context.DBA_RECYCLEBIN() != null)
+        {
+            purge.PurgeObjectType = PurgeObjectType.DBA_RECYCLEBIN;
+        }
+        else if (context.TABLESPACE() != null)
+        {
+            purge.PurgeObjectType = PurgeObjectType.TABLESPACE;
+            var ids = context.identifier();
+            if (ids.Length > 0) purge.TableSpaceName = ids[0].GetText();
+            if (context.USER() != null && ids.Length > 1) purge.UserName = ids[1].GetText();
+        }
+        return purge;
+    }
+
+    public override object VisitAlterViewStatement(JSqlParserGrammar.AlterViewStatementContext context)
+    {
+        var view = new AlterView
+        {
+            UseReplace = context.REPLACE() != null,
+            View = (Table)Visit(context.table()),
+            Select = (Select)Visit(context.selectStatement())
+        };
+        return view;
     }
 
     /// <summary>

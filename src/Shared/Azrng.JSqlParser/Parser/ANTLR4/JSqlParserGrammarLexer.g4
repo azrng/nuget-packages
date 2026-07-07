@@ -595,6 +595,8 @@ START           : [Ss][Tt][Aa][Rr][Tt] ;
 SPATIAL         : [Ss][Pp][Aa][Tt][Ii][Aa][Ll] ;
 TABLES          : [Tt][Aa][Bb][Ll][Ee][Ss] ;
 TABLESPACE      : [Tt][Aa][Bb][Ll][Ee][Ss][Pp][Aa][Cc][Ee] ;
+RECYCLEBIN      : [Rr][Ee][Cc][Yy][Cc][Ll][Ee][Bb][Ii][Nn] ;
+DBA_RECYCLEBIN  : [Dd][Bb][Aa]'_'[Rr][Ee][Cc][Yy][Cc][Ll][Ee][Bb][Ii][Nn] ;
 TABLESAMPLE     : [Tt][Aa][Bb][Ll][Ee][Ss][Aa][Mm][Pp][Ll][Ee] ;
 TEMPORARY       : [Tt][Ee][Mm][Pp][Oo][Rr][Aa][Rr][Yy] ;
 TEMP            : [Tt][Ee][Mm][Pp] ;

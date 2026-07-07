@@ -39,6 +39,11 @@ statement
     | createIndex
     | alterStatement
     | renameTableStatement
+    | analyzeStatement
+    | commentStatement
+    | executeStatement
+    | purgeStatement
+    | alterViewStatement
     | dropStatement
     | truncateStatement
     | commitStatement
@@ -548,6 +553,37 @@ alterStatement
 renameTableStatement
     : RENAME TABLE? IF? EXISTS? table (WAIT LONG_VALUE | NOWAIT)? TO table
       (COMMA table TO table)*
+    ;
+
+// ANALYZE 语句
+analyzeStatement
+    : ANALYZE table
+    ;
+
+// COMMENT ON TABLE/COLUMN ... IS 'xxx'
+commentStatement
+    : COMMENT ON (TABLE table | COLUMN identifier) IS S_CHAR_LITERAL
+    ;
+
+// EXECUTE / EXEC / CALL proc(args)
+executeStatement
+    : (EXEC | EXECUTE | CALL) identifier (OPENING_PAREN expressionList? CLOSING_PAREN)?
+    ;
+
+// PURGE 语句（Oracle）
+purgeStatement
+    : PURGE (
+        TABLE table
+      | INDEX table DOT identifier
+      | RECYCLEBIN
+      | DBA_RECYCLEBIN
+      | TABLESPACE identifier (USER identifier)?
+    )
+    ;
+
+// ALTER VIEW / REPLACE VIEW v [(cols)] AS SELECT ...
+alterViewStatement
+    : (ALTER | REPLACE) VIEW table (OPENING_PAREN identifierList CLOSING_PAREN)? AS selectStatement
     ;
 
 alterOperation
