@@ -10,6 +10,26 @@
 
 > 当前无活跃任务。下一个任务待用户指定。
 
+## 待业务驱动 Backlog
+
+> 以下事项已识别为未做或差异，当前无业务需求驱动，**不进入活跃任务**。出现具体业务场景时按触发条件择项启动，新建对应 `T-` 编号任务并引用本表 `BL-` 编号。
+
+| BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
+|---------|------|------|------|----------|------|
+| BL-01 | JSON_QUERY Legacy 额外 path 参数（`additionalQueryPathArguments`） | 功能补全 | T076 | 业务需解析 MySQL/Oracle legacy `JSON_QUERY(expr, path1, path2...)` 多 path 参数 | 上游用 `additionalQueryPathArguments` 字段承载额外 path，Azrng 当前未实现 |
+| BL-02 | JSON_TABLE Oracle/Trino 方言子句（PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY） | 方言补全 | T076 | 业务需解析 Oracle/Trino 的 JSON_TABLE 方言高级子句 | T076 已迁 PASSING/ON ERROR/NESTED PATH，剩余 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 待补 |
+| BL-03 | 聚合函数 OVER 窗口子句 | 架构差异 | T076 | 业务需 `SUM(x) OVER(...)` 等聚合函数直接挂 OVER 子句 | Azrng OVER 走 `AnalyticExpression` 独立路径，需另设计 Function ↔ 窗口接线，影响范围较大 |
+| BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出） | 输出差异 | T076 F7 | 业务需 OBJECTAGG 按逗号分隔输出（与上游一致） | 当前按冒号分隔输出；上游 `MYSQL_OBJECT` 用逗号，需新增类型或开关 |
+| BL-05 | JSON_OBJECT/OBJECTAGG 冒号分隔 lexer 歧义 | 词法限制 | T076 F7 | 业务需支持无空格 `:bar` 形式的键值对 | ANTLR 无上下文 lexer 与上游 JavaCC LOOKAHEAD 本质差异：无空格 `:bar` 会被识别为命名参数，需 lexer 层改造 |
+| BL-06 | 方言专项 CREATE TABLE 等方言特性（ClickHouse/DuckDB/Trino/Snowflake/Databricks/BigQuery） | 方言补全 | T075（子项 69-77 除 72/73） | 业务出现上述方言的 CREATE TABLE 或专属语法场景 | 工作量最大，建议按出现的具体方言逐项迁移，不一次性铺开 |
+
+### 测试规模差异说明（非缺陷，仅供参考）
+
+- **Azrng**：845 测试
+- **上游 JSqlParser**：2309 测试
+- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等），这些是 Azrng 明确不在迁移范围内的（对应 BL-06）
+- **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
+
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
