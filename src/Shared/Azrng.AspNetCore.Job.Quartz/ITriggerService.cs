@@ -26,14 +26,12 @@ namespace Azrng.AspNetCore.Job.Quartz
         {
 
             return BeginBuilder(entity)
-                   .StartAt(entity.BeginTime.AddHours(-8))
-                   .EndAt(entity.EndTime?.AddHours(-8))
+                   .StartAt(entity.BeginTime)
+                   .EndAt(entity.EndTime)
                    .WithCronSchedule(entity.Cron, builder =>
                    {
                        // 这次使用donothin策略是因为有的环境会立即触发一次
                        builder.WithMisfireHandlingInstructionDoNothing();
-
-                       //.InTimeZone(TimeZoneInfo.ConvertTime(timeZoneId));
                    })
                    .ForJob(entity.JobName, entity.JobGroup)
                    .Build();

@@ -189,6 +189,23 @@ namespace Azrng.AspNetCore.Job.Quartz.Test
             _output.WriteLine($"预期抛出异常: {exception.Message}");
         }
 
+        [Fact]
+        public async Task PauseJobAsync_ShouldPauseSimpleTriggerJob()
+        {
+            // StartJobAsync 创建的是 SimpleTrigger（非 Cron），验证暂停对非 Cron 触发器同样生效
+            var jobService = _serviceProvider.GetRequiredService<IJobService>();
+            var jobName = "SimplePauseTest_" + Guid.NewGuid();
+            await jobService.StartJobAsync<TestJob>(jobName, DateTime.Now.AddMinutes(5));
+
+            var result = await jobService.PauseJobAsync(jobName);
+            Assert.True(result);
+
+            var triggers = await _scheduler.GetTriggersOfJob(new JobKey(jobName, "default"));
+            Assert.NotEmpty(triggers);
+            var state = await _scheduler.GetTriggerState(triggers.First().Key);
+            Assert.Equal(TriggerState.Paused, state);
+        }
+
         public void Dispose()
         {
             // 清理调度器

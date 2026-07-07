@@ -11,7 +11,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
     internal class DependencyInjectionJobFactory : IJobFactory
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ConcurrentDictionary<string, IServiceScope> _scopes = new();
+        private readonly ConcurrentDictionary<IJob, IServiceScope> _scopes = new();
 
         public DependencyInjectionJobFactory(IServiceProvider serviceProvider)
         {
@@ -21,47 +21,29 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
         public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
         {
             var scope = _serviceProvider.CreateScope();
-            var jobKey = bundle.JobDetail.Key.ToString();
-
-            // 存储scope以便后续清理
-            _scopes.TryAdd(jobKey, scope);
-
             var job = scope.ServiceProvider.GetRequiredService(bundle.JobDetail.JobType) as IJob;
             if (job == null)
             {
+                scope.Dispose();
                 throw new InvalidOperationException($"无法创建作业实例: {bundle.JobDetail.JobType.Name}。请确保作业类型已注册为服务。");
             }
 
+            // 以 job 实例为键存储 scope，ReturnJob 时据此清理，避免 scope 永不释放
+            _scopes[job] = scope;
             return job;
         }
 
         public void ReturnJob(IJob job)
         {
-            // 清理scope
-            if (job is IDisposable disposableJob)
-            {
-                disposableJob.Dispose();
-            }
-
-            // 尝试清理对应的scope
-            // 注意：由于我们无法从job实例直接获取jobKey，这里采用保守策略
-            // 实际的清理将在作业完成时通过其他方式处理
-        }
-
-        /// <summary>
-        /// 清理指定作业的scope
-        /// </summary>
-        /// <param name="jobKey">作业键</param>
-        public void DisposeScope(string jobKey)
-        {
-            if (_scopes.TryRemove(jobKey, out var scope))
+            // 作业执行完毕，回收对应的 DI scope（修复原先 scope 永不释放的内存泄漏）
+            if (job != null && _scopes.TryRemove(job, out var scope))
             {
                 scope.Dispose();
             }
         }
 
         /// <summary>
-        /// 清理所有scope
+        /// 清理所有尚未回收的 scope（调度器关闭时兜底）
         /// </summary>
         public void DisposeAllScopes()
         {

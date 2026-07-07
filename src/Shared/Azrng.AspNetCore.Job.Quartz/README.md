@@ -214,6 +214,8 @@ builder.Services.AddQuartzService(
 |------|------|--------|------|
 | `EnableJobHistory` | bool | true | 是否启用作业执行历史记录 |
 | `EnableDetailedLogging` | bool | true | 是否记录详细的作业执行日志 |
+| `SchedulerName` | string | QuartzScheduler | 调度器名称（对应 quartz.scheduler.name） |
+| `JobHistoryRetentionDays` | int | 30 | 作业执行历史保留天数，超过由清理服务自动删除 |
 | `AssemblyNamesToScan` | List\<string\> | 空 | 要扫描的程序集名称列表，为空时自动扫描入口程序集和调用程序集 |
 | `ScanAllLoadedAssemblies` | bool | false | 是否扫描所有已加载的程序集（包含系统程序集，需谨慎使用） |
 | `ExcludedAssemblyPatterns` | List\<string\> | 空 | 排除的程序集名称模式列表（支持通配符 * 和 ?）|

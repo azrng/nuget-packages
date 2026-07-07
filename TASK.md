@@ -14,11 +14,19 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
 | T078 | Azrng.JSqlParser 修复嵌套块注释词法（对齐上游 /* /* */ */ 嵌套支持，全量 845 测试通过） | DONE | 2026-07-07 |
 | T077 | Azrng.JSqlParser 客户反馈问题核查与修复（CASE WHEN 序列化 Bug + 6 项现状固化测试，全量 830 测试通过） | DONE | 2026-07-07 |
 | T076 | Azrng.JSqlParser 继续迁移上游 5.4-SNAPSHOT 剩余缺口 F1-F8（8 项特性 + 全量 799 测试通过，净增 54） | DONE | 2026-07-07 |
 | T075 | Azrng.JSqlParser 同步上游 5.4..HEAD 高价值变更（77 子项全部处理闭环，全量 745 测试通过） | DONE | 2026-07-06 |
-| T074 | Azrng.JSqlParser README 补充上游溯源信息（标注基于 jsqlparser-5.4 tag / commit 7d2e6b65） | DONE | 2026-07-03 |
+
+### T079 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.AspNetCore.Job.Quartz`，测试：`test/Azrng.AspNetCore.Job.Quartz.Test`，示例：`src/Services/QuartzApi`
+- **任务目标**：修复代码审查发现的调度主链路 5 个 P0 缺陷及必需配套
+- **完成情况**：5 个 P0 全部修复（DI scope 泄漏 / QuartzJobListener 未注册 / Cron 时区 -8 偏移 / 暂停仅限 CronTrigger / DI 与调度扫描割裂），补 `JobHistoryCleanupHostedService` 周期清理、`QuartzOptions.SchedulerName`/`JobHistoryRetentionDays`、README/ARCHITECTURE 文档对齐；新增 3 个测试文件（DependencyInjectionJobFactoryTests / TriggerServiceTests / AssemblyResolverTests）+ 2 处回归用例，全量 25 测试通过（net8/net9），包与 QuartzApi 示例构建 0 警告 0 错误
+- **阻塞项**：无
+- **未做的事**：未删除 `ITriggerService`/`TriggerService`/`ScheduleViewModel`（作为 public API 保留，仅删除 `JobService` 内部未使用的私有 `GetTrigger` 死方法）；未引入 `explicitAssemblies` 参数与 entry 含 JobConfig 边缘场景的程序集共享（当前满足 DI 注册范围 ⊇ 调度范围，常见配置场景一致）
 
 ### T078 归档说明
 

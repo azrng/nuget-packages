@@ -1,3 +1,4 @@
+using Azrng.AspNetCore.Job.Quartz.Listeners;
 using Azrng.AspNetCore.Job.Quartz.Options;
 using Azrng.AspNetCore.Job.Quartz.Schedules;
 using Azrng.AspNetCore.Job.Quartz.Services;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Quartz;
 using Quartz.Impl;
 using Quartz.Spi;
+using System.Collections.Specialized;
 using System.Reflection;
 
 namespace Azrng.AspNetCore.Job.Quartz
@@ -30,7 +32,10 @@ namespace Azrng.AspNetCore.Job.Quartz
             Action<QuartzOptions>? configure = null,
             params Assembly[] assemblies)
         {
-            // 配置选项
+            // 构造一份 options 实例用于注册阶段的程序集解析（与运行时 IOptions 配置保持一致）
+            var options = new QuartzOptions();
+            configure?.Invoke(options);
+
             if (configure != null)
             {
                 services.Configure(configure);
@@ -42,13 +47,28 @@ namespace Azrng.AspNetCore.Job.Quartz
             // 注册作业历史服务
             services.AddSingleton<IJobExecutionHistoryService, InMemoryJobExecutionHistoryService>();
 
-            // 注册作业实现类（Scoped生命周期）
-            RegisterJobs(services, assemblies);
+            // 注册作业监听器（调度器启动时挂载到 ListenerManager，使历史记录与详细日志配置生效）
+            services.AddSingleton<QuartzJobListener>();
 
-            // 注册Quartz核心服务
-            services.AddSingleton<ISchedulerFactory, StdSchedulerFactory>();
+            // 注册作业实现类（Scoped生命周期），与调度扫描共用同一程序集解析逻辑
+            var entryAssembly = Assembly.GetEntryAssembly();
+            var callingAssembly = Assembly.GetCallingAssembly();
+            RegisterJobs(services, options, assemblies, entryAssembly, callingAssembly);
+
+            // 注册Quartz核心服务，支持自定义调度器名称
+            services.AddSingleton<ISchedulerFactory>(resolver =>
+            {
+                var opt = resolver.GetRequiredService<IOptions<QuartzOptions>>().Value;
+                var props = new NameValueCollection();
+                if (!string.IsNullOrWhiteSpace(opt.SchedulerName))
+                {
+                    props[StdSchedulerFactory.PropertySchedulerInstanceName] = opt.SchedulerName;
+                }
+                return new StdSchedulerFactory(props);
+            });
             services.AddSingleton<IJobFactory, DependencyInjectionJobFactory>();
             services.AddHostedService<JobHostedService>();
+            services.AddHostedService<JobHistoryCleanupHostedService>();
 
             // 注册应用服务
             services.AddScoped<IJobService, JobService>();
@@ -62,31 +82,23 @@ namespace Azrng.AspNetCore.Job.Quartz
         /// <summary>
         /// 注册作业实现类
         /// </summary>
-        /// <param name="services">服务集合</param>
-        /// <param name="assemblies">要扫描的程序集，为空时自动扫描入口程序集和调用程序集</param>
-        private static void RegisterJobs(IServiceCollection services, params Assembly[] assemblies)
+        private static void RegisterJobs(
+            IServiceCollection services,
+            QuartzOptions options,
+            Assembly[] explicitAssemblies,
+            Assembly? entryAssembly,
+            Assembly? callingAssembly)
         {
-            // 1. 如果指定了程序集，从指定程序集注册
-            if (assemblies != null && assemblies.Length > 0)
-            {
-                foreach (var assembly in assemblies)
-                {
-                    RegisterJobsFromAssembly(services, assembly);
-                }
-                return;
-            }
+            var assembliesToScan = AssemblyResolver.Resolve(
+                options,
+                explicitAssemblies.Length > 0 ? explicitAssemblies : null,
+                entryAssembly,
+                callingAssembly,
+                logger: null);
 
-            // 2. 否则自动从入口程序集和调用程序集注册
-            var entryAssembly = Assembly.GetEntryAssembly();
-            if (entryAssembly != null)
+            foreach (var assembly in assembliesToScan)
             {
-                RegisterJobsFromAssembly(services, entryAssembly);
-            }
-
-            var callingAssembly = Assembly.GetCallingAssembly();
-            if (callingAssembly != null && callingAssembly != entryAssembly)
-            {
-                RegisterJobsFromAssembly(services, callingAssembly);
+                RegisterJobsFromAssembly(services, assembly);
             }
         }
 
@@ -98,7 +110,7 @@ namespace Azrng.AspNetCore.Job.Quartz
         private static void RegisterJobsFromAssembly(IServiceCollection services, Assembly assembly)
         {
             foreach (var type in assembly.DefinedTypes.Where(t =>
-                t.IsClass && typeof(IJob).IsAssignableFrom(t)))
+                t.IsClass && !t.IsAbstract && typeof(IJob).IsAssignableFrom(t)))
             {
                 services.AddScoped(type.AsType());
             }

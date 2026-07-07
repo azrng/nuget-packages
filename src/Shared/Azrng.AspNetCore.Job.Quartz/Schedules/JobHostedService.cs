@@ -1,3 +1,4 @@
+using Azrng.AspNetCore.Job.Quartz.Listeners;
 using Azrng.AspNetCore.Job.Quartz.Options;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,32 +14,42 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
     /// </summary>
     public class JobHostedService : IHostedService
     {
-        private readonly IScheduler _scheduler;
+        private readonly ISchedulerFactory _schedulerFactory;
+        private readonly IJobFactory _jobFactory;
+        private readonly QuartzJobListener _jobListener;
         private readonly ILogger<JobHostedService> _logger;
         private readonly QuartzOptions _options;
-        private readonly DependencyInjectionJobFactory? _jobFactory;
+        private IScheduler? _scheduler;
 
         public JobHostedService(
             ISchedulerFactory schedulerFactory,
             IJobFactory jobFactory,
+            QuartzJobListener jobListener,
             ILogger<JobHostedService> logger,
             IOptions<QuartzOptions> options)
         {
-            _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
-            _scheduler.JobFactory = jobFactory;
+            _schedulerFactory = schedulerFactory;
+            _jobFactory = jobFactory;
+            _jobListener = jobListener;
             _logger = logger;
             _options = options.Value;
-            _jobFactory = jobFactory as DependencyInjectionJobFactory;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            _scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+            _scheduler.JobFactory = _jobFactory;
+
+            // 注册作业监听器，使历史记录与详细日志配置真正生效
+            _scheduler.ListenerManager.AddJobListener(_jobListener);
+
             _logger.LogInformation("Quartz 调度器正在启动...");
             await _scheduler.Start(cancellationToken);
             _logger.LogInformation("Quartz 调度器启动成功 | 调度器名称: {SchedulerName}", _scheduler.SchedulerName);
 
-            // 获取要扫描的程序集
-            var assembliesToScan = GetAssembliesToScan();
+            // 获取要扫描的程序集（与 DI 注册共用同一解析逻辑，确保范围一致）
+            var entryAssembly = Assembly.GetEntryAssembly();
+            var assembliesToScan = AssemblyResolver.Resolve(_options, null, entryAssembly, null, _logger);
 
             if (assembliesToScan.Count == 0)
             {
@@ -85,13 +96,15 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
                                                   .Build();
 
                         var triggerBuilder = TriggerBuilder.Create();
-                        if (string.IsNullOrEmpty(customAttribute.CronExpression))
+                        var hasCron = !string.IsNullOrEmpty(customAttribute.CronExpression);
+                        if (hasCron)
                         {
-                            triggerBuilder.WithSimpleSchedule();
+                            triggerBuilder.WithCronSchedule(customAttribute.CronExpression);
                         }
                         else
                         {
-                            triggerBuilder.WithCronSchedule(customAttribute.CronExpression);
+                            // 未配置 Cron 时按简单调度执行一次
+                            triggerBuilder.WithSimpleSchedule();
                         }
 
                         var trigger = triggerBuilder.Build();
@@ -106,7 +119,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
                         _logger.LogInformation("作业已自动注册 [{Group}].[{Name}] | Cron: {Cron} | 类型: {JobType}",
                             customAttribute.Group,
                             customAttribute.Name,
-                            customAttribute.CronExpression ?? "(简单调度)",
+                            hasCron ? customAttribute.CronExpression : "(简单调度)",
                             jobType.FullName);
                     }
                     catch (Exception ex)
@@ -123,128 +136,18 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
         {
             _logger.LogInformation("Quartz 调度器正在关闭...");
 
-            // 清理所有scope
-            if (_jobFactory != null)
+            // 清理所有尚未回收的 scope
+            if (_jobFactory is DependencyInjectionJobFactory diJobFactory)
             {
-                _jobFactory.DisposeAllScopes();
+                diJobFactory.DisposeAllScopes();
                 _logger.LogDebug("已清理所有作业scope");
             }
 
-            await _scheduler.Shutdown(cancellationToken);
+            if (_scheduler != null)
+            {
+                await _scheduler.Shutdown(cancellationToken);
+            }
             _logger.LogInformation("Quartz 调度器已关闭");
-        }
-
-        /// <summary>
-        /// 获取要扫描的程序集列表
-        /// </summary>
-        /// <returns></returns>
-        private List<Assembly> GetAssembliesToScan()
-        {
-            var assemblies = new List<Assembly>();
-
-            // 1. 如果配置了指定的程序集名称，则按名称加载
-            if (_options.AssemblyNamesToScan.Any())
-            {
-                _logger.LogInformation("使用配置的程序集列表进行扫描: {Assemblies}",
-                    string.Join(", ", _options.AssemblyNamesToScan));
-
-                foreach (var assemblyName in _options.AssemblyNamesToScan)
-                {
-                    try
-                    {
-                        var assembly = Assembly.Load(assemblyName);
-                        assemblies.Add(assembly);
-                        _logger.LogDebug("添加配置程序集: {AssemblyName}", assemblyName);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "无法加载程序集 {AssemblyName}", assemblyName);
-                    }
-                }
-
-                return assemblies.Distinct().ToList();
-            }
-
-            // 2. 如果启用了扫描所有已加载的程序集
-            if (_options.ScanAllLoadedAssemblies)
-            {
-                _logger.LogWarning("启用了扫描所有已加载程序集选项，这可能包含系统程序集");
-                assemblies.AddRange(AppDomain.CurrentDomain.GetAssemblies());
-                return FilterExcludedAssemblies(assemblies);
-            }
-
-            // 3. 默认行为：添加入口程序集和调用程序集
-            var entryAssembly = Assembly.GetEntryAssembly();
-            if (entryAssembly != null)
-            {
-                assemblies.Add(entryAssembly);
-                _logger.LogDebug("添加入口程序集: {AssemblyName}", entryAssembly.GetName().Name);
-            }
-
-            var callingAssembly = Assembly.GetCallingAssembly();
-            if (callingAssembly != null && callingAssembly != entryAssembly)
-            {
-                assemblies.Add(callingAssembly);
-                _logger.LogDebug("添加调用程序集: {AssemblyName}", callingAssembly.GetName().Name);
-            }
-
-            // 4. 应用排除规则
-            return FilterExcludedAssemblies(assemblies);
-        }
-
-        /// <summary>
-        /// 应用排除规则过滤程序集
-        /// </summary>
-        private List<Assembly> FilterExcludedAssemblies(List<Assembly> assemblies)
-        {
-            if (!_options.ExcludedAssemblyPatterns.Any())
-            {
-                return assemblies;
-            }
-
-            var filtered = assemblies.Where(assembly =>
-                                     {
-                                         var assemblyName = assembly.GetName().Name;
-                                         if (assemblyName == null)
-                                         {
-                                             return true;
-                                         }
-
-                                         foreach (var pattern in _options.ExcludedAssemblyPatterns)
-                                         {
-                                             if (SimpleWildcardMatch(assemblyName, pattern))
-                                             {
-                                                 _logger.LogDebug("排除程序集: {AssemblyName} (匹配模式: {Pattern})", assemblyName, pattern);
-                                                 return false;
-                                             }
-                                         }
-
-                                         return true;
-                                     })
-                                     .ToList();
-
-            if (filtered.Count < assemblies.Count)
-            {
-                _logger.LogInformation("应用排除规则后剩余 {Count} 个程序集", filtered.Count);
-            }
-
-            return filtered;
-        }
-
-        /// <summary>
-        /// 简单的通配符匹配
-        /// </summary>
-        private static bool SimpleWildcardMatch(string input, string pattern)
-        {
-            // 转换通配符为正则表达式
-            var regexPattern = "^" +
-                               System.Text.RegularExpressions.Regex.Escape(pattern)
-                                     .Replace("\\*", ".*")
-                                     .Replace("\\?", ".") +
-                               "$";
-
-            return System.Text.RegularExpressions.Regex.IsMatch(input, regexPattern,
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
     }
 }

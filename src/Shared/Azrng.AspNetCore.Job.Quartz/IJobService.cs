@@ -1,7 +1,5 @@
-﻿using Azrng.AspNetCore.Job.Quartz.Model;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using Quartz.Impl.Triggers;
 
 namespace Azrng.AspNetCore.Job.Quartz
 {
@@ -77,13 +75,11 @@ namespace Azrng.AspNetCore.Job.Quartz
     public class JobService : IJobService
     {
         private readonly ISchedulerFactory _schedulerFactory;
-        private readonly ITriggerService _triggerService;
         private readonly ILogger<JobService> _logger;
 
-        public JobService(ISchedulerFactory schedulerFactory, ITriggerService triggerService, ILogger<JobService> logger)
+        public JobService(ISchedulerFactory schedulerFactory, ILogger<JobService> logger)
         {
             _schedulerFactory = schedulerFactory;
-            _triggerService = triggerService;
             _logger = logger;
         }
 
@@ -136,20 +132,10 @@ namespace Azrng.AspNetCore.Job.Quartz
             var scheduler = await _schedulerFactory.GetScheduler();
             var jobKey = new JobKey(jobName, jobGroup);
 
-            // 暂停触发器
-            var triggers = await scheduler.GetTriggersOfJob(jobKey);
-            var pausedCount = 0;
-            foreach (var trigger in triggers)
-            {
-                if (trigger is CronTriggerImpl)
-                {
-                    await scheduler.PauseTrigger(trigger.Key);
-                    pausedCount++;
-                }
-            }
+            // 暂停该作业的所有触发器（对所有触发器类型生效，不再仅限 CronTrigger）
+            await scheduler.PauseJob(jobKey);
 
-            _logger.LogInformation("任务已暂停 [{Group}].[{Name}] | 暂停触发器数量: {Count}",
-                jobGroup, jobName, pausedCount);
+            _logger.LogInformation("任务已暂停 [{Group}].[{Name}]", jobGroup, jobName);
 
             return true;
         }
@@ -166,20 +152,10 @@ namespace Azrng.AspNetCore.Job.Quartz
                 throw new ArgumentException("任务不存在", nameof(jobName));
             }
 
-            // 获取当前任务的触发器
-            var triggers = await scheduler.GetTriggersOfJob(jobKey);
-            var resumedCount = 0;
-            foreach (var trigger in triggers)
-            {
-                if (trigger is CronTriggerImpl)
-                {
-                    await scheduler.ResumeTrigger(trigger.Key);
-                    resumedCount++;
-                }
-            }
+            // 恢复该作业的所有触发器（对所有触发器类型生效）
+            await scheduler.ResumeJob(jobKey);
 
-            _logger.LogInformation("任务已恢复 [{Group}].[{Name}] | 恢复触发器数量: {Count}",
-                jobGroup, jobName, resumedCount);
+            _logger.LogInformation("任务已恢复 [{Group}].[{Name}]", jobGroup, jobName);
 
             return true;
         }
@@ -229,35 +205,12 @@ namespace Azrng.AspNetCore.Job.Quartz
                 throw new ArgumentException($"不存在该任务{jobKey}");
             }
 
-            // 获取当前任务的触发器
-            var triggers = await scheduler.GetTriggersOfJob(jobKey);
-            var unscheduledCount = 0;
-            foreach (var trigger in triggers)
-            {
-                if (trigger is CronTriggerImpl)
-                {
-                    await scheduler.PauseTrigger(trigger.Key);
-                    await scheduler.UnscheduleJob(trigger.Key);
-                    unscheduledCount++;
-                }
-            }
-
+            // DeleteJob 会自动级联删除关联的所有触发器
             var result = await scheduler.DeleteJob(jobKey);
-            _logger.LogInformation("任务已删除 [{Group}].[{Name}] | 移除触发器数量: {Count} | 删除结果: {Result}",
-                jobGroup, jobName, unscheduledCount, result);
+            _logger.LogInformation("任务已删除 [{Group}].[{Name}] | 删除结果: {Result}",
+                jobGroup, jobName, result);
 
             return result;
-        }
-
-        private ITrigger GetTrigger(ScheduleViewModel entity)
-        {
-            var trigger = entity.TriggerType switch
-            {
-                TriggerTypeEnum.Cron => _triggerService.CreateCronTrigger(entity),
-                TriggerTypeEnum.Simple => _triggerService.CreateSimpleTrigger(entity),
-                _ => _triggerService.CreateStarNowTrigger(entity)
-            };
-            return trigger;
         }
     }
 }

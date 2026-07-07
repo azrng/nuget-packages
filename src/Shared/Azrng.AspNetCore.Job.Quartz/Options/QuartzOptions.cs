@@ -16,6 +16,16 @@ namespace Azrng.AspNetCore.Job.Quartz.Options
         public bool EnableDetailedLogging { get; set; } = true;
 
         /// <summary>
+        /// 调度器名称（对应 quartz.scheduler.name，默认与 Quartz 内置一致）
+        /// </summary>
+        public string SchedulerName { get; set; } = "QuartzScheduler";
+
+        /// <summary>
+        /// 作业执行历史保留天数，超过则被自动清理（由历史清理服务周期执行）
+        /// </summary>
+        public int JobHistoryRetentionDays { get; set; } = 30;
+
+        /// <summary>
         /// 要扫描的程序集列表
         /// 如果为空，则自动扫描入口程序集和调用程序集
         /// </summary>

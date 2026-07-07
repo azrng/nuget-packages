@@ -66,10 +66,6 @@ namespace Azrng.AspNetCore.Job.Quartz.Services
                                   JobName = jobDetail.Key.Name,
                                   JobGroup = jobDetail.Key.Group,
                                   Description = jobDetail.Description ?? string.Empty,
-                                  IsPaused =
-                                      triggers.Any(t =>
-                                          scheduler.GetTriggerState(t.Key, cancellationToken).GetAwaiter().GetResult() ==
-                                          TriggerState.Paused),
                                   IsDurable = jobDetail.Durable,
                                   IsConcurrent = jobDetail.ConcurrentExecutionDisallowed == false,
                                   NextFireTime =
@@ -102,6 +98,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Services
                                          });
                 }
 
+                jobInfo.IsPaused = jobInfo.Triggers.Any(t => t.State == TriggerState.Paused);
                 scheduledJobs.Add(jobInfo);
             }
 
