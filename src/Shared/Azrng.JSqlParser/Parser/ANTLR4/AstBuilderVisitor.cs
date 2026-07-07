@@ -2616,6 +2616,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             return Visit(context.jsonQueryFunction());
         }
+        if (context.jsonObjectAggFunction() != null)
+        {
+            return Visit(context.jsonObjectAggFunction());
+        }
+        if (context.jsonArrayAggFunction() != null)
+        {
+            return Visit(context.jsonArrayAggFunction());
+        }
 
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
@@ -3045,6 +3053,82 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (b.EMPTY_KW() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY);
         if (b.ERROR() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.ERROR);
         return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
+    }
+
+    // JSON_OBJECTAGG([KEY] key (VALUE|:|,) value [FORMAT JSON] [ON NULL] [UNIQUE KEYS])
+    public override object VisitJsonObjectAggFunction(JSqlParserGrammar.JsonObjectAggFunctionContext context)
+    {
+        var func = new JsonAggregateFunction
+        {
+            AggregateFunctionType = JsonAggregateFunction.AggregateType.OBJECT,
+            Name = "JSON_OBJECTAGG",
+            UsingKeyKeyword = context.KEY() != null
+        };
+
+        // key
+        func.Key = context.S_CHAR_LITERAL() != null
+            ? (object)new StringValue(context.S_CHAR_LITERAL().GetText())
+            : Visit(context.columnRef());
+
+        // 分隔符
+        if (context.VALUE() != null)
+        {
+            func.UsingValueSeparator = true;
+            func.UsingValueKeyword = true;
+        }
+        else if (context.DOUBLE_COLON() != null || context.COLON() != null)
+        {
+            func.UsingValueSeparator = false;
+        }
+        // COMMA 分隔（MySQL）也归为非 VALUE
+
+        // value
+        func.Value = (Expression.Expression)Visit(context.expression());
+
+        if (context.FORMAT() != null) func.UsingFormatJson = true;
+
+        if (context.onNullClause() != null)
+        {
+            func.OnNull = context.onNullClause().ABSENT() != null
+                ? JsonFunction.OnNullType.ABSENT
+                : JsonFunction.OnNullType.NULL;
+        }
+
+        if (context.uniqueKeysClause() != null)
+        {
+            func.UniqueKeys = context.uniqueKeysClause().WITH() != null
+                ? JsonFunction.UniqueKeysType.WITH
+                : JsonFunction.UniqueKeysType.WITHOUT;
+        }
+
+        return func;
+    }
+
+    // JSON_ARRAYAGG(expr [FORMAT JSON] [ORDER BY ...] [ON NULL])
+    public override object VisitJsonArrayAggFunction(JSqlParserGrammar.JsonArrayAggFunctionContext context)
+    {
+        var func = new JsonAggregateFunction
+        {
+            AggregateFunctionType = JsonAggregateFunction.AggregateType.ARRAY,
+            Name = "JSON_ARRAYAGG",
+            AggregateExpression = (Expression.Expression)Visit(context.expression())
+        };
+
+        if (context.FORMAT() != null) func.UsingFormatJson = true;
+
+        if (context.orderByClause() != null)
+        {
+            func.OrderByElements = (List<OrderByElement>)Visit(context.orderByClause());
+        }
+
+        if (context.onNullClause() != null)
+        {
+            func.OnNull = context.onNullClause().ABSENT() != null
+                ? JsonFunction.OnNullType.ABSENT
+                : JsonFunction.OnNullType.NULL;
+        }
+
+        return func;
     }
 
     private JsonFunction.JsonOnResponseBehavior ParseJsonValueBehavior(JSqlParserGrammar.JsonValueBehaviorContext b)

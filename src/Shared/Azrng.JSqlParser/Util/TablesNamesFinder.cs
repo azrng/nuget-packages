@@ -273,6 +273,13 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         jsonFunction.JsonPathExpression?.Accept(this);
         return null;
     }
+    public object? Visit<S>(JsonAggregateFunction jsonAggregateFunction, S context)
+    {
+        jsonAggregateFunction.Value?.Accept(this);
+        jsonAggregateFunction.AggregateExpression?.Accept(this);
+        jsonAggregateFunction.FilterExpression?.Accept(this);
+        return null;
+    }
     public object? Visit<S>(Plus plus, S context) => VisitBinary(plus);
     public object? Visit<S>(PriorTo priorTo, S context) => VisitBinary(priorTo);
 

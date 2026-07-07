@@ -144,6 +144,13 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
         jsonFunction.OnErrorBehavior?.Expression?.Accept(this);
         return default!;
     }
+    public virtual T Visit<S>(JsonAggregateFunction jsonAggregateFunction, S context)
+    {
+        jsonAggregateFunction.Value?.Accept(this);
+        jsonAggregateFunction.AggregateExpression?.Accept(this);
+        jsonAggregateFunction.FilterExpression?.Accept(this);
+        return default!;
+    }
     public virtual T Visit<S>(Operators.Relational.CosineSimilarity cosineSimilarity, S context) => VisitBinary(cosineSimilarity);
     public virtual T Visit<S>(Operators.Relational.GeometryDistance geometryDistance, S context) => VisitBinary(geometryDistance);
     public virtual T Visit<S>(Operators.Relational.Plus plus, S context) => VisitBinary(plus);

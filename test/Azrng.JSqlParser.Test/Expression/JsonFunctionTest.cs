@@ -213,4 +213,64 @@ public class JsonFunctionTest
         Assert.Equal(JsonFunction.OnResponseBehaviorType.EMPTY_ARRAY, func.OnEmptyBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
+
+    [Fact]
+    public void JsonObjectAgg_ColonSpaced_ShouldParse()
+    {
+        // foo : bar 带空格，避免 :bar 被识别为命名参数
+        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT JSON_OBJECTAGG( foo : bar) FROM dual")!;
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonAggregateFunction.AggregateType.OBJECT, func.AggregateFunctionType);
+        Assert.False(func.UsingValueSeparator);
+    }
+
+    [Fact]
+    public void JsonObjectAgg_KeyValueKeyword_ShouldRoundTrip()
+    {
+        // OBJECTAGG 输出 " )"（末尾带空格，与上游 OBJECT 对齐）
+        var sql = "SELECT JSON_OBJECTAGG( KEY foo VALUE bar ) FROM dual";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.True(func.UsingKeyKeyword);
+        Assert.True(func.UsingValueSeparator);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonObjectAgg_NullOnNullWithUniqueKeys_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_OBJECTAGG( KEY foo VALUE bar NULL ON NULL WITH UNIQUE KEYS ) FROM dual";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonFunction.OnNullType.NULL, func.OnNull);
+        Assert.Equal(JsonFunction.UniqueKeysType.WITH, func.UniqueKeys);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonArrayAgg_Simple_ShouldRoundTrip()
+    {
+        // ARRAYAGG 输出 "JSON_ARRAYAGG( a)"（a 后无空格）
+        var sql = "SELECT JSON_ARRAYAGG( a) FROM dual";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonAggregateFunction.AggregateType.ARRAY, func.AggregateFunctionType);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    [Fact]
+    public void JsonArrayAgg_OrderByAndOnNull_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_ARRAYAGG( a ORDER BY a NULL ON NULL) FROM dual";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.NotNull(func.OrderByElements);
+        Assert.Single(func.OrderByElements);
+        Assert.Equal(JsonFunction.OnNullType.NULL, func.OnNull);
+        Assert.Equal(sql, select.ToString());
+    }
 }

@@ -956,6 +956,8 @@ functionExpr
     | jsonValueFunction
     | jsonExistsFunction
     | jsonQueryFunction
+    | jsonObjectAggFunction
+    | jsonArrayAggFunction
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -1081,6 +1083,28 @@ jsonQueryBehavior
     | EMPTY_KW ARRAY?
     | EMPTY_KW OBJECT
     | DEFAULT expression
+    ;
+
+// JSON_OBJECTAGG([KEY] key (VALUE | : | ,) value [FORMAT JSON] [NULL|ABSENT ON NULL] [WITH|WITHOUT UNIQUE KEYS])
+jsonObjectAggFunction
+    : JSON_OBJECTAGG OPENING_PAREN
+      (KEY)? (S_CHAR_LITERAL | columnRef)
+      (VALUE | DOUBLE_COLON | COLON | COMMA)
+      expression
+      (FORMAT JSON)?
+      (onNullClause)?
+      (uniqueKeysClause)?
+      CLOSING_PAREN
+    ;
+
+// JSON_ARRAYAGG(expr [FORMAT JSON] [ORDER BY ...] [NULL|ABSENT ON NULL])
+jsonArrayAggFunction
+    : JSON_ARRAYAGG OPENING_PAREN
+      expression
+      (FORMAT JSON)?
+      (orderByClause)?
+      (onNullClause)?
+      CLOSING_PAREN
     ;
 
 // JSON_VALUE 的 ON EMPTY / ON ERROR 行为：ERROR | NULL | DEFAULT expr | EMPTY
