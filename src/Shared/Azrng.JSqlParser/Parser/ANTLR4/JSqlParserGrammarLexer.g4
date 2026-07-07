@@ -15,6 +15,11 @@ lexer grammar JSqlParserGrammarLexer;
 namespace Azrng.JSqlParser.Parser.ANTLR4;
 }
 
+// 词法分析器实例字段：用于嵌套块注释深度计数（对齐上游 commentNesting）。
+@members {
+    private int commentNesting = 0;
+}
+
 // ──────────────────────────────────────────────
 // Whitespace & Comments
 // ──────────────────────────────────────────────
@@ -23,7 +28,12 @@ WHITESPACE      : [ \t\r\n]+ -> skip ;
 ORACLE_HINT     : '--+' ~[\r\n]* ;
 ORACLE_HINT_ML  : '/*+' .*? '*/' ;
 LINE_COMMENT    : ('--' | '//') ~[\r\n]* -> skip ;
-BLOCK_COMMENT   : '/*' .*? '*/' -> skip ;
+// 嵌套块注释（支持 /* 外层 /* 内层 */ 外层 */ 任意深度嵌套，对齐上游 JSqlParserCC.jjt）：
+// 原非贪婪规则 '/*' .*? '*/' 遇到首个 */ 即结束，导致嵌套注释剩余文本抛语法错误。
+// 用 MORE 跳转入 IN_BLOCK_COMMENT 词法模式 + commentNesting 深度计数器模拟上游
+//   DEFAULT -> IN_BLOCK_COMMENT -> DEFAULT 状态机（详见文件末尾 mode IN_BLOCK_COMMENT 段）。
+// 注意：mode 声明会使其后所有规则归属该模式，因此 IN_BLOCK_COMMENT 必须放在文件最后。
+BLOCK_COMMENT_OPEN : '/*' { commentNesting = 0; } -> more, mode(IN_BLOCK_COMMENT) ;
 
 // ──────────────────────────────────────────────
 // Delimiters & Punctuation
@@ -616,3 +626,22 @@ SINGLE_AT_IDENTIFIER
 IDENTIFIER
     : [a-zA-Z_\p{L}] [a-zA-Z0-9_$#\p{L}\p{N}]*
     ;
+
+// ══════════════════════════════════════════════
+// Mode: IN_BLOCK_COMMENT — 嵌套块注释内容（必须位于文件最后，mode 声明后规则归属此模式）
+// ══════════════════════════════════════════════
+//
+// 进入方式：默认模式的 BLOCK_COMMENT_OPEN 匹配 '/*' 后 -> more, mode(IN_BLOCK_COMMENT)，
+// 并将 commentNesting 置 0。本模式下用 MORE 不断累积注释字符，直到最外层 '*/'：
+//   - NESTED_OPEN      遇内层 '/*' 深度自增，累积
+//   - NESTED_CLOSE_IN  当深度 > 0 时遇 '*/' 深度自减，累积（内层闭合）
+//   - BLOCK_COMMENT_END 当深度 == 0 时遇 '*/' skip 整段注释并切回默认模式（最外层闭合）
+//   - COMMENT_BODY     其它任意单字符，累积
+// 两条 '*/' 规则靠语义谓词 {commentNesting > 0}? 区分内外层闭合。
+
+mode IN_BLOCK_COMMENT;
+
+NESTED_OPEN      : '/*' { commentNesting++; } -> more ;
+NESTED_CLOSE_IN  : { commentNesting > 0 }? '*/' { commentNesting--; } -> more ;
+BLOCK_COMMENT_END: '*/' -> skip, mode(DEFAULT_MODE) ;
+COMMENT_BODY     : . -> more ;
