@@ -258,6 +258,21 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.Top = top;
         }
 
+        // Informix SKIP n / FIRST n 量词
+        if (context.informixSkipFirstClause() != null)
+        {
+            var sfc = context.informixSkipFirstClause();
+            if (sfc.SKIP_KW() != null && sfc.expression().Length > 0)
+                select.Skip = (Expression.Expression)Visit(sfc.expression(0));
+            // FIRST 可能在 SKIP 后（expression(1)）或单独（expression(0)）
+            if (sfc.FIRST() != null)
+            {
+                var firstExpr = sfc.SKIP_KW() != null && sfc.expression().Length > 1
+                    ? sfc.expression(1) : sfc.expression(0);
+                select.First = (Expression.Expression)Visit(firstExpr);
+            }
+        }
+
         if (context.DISTINCT() != null || context.DISTINCTROW() != null)
         {
             select.Distinct = new Distinct();
@@ -373,6 +388,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 BeforeFrom = false
             };
             FillOutfileTail(select.MySqlIntoOutfile, context.outfileTail());
+        }
+
+        // DB2 OPTIMIZE FOR n ROWS
+        if (context.optimizeForClause() != null)
+        {
+            select.OptimizeFor = long.Parse(context.optimizeForClause().LONG_VALUE().GetText());
         }
 
         return select;
@@ -2890,6 +2911,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new JdbcNamedParameter { Name = context.S_JDBC_NAMED_PARAM().GetText()[1..] };
         }
 
+        // :1、:2 数值绑定（Oracle/MySQL），与命名参数共用 JdbcNamedParameter，Name 存数字串
+        // grammar 用 COLON LONG_VALUE 组合避免与数组范围 [1:3] 的冒号冲突
+        if (context.LONG_VALUE() != null && context.COLON() != null)
+        {
+            return new JdbcNamedParameter { Name = context.LONG_VALUE().GetText() };
+        }
+
         var param = new JdbcParameter();
         if (context.S_PARAMETER() != null)
         {
@@ -2941,6 +2969,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var cast = new CastExpression();
         cast.Expression = (Expression.Expression)Visit(context.expression());
         cast.DataType = context.dataType().GetText();
+        // 设置 CAST 关键字：CAST / TRY_CAST / SAFE_CAST
+        cast.Keyword = context.SAFE_CAST() != null ? "SAFE_CAST"
+            : context.TRY_CAST() != null ? "TRY_CAST" : "CAST";
         return cast;
     }
 
@@ -3643,31 +3674,25 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitTable(JSqlParserGrammar.TableContext context)
     {
         var identifiers = context.identifier();
-        if (identifiers.Length == 1)
+        // 支持 1-4 段命名：name / schema.name / db.schema.name / server.db.schema.name
+        return identifiers.Length switch
         {
-            return new Table { Name = identifiers[0].GetText() };
-        }
-
-        if (identifiers.Length == 2)
-        {
-            return new Table
-            {
-                SchemaName = identifiers[0].GetText(),
-                Name = identifiers[1].GetText()
-            };
-        }
-
-        if (identifiers.Length >= 3)
-        {
-            return new Table
+            1 => new Table { Name = identifiers[0].GetText() },
+            2 => new Table { SchemaName = identifiers[0].GetText(), Name = identifiers[1].GetText() },
+            3 => new Table
             {
                 Database = identifiers[0].GetText(),
                 SchemaName = identifiers[1].GetText(),
                 Name = identifiers[2].GetText()
-            };
-        }
-
-        return new Table { Name = identifiers[^1].GetText() };
+            },
+            _ => new Table
+            {
+                ServerName = identifiers[0].GetText(),
+                Database = identifiers[1].GetText(),
+                SchemaName = identifiers[2].GetText(),
+                Name = identifiers[3].GetText()
+            }
+        };
     }
 
     public override object VisitLambdaExpression(JSqlParserGrammar.LambdaExpressionContext context)

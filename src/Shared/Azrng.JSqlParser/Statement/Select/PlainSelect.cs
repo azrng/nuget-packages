@@ -14,6 +14,15 @@ public class PlainSelect : Select
 
     /// <summary>SQL Server / Informix 风格的 SELECT TOP n 量词，未指定时为 null。</summary>
     public Top? Top { get; set; }
+
+    /// <summary>Informix FIRST n 量词（SELECT FIRST n ...），未指定时为 null。与 Top 互斥使用。</summary>
+    public Expression.Expression? First { get; set; }
+
+    /// <summary>Informix SKIP n 量词（SELECT SKIP n FIRST m ...），未指定时为 null。</summary>
+    public Expression.Expression? Skip { get; set; }
+
+    /// <summary>DB2 OPTIMIZE FOR n ROWS 子句，未指定时为 null。</summary>
+    public long? OptimizeFor { get; set; }
     public List<SelectItem>? SelectItems { get; set; }
     public FromItem? FromItem { get; set; }
     public List<Join>? Joins { get; set; }
@@ -41,6 +50,8 @@ public class PlainSelect : Select
         builder.Append("SELECT ");
         if (OracleHint != null) builder.Append(OracleHint).Append(' ');
         if (Top != null) builder.Append(Top).Append(' ');
+        if (Skip != null) builder.Append("SKIP ").Append(Skip).Append(' ');
+        if (First != null) builder.Append("FIRST ").Append(First).Append(' ');
         if (Distinct != null) builder.Append(Distinct).Append(' ');
         else if (All) builder.Append("ALL ");
         if (SelectItems != null) builder.Append(string.Join(", ", SelectItems));
@@ -68,6 +79,9 @@ public class PlainSelect : Select
 
         // MySQL INTO OUTFILE/DUMPFILE 尾部位置
         if (MySqlIntoOutfile is { BeforeFrom: false }) builder.Append(' ').Append(MySqlIntoOutfile);
+
+        // DB2 OPTIMIZE FOR n ROWS
+        if (OptimizeFor.HasValue) builder.Append(" OPTIMIZE FOR ").Append(OptimizeFor.Value).Append(" ROWS");
 
         return builder;
     }

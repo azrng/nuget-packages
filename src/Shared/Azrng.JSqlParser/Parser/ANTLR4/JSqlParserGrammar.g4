@@ -92,7 +92,7 @@ selectBody
     ;
 
 plainSelect
-    : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
+    : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? informixSkipFirstClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
       intoClause?
       fromClause?
       whereClause?
@@ -102,6 +102,7 @@ plainSelect
       windowClause?
       qualifyClause?
       (INTO OUTFILE S_CHAR_LITERAL outfileTail? | INTO DUMPFILE S_CHAR_LITERAL)?
+      optimizeForClause?
     ;
 
 setOperator
@@ -109,6 +110,18 @@ setOperator
     | INTERSECT (ALL | DISTINCT)? CORRESPONDING?
     | EXCEPT (ALL | DISTINCT)? CORRESPONDING?
     | MINUS_KW (ALL | DISTINCT)? CORRESPONDING?
+    ;
+
+// Informix SKIP n / FIRST n 量词（SELECT 关键字后）
+informixSkipFirstClause
+    : SKIP_KW expression FIRST expression
+    | SKIP_KW expression
+    | FIRST expression
+    ;
+
+// DB2 OPTIMIZE FOR n ROWS
+optimizeForClause
+    : OPTIMIZE FOR LONG_VALUE ROWS
     ;
 
 selectColumnList
@@ -1016,6 +1029,7 @@ parameter
     | S_AT_IDENTIFIER
     | SINGLE_AT_IDENTIFIER
     | S_JDBC_NAMED_PARAM
+    | COLON LONG_VALUE
     ;
 
 lambdaExpression
@@ -1058,7 +1072,7 @@ whenExpr
     ;
 
 castExpr
-    : (CAST | TRY_CAST) OPENING_PAREN expression AS dataType (FORMAT S_CHAR_LITERAL)? CLOSING_PAREN
+    : (CAST | TRY_CAST | SAFE_CAST) OPENING_PAREN expression AS dataType (FORMAT S_CHAR_LITERAL)? CLOSING_PAREN
     ;
 
 extractExpr
