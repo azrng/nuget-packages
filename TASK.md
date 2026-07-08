@@ -20,9 +20,9 @@
 
 | BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
 |---------|------|------|------|----------|------|
-| BL-10 | `LATERAL` 子查询（FROM `LATERAL (subq)`） | 半成品 | BL-15 全量对比 | 业务需 LATERAL JOIN | grammar `g4:151` 接受但 AST 退化为普通子查询，LATERAL 标志丢失；需新增标志字段或 `LateralSubSelect` 类 |
-| BL-11 | `DATE`/`TIMESTAMP`/`TIME` 类型前缀字面量（`DATE '2024-01-01'`） | 功能缺口 | BL-15 全量对比 | 业务需 SQL 标准日期字面量 | `DateValue`/`TimestampValue`/`TimeValue.cs` 是死代码（零实例化），`literal` 规则不含类型前缀分支 |
-| BL-12 | 上游缺失的语句类型（按需迁移） | 语句缺口 | BL-15 全量对比 | 业务需其中任一语句 | 涵盖：`COMMENT ON`、独立 `ANALYZE`、`RENAME TABLE` 顶层语句、`ALTER VIEW`、`ALTER SESSION/SYSTEM`、`CREATE SYNONYM`、`CREATE FUNCTION/PROCEDURE`、`EXECUTE/CALL` 过程调用、`PURGE`、`RESET`、`SHOW COLUMNS/INDEX/TABLES` 子类、`BLOCK`/`DECLARE`/`IF`（PL/SQL）。详见 BL-15 对齐记录 |
+| BL-10 | `LATERAL` 子查询（已完成） | 特性缺口 | BL-15 全量对比 | — | **已完成（commit 6f753c3）**。新增 `LateralSubSelect` 类（继承 `ParenthesedSelect`，Prefix 字段默认 LATERAL），visitor `VisitTableOrSubquery` LATERAL 分支前置接线，保留前缀语义不再退化为普通子查询；6 项 round-trip 测试覆盖（`LateralSubSelectTest`） |
+| BL-11 | `DATE`/`TIMESTAMP`/`TIME` 类型前缀字面量（已完成） | 功能缺口 | BL-15 全量对比 | — | **已完成（commit 358906a）**。新增 `DateTimeLiteralExpression` 类（保留字符串原值 + `DateTimeType` 枚举，对齐上游序列化行为），grammar `literal` 增 `dateTimeLiteral` 分支，visitor `VisitLiteral` 接线。**死代码清理（T083）**：删除遗留的 `DateValue`/`TimestampValue`/`TimeValue` 三个类（零实例化，强类型 DateTime 设计与上游不符），同步移除 `ExpressionVisitor`/`ExpressionVisitorAdapter`/`TablesNamesFinder` 中的 visitor 签名——**破坏性 API 变更**：外部实现 `ExpressionVisitor<T>` 接口的代码需移除对应 Visit 方法 |
+| BL-12 | 上游缺失的语句类型（已完成） | 语句缺口 | BL-15 全量对比 | — | **已完成（commit 85d9218~3e8a82e 分批）**。14 个语句类型全部实现并接线：`COMMENT ON`、`ANALYZE`、`RENAME TABLE`、`ALTER VIEW`、`ALTER SESSION/SYSTEM`、`CREATE SYNONYM`、`CREATE FUNCTION/PROCEDURE`、`EXECUTE/CALL`、`PURGE`、`RESET`、`SHOW COLUMNS/INDEX/TABLES`、`BLOCK`/`DECLARE`/`IF`。注：`CREATE PROCEDURE` 与 `CREATE FUNCTION` 共用一条 grammar 规则按 token 分流；3 个 SHOW 子类共用一条 `showStatement` 规则在 visitor 分流 |
 | BL-13 | 上游缺失的 Select/Schema 子特性（已完成） | 特性缺口 | BL-15 全量对比 | — | **已完成（T081 批次）**。逐项实现：FROM 子句 `PIVOT/UNPIVOT`、`TABLESAMPLE`、通用表函数作 FromItem、`OPTIMIZE FOR n ROWS`、Informix `FIRST`/`SKIP`、Join 多 ON、ClickHouse `GLOBAL/ANY/ALL`（含 STRAIGHT_JOIN）、Table 时间旅行（Snowflake AT/BEFORE，已接线）、`Table` 多部分名/Pivot/SampleClause/TimeTravel 字段、`SAFE_CAST`、`SIMILAR TO`、`NumericBind`。**未做**：`PIVOT XML` 变体（边缘方言，PIVOT/UNPIVOT 核心已覆盖，按需再补） |
 | BL-14 | `ALTER` 操作覆盖度（已完成 round-trip 收口） | 特性缺口 | BL-15 全量对比 | — | **已完成（T081 批次 A）**。经 Explore 逐值核对：`AlterOperation` 枚举已 **47/47 全量对齐**上游（原 backlog "11/47" 记载已过时）；修复 grammar 已接受但 AST 静默丢失语义的 14 处 round-trip 缺陷（DROP PRIMARY/UNIQUE/FOREIGN KEY/CONSTRAINT、RENAME INDEX/KEY/CONSTRAINT、ENGINE/COMMENT 等号、分区操作族 ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION 填充结构化字段、ALTER SEQUENCE 复用 SequenceParameter）。**澄清**：上游不存在 `ALTER INDEX`/`ALTER SCHEMA` 语句类（用 UnsupportedStatement 兜底），原 backlog 该项非对齐缺口；`ALTER VIEW` 已在 BL-12 完成，`ALTER SEQUENCE` 已在本批次接线 |
 
@@ -58,11 +58,11 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T083 | Azrng.JSqlParser BL-10/11/12 backlog 状态同步 + BL-11 死代码清理（删除 DateValue/TimestampValue/TimeValue 三个零实例化类及 visitor 签名，全量 1006 测试通过） | DONE | 2026-07-08 |
 | T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |
 | T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
 | T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
 | T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
-| T078 | Azrng.JSqlParser 修复嵌套块注释词法（对齐上游 /* /* */ */ 嵌套支持，全量 845 测试通过） | DONE | 2026-07-07 |
 
 ### T082 归档说明
 

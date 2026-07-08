@@ -18,9 +18,6 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
     public virtual T Visit<S>(LongValue longValue, S context) => default!;
     public virtual T Visit<S>(DoubleValue doubleValue, S context) => default!;
     public virtual T Visit<S>(StringValue stringValue, S context) => default!;
-    public virtual T Visit<S>(DateValue dateValue, S context) => default!;
-    public virtual T Visit<S>(TimeValue timeValue, S context) => default!;
-    public virtual T Visit<S>(TimestampValue timestampValue, S context) => default!;
     public virtual T Visit<S>(HexValue hexValue, S context) => default!;
 
     public virtual T Visit<S>(JdbcParameter jdbcParameter, S context) => default!;

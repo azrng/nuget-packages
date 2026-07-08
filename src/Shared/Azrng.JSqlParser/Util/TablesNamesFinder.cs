@@ -37,9 +37,6 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(LongValue longValue, S context) => null;
     public object? Visit<S>(DoubleValue doubleValue, S context) => null;
     public object? Visit<S>(StringValue stringValue, S context) => null;
-    public object? Visit<S>(DateValue dateValue, S context) => null;
-    public object? Visit<S>(TimeValue timeValue, S context) => null;
-    public object? Visit<S>(TimestampValue timestampValue, S context) => null;
     public object? Visit<S>(HexValue hexValue, S context) => null;
     public object? Visit<S>(JdbcParameter jdbcParameter, S context) => null;
     public object? Visit<S>(JdbcNamedParameter jdbcNamedParameter, S context) => null;

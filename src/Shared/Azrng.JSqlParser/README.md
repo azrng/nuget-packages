@@ -194,7 +194,8 @@ Console.WriteLine(stmt.ToString());
   - `OVERLAPS` 谓词（`a OVERLAPS b`）—— 新增 `OverlapsCondition` 类并接线 visitor
   - `MEMBER OF` 谓词（`val MEMBER OF json_arr`）—— 补齐 visitor 分派、加 `NOT` 支持
   - `SELECT TOP n [PERCENT] [WITH TIES]` —— 新增 `Top` 类、`PlainSelect.Top` 字段并接线 visitor
-- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01~06、BL-10~14（BL-07~09 已由 T080 修复）
+- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01~06（均为方言/架构差异，按需启动）。BL-07~14 已全部完成
+- **破坏性 API 变更（T083）**：删除零实例化的 `DateValue`/`TimestampValue`/`TimeValue` 三个类及 `ExpressionVisitor` 中对应 Visit 方法签名——外部直接实现 `ExpressionVisitor<T>` 接口的代码需移除这三个 Visit 方法（改用 `DateTimeLiteralExpression`）
 
 ### 1.0.0-beta1
 

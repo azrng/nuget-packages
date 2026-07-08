@@ -17,9 +17,6 @@ public interface ExpressionVisitor<T>
     T Visit<S>(LongValue longValue, S context);
     T Visit<S>(DoubleValue doubleValue, S context);
     T Visit<S>(StringValue stringValue, S context);
-    T Visit<S>(DateValue dateValue, S context);
-    T Visit<S>(TimeValue timeValue, S context);
-    T Visit<S>(TimestampValue timestampValue, S context);
     T Visit<S>(HexValue hexValue, S context);
 
     // Parameters
@@ -221,9 +218,6 @@ public interface ExpressionVisitor<T>
     void Visit(LongValue longValue) => Visit<object?>(longValue, default);
     void Visit(DoubleValue doubleValue) => Visit<object?>(doubleValue, default);
     void Visit(StringValue stringValue) => Visit<object?>(stringValue, default);
-    void Visit(DateValue dateValue) => Visit<object?>(dateValue, default);
-    void Visit(TimeValue timeValue) => Visit<object?>(timeValue, default);
-    void Visit(TimestampValue timestampValue) => Visit<object?>(timestampValue, default);
     void Visit(HexValue hexValue) => Visit<object?>(hexValue, default);
     void Visit(JdbcParameter jdbcParameter) => Visit<object?>(jdbcParameter, default);
     void Visit(JdbcNamedParameter jdbcNamedParameter) => Visit<object?>(jdbcNamedParameter, default);
