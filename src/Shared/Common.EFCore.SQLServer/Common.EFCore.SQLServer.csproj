@@ -11,7 +11,6 @@
         <Version>1.6.2</Version>
         <PackageId>Common.EFCore.SQLServer</PackageId>
         <RootNamespace>Azrng.EFCore.SQLServer</RootNamespace>
-
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591</NoWarn>
         <PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>

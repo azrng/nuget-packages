@@ -12,7 +12,6 @@
         <Version>1.6.2</Version>
         <PackageId>Common.EFCore.SQLite</PackageId>
         <RootNamespace>Azrng.EFCore.SQLite</RootNamespace>
-
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<PackageProjectUrl>https://azrng.gitee.io/nuget-docs/</PackageProjectUrl>
 		<NoWarn>1701;1702;1591</NoWarn>
