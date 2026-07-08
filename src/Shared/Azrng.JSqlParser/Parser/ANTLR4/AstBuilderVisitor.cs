@@ -569,9 +569,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             join.Natural = true;
         }
-        else if (context.joinType() != null)
+        else
         {
-            SetJoinType(join, context.joinType());
+            // ClickHouse 修饰：GLOBAL / ANY|ALL（仅普通 JOIN 分支支持）
+            if (context.GLOBAL() != null) join.Global = true;
+            if (context.ANY() != null) join.Any = true;
+            else if (context.ALL() != null) join.All = true;
+            if (context.joinType() != null)
+            {
+                SetJoinType(join, context.joinType());
+            }
         }
 
         if (context.FETCH() != null)

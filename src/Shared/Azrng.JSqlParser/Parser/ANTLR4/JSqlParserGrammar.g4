@@ -247,7 +247,7 @@ jsonTableColumn
     ;
 
 joinClause
-    : joinType? JOIN FETCH? tableOrSubquery joinCondition?
+    : GLOBAL? (ANY | ALL)? joinType? JOIN FETCH? tableOrSubquery joinCondition?
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?
@@ -1428,7 +1428,7 @@ nonReservedKeyword
     | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
     | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXPORT | EXTERNAL
     | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | FUNCTION | GENERATED
-    | GLOBAL | GRANT | GROUP_CONCAT | GROUPING
+    | GRANT | GROUP_CONCAT | GROUPING
     | HASH | HIGH | HISTORY
     | IDENTIFIED | IDENTITY | IGNORE | IMPORT | INCLUDE | INCLUDING | INCREMENT
     | INDEX | INFORMATION | INSERT | INTERLEAVE | INVALIDATE | INVERSE | INVISIBLE | ISNULL

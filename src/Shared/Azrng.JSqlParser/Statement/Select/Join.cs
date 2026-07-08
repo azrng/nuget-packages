@@ -22,6 +22,15 @@ public class Join : ASTNodeAccessImpl
     /// <summary>ClickHouse/MySQL STRAIGHT_JOIN（强制连接顺序）。</summary>
     public bool Straight { get; set; }
 
+    /// <summary>ClickHouse GLOBAL JOIN（分布式查询全局聚合），对齐上游 isGlobal()。</summary>
+    public bool Global { get; set; }
+
+    /// <summary>ClickHouse ANY JOIN（保留首条匹配），对齐上游 isAny()。</summary>
+    public bool Any { get; set; }
+
+    /// <summary>ClickHouse ALL JOIN（保留全部匹配），对齐上游 isAll()。</summary>
+    public bool All { get; set; }
+
     /// <summary>是否为 JPQL/HQL 的 JOIN FETCH（预加载关联）。</summary>
     public bool Fetch { get; set; }
 
@@ -61,12 +70,17 @@ public class Join : ASTNodeAccessImpl
             return sb.ToString();
         }
 
+        // ClickHouse 修饰顺序：GLOBAL → NATURAL → ANY|ALL → 方向(LEFT/RIGHT/FULL/CROSS) → OUTER/INNER/SEMI
+        if (Global) sb.Append("GLOBAL ");
+        if (Natural) sb.Append("NATURAL ");
+        if (Any) sb.Append("ANY ");
+        else if (All) sb.Append("ALL ");
+
         if (Inner) sb.Append("INNER ");
         else if (Left) sb.Append("LEFT ");
         else if (Right) sb.Append("RIGHT ");
         else if (Full) sb.Append("FULL ");
         if (Outer) sb.Append("OUTER ");
-        if (Natural) sb.Append("NATURAL ");
         if (Cross) sb.Append("CROSS ");
         if (Semi) sb.Append("SEMI ");
 
