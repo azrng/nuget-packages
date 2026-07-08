@@ -30,7 +30,7 @@
 
 | BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
 |---------|------|------|------|----------|------|
-| BL-01 | JSON_QUERY Legacy 额外 path 参数（`additionalQueryPathArguments`） | 功能补全 | T076 | 业务需解析 MySQL/Oracle legacy `JSON_QUERY(expr, path1, path2...)` 多 path 参数 | 上游用 `additionalQueryPathArguments` 字段承载额外 path，Azrng 当前未实现 |
+| BL-01 | JSON_QUERY Legacy 额外 path 参数（已完成） | 功能补全 | T076 | — | **已完成（T085）**。`AdditionalQueryPathArguments` 字段此前是死代码（grammar 不接受多 path、visitor 不填、ToString 不输出）；grammar `jsonQueryFunction` 增 `(COMMA expression)*` 尾部重复；visitor 仅在无 PASSING 时收集额外 path（对齐上游 `additionalQueryPathArguments` 仅无 PASSING 时存在的语义）；`AppendQuery` 循环输出额外 path |
 | BL-02 | JSON_TABLE Oracle/Trino 方言子句（PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY） | 方言补全 | T076 | 业务需解析 Oracle/Trino 的 JSON_TABLE 方言高级子句 | T076 已迁 PASSING/ON ERROR/NESTED PATH，剩余 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 待补 |
 | BL-03 | 聚合函数 OVER 窗口子句 | 架构差异 | T076 | 业务需 `SUM(x) OVER(...)` 等聚合函数直接挂 OVER 子句 | Azrng OVER 走 `AnalyticExpression` 独立路径，需另设计 Function ↔ 窗口接线，影响范围较大 |
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
@@ -58,6 +58,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
 | T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
 | T083 | Azrng.JSqlParser BL-10/11/12 backlog 状态同步 + BL-11 死代码清理（删除 DateValue/TimestampValue/TimeValue 三个零实例化类及 visitor 签名，全量 1006 测试通过） | DONE | 2026-07-08 |
 | T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |

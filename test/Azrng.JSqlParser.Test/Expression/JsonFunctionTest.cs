@@ -189,6 +189,22 @@ public class JsonFunctionTest
         Assert.Equal(sql, select.ToString());
     }
 
+    /// <summary>
+    /// BL-01：JSON_QUERY Legacy 多 path 参数（MySQL/Oracle: JSON_QUERY(input, path1, path2...)）
+    /// 应正确 round-trip，对齐上游 additionalQueryPathArguments。
+    /// </summary>
+    [Fact]
+    public void JsonQuery_LegacyMultiplePaths_ShouldRoundTrip()
+    {
+        var sql = "SELECT JSON_QUERY(payload, '$.a', '$.b', '$.c') FROM t";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(2, func.AdditionalQueryPathArguments.Count);
+        Assert.Equal("'$.b'", func.AdditionalQueryPathArguments[0]);
+        Assert.Equal(sql, select.ToString());
+    }
+
     [Fact]
     public void JsonQuery_WithWrapperAndQuotes_ShouldRoundTrip()
     {

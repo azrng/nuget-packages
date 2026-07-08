@@ -196,7 +196,7 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
 
     private void AppendQuery(StringBuilder sb)
     {
-        // JSON_QUERY(input, path [PASSING ...] [RETURNING ...] [WRAPPER ...] [QUOTES ...] [ON EMPTY ...] [ON ERROR ...])
+        // JSON_QUERY(input, path [PASSING ...] [RETURNING ...] [WRAPPER ...] [QUOTES ...] [ON EMPTY ...] [ON ERROR ...] [, path2 ...])
         sb.Append("JSON_QUERY(");
         AppendInputAndPath(sb);
         AppendPassing(sb);
@@ -205,6 +205,11 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
         AppendQuotes(sb);
         AppendOnResponse(sb, OnEmptyBehavior, "ON EMPTY");
         AppendOnResponse(sb, OnErrorBehavior, "ON ERROR");
+        // Legacy 额外 path 参数（仅无 PASSING 时存在），对齐上游 additionalQueryPathArguments
+        foreach (var extra in AdditionalQueryPathArguments)
+        {
+            sb.Append(", ").Append(extra);
+        }
         sb.Append(')');
     }
 

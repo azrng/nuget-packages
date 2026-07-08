@@ -1272,6 +1272,7 @@ jsonQueryFunction
       (jsonQuotesClause)?
       (jsonQueryBehavior ON EMPTY_KW)?
       (jsonQueryBehavior ON ERROR)?
+      (COMMA expression)*
       CLOSING_PAREN
     ;
 

@@ -3805,6 +3805,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             func.OnEmptyBehavior = ParseJsonQueryBehavior(behaviors[0]);
             func.OnErrorBehavior = ParseJsonQueryBehavior(behaviors[1]);
         }
+
+        // Legacy 额外 path 参数（JSON_QUERY(input, path1, path2...)），仅在无 PASSING 时收集
+        // context.expression() 含首个 path（index 0）+ 额外 path（index 1+）
+        if (func.PassingExpressions.Count == 0)
+        {
+            var allExprs = context.expression();
+            for (int i = 1; i < allExprs.Length; i++)
+            {
+                func.AdditionalQueryPathArguments.Add(((Expression.Expression)Visit(allExprs[i])).ToString());
+            }
+        }
         return func;
     }
 
