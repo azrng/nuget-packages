@@ -21,6 +21,7 @@
   <Folder Name="/Shared/AspNetCore/">
     <Project Path="src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj" />
     <Project Path="src/Shared/Azrng.AspNetCore.Inject/Azrng.AspNetCore.Inject.csproj" />
+    <Project Path="src/Shared/Azrng.AspNetCore.Job.Quartz/Azrng.AspNetCore.Job.Quartz.csproj" />
     <Project Path="src/Shared/Azrng.ConsoleApp.DependencyInjection/Azrng.ConsoleApp.DependencyInjection.csproj" />
     <Project Path="src/Shared/Azrng.Core.Json/Azrng.Core.Json.csproj" />
     <Project Path="src/Shared/Azrng.Core.NewtonsoftJson/Azrng.Core.NewtonsoftJson.csproj" />

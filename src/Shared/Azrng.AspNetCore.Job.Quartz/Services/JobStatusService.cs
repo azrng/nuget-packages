@@ -1,3 +1,4 @@
+using Azrng.AspNetCore.Job.Quartz.Model;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
