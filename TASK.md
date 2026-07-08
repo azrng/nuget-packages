@@ -23,8 +23,8 @@
 | BL-10 | `LATERAL` 子查询（FROM `LATERAL (subq)`） | 半成品 | BL-15 全量对比 | 业务需 LATERAL JOIN | grammar `g4:151` 接受但 AST 退化为普通子查询，LATERAL 标志丢失；需新增标志字段或 `LateralSubSelect` 类 |
 | BL-11 | `DATE`/`TIMESTAMP`/`TIME` 类型前缀字面量（`DATE '2024-01-01'`） | 功能缺口 | BL-15 全量对比 | 业务需 SQL 标准日期字面量 | `DateValue`/`TimestampValue`/`TimeValue.cs` 是死代码（零实例化），`literal` 规则不含类型前缀分支 |
 | BL-12 | 上游缺失的语句类型（按需迁移） | 语句缺口 | BL-15 全量对比 | 业务需其中任一语句 | 涵盖：`COMMENT ON`、独立 `ANALYZE`、`RENAME TABLE` 顶层语句、`ALTER VIEW`、`ALTER SESSION/SYSTEM`、`CREATE SYNONYM`、`CREATE FUNCTION/PROCEDURE`、`EXECUTE/CALL` 过程调用、`PURGE`、`RESET`、`SHOW COLUMNS/INDEX/TABLES` 子类、`BLOCK`/`DECLARE`/`IF`（PL/SQL）。详见 BL-15 对齐记录 |
-| BL-13 | 上游缺失的 Select/Schema 子特性（按需迁移） | 特性缺口 | BL-15 全量对比 | 业务需其中任一特性 | 涵盖：FROM 子句 `PIVOT/UNPIVOT/PIVOT XML`、`TABLESAMPLE`/`SAMPLE`、通用表函数作 FromItem、`OPTIMIZE FOR n ROWS`、Informix `FIRST`/`SKIP`、Join 多 ON、ClickHouse `GLOBAL/ANY/ALL/STRAIGHT_JOIN`、Table 时间旅行（Snowflake AT/BEFORE）、`Table` 多部分名/Pivot/SampleClause 字段、`SAFE_CAST`、`SIMILAR TO`、`NumericBind`（`:1` 数值绑定，已有 `$1` 替代）。详见 BL-15 对齐记录 |
-| BL-14 | `ALTER` 操作覆盖度不足（11/47） | 特性缺口 | BL-15 全量对比 | 业务需 ALTER 高级操作 | Azrng 仅 11 个 alterOperation，缺 REMOVE/REORGANIZE/REPAIR/REGISTER PARTITION、PARTITION BY、DROP PRIMARY/FOREIGN/UNIQUE KEY、RENAME INDEX/CONSTRAINT 等；且仅 `ALTER TABLE`，无 `ALTER INDEX/VIEW/SEQUENCE/SCHEMA` |
+| BL-13 | 上游缺失的 Select/Schema 子特性（已完成） | 特性缺口 | BL-15 全量对比 | — | **已完成（T081 批次）**。逐项实现：FROM 子句 `PIVOT/UNPIVOT`、`TABLESAMPLE`、通用表函数作 FromItem、`OPTIMIZE FOR n ROWS`、Informix `FIRST`/`SKIP`、Join 多 ON、ClickHouse `GLOBAL/ANY/ALL`（含 STRAIGHT_JOIN）、Table 时间旅行（Snowflake AT/BEFORE，已接线）、`Table` 多部分名/Pivot/SampleClause/TimeTravel 字段、`SAFE_CAST`、`SIMILAR TO`、`NumericBind`。**未做**：`PIVOT XML` 变体（边缘方言，PIVOT/UNPIVOT 核心已覆盖，按需再补） |
+| BL-14 | `ALTER` 操作覆盖度（已完成 round-trip 收口） | 特性缺口 | BL-15 全量对比 | — | **已完成（T081 批次 A）**。经 Explore 逐值核对：`AlterOperation` 枚举已 **47/47 全量对齐**上游（原 backlog "11/47" 记载已过时）；修复 grammar 已接受但 AST 静默丢失语义的 14 处 round-trip 缺陷（DROP PRIMARY/UNIQUE/FOREIGN KEY/CONSTRAINT、RENAME INDEX/KEY/CONSTRAINT、ENGINE/COMMENT 等号、分区操作族 ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION 填充结构化字段、ALTER SEQUENCE 复用 SequenceParameter）。**澄清**：上游不存在 `ALTER INDEX`/`ALTER SCHEMA` 语句类（用 UnsupportedStatement 兜底），原 backlog 该项非对齐缺口；`ALTER VIEW` 已在 BL-12 完成，`ALTER SEQUENCE` 已在本批次接线 |
 
 ### P2 已知差异（保持现状，按需启动）
 
@@ -58,11 +58,22 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
 | T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
 | T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
 | T078 | Azrng.JSqlParser 修复嵌套块注释词法（对齐上游 /* /* */ */ 嵌套支持，全量 845 测试通过） | DONE | 2026-07-07 |
 | T077 | Azrng.JSqlParser 客户反馈问题核查与修复（CASE WHEN 序列化 Bug + 6 项现状固化测试，全量 830 测试通过） | DONE | 2026-07-07 |
-| T076 | Azrng.JSqlParser 继续迁移上游 5.4-SNAPSHOT 剩余缺口 F1-F8（8 项特性 + 全量 799 测试通过，净增 54） | DONE | 2026-07-07 |
+
+### T081 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：BL-13/BL-14 剩余项收口（Select 子特性 + ALTER 覆盖度）
+- **完成情况**：3 批次独立提交，全量 1006 测试通过（958 → 1006，净增 48）
+  - **批次 A（BL-14 round-trip 收口）**：Explore 逐值核对 `AlterOperation` 枚举已 47/47 全量对齐上游（原 backlog "11/47" 过时）；修复 14 处 grammar 已接受但 AST 静默丢失语义的缺陷——DROP PRIMARY/UNIQUE/FOREIGN KEY/CONSTRAINT、RENAME INDEX/KEY/CONSTRAINT、ENGINE/COMMENT（含等号）、分区操作族（ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION 填充结构化字段）；ALTER SEQUENCE 重构为复用 `SequenceParameter`；`partitionDef` 增加可选 PARTITION 前缀支持标准 MySQL 形式。新增 `AlterOperationRoundTripTest`（30 项）
+  - **批次 B（BL-13 ClickHouse JOIN）**：Join 新增 Global/Any/All 字段对齐上游；grammar joinClause 增加 `GLOBAL? (ANY|ALL)?` 前缀；从 identifier 兜底列表移除 GLOBAL（消除 alias 贪婪吞掉 GLOBAL 的歧义，与上游保留字一致）。新增 `ClickHouseJoinModifierTest`（11 项）
+  - **批次 C（BL-13 Snowflake 时间旅行）**：grammar 新增 `timeTravelClause` 产生式并接线 visitor 填 `Table.TimeTravel`；修复 `TimeTravelClause.ToString` 缺括号缺陷（AT (TIMESTAMP => expr) 标准形式）。新增 `TimeTravelTest`（7 项）
+- **阻塞项**：无
+- **未做的事**：`PIVOT XML` 变体（边缘方言，PIVOT/UNPIVOT 核心已覆盖，按需再补）；`ALTER INDEX`/`ALTER SCHEMA` 语句类（上游无此建模，用 UnsupportedStatement 兜底，属 Azrng 净新功能非对齐缺口）；Snowflake time-travel 与 alias 同时出现时的排序细节（grammar 解析 alias 在前，round-trip 一致，真实 Snowflake alias 在后属边缘场景）
 
 ### T080 归档说明
 
