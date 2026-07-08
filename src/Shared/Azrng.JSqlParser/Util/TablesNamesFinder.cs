@@ -349,7 +349,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
             foreach (var join in plainSelect.Joins)
             {
                 VisitFromItem(join.RightItem);
-                join.OnExpression?.Accept(this);
+                foreach (var onExpr in join.OnExpressions) onExpr.Accept(this);
             }
         }
 
@@ -379,7 +379,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
             foreach (var join in fromQuery.Joins)
             {
                 VisitFromItem(join.RightItem);
-                join.OnExpression?.Accept(this);
+                foreach (var onExpr in join.OnExpressions) onExpr.Accept(this);
             }
         }
 

@@ -585,7 +585,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var cond = context.joinCondition();
             if (cond.ON() != null)
             {
-                join.OnExpression = (Expression.Expression)Visit(cond.expression());
+                join.OnExpressions.Add((Expression.Expression)Visit(cond.expression()));
             }
             else if (cond.USING() != null)
             {
@@ -3978,7 +3978,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var condCtx = context.joinCondition();
             if (condCtx.ON() != null)
-                join.OnExpression = (Expression.Expression)Visit(condCtx.expression());
+                join.OnExpressions.Add((Expression.Expression)Visit(condCtx.expression()));
             else if (condCtx.USING() != null)
                 join.UsingColumns = condCtx.identifierList().identifier()
                     .Select(id => new Column { ColumnName = id.GetText() }).ToList();

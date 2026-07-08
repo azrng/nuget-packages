@@ -26,7 +26,21 @@ public class Join : ASTNodeAccessImpl
     public bool Fetch { get; set; }
 
     public FromItem RightItem { get; set; } = null!;
-    public Expression.Expression? OnExpression { get; set; }
+
+    /// <summary>JOIN 的 ON 表达式列表，支持多个 ON（如 JOIN t ON a ON b）。对齐上游 onExpressions。</summary>
+    public List<Expression.Expression> OnExpressions { get; set; } = new();
+
+    /// <summary>单个 ON 表达式（兼容旧 API，取 OnExpressions 首项或 null）。</summary>
+    public Expression.Expression? OnExpression
+    {
+        get => OnExpressions.Count > 0 ? OnExpressions[0] : null;
+        set
+        {
+            OnExpressions.Clear();
+            if (value != null) OnExpressions.Add(value);
+        }
+    }
+
     public List<Column> UsingColumns { get; set; } = new();
 
     public bool IsInnerJoin()
@@ -64,9 +78,12 @@ public class Join : ASTNodeAccessImpl
         if (Fetch) sb.Append("FETCH ");
         sb.Append(RightItem);
 
-        if (OnExpression != null)
-            sb.Append(" ON ").Append(OnExpression);
-        else if (UsingColumns.Count > 0)
+        // 支持多个 ON 表达式（JOIN t ON a ON b），对齐上游 onExpressions
+        foreach (var onExpr in OnExpressions)
+        {
+            sb.Append(" ON ").Append(onExpr);
+        }
+        if (OnExpressions.Count == 0 && UsingColumns.Count > 0)
             sb.Append(" USING (").Append(string.Join(", ", UsingColumns)).Append(")");
 
         return sb.ToString();
