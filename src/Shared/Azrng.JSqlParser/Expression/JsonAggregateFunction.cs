@@ -30,6 +30,9 @@ public class JsonAggregateFunction : Function
     /// <summary>OBJECTAGG 分隔符：true=VALUE 关键字，false=冒号/逗号。</summary>
     public bool UsingValueSeparator { get; set; }
 
+    /// <summary>OBJECTAGG 是否使用逗号分隔（MySQL 风格 key,value），对齐上游 MYSQL_OBJECT。仅当 UsingValueSeparator=false 时有意义。</summary>
+    public bool UseCommaSeparator { get; set; }
+
     public bool UsingFormatJson { get; set; }
 
     public JsonFunction.OnNullType? OnNull { get; set; }
@@ -59,7 +62,7 @@ public class JsonAggregateFunction : Function
         sb.Append("JSON_OBJECTAGG( ");
         if (UsingKeyKeyword) sb.Append("KEY ");
         sb.Append(Key);
-        sb.Append(UsingValueSeparator ? " VALUE " : ":");
+        sb.Append(UsingValueSeparator ? " VALUE " : UseCommaSeparator ? ", " : ":");
         sb.Append(Value);
         if (UsingFormatJson) sb.Append(" FORMAT JSON");
         if (OnNull != null)

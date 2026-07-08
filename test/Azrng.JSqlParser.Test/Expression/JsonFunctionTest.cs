@@ -249,6 +249,22 @@ public class JsonFunctionTest
         Assert.Equal(sql, select.ToString());
     }
 
+    /// <summary>
+    /// BL-04：JSON_OBJECTAGG 逗号分隔（MySQL 风格 key,value）应正确 round-trip，
+    /// 不再静默退化为冒号（对齐上游 MYSQL_OBJECT）。
+    /// </summary>
+    [Fact]
+    public void JsonObjectAgg_CommaSeparator_ShouldRoundTrip()
+    {
+        // 注意：OBJECTAGG 输出 " foo, bar "（与冒号/VALUE 分支一致的括号内空格风格）
+        var sql = "SELECT JSON_OBJECTAGG( foo, bar ) FROM dual";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
+        Assert.True(func.UseCommaSeparator);
+        Assert.False(func.UsingValueSeparator);
+        Assert.Equal(sql, select.ToString());
+    }
+
     [Fact]
     public void JsonArrayAgg_Simple_ShouldRoundTrip()
     {

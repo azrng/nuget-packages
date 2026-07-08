@@ -3850,7 +3850,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             func.UsingValueSeparator = false;
         }
-        // COMMA 分隔（MySQL）也归为非 VALUE
+        else if (context.COMMA() != null)
+        {
+            // COMMA 分隔（MySQL 风格 key,value），对齐上游 MYSQL_OBJECT
+            func.UsingValueSeparator = false;
+            func.UseCommaSeparator = true;
+        }
 
         // value
         func.Value = (Expression.Expression)Visit(context.expression());

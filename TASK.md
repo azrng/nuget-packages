@@ -33,7 +33,7 @@
 | BL-01 | JSON_QUERY Legacy 额外 path 参数（`additionalQueryPathArguments`） | 功能补全 | T076 | 业务需解析 MySQL/Oracle legacy `JSON_QUERY(expr, path1, path2...)` 多 path 参数 | 上游用 `additionalQueryPathArguments` 字段承载额外 path，Azrng 当前未实现 |
 | BL-02 | JSON_TABLE Oracle/Trino 方言子句（PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY） | 方言补全 | T076 | 业务需解析 Oracle/Trino 的 JSON_TABLE 方言高级子句 | T076 已迁 PASSING/ON ERROR/NESTED PATH，剩余 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 待补 |
 | BL-03 | 聚合函数 OVER 窗口子句 | 架构差异 | T076 | 业务需 `SUM(x) OVER(...)` 等聚合函数直接挂 OVER 子句 | Azrng OVER 走 `AnalyticExpression` 独立路径，需另设计 Function ↔ 窗口接线，影响范围较大 |
-| BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出） | 输出差异 | T076 F7 | 业务需 OBJECTAGG 按逗号分隔输出（与上游一致） | 当前按冒号分隔输出；上游 `MYSQL_OBJECT` 用逗号，需新增类型或开关 |
+| BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
 | BL-05 | JSON_OBJECT/OBJECTAGG 冒号分隔 lexer 歧义 | 词法限制 | T076 F7 | 业务需支持无空格 `:bar` 形式的键值对 | ANTLR 无上下文 lexer 与上游 JavaCC LOOKAHEAD 本质差异：无空格 `:bar` 会被识别为命名参数，需 lexer 层改造 |
 | BL-06 | 方言专项 CREATE TABLE 等方言特性（ClickHouse/DuckDB/Trino/Snowflake/Databricks/BigQuery） | 方言补全 | T075（子项 69-77 除 72/73） | 业务出现上述方言的 CREATE TABLE 或专属语法场景 | 工作量最大，建议按出现的具体方言逐项迁移，不一次性铺开 |
 
@@ -58,6 +58,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
 | T083 | Azrng.JSqlParser BL-10/11/12 backlog 状态同步 + BL-11 死代码清理（删除 DateValue/TimestampValue/TimeValue 三个零实例化类及 visitor 签名，全量 1006 测试通过） | DONE | 2026-07-08 |
 | T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |
 | T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
