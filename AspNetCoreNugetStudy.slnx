@@ -1,0 +1,73 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Services/">
+    <Project Path="src/Services/ApiSettingConfig/ApiSettingConfig.csproj" />
+    <Project Path="src/Services/APIStudy/APIStudy.csproj" />
+    <Project Path="src/Services/AuthenticationApiSample/AuthenticationApiSample.csproj" />
+    <Project Path="src/Services/QuartzApi/QuartzApi.csproj" />
+    <Project Path="src/Services/WebDbSqlMigrationSample/WebDbSqlMigrationSample.csproj" />
+  </Folder>
+  <Folder Name="/Services/InjectSample/">
+    <Project Path="src/Services/InjectSample.Application/InjectSample.Application.csproj" />
+    <Project Path="src/Services/InjectSampleApi/InjectSampleApi.csproj" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="src/Shared/Azrng.SqlMigration/Azrng.SqlMigration.csproj" />
+  </Folder>
+  <Folder Name="/Shared/AspNetCore/">
+    <Project Path="src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj" />
+    <Project Path="src/Shared/Azrng.AspNetCore.Inject/Azrng.AspNetCore.Inject.csproj" />
+    <Project Path="src/Shared/Azrng.ConsoleApp.DependencyInjection/Azrng.ConsoleApp.DependencyInjection.csproj" />
+    <Project Path="src/Shared/Azrng.Core.Json/Azrng.Core.Json.csproj" />
+    <Project Path="src/Shared/Azrng.Core.NewtonsoftJson/Azrng.Core.NewtonsoftJson.csproj" />
+    <Project Path="src/Shared/Azrng.Swashbuckle/Azrng.Swashbuckle.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Authentication/">
+    <Project Path="src/Shared/Azrng.AspNetCore.Authentication.Basic/Azrng.AspNetCore.Authentication.Basic.csproj" />
+    <Project Path="src/Shared/Azrng.AspNetCore.Authentication.JwtBearer/Azrng.AspNetCore.Authentication.JwtBearer.csproj" />
+    <Project Path="src/Shared/Azrng.AspNetCore.Authorization.Default/Azrng.AspNetCore.Authorization.Default.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DistributeLock/">
+    <Project Path="src/Shared/Azrng.DistributeLock.Core/Azrng.DistributeLock.Core.csproj" />
+    <Project Path="src/Shared/Azrng.DistributeLock.InMemory/Azrng.DistributeLock.InMemory.csproj" />
+    <Project Path="src/Shared/Azrng.DistributeLock.Redis/Azrng.DistributeLock.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Helper/">
+    <Project Path="src/Shared/Azrng.Core/Azrng.Core.csproj" />
+  </Folder>
+  <Folder Name="/Shared/Http/">
+    <Project Path="src/Shared/Common.HttpClients/Common.HttpClients.csproj" />
+  </Folder>
+  <Folder Name="/Shared/SettingConfig/">
+    <Project Path="src/Shared/Azrng.SettingConfig.BasicAuthorization/Azrng.SettingConfig.BasicAuthorization.csproj" />
+    <Project Path="src/Shared/Azrng.SettingConfig/Azrng.SettingConfig.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Shared/" />
+  <Folder Name="/src/Shared/NewEventBus/">
+    <Project Path="src/Shared/NewEventBus/Azrng.EventBus.Core/Azrng.EventBus.Core.csproj" />
+    <Project Path="src/Shared/NewEventBus/Azrng.EventBus.InMemory/Azrng.EventBus.InMemory.csproj" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="test/APIStudy.Test/APIStudy.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Authentication.Basic.Test/Azrng.AspNetCore.Authentication.Basic.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Authentication.JwtBearer.Test/Azrng.AspNetCore.Authentication.JwtBearer.Test.csproj" />
+    <Project Path="test/Azrng.AspNetCore.Authorization.Default.Test/Azrng.AspNetCore.Authorization.Default.Test.csproj" />
+    <Project Path="test/Azrng.Core.DefaultJson.Test/Azrng.Core.DefaultJson.Test.csproj" />
+    <Project Path="test/Azrng.Core.NewtonsoftJson.Test/Azrng.Core.NewtonsoftJson.Test.csproj" />
+    <Project Path="test/Azrng.EventBus.Core.Test/Azrng.EventBus.Core.Test.csproj" />
+    <Project Path="test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.csproj" />
+    <Project Path="test/Azrng.SettingConfig.BasicAuthorization.Test/Azrng.SettingConfig.BasicAuthorization.Test.csproj" />
+    <Project Path="test/Common.Core.Test/Common.Core.Test.csproj" />
+    <Project Path="test/Common.HttpClients.Test/Common.HttpClients.Test.csproj" />
+  </Folder>
+</Solution>
