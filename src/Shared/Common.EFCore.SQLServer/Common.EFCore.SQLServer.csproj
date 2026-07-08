@@ -8,7 +8,7 @@
         <Authors>Azrng</Authors>
         <Copyright>Azrng</Copyright>
         <Description>基本的对sqlserver增删改查的封装</Description>
-        <Version>1.6.1</Version>
+        <Version>1.6.2</Version>
         <PackageId>Common.EFCore.SQLServer</PackageId>
         <RootNamespace>Azrng.EFCore.SQLServer</RootNamespace>
 

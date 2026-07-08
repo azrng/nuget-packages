@@ -58,14 +58,12 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddDbContext<T>((provider, options) =>
             {
-                options.UseNpgsql(config.ConnectionString, builder)
-                       .UseLoggerFactory(LoggerFactory.Create(configure =>
-                       {
-                           configure.AddFilter((category, level) =>
-                                        category == DbLoggerCategory.Database.Command.Name &&
-                                        level == LogLevel.Information)
-                                    .AddConsole();
-                       }));
+                options.UseNpgsql(config.ConnectionString, builder);
+
+                var loggerFactory = provider.GetService<ILoggerFactory>();
+                if (loggerFactory != null)
+                    options.UseLoggerFactory(loggerFactory);
+
                 if (config.IsSnakeCaseNaming)
                     options.UseSnakeCaseNamingConvention();
 
@@ -109,14 +107,12 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddDbContextFactory<T>((provider, options) =>
             {
-                options.UseNpgsql(config.ConnectionString, builder)
-                       .UseLoggerFactory(LoggerFactory.Create(configure =>
-                       {
-                           configure.AddFilter((category, level) =>
-                                        category == DbLoggerCategory.Database.Command.Name &&
-                                        level == LogLevel.Information)
-                                    .AddConsole();
-                       }));
+                options.UseNpgsql(config.ConnectionString, builder);
+
+                var loggerFactory = provider.GetService<ILoggerFactory>();
+                if (loggerFactory != null)
+                    options.UseLoggerFactory(loggerFactory);
+
                 if (config.IsSnakeCaseNaming)
                     options.UseSnakeCaseNamingConvention();
 

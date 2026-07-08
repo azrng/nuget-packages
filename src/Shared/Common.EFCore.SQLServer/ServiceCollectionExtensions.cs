@@ -57,14 +57,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddDbContext<T>((provider, options) =>
             {
-                options.UseSqlServer(config.ConnectionString, builder)
-                       .UseLoggerFactory(LoggerFactory.Create(configure =>
-                       {
-                           configure.AddFilter((category, level) =>
-                                        category == DbLoggerCategory.Database.Command.Name &&
-                                        level == LogLevel.Information)
-                                    .AddConsole();
-                       }));
+                options.UseSqlServer(config.ConnectionString, builder);
+
+                var loggerFactory = provider.GetService<ILoggerFactory>();
+                if (loggerFactory != null)
+                    options.UseLoggerFactory(loggerFactory);
 
                 dbContextOptionBuild?.Invoke(provider, options);
             });
@@ -105,14 +102,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddDbContextFactory<T>((provider, options) =>
             {
-                options.UseSqlServer(config.ConnectionString, builder)
-                       .UseLoggerFactory(LoggerFactory.Create(configure =>
-                       {
-                           configure.AddFilter((category, level) =>
-                                        category == DbLoggerCategory.Database.Command.Name &&
-                                        level == LogLevel.Information)
-                                    .AddConsole();
-                       }));
+                options.UseSqlServer(config.ConnectionString, builder);
+
+                var loggerFactory = provider.GetService<ILoggerFactory>();
+                if (loggerFactory != null)
+                    options.UseLoggerFactory(loggerFactory);
 
                 dbContextOptionBuild?.Invoke(provider, options);
             });

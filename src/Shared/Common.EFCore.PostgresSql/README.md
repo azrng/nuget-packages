@@ -10,8 +10,34 @@ services.AddEntityFramework<AuthDbContext>(options =>
 });
 ```
 
+#### SQL 日志输出
+
+包内部不会再创建独立的 `ConsoleLoggerProvider`，而是复用宿主应用 DI 中的 `ILoggerFactory`。如需在控制台打印 EF Core 执行的 SQL，请在宿主应用 `Program.cs` 中配置日志：
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+builder.Logging.AddFilter(DbLoggerCategory.Database.Command.Name, LogLevel.Information);
+builder.Logging.AddConsole();
+```
+
+如果只想通过 `appsettings.json` 控制日志级别，可配置：
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Microsoft.EntityFrameworkCore.Database.Command": "Information"
+    }
+  }
+}
+```
+
 #### 版本更新记录
 
+* 1.7.1
+  * 修复 DbContextOptions 创建时重复创建 ConsoleLoggerProvider 的资源泄漏风险，SQL 日志输出改由宿主应用 Logging 配置控制
 * 1.6.0
     * 适配Common.EFCore修改
 * 1.5.0

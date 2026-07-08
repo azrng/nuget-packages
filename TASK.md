@@ -58,11 +58,21 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |
 | T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
 | T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
 | T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
 | T078 | Azrng.JSqlParser 修复嵌套块注释词法（对齐上游 /* /* */ */ 嵌套支持，全量 845 测试通过） | DONE | 2026-07-07 |
-| T077 | Azrng.JSqlParser 客户反馈问题核查与修复（CASE WHEN 序列化 Bug + 6 项现状固化测试，全量 830 测试通过） | DONE | 2026-07-07 |
+
+### T082 归档说明
+
+- **目标仓库**：`src/Shared/Common.EFCore.PostgresSql`、`src/Shared/Common.EFCore.MySQL`、`src/Shared/Common.EFCore.SQLServer`、`src/Shared/Common.EFCore.SQLite`
+- **任务目标**：修复四个关系型 EFCore provider 在 `DbContextOptions` 创建时重复 `LoggerFactory.Create(...).AddConsole()` 导致 `ConsoleLoggerProvider` 资源累积的风险，并补充宿主应用 SQL 日志配置文档
+- **完成情况**：四个 provider 的 `AddEntityFramework<T>` / `AddEntityFrameworkFactory<T>` 均改为复用宿主 DI 中的 `ILoggerFactory`；包内部不再强制创建 ConsoleLoggerProvider；Postgres 版本升至 `1.7.1`，MySQL/SQLServer/SQLite 版本升至 `1.6.2`；四个 README 补充 `builder.Logging` 和 `appsettings.json` 开启 SQL 日志示例
+- **验证**：串行构建四个 provider 通过并生成新版本 nupkg；`ProviderLoggingTests` 2 项通过，验证 `AddEntityFramework` 与 `AddEntityFrameworkFactory` 均复用宿主 `ILoggerFactory`
+- **未覆盖项**：完整 PostgreSQL 集成测试未通过，原因是本机 `127.0.0.1:5432` 未启动 PostgreSQL，26 个既有依赖真实数据库的测试连接被拒绝；与本次日志工厂修复无关
+- **风险**：默认行为从“包内强制输出 SQL 控制台日志”调整为“由宿主应用 Logging 配置控制”，需要应用按 README 示例显式开启 SQL 日志
+- **阻塞项**：无
 
 ### T081 归档说明
 
