@@ -17,10 +17,12 @@ public class TimeTravelClause
 
     public override string ToString()
     {
+        // Snowflake 标准形式：AT (TIMESTAMP => expr) / BEFORE (STATEMENT => expr)
         var sb = new System.Text.StringBuilder();
-        sb.Append(IsBefore ? "BEFORE " : "AT ");
+        sb.Append(IsBefore ? "BEFORE (" : "AT (");
         if (!string.IsNullOrEmpty(TravelType)) sb.Append(TravelType).Append(" => ");
         sb.Append(Expression);
+        sb.Append(')');
         return sb.ToString();
     }
 }

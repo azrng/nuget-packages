@@ -645,6 +645,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 BuildPivotClause(table, context.pivotClause());
             }
+            // Snowflake 时间旅行（AT/BEFORE）
+            if (context.timeTravelClause() != null)
+            {
+                table.TimeTravel = BuildTimeTravel(context.timeTravelClause());
+            }
             return table;
         }
 
@@ -694,6 +699,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         else if (context.SYSTEM() != null) sample.SamplingMethod = "SYSTEM";
         if (context.PERCENT() != null) sample.Percentage = true;
         return sample;
+    }
+
+    /// <summary>
+    /// 构建 TimeTravelClause（Snowflake 时间旅行 AT/BEFORE）。
+    /// 形式：AT (TIMESTAMP|OFFSET|STATEMENT =&gt; expr) 或 BEFORE (STATEMENT =&gt; expr)。
+    /// </summary>
+    private TimeTravelClause BuildTimeTravel(JSqlParserGrammar.TimeTravelClauseContext context)
+    {
+        var clause = new TimeTravelClause
+        {
+            IsBefore = context.BEFORE() != null
+        };
+        if (context.TIMESTAMP() != null) clause.TravelType = "TIMESTAMP";
+        else if (context.OFFSET() != null) clause.TravelType = "OFFSET";
+        else if (context.STATEMENT() != null) clause.TravelType = "STATEMENT";
+        clause.Expression = (Expression.Expression)Visit(context.expression());
+        return clause;
     }
 
     /// <summary>从 tableFunction 上下文构建 Function（FROM 子句的表函数）。</summary>

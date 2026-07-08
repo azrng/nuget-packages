@@ -172,12 +172,17 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause?
+    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause? timeTravelClause?
     | tableFunction alias?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
+    ;
+
+// Snowflake 时间旅行（AT/BEFORE (TIMESTAMP|OFFSET|STATEMENT => expr)）
+timeTravelClause
+    : (AT | BEFORE) OPENING_PAREN (TIMESTAMP | OFFSET | STATEMENT) ARROW expression CLOSING_PAREN
     ;
 
 // PIVOT / UNPIVOT 子句（FROM 子句行列转换）
