@@ -632,6 +632,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 table.TableSample = BuildTableSample(context.tableSampleClause());
             }
+            // PIVOT / UNPIVOT 子句
+            if (context.pivotClause() != null)
+            {
+                BuildPivotClause(table, context.pivotClause());
+            }
             return table;
         }
 
@@ -697,6 +702,43 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             func.Parameters = exprList;
         }
         return func;
+    }
+
+    /// <summary>构建 PIVOT/UNPIVOT 子句并挂到 Table。</summary>
+    private void BuildPivotClause(Table table, JSqlParserGrammar.PivotClauseContext context)
+    {
+        // PIVOT (func FOR cols IN (vals)) [AS alias]
+        if (context.PIVOT() != null)
+        {
+            var pivot = new Pivot
+            {
+                Function = (Function)Visit(context.functionExpr()),
+                ForColumns = context.columnList(0).identifier()
+                    .Select(i => new Column { ColumnName = i.GetText() }).ToList(),
+                InItems = ((ExpressionList)Visit(context.expressionList())).Expressions
+            };
+            if (context.alias() != null)
+                pivot.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            table.Pivot = pivot;
+        }
+        // UNPIVOT [INCLUDE NULLS] (cols FOR cols IN (vals)) [AS alias]
+        else if (context.UNPIVOT() != null)
+        {
+            var unpivot = new UnPivot
+            {
+                IncludeNulls = context.INCLUDE() != null && context.NULLS() != null,
+                UnpivotClause = context.columnList(0).identifier()
+                    .Select(i => new Column { ColumnName = i.GetText() }).ToList(),
+                UnpivotForClause = context.columnList(1).identifier()
+                    .Select(i => new Column { ColumnName = i.GetText() }).ToList(),
+                UnpivotInClause = ((ExpressionList)Visit(context.expressionList())).Expressions
+            };
+            if (context.alias() != null)
+                unpivot.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            table.UnPivot = unpivot;
+        }
     }
 
     public override object VisitJsonTable(JSqlParserGrammar.JsonTableContext context)

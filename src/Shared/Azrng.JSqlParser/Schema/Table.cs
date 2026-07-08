@@ -28,6 +28,12 @@ public class Table : ASTNodeAccessImpl, FromItem
     /// <summary>时间旅行子句（Snowflake AT/BEFORE），未指定时为 null。</summary>
     public TimeTravelClause? TimeTravel { get; set; }
 
+    /// <summary>FROM 子句 PIVOT（行列转换），未指定时为 null。</summary>
+    public Statement.Select.Pivot? Pivot { get; set; }
+
+    /// <summary>FROM 子句 UNPIVOT，未指定时为 null。</summary>
+    public Statement.Select.UnPivot? UnPivot { get; set; }
+
     public string GetFullyQualifiedName()
     {
         var parts = new System.Collections.Generic.List<string>();
@@ -49,6 +55,8 @@ public class Table : ASTNodeAccessImpl, FromItem
         if (MySqlIndexHint != null) result += MySqlIndexHint;
         if (TableSample != null) result += $" {TableSample}";
         if (TimeTravel != null) result += $" {TimeTravel}";
+        if (Pivot != null) result += $" {Pivot}";
+        if (UnPivot != null) result += $" {UnPivot}";
         return result;
     }
 }

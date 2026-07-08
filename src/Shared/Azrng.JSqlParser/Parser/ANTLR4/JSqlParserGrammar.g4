@@ -171,12 +171,22 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause?
+    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause?
     | tableFunction alias?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
+    ;
+
+// PIVOT / UNPIVOT 子句（FROM 子句行列转换）
+pivotClause
+    : PIVOT OPENING_PAREN functionExpr FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
+    | UNPIVOT (INCLUDE NULLS)? OPENING_PAREN columnList FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
+    ;
+
+columnList
+    : identifier (COMMA identifier)*
     ;
 
 // 表函数：identifier(args) 作 FromItem（如 generate_series(1,10)）
