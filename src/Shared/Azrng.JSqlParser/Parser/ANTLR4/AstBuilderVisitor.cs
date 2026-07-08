@@ -599,6 +599,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitTableOrSubquery(JSqlParserGrammar.TableOrSubqueryContext context)
     {
+        // 表函数（FROM func(...) AS alias）
+        if (context.tableFunction() != null)
+        {
+            var fn = BuildFunctionFromTableFunction(context.tableFunction());
+            var tableFn = new TableFunction { Function = fn };
+            if (context.alias() != null)
+                tableFn.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            return tableFn;
+        }
+
         if (context.table() != null)
         {
             var table = (Table)Visit(context.table());
@@ -670,6 +681,22 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         else if (context.SYSTEM() != null) sample.SamplingMethod = "SYSTEM";
         if (context.PERCENT() != null) sample.Percentage = true;
         return sample;
+    }
+
+    /// <summary>从 tableFunction 上下文构建 Function（FROM 子句的表函数）。</summary>
+    private Function BuildFunctionFromTableFunction(JSqlParserGrammar.TableFunctionContext context)
+    {
+        var func = new Function
+        {
+            Name = context.identifier().GetText(),
+            AllColumns = context.MULTIPLY() != null
+        };
+        if (context.expressionList() != null)
+        {
+            var exprList = (ExpressionList)Visit(context.expressionList());
+            func.Parameters = exprList;
+        }
+        return func;
     }
 
     public override object VisitJsonTable(JSqlParserGrammar.JsonTableContext context)

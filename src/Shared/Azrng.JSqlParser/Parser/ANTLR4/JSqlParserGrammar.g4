@@ -172,10 +172,16 @@ fromItem
 
 tableOrSubquery
     : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause?
+    | tableFunction alias?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
+    ;
+
+// 表函数：identifier(args) 作 FromItem（如 generate_series(1,10)）
+tableFunction
+    : identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
     ;
 
 // TABLESAMPLE 子句（FROM 子句采样）
