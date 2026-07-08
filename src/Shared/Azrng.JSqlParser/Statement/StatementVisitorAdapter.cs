@@ -24,6 +24,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(Alter.AlterView alterView, S context) => default!;
     public virtual T Visit<S>(Alter.AlterSession alterSession, S context) => default!;
     public virtual T Visit<S>(Alter.AlterSystemStatement alterSystem, S context) => default!;
+    public virtual T Visit<S>(Alter.AlterSequence alterSequence, S context) => default!;
     public virtual T Visit<S>(Create.Synonym.CreateSynonym createSynonym, S context) => default!;
     public virtual T Visit<S>(Block block, S context) { if (block.Statements?.StatementList != null) foreach (var s in block.Statements.StatementList) s.Accept(this); return default!; }
     public virtual T Visit<S>(DeclareStatement declare, S context) => default!;

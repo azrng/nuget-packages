@@ -498,6 +498,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Alter.AlterView alterView, S context) { AddTable(alterView.View); return null; }
     public object? Visit<S>(Statement.Alter.AlterSession alterSession, S context) => null;
     public object? Visit<S>(Statement.Alter.AlterSystemStatement alterSystem, S context) => null;
+    public object? Visit<S>(Statement.Alter.AlterSequence alterSequence, S context) { if (alterSequence.Sequence != null) AddTable(new Table { Name = alterSequence.Sequence.Name, SchemaName = alterSequence.Sequence.SchemaName }); return null; }
     public object? Visit<S>(Statement.Create.Synonym.CreateSynonym createSynonym, S context) => null;
     public object? Visit<S>(Statement.Block block, S context) { if (block.Statements?.StatementList != null) foreach (var s in block.Statements.StatementList) s.Accept(this); return null; }
     public object? Visit<S>(Statement.DeclareStatement declare, S context) => null;

@@ -24,6 +24,7 @@ public interface StatementVisitor<T>
     T Visit<S>(Alter.AlterView alterView, S context);
     T Visit<S>(Alter.AlterSession alterSession, S context);
     T Visit<S>(Alter.AlterSystemStatement alterSystem, S context);
+    T Visit<S>(Alter.AlterSequence alterSequence, S context);
     T Visit<S>(Create.Synonym.CreateSynonym createSynonym, S context);
     T Visit<S>(Block block, S context);
     T Visit<S>(DeclareStatement declare, S context);
@@ -89,6 +90,7 @@ public interface StatementVisitor<T>
     void Visit(Alter.AlterView alterView) => Visit<object?>(alterView, default);
     void Visit(Alter.AlterSession alterSession) => Visit<object?>(alterSession, default);
     void Visit(Alter.AlterSystemStatement alterSystem) => Visit<object?>(alterSystem, default);
+    void Visit(Alter.AlterSequence alterSequence) => Visit<object?>(alterSequence, default);
     void Visit(Create.Synonym.CreateSynonym createSynonym) => Visit<object?>(createSynonym, default);
     void Visit(Block block) => Visit<object?>(block, default);
     void Visit(DeclareStatement declare) => Visit<object?>(declare, default);

@@ -69,6 +69,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.alterViewStatement() != null) return Visit(context.alterViewStatement());
         if (context.alterSessionStatement() != null) return Visit(context.alterSessionStatement());
         if (context.alterSystemStatement() != null) return Visit(context.alterSystemStatement());
+        if (context.alterSequenceStatement() != null) return Visit(context.alterSequenceStatement());
         if (context.createSynonymStatement() != null) return Visit(context.createSynonymStatement());
         if (context.blockStatement() != null) return Visit(context.blockStatement());
         if (context.declareStatement() != null) return Visit(context.declareStatement());
@@ -1495,6 +1496,50 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return stmt;
     }
 
+    public override object VisitAlterSequenceStatement(JSqlParserGrammar.AlterSequenceStatementContext context)
+    {
+        var table = (Table)Visit(context.table());
+        var sequence = new Sequence { Name = table.Name, SchemaName = table.SchemaName, Database = table.Database };
+        var stmt = new AlterSequence { Sequence = sequence };
+        foreach (var optCtx in context.alterSequenceOption())
+        {
+            sequence.Parameters ??= new List<SequenceParameter>();
+            var param = ParseAlterSequenceOption(optCtx);
+            if (param != null) sequence.Parameters.Add(param);
+        }
+        return stmt;
+    }
+
+    /// <summary>
+    /// 将单个 alterSequenceOption 上下文解析为结构化 <see cref="SequenceParameter"/>。
+    /// </summary>
+    private static SequenceParameter? ParseAlterSequenceOption(JSqlParserGrammar.AlterSequenceOptionContext ctx)
+    {
+        if (ctx.RESTART() != null)
+        {
+            var p = new SequenceParameter(SequenceParameterType.RESTART_WITH);
+            if (ctx.WITH() != null && ctx.LONG_VALUE() != null)
+                p.Value = long.Parse(ctx.LONG_VALUE().GetText());
+            return p;
+        }
+        if (ctx.INCREMENT() != null && ctx.LONG_VALUE() != null)
+            return new SequenceParameter(SequenceParameterType.INCREMENT_BY).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.NOMINVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMINVALUE);
+        if (ctx.MINVALUE() != null && ctx.LONG_VALUE() != null)
+            return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.NOMAXVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMAXVALUE);
+        if (ctx.MAXVALUE() != null && ctx.LONG_VALUE() != null)
+            return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.NOCACHE() != null) return new SequenceParameter(SequenceParameterType.NOCACHE);
+        if (ctx.CACHE() != null && ctx.LONG_VALUE() != null)
+            return new SequenceParameter(SequenceParameterType.CACHE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.NOCYCLE() != null) return new SequenceParameter(SequenceParameterType.NOCYCLE);
+        if (ctx.CYCLE() != null) return new SequenceParameter(SequenceParameterType.CYCLE);
+        if (ctx.NOORDER() != null) return new SequenceParameter(SequenceParameterType.NOORDER);
+        if (ctx.ORDER() != null) return new SequenceParameter(SequenceParameterType.ORDER);
+        return null;
+    }
+
     public override object VisitCreateSynonymStatement(JSqlParserGrammar.CreateSynonymStatementContext context)
     {
         var stmt = new CreateSynonym
@@ -1583,6 +1628,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var expr = new AlterExpression();
         var identifiers = context.identifier();
 
+        // 分区操作优先识别（ADD/DROP/... PARTITION 与列操作共享 ADD/DROP token，须先分流）
+        if (context.PARTITION() != null)
+        {
+            BuildPartitionOperation(expr, context);
+            return expr;
+        }
+
         // ADD COLUMN? columnDefinition | ADD tableConstraint
         if (context.ADD() != null)
         {
@@ -1619,12 +1671,34 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return expr;
         }
 
-        // DROP COLUMN? (IF EXISTS)? identifier
+        // DROP 分支：DROP COLUMN / DROP PRIMARY KEY / DROP UNIQUE / DROP FOREIGN KEY / DROP CONSTRAINT
         if (context.DROP() != null)
         {
-            expr.Operation = AlterOperation.DROP;
-            if (identifiers.Length > 0)
-                expr.ColumnName = identifiers[0].GetText();
+            if (context.PRIMARY() != null)
+            {
+                expr.Operation = AlterOperation.DROP_PRIMARY_KEY;
+            }
+            else if (context.UNIQUE() != null)
+            {
+                expr.Operation = AlterOperation.DROP_UNIQUE;
+                if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
+            }
+            else if (context.FOREIGN() != null)
+            {
+                expr.Operation = AlterOperation.DROP_FOREIGN_KEY;
+                if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
+            }
+            else if (context.CONSTRAINT() != null)
+            {
+                expr.Operation = AlterOperation.DROP;
+                if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
+            }
+            else
+            {
+                expr.Operation = AlterOperation.DROP;
+                if (identifiers.Length > 0)
+                    expr.ColumnName = identifiers[0].GetText();
+            }
             return expr;
         }
 
@@ -1669,10 +1743,37 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return expr;
         }
 
-        // RENAME COLUMN? identifier TO identifier | RENAME TO identifier
+        // RENAME 分支：RENAME COLUMN? old TO new / RENAME TO table / RENAME INDEX/KEY/CONSTRAINT old TO new
         if (context.RENAME() != null)
         {
-            if (context.TO() != null)
+            if (context.INDEX() != null)
+            {
+                expr.Operation = AlterOperation.RENAME_INDEX;
+                if (identifiers.Length >= 2)
+                {
+                    expr.ColumnOldName = identifiers[0].GetText();
+                    expr.ColumnName = identifiers[1].GetText();
+                }
+            }
+            else if (context.KEY() != null)
+            {
+                expr.Operation = AlterOperation.RENAME_KEY;
+                if (identifiers.Length >= 2)
+                {
+                    expr.ColumnOldName = identifiers[0].GetText();
+                    expr.ColumnName = identifiers[1].GetText();
+                }
+            }
+            else if (context.CONSTRAINT() != null)
+            {
+                expr.Operation = AlterOperation.RENAME_CONSTRAINT;
+                if (identifiers.Length >= 2)
+                {
+                    expr.ColumnOldName = identifiers[0].GetText();
+                    expr.ColumnName = identifiers[1].GetText();
+                }
+            }
+            else if (context.TO() != null)
             {
                 if (identifiers.Length >= 2)
                 {
@@ -1713,8 +1814,127 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return expr;
         }
 
+        // ENGINE [=] name
+        if (context.ENGINE() != null)
+        {
+            expr.Operation = AlterOperation.ENGINE;
+            expr.UseEqualsForEngine = context.EQUALS() != null;
+            if (identifiers.Length > 0) expr.OptionalSpecifier = identifiers[0].GetText();
+            return expr;
+        }
+
+        // COMMENT [=] 'xxx'
+        if (context.COMMENT() != null)
+        {
+            expr.Operation = context.EQUALS() != null ? AlterOperation.COMMENT_WITH_EQUAL_SIGN : AlterOperation.COMMENT;
+            expr.UseEqualsForComment = context.EQUALS() != null;
+            if (context.S_CHAR_LITERAL() != null) expr.OptionalSpecifier = context.S_CHAR_LITERAL().GetText();
+            return expr;
+        }
+
+        if (context.REMOVE() != null)
+        {
+            expr.Operation = AlterOperation.REMOVE_PARTITIONING;
+            return expr;
+        }
+
         expr.Operation = AlterOperation.UNSPECIFIC;
         return expr;
+    }
+
+    /// <summary>
+    /// 识别分区操作并填充 <paramref name="expr"/> 的结构与 Operation 字段。
+    /// </summary>
+    private void BuildPartitionOperation(AlterExpression expr, JSqlParserGrammar.AlterOperationContext context)
+    {
+        if (context.ADD() != null)
+        {
+            expr.Operation = AlterOperation.ADD_PARTITION;
+            var partDefs = context.partitionDef();
+            if (partDefs != null && partDefs.Length > 0)
+            {
+                expr.PartitionDefinitions = new List<PartitionDefinition>();
+                foreach (var pd in partDefs)
+                    expr.PartitionDefinitions.Add(BuildPartitionDefinition(pd));
+            }
+        }
+        else if (context.DROP() != null)
+        {
+            expr.Operation = AlterOperation.DROP_PARTITION;
+            expr.PartitionNames = CollectIdentifiers(context.identifierList());
+        }
+        else if (context.TRUNCATE() != null)
+        {
+            expr.Operation = AlterOperation.TRUNCATE_PARTITION;
+            expr.PartitionNames = CollectIdentifiers(context.identifierList());
+        }
+        else if (context.COALESCE() != null)
+        {
+            expr.Operation = AlterOperation.COALESCE_PARTITION;
+            if (context.LONG_VALUE() != null)
+                expr.CoalescePartitionNumber = int.Parse(context.LONG_VALUE().GetText());
+        }
+        else if (context.REORGANIZE() != null)
+        {
+            expr.Operation = AlterOperation.REORGANIZE_PARTITION;
+            expr.PartitionNames = CollectIdentifiers(context.identifierList());
+            var partDefs = context.partitionDef();
+            if (partDefs != null && partDefs.Length > 0)
+            {
+                expr.PartitionDefinitions = new List<PartitionDefinition>();
+                foreach (var pd in partDefs)
+                    expr.PartitionDefinitions.Add(BuildPartitionDefinition(pd));
+            }
+        }
+        else if (context.EXCHANGE() != null)
+        {
+            expr.Operation = AlterOperation.EXCHANGE_PARTITION;
+            var exchangeIdent = context.identifier();
+            if (exchangeIdent != null && exchangeIdent.Length > 0)
+                expr.PartitionNames = new List<string> { exchangeIdent[0].GetText() };
+            if (context.table() != null)
+            {
+                var exTable = (Table)Visit(context.table());
+                expr.ExchangePartitionTable = exTable.GetFullyQualifiedName();
+            }
+        }
+        else
+        {
+            expr.Operation = AlterOperation.PARTITION_BY;
+        }
+    }
+
+    /// <summary>
+    /// 从 partitionDef 文法节点构建 <see cref="PartitionDefinition"/>。
+    /// partitionDef: name VALUES? (LESS THAN (expr) | IN (exprList))?
+    /// </summary>
+    private PartitionDefinition BuildPartitionDefinition(JSqlParserGrammar.PartitionDefContext ctx)
+    {
+        var def = new PartitionDefinition();
+        if (ctx.partitionName != null) def.Name = ctx.partitionName.GetText();
+        if (ctx.LESS() != null && ctx.expression() != null)
+        {
+            def.ValuesLessThan = new ExpressionList
+            {
+                Expressions = new() { (Expression.Expression)Visit(ctx.expression()) }
+            };
+        }
+        else if (ctx.IN() != null && ctx.expressionList() != null)
+        {
+            def.ValuesIn = (ExpressionList)Visit(ctx.expressionList());
+        }
+        return def;
+    }
+
+    /// <summary>
+    /// 从 identifierList 文法节点收集标识符文本列表。
+    /// </summary>
+    private static List<string> CollectIdentifiers(JSqlParserGrammar.IdentifierListContext? ctx)
+    {
+        var result = new List<string>();
+        if (ctx == null) return result;
+        foreach (var id in ctx.identifier()) result.Add(id.GetText());
+        return result;
     }
 
     // ── DROP TABLE ─────────────────────────────

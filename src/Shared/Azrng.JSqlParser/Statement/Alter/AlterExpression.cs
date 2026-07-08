@@ -39,6 +39,11 @@ public class AlterExpression : ASTNodeAccessImpl
     public bool DefaultCollateSpecified { get; set; }
     public bool Invisible { get; set; }
 
+    /// <summary>ENGINE 子句是否使用等号（ENGINE = InnoDB），对齐上游 engineOptionWithEqual。</summary>
+    public bool UseEqualsForEngine { get; set; }
+    /// <summary>COMMENT 子句是否使用等号（COMMENT = 'x'），对齐上游 commentWithEqualSign。</summary>
+    public bool UseEqualsForComment { get; set; }
+
     // Column set default/visibility
     public List<ColumnSetDefault>? ColumnSetDefaultList { get; set; }
     public List<ColumnSetVisibility>? ColumnSetVisibilityList { get; set; }
@@ -70,43 +75,157 @@ public class AlterExpression : ASTNodeAccessImpl
 
     public override string ToString()
     {
-        var sb = new System.Text.StringBuilder(Operation.ToString().Replace('_', ' '));
-        if (ColumnName != null) sb.Append(' ').Append(ColumnName);
-        if (DataType != null) sb.Append(' ').Append(DataType);
-        if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
+        // 新增/分区等需要特定关键字输出的操作：分支化输出，避免静默丢失语义。
+        switch (Operation)
+        {
+            case AlterOperation.DROP when !string.IsNullOrEmpty(ConstraintSymbol):
+                return $"DROP CONSTRAINT {ConstraintSymbol}";
+            case AlterOperation.DROP_PRIMARY_KEY:
+                return "DROP PRIMARY KEY";
+            case AlterOperation.DROP_UNIQUE:
+            {
+                var sb = new System.Text.StringBuilder("DROP UNIQUE");
+                if (!string.IsNullOrEmpty(ConstraintSymbol)) sb.Append(' ').Append(ConstraintSymbol);
+                return sb.ToString();
+            }
+            case AlterOperation.DROP_FOREIGN_KEY:
+            {
+                var sb = new System.Text.StringBuilder("DROP FOREIGN KEY");
+                if (!string.IsNullOrEmpty(ConstraintSymbol)) sb.Append(' ').Append(ConstraintSymbol);
+                return sb.ToString();
+            }
+            case AlterOperation.RENAME_INDEX:
+                return ColumnOldName != null && ColumnName != null
+                    ? $"RENAME INDEX {ColumnOldName} TO {ColumnName}"
+                    : "RENAME INDEX";
+            case AlterOperation.RENAME_KEY:
+                return ColumnOldName != null && ColumnName != null
+                    ? $"RENAME KEY {ColumnOldName} TO {ColumnName}"
+                    : "RENAME KEY";
+            case AlterOperation.RENAME_CONSTRAINT:
+                return ColumnOldName != null && ColumnName != null
+                    ? $"RENAME CONSTRAINT {ColumnOldName} TO {ColumnName}"
+                    : "RENAME CONSTRAINT";
+            case AlterOperation.ENGINE:
+            {
+                var sb = new System.Text.StringBuilder("ENGINE");
+                if (UseEqualsForEngine) sb.Append(" =");
+                if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
+                return sb.ToString();
+            }
+            case AlterOperation.COMMENT:
+            case AlterOperation.COMMENT_WITH_EQUAL_SIGN:
+            {
+                var sb = new System.Text.StringBuilder("COMMENT");
+                if (UseEqualsForComment || Operation == AlterOperation.COMMENT_WITH_EQUAL_SIGN) sb.Append(" =");
+                if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
+                return sb.ToString();
+            }
+            case AlterOperation.REMOVE_PARTITIONING:
+                return "REMOVE PARTITIONING";
+            case AlterOperation.ADD_PARTITION:
+            case AlterOperation.DROP_PARTITION:
+            case AlterOperation.TRUNCATE_PARTITION:
+            case AlterOperation.COALESCE_PARTITION:
+            case AlterOperation.REORGANIZE_PARTITION:
+            case AlterOperation.EXCHANGE_PARTITION:
+                return FormatPartitionOperation();
+        }
+
+        // 通用分支：ADD/DROP COLUMN/MODIFY/CHANGE/ALTER COLUMN/RENAME COLUMN/RENAME TABLE 等
+        var sb2 = new System.Text.StringBuilder(Operation.ToString().Replace('_', ' '));
+        if (ColumnName != null) sb2.Append(' ').Append(ColumnName);
+        if (DataType != null) sb2.Append(' ').Append(DataType);
+        if (OptionalSpecifier != null) sb2.Append(' ').Append(OptionalSpecifier);
         if (ColDataTypeList != null && ColDataTypeList.Count > 0)
-            sb.Append(' ').Append(string.Join(", ", ColDataTypeList));
+            sb2.Append(' ').Append(string.Join(", ", ColDataTypeList));
 
         // 约束分支：输出完整 CONSTRAINT name TYPE (cols) [USING INDEX ...]
         if (!string.IsNullOrEmpty(ConstraintType))
         {
             if (!string.IsNullOrEmpty(ConstraintSymbol))
-                sb.Append(" CONSTRAINT ").Append(ConstraintSymbol);
-            sb.Append(' ').Append(ConstraintType);
+                sb2.Append(" CONSTRAINT ").Append(ConstraintSymbol);
+            sb2.Append(' ').Append(ConstraintType);
         }
         if (PkColumns != null && PkColumns.Count > 0)
-            sb.Append(" (").Append(string.Join(", ", PkColumns)).Append(')');
+            sb2.Append(" (").Append(string.Join(", ", PkColumns)).Append(')');
         if (UkColumns != null && UkColumns.Count > 0)
-            sb.Append(" (").Append(string.Join(", ", UkColumns)).Append(')');
+            sb2.Append(" (").Append(string.Join(", ", UkColumns)).Append(')');
         if (HasUsingIndex)
         {
-            sb.Append(" USING INDEX");
-            if (UsingIndex != null) sb.Append(' ').Append(UsingIndex);
+            sb2.Append(" USING INDEX");
+            if (UsingIndex != null) sb2.Append(' ').Append(UsingIndex);
         }
         if (PartitionDefinitions != null)
         {
-            sb.Append(" (");
+            sb2.Append(" (");
             for (int i = 0; i < PartitionDefinitions.Count; i++)
             {
-                if (i > 0) sb.Append(", ");
-                sb.Append(PartitionDefinitions[i]);
+                if (i > 0) sb2.Append(", ");
+                sb2.Append(PartitionDefinitions[i]);
             }
-            sb.Append(')');
+            sb2.Append(')');
         }
         if (PartitionNames != null)
-            sb.Append(' ').Append(string.Join(", ", PartitionNames));
+            sb2.Append(' ').Append(string.Join(", ", PartitionNames));
         if (Parameters != null && Parameters.Count > 0)
-            sb.Append(' ').Append(string.Join(", ", Parameters));
+            sb2.Append(' ').Append(string.Join(", ", Parameters));
+        return sb2.ToString();
+    }
+
+    /// <summary>
+    /// 格式化分区操作（ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION）。
+    /// </summary>
+    private string FormatPartitionOperation()
+    {
+        var sb = new System.Text.StringBuilder();
+        switch (Operation)
+        {
+            case AlterOperation.ADD_PARTITION:
+                sb.Append("ADD PARTITION");
+                if (PartitionDefinitions != null && PartitionDefinitions.Count > 0)
+                {
+                    sb.Append(" (");
+                    for (int i = 0; i < PartitionDefinitions.Count; i++)
+                    {
+                        if (i > 0) sb.Append(", ");
+                        sb.Append(PartitionDefinitions[i]);
+                    }
+                    sb.Append(')');
+                }
+                break;
+            case AlterOperation.DROP_PARTITION:
+                sb.Append("DROP PARTITION");
+                if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
+                break;
+            case AlterOperation.TRUNCATE_PARTITION:
+                sb.Append("TRUNCATE PARTITION");
+                if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
+                break;
+            case AlterOperation.COALESCE_PARTITION:
+                sb.Append("COALESCE PARTITION");
+                if (CoalescePartitionNumber.HasValue) sb.Append(' ').Append(CoalescePartitionNumber.Value);
+                break;
+            case AlterOperation.REORGANIZE_PARTITION:
+                sb.Append("REORGANIZE PARTITION");
+                if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
+                if (PartitionDefinitions != null && PartitionDefinitions.Count > 0)
+                {
+                    sb.Append(" INTO (");
+                    for (int i = 0; i < PartitionDefinitions.Count; i++)
+                    {
+                        if (i > 0) sb.Append(", ");
+                        sb.Append(PartitionDefinitions[i]);
+                    }
+                    sb.Append(')');
+                }
+                break;
+            case AlterOperation.EXCHANGE_PARTITION:
+                sb.Append("EXCHANGE PARTITION");
+                if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
+                if (!string.IsNullOrEmpty(ExchangePartitionTable)) sb.Append(" WITH TABLE ").Append(ExchangePartitionTable);
+                break;
+        }
         return sb.ToString();
     }
 

@@ -46,6 +46,7 @@ statement
     | alterViewStatement
     | alterSessionStatement
     | alterSystemStatement
+    | alterSequenceStatement
     | createSynonymStatement
     | blockStatement
     | declareStatement
@@ -643,6 +644,26 @@ alterSystemStatement
                     | identifier (identifier)*)
     ;
 
+// ALTER SEQUENCE name [选项...]
+alterSequenceStatement
+    : ALTER SEQUENCE sequence=table alterSequenceOption*
+    ;
+
+alterSequenceOption
+    : RESTART (WITH LONG_VALUE)?
+    | INCREMENT BY LONG_VALUE
+    | MINVALUE LONG_VALUE
+    | NOMINVALUE
+    | MAXVALUE LONG_VALUE
+    | NOMAXVALUE
+    | CACHE LONG_VALUE
+    | NOCACHE
+    | CYCLE
+    | NOCYCLE
+    | ORDER
+    | NOORDER
+    ;
+
 // CREATE [OR REPLACE] [PUBLIC] SYNONYM name FOR target
 createSynonymStatement
     : CREATE (OR REPLACE)? PUBLIC? SYNONYM identifier (FOR identifier (DOT identifier)?)?
@@ -683,11 +704,32 @@ alterOperation
     | ADD COLUMN? columnDefinition
     | ADD tableConstraint
     | DROP COLUMN? (IF EXISTS)? identifier
+    | DROP PRIMARY KEY
+    | DROP UNIQUE (identifier | OPENING_PAREN identifierList CLOSING_PAREN)
+    | DROP FOREIGN KEY identifier
+    | DROP CONSTRAINT identifier
     | ALTER COLUMN? identifier (SET DEFAULT expression | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE dataType)
     | RENAME COLUMN? identifier TO identifier
     | RENAME TO identifier
+    | RENAME INDEX identifier TO identifier
+    | RENAME KEY identifier TO identifier
+    | RENAME CONSTRAINT identifier TO identifier
     | (ENABLE | DISABLE | FORCE) ROW LEVEL SECURITY
     | NO FORCE ROW LEVEL SECURITY
+    | ENGINE EQUALS? identifier
+    | COMMENT EQUALS? S_CHAR_LITERAL
+    | ADD PARTITION OPENING_PAREN? partitionDef? CLOSING_PAREN?
+    | DROP PARTITION identifierList
+    | TRUNCATE PARTITION identifierList
+    | COALESCE PARTITION LONG_VALUE
+    | REORGANIZE PARTITION identifierList INTO OPENING_PAREN partitionDef (COMMA partitionDef)* CLOSING_PAREN
+    | EXCHANGE PARTITION identifier WITH TABLE table
+    | REMOVE PARTITIONING
+    | PARTITION BY identifier
+    ;
+
+partitionDef
+    : PARTITION? partitionName=identifier VALUES? (LESS THAN OPENING_PAREN expression CLOSING_PAREN | IN OPENING_PAREN expressionList CLOSING_PAREN)?
     ;
 
 // ══════════════════════════════════════════════

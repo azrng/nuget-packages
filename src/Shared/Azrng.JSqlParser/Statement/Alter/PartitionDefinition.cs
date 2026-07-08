@@ -17,6 +17,8 @@ public class PartitionDefinition
 
     public StringBuilder AppendTo(StringBuilder builder)
     {
+        // 标准 MySQL 分区定义以 PARTITION 关键字开头：PARTITION p0 VALUES LESS THAN (...)
+        builder.Append("PARTITION ");
         if (Name != null)
             builder.Append(Name);
         if (ValuesLessThan != null)
