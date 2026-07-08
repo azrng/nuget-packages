@@ -616,6 +616,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 table.MySqlIndexHint = (MySQLIndexHint)Visit(context.mySqlIndexHint());
             }
+            // TABLESAMPLE 子句
+            if (context.tableSampleClause() != null)
+            {
+                table.TableSample = BuildTableSample(context.tableSampleClause());
+            }
             return table;
         }
 
@@ -652,6 +657,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return Visit(context.GetChild(0));
+    }
+
+    /// <summary>构建 TableSample（FROM 子句采样）。</summary>
+    private TableSample BuildTableSample(JSqlParserGrammar.TableSampleClauseContext context)
+    {
+        var sample = new TableSample
+        {
+            SampleSize = (Expression.Expression)Visit(context.expression())
+        };
+        if (context.BERNOULLI() != null) sample.SamplingMethod = "BERNOULLI";
+        else if (context.SYSTEM() != null) sample.SamplingMethod = "SYSTEM";
+        if (context.PERCENT() != null) sample.Percentage = true;
+        return sample;
     }
 
     public override object VisitJsonTable(JSqlParserGrammar.JsonTableContext context)

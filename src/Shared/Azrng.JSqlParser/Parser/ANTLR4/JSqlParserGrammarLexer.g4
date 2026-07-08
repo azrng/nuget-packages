@@ -591,6 +591,8 @@ SEQUENCE        : [Ss][Ee][Qq][Uu][Ee][Nn][Cc][Ee] ;
 SEPARATOR       : [Ss][Ee][Pp][Aa][Rr][Aa][Tt][Oo][Rr] ;
 SESSION         : [Ss][Ee][Ss][Ss][Ii][Oo][Nn] ;
 SYSTEM          : [Ss][Yy][Ss][Tt][Ee][Mm] ;
+BERNOULLI       : [Bb][Ee][Rr][Nn][Oo][Uu][Ll][Ll][Ii] ;
+STATEMENT       : [Ss][Tt][Aa][Tt][Ee][Mm][Ee][Nn][Tt] ;
 SYNONYM         : [Ss][Yy][Nn][Oo][Nn][Yy][Mm] ;
 USER            : [Uu][Ss][Ee][Rr] ;
 SETTINGS        : [Ss][Ee][Tt][Tt][Ii][Nn][Gg][Ss] ;

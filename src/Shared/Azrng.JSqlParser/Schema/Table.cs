@@ -22,6 +22,12 @@ public class Table : ASTNodeAccessImpl, FromItem
     /// <summary>MySQL 索引提示（USE/IGNORE/FORCE INDEX/KEY (...)），出现在表后。未指定时为 null。</summary>
     public MySQLIndexHint? MySqlIndexHint { get; set; }
 
+    /// <summary>TABLESAMPLE 子句（FROM 子句采样），未指定时为 null。</summary>
+    public TableSample? TableSample { get; set; }
+
+    /// <summary>时间旅行子句（Snowflake AT/BEFORE），未指定时为 null。</summary>
+    public TimeTravelClause? TimeTravel { get; set; }
+
     public string GetFullyQualifiedName()
     {
         var parts = new System.Collections.Generic.List<string>();
@@ -41,6 +47,8 @@ public class Table : ASTNodeAccessImpl, FromItem
         var result = Alias != null ? $"{name} {Alias}" : name;
         if (SqlServerHints != null) result += SqlServerHints;
         if (MySqlIndexHint != null) result += MySqlIndexHint;
+        if (TableSample != null) result += $" {TableSample}";
+        if (TimeTravel != null) result += $" {TimeTravel}";
         return result;
     }
 }

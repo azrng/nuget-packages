@@ -171,12 +171,21 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias? sqlServerHints? mySqlIndexHint?
+    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause?
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
     | LATERAL subSelect alias?
     ;
+
+// TABLESAMPLE 子句（FROM 子句采样）
+tableSampleClause
+    : TABLESAMPLE (BERNOULLI | SYSTEM)? OPENING_PAREN expression CLOSING_PAREN PERCENT?
+    ;
+
+// 时间旅行子句（Snowflake AT/BEFORE）当前因 AT/BEFORE 与 alias 歧义未接线
+// （ANTLR 无上下文 lexer 无法区分 AT 是时间旅行还是 identifier alias）
+// timeTravelClause 类已保留供未来用 lexer 状态机或语义谓词时接线
 
 // SQL Server 表提示：WITH (INDEX(name) | NOLOCK | ...)，出现在表后
 sqlServerHints
