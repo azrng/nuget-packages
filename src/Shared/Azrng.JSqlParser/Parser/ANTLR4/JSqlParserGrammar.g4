@@ -1211,6 +1211,9 @@ jsonKeyValuePair
     : (KEY)? (S_CHAR_LITERAL | columnRef)
       ((VALUE | DOUBLE_COLON | COLON | COMMA) (S_CHAR_LITERAL | columnRef | expression))?
       (FORMAT JSON (ENCODING identifier)?)?
+    // 无空格冒号形式 key:bar —— :bar 被 S_JDBC_NAMED_PARAM 吞掉（lexer 最大匹配），
+    // 此分支把命名参数整体当作冒号分隔符 + 值，由 visitor 拆解前导冒号
+    | (KEY)? (S_CHAR_LITERAL | columnRef) S_JDBC_NAMED_PARAM (FORMAT JSON (ENCODING identifier)?)?
     ;
 
 // JSON_ARRAY 标量函数

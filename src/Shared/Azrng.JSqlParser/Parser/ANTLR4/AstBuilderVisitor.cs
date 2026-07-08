@@ -3621,13 +3621,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             kvp.Separator = JsonKeyValuePair.SeparatorKind.VALUE;
         }
-        else if (context.DOUBLE_COLON() != null || context.COLON() != null)
+        else if (context.DOUBLE_COLON() != null || context.COLON() != null || context.S_JDBC_NAMED_PARAM() != null)
         {
             kvp.Separator = JsonKeyValuePair.SeparatorKind.COLON;
         }
         else
         {
             kvp.Separator = JsonKeyValuePair.SeparatorKind.COMMA;
+        }
+
+        // 无空格冒号形式 key:bar：:bar 被词法分析为 S_JDBC_NAMED_PARAM，去前导冒号得到值
+        if (context.S_JDBC_NAMED_PARAM() != null)
+        {
+            var raw = context.S_JDBC_NAMED_PARAM().GetText();
+            kvp.Value = new Column { ColumnName = raw.Length > 1 ? raw[1..] : raw };
         }
 
         // value：分隔符存在时，取其后的 S_CHAR_LITERAL / columnRef / expression

@@ -34,7 +34,7 @@
 | BL-02 | JSON_TABLE Oracle/Trino 方言子句（PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY） | 方言补全 | T076 | 业务需解析 Oracle/Trino 的 JSON_TABLE 方言高级子句 | T076 已迁 PASSING/ON ERROR/NESTED PATH，剩余 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 待补 |
 | BL-03 | 聚合函数 OVER 窗口子句 | 架构差异 | T076 | 业务需 `SUM(x) OVER(...)` 等聚合函数直接挂 OVER 子句 | Azrng OVER 走 `AnalyticExpression` 独立路径，需另设计 Function ↔ 窗口接线，影响范围较大 |
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
-| BL-05 | JSON_OBJECT/OBJECTAGG 冒号分隔 lexer 歧义 | 词法限制 | T076 F7 | 业务需支持无空格 `:bar` 形式的键值对 | ANTLR 无上下文 lexer 与上游 JavaCC LOOKAHEAD 本质差异：无空格 `:bar` 会被识别为命名参数，需 lexer 层改造 |
+| BL-05 | JSON_OBJECT 冒号分隔 lexer 歧义（已完成） | 词法限制 | T076 F7 | — | **已完成（T086）**。原 backlog 判断"ANTLR 与 JavaCC LOOKAHEAD 本质差异、需 lexer 层改造"**不准确**——实为 token 优先级冲突（`:bar` 被 `S_JDBC_NAMED_PARAM` 最大匹配吞掉）。解法：grammar `jsonKeyValuePair` 增加 `S_JDBC_NAMED_PARAM` 分支（把命名参数整体当冒号分隔符+值），visitor 去前导冒号得到值。无需 lexer 层改造 |
 | BL-06 | 方言专项 CREATE TABLE 等方言特性（ClickHouse/DuckDB/Trino/Snowflake/Databricks/BigQuery） | 方言补全 | T075（子项 69-77 除 72/73） | 业务出现上述方言的 CREATE TABLE 或专属语法场景 | 工作量最大，建议按出现的具体方言逐项迁移，不一次性铺开 |
 
 ### BL-15 对齐基线说明
@@ -58,6 +58,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T086 | Azrng.JSqlParser BL-05 修复 JSON_OBJECT 无空格冒号 lexer 冲突（grammar 接受 S_JDBC_NAMED_PARAM 作分隔符，visitor 去前导冒号，全量 1011 测试通过） | DONE | 2026-07-08 |
 | T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
 | T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
 | T083 | Azrng.JSqlParser BL-10/11/12 backlog 状态同步 + BL-11 死代码清理（删除 DateValue/TimestampValue/TimeValue 三个零实例化类及 visitor 签名，全量 1006 测试通过） | DONE | 2026-07-08 |

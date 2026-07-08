@@ -21,6 +21,21 @@ public class JsonFunctionTest
         Assert.Equal(JsonKeyValuePair.SeparatorKind.COLON, func.KeyValuePairs[0].Separator);
     }
 
+    /// <summary>
+    /// BL-05：JSON_OBJECT 无空格冒号形式（key:bar）应可解析。
+    /// 此前 :bar 被词法分析为 S_JDBC_NAMED_PARAM（lexer 最大匹配），导致解析失败。
+    /// </summary>
+    [Theory]
+    [InlineData("SELECT JSON_OBJECT(foo:bar) FROM dual")]
+    [InlineData("SELECT JSON_OBJECT('foo':bar) FROM dual")]
+    [InlineData("SELECT JSON_OBJECT('foo':'bar') FROM dual")]
+    public void JsonObject_NoSpaceColon_ShouldParse(string sql)
+    {
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
+        Assert.Equal(JsonKeyValuePair.SeparatorKind.COLON, func.KeyValuePairs[0].Separator);
+    }
+
     [Fact]
     public void JsonObject_KeyValueKeyword_ShouldRoundTrip()
     {
