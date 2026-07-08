@@ -7,7 +7,7 @@
         <Description>原生 .NET SQL 解析器 — 从JSqlParser移植而来，基于 ANTLR4 驱动。</Description>
         <Authors>Azrng</Authors>
         <Company>Azrng</Company>
-        <Version>1.0.0-beta2</Version>
+        <Version>1.0.0-beta3</Version>
         <PackageId>Azrng.JSqlParser</PackageId>
         <Copyright>Azrng</Copyright>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
