@@ -594,12 +594,14 @@ createParameter
     ;
 
 createParameterAtom
-    : identifier | LONG_VALUE | S_CHAR_LITERAL | MAX
+    : identifier (OPENING_PAREN (createParameterAtom (COMMA createParameterAtom)*)? CLOSING_PAREN)?   // 支持 MergeTree() / tuple() 等函数形式（含空参）
+    | LONG_VALUE | S_CHAR_LITERAL | MAX
+    | ORDER | BY | SAMPLE | HASH | PARTITION   // 表级选项保留关键字（ORDER BY / SAMPLE BY / PARTITION BY HASH）；PARTITIONS/STORE/IN 等非保留字走 identifier
     ;
 
-// Oracle ENABLE/DISABLE ROW MOVEMENT
+// Oracle ENABLE/DISABLE ROW MOVEMENT（ROW 为保留 token，MOVEMENT 走 identifier）
 rowMovementClause
-    : (ENABLE | DISABLE) identifier identifier   // identifier 匹配 ROW、MOVEMENT（非保留字）
+    : (ENABLE | DISABLE) ROW identifier
     ;
 
 referentialAction

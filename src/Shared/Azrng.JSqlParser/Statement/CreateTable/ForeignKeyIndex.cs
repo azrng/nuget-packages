@@ -29,7 +29,7 @@ public class ForeignKeyIndex : Constraint
             sb.Append(" REFERENCES ").Append(ReferencedTable);
             if (ReferencedColumnNames is { Count: > 0 })
             {
-                sb.Append(" (").Append(string.Join(", ", ReferencedColumnNames)).Append(')');
+                sb.Append("(").Append(string.Join(", ", ReferencedColumnNames)).Append(')');
             }
         }
         if (OnDelete != null) sb.Append(' ').Append(OnDelete);

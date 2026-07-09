@@ -1400,7 +1400,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // 结构化 columnConstraint + 兜底 createParameter 均收集原始文本，保 round-trip
         var specs = new List<string>();
         foreach (var cc in context.columnConstraint())
-            specs.Add(cc.GetText());
+            specs.Add(GetOriginalText(cc));
         specs.AddRange(CollectCreateParameters(context.createParameter()));
         colDef.ColumnSpecs = specs;
         return colDef;
@@ -1425,17 +1425,31 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     /// <summary>
     /// 收集 createParameter 产生式的原始文本为字符串列表（保 round-trip），对齐上游 CreateParameter + tableOptionsStrings/columnSpecs。
+    /// 使用 InputStream 区间获取原始字符流文本，保留 token 间的空格/等号风格。
     /// </summary>
     private static List<string> CollectCreateParameters(JSqlParserGrammar.CreateParameterContext[]? parameters)
     {
         var result = new List<string>();
         if (parameters == null) return result;
         foreach (var p in parameters)
-        {
-            // 整个 createParameter 节点的原始文本（保留空格/等号/大小写）
-            result.Add(p.GetText());
-        }
+            AddOriginalText(result, p);
         return result;
+    }
+
+    /// <summary>获取解析树节点的原始字符流文本（保留 token 间空格），用于 round-trip。</summary>
+    private static string GetOriginalText(Antlr4.Runtime.ParserRuleContext ctx)
+    {
+        if (ctx.Start == null) return ctx.GetText();
+        var stop = ctx.Stop ?? ctx.Start;
+        var interval = new Antlr4.Runtime.Misc.Interval(ctx.Start.StartIndex, stop.StopIndex);
+        return ctx.Start.InputStream?.GetText(interval) ?? ctx.GetText();
+    }
+
+    /// <summary>将解析树节点的原始文本加入列表（非空才加）。</summary>
+    private static void AddOriginalText(List<string> list, Antlr4.Runtime.ParserRuleContext ctx)
+    {
+        var text = GetOriginalText(ctx);
+        if (!string.IsNullOrEmpty(text)) list.Add(text);
     }
 
     public override object VisitTableConstraint(JSqlParserGrammar.TableConstraintContext context)
