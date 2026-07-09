@@ -26,6 +26,12 @@ public class Constraint : ASTNodeAccessImpl
     /// <summary>是否存在 USING INDEX 子句（区分"无名 USING INDEX"与"无 USING INDEX"）。</summary>
     public bool HasUsingIndex { get; set; }
 
+    /// <summary>
+    /// MySQL 索引尾选项原始字符串列表（USING BTREE/HASH、COMMENT '...'、KEY_BLOCK_SIZE n、VISIBLE/INVISIBLE 等），
+    /// 对齐上游 Index.idxSpec / IndexOption。输出时空格连接追加到约束末尾。
+    /// </summary>
+    public System.Collections.Generic.List<string>? IndexOptions { get; set; }
+
     public override string ToString()
     {
         var name = Name != null ? $"{Name} " : "";
@@ -33,13 +39,15 @@ public class Constraint : ASTNodeAccessImpl
         var usingIndex = HasUsingIndex
             ? (UsingIndex != null ? $" USING INDEX {UsingIndex}" : " USING INDEX")
             : "";
+        // MySQL 索引尾选项（USING BTREE/HASH、COMMENT 等），空格连接追加
+        var indexOpts = IndexOptions is { Count: > 0 } ? " " + string.Join(" ", IndexOptions) : "";
         // 简单约束（PRIMARY KEY/UNIQUE/CHECK/FOREIGN KEY）输出 CONSTRAINT 前缀
         if (Type is "PRIMARY KEY" or "UNIQUE" or "CHECK" or "FOREIGN KEY")
         {
-            return $"{constraintPrefix}{Type} ({string.Join(", ", Columns)}){usingIndex}";
+            return $"{constraintPrefix}{Type} ({string.Join(", ", Columns)}){usingIndex}{indexOpts}";
         }
         // MySQL 索引（KEY/INDEX/UNIQUE KEY 等）输出索引名，优先用 IndexColumnParams（含 ASC/DESC）
         var indexCols = IndexColumnParams ?? Columns;
-        return $"{Type} {name}({string.Join(", ", indexCols)})";
+        return $"{Type} {name}({string.Join(", ", indexCols)}){indexOpts}";
     }
 }

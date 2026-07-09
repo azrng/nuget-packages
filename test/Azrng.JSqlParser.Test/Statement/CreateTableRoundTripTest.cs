@@ -279,6 +279,82 @@ public class CreateTableRoundTripTest
         Assert.Equal("STRUCT", col.ColDataType.DataType);
         Assert.Contains("y ARRAY<INT>", col.ColDataType.ArgumentsStringList!);
     }
+
+    // ── 边缘遗留项（T090） ───────────────────────────────────────────
+
+    // 缺口1: character varying / character 列类型
+    [Fact]
+    public void CharacterVaring_ColumnType_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, name CHARACTER VARYING(255))");
+
+    [Fact]
+    public void CharacterVaring_NoLength_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, name CHARACTER VARYING)");
+
+    // 缺口2: TIMESTAMP WITH/WITHOUT TIME ZONE
+    [Fact]
+    public void Timestamp_WithTimeZone_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (d TIMESTAMP WITH TIME ZONE)");
+
+    [Fact]
+    public void Timestamp_WithoutTimeZone_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (d TIMESTAMP WITHOUT TIME ZONE)");
+
+    [Fact]
+    public void Timestamp_WithLocalTimeZone_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (d TIMESTAMP WITH LOCAL TIME ZONE)");
+
+    // 缺口3: MySQL USING BTREE/HASH 索引选项
+    [Fact]
+    public void Index_UsingBtree_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, KEY idx (id) USING BTREE)");
+
+    [Fact]
+    public void PrimaryKey_UsingBtree_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, PRIMARY KEY (id) USING BTREE)");
+
+    [Fact]
+    public void Index_CommentOption_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, KEY idx (id) COMMENT 'test')");
+
+    // 缺口4: 功能性/表达式索引
+    [Fact]
+    public void Index_FunctionalExpression_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (PK INT, b INT, INDEX fAdd ((b + 1)))");
+
+    [Fact]
+    public void Index_FunctionalExpressionWithDesc_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (PK INT, b INT, INDEX fAdd ((b + 1) DESC))");
+
+    // 缺口5: set('a','b') 类型
+    [Fact]
+    public void SetType_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (priv set('Select', 'Insert'))");
+
+    // 缺口6: 数组带尺寸 int[5]
+    [Fact]
+    public void ArrayType_WithSize_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, arr INT[5])");
+
+    [Fact]
+    public void ArrayType_MultiDimensionWithSize_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, grid TEXT[3][2])");
+
+    // 缺口7: :: text[] 数组类型 cast（既有 :: cast 行为无空格）
+    [Fact]
+    public void Cast_ArrayType_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT ARRAY[]::TEXT[] AS empty_arr");
+
+    // 缺口8: 表级 WITH (fillfactor=70)
+    [Fact]
+    public void TableLevel_WithOption_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT) WITH (fillfactor = 70)");
+
+    // 缺口9: Spanner 列级 OPTIONS (k = v)
+    [Fact]
+    public void Spanner_ColumnOptions_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (ts TIMESTAMP OPTIONS (allow_commit_timestamp = true))");
 }
+
 
 

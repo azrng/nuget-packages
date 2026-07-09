@@ -1434,14 +1434,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return result;
         }
 
-        // 普通类型：dataType 文本（含 schema.type 点号）
+        // 普通类型：dataType 原始文本（保留 CHARACTER VARYING / set('a','b') 等空格）+ 可选 TIME ZONE 后缀
+        // 数组维度 int[5] 不进 DataType，由 ArrayData 单独表示（避免 ToString 重复输出）
         var dtCtx = ctx.dataType();
         if (dtCtx != null)
-            result.DataType = dtCtx.GetText();
-        // 数组维度 text[]
-        var brackets = ctx.LBRACKET();
-        if (brackets is { Length: > 0 })
-            result.ArrayData = brackets.Select(_ => (int?)null).ToList();
+        {
+            var typeText = GetOriginalText(dtCtx);
+            if (ctx.timeZoneSuffix() is { } tz)
+                typeText += " " + GetOriginalText(tz);
+            result.DataType = typeText;
+        }
+        // 数组维度 int[5]：填充 ArrayData（带尺寸），对齐上游 arrayData
+        var dims = ctx.arrayDimension();
+        if (dims is { Length: > 0 })
+        {
+            result.ArrayData = dims.Select(d =>
+            {
+                var n = d.LONG_VALUE();
+                return n != null ? int.Parse(n.GetText()) : (int?)null;
+            }).ToList();
+        }
         return result;
     }
 
@@ -1534,12 +1546,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             constraint.Type = "PRIMARY KEY";
             constraint.Columns = ExtractIdentifierList(firstList);
             FillUsingIndex(constraint, context);
+            CollectIndexOptions(constraint, context);
         }
         else if (context.UNIQUE() != null && context.KEY() == null && context.INDEX() == null)
         {
             constraint.Type = "UNIQUE";
             constraint.Columns = ExtractIdentifierList(firstList);
             FillUsingIndex(constraint, context);
+            CollectIndexOptions(constraint, context);
         }
         else if (context.KEY() != null || context.INDEX() != null)
         {
@@ -1555,6 +1569,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var (colParams, colNames) = ExtractIndexColumnList(context.indexColumnList());
             constraint.IndexColumnParams = colParams;
             constraint.Columns = colNames;
+            CollectIndexOptions(constraint, context);
         }
         return constraint;
     }
@@ -1634,6 +1649,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
     }
 
+    /// <summary>
+    /// 收集 MySQL 索引尾选项（USING BTREE/HASH、COMMENT '...'、KEY_BLOCK_SIZE n、VISIBLE/INVISIBLE 等），
+    /// 用 InputStream 区间取原始文本保 round-trip，对齐上游 IndexOption/idxSpec。
+    /// </summary>
+    private static void CollectIndexOptions(Constraint constraint, JSqlParserGrammar.TableConstraintContext context)
+    {
+        var opts = context.indexOption();
+        if (opts is { Length: > 0 })
+            constraint.IndexOptions = opts.Select(GetOriginalText).ToList();
+    }
+
     private static List<string> ExtractIdentifierList(JSqlParserGrammar.IdentifierListContext? list)
     {
         var result = new List<string>();
@@ -1646,8 +1672,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     }
 
     /// <summary>
-    /// 解析 MySQL 索引列列表（含 ASC/DESC 排序方向）。
-    /// 返回 (含方向的列参数如 "col ASC", 纯列名列表)。
+    /// 解析 MySQL 索引列列表（含 ASC/DESC 排序方向，支持表达式索引 (expr)）。
+    /// 返回 (含方向的列参数如 "col ASC" 或 "(expr) DESC", 纯列名/表达式文本列表)。
     /// </summary>
     private static (List<string> colParams, List<string> colNames) ExtractIndexColumnList(
         JSqlParserGrammar.IndexColumnListContext? list)
@@ -1657,7 +1683,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (list == null) return (colParams, colNames);
         foreach (var col in list.indexColumn())
         {
-            var name = col.identifier().GetText();
+            // 普通列名或表达式索引 (expr)：identifier 为 null 时取表达式原始文本并补括号
+            string name;
+            if (col.identifier() != null)
+                name = col.identifier().GetText();
+            else if (col.expression() != null)
+                name = $"({GetOriginalText(col.expression())})";
+            else
+                name = GetOriginalText(col);
             colNames.Add(name);
             if (col.ASC() != null)
                 colParams.Add($"{name} ASC");
@@ -3200,11 +3233,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var expr = (Expression.Expression)Visit(context.primaryExpr());
 
-        // 按出现顺序处理后缀操作符：::dataType（cast）、.identifier（字段访问）、
+        // 按出现顺序处理后缀操作符：::colDataType（cast）、.identifier（字段访问）、
         // COLLATE collation、AT TIME ZONE expr。
         // ANTLR 的 postfixExpr 文法将这些操作符以 * 循环混合，需顺序遍历子节点。
-        var dataTypes = context.dataType();
-        int dataTypeIdx = 0;
+        // 注：grammar 用 colDataType（含数组维度 [] 与 TIME ZONE 后缀），支持 ::text[] / ::character varying
+        var colDataTypes = context.colDataType();
+        int colDataTypeIdx = 0;
         var identifiers = context.identifier();
         int identifierIdx = 0;
         // postfixExpr 内部的 expression 子节点（用于 AT TIME ZONE）
@@ -3222,13 +3256,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var child = context.GetChild(i);
             if (child is ITerminalNode terminal)
             {
-                if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOUBLE_COLON && dataTypeIdx < dataTypes.Length)
+                if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOUBLE_COLON && colDataTypeIdx < colDataTypes.Length)
                 {
                     var cast = new CastExpression();
                     cast.Expression = expr;
-                    cast.DataType = dataTypes[dataTypeIdx].GetText();
+                    cast.DataType = colDataTypes[colDataTypeIdx].GetText();
                     cast.UseCastKeyword = false;
-                    dataTypeIdx++;
+                    colDataTypeIdx++;
                     expr = cast;
                 }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOT && identifierIdx < identifiers.Length)

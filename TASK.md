@@ -8,7 +8,7 @@
 |----|----------|------|------|------|--------|----------|
 | _无活跃任务_ | | | | | | |
 
-> 当前无活跃任务。下一个任务待用户指定。
+> 当前无活跃任务。下一个任务待用户指定。CREATE TABLE 方言能力已与上游全面对齐（T088/T089/T090）。
 
 ## 待业务驱动 Backlog
 
@@ -49,23 +49,39 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1064 测试（截至 T089/STRUCT-ARRAY 列类型完成）
+- **Azrng**：1080 测试（截至 T090/CREATE TABLE 边缘遗留项清完）
 - **上游 JSqlParser**：2309 测试
-- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06 + T089 已移植 CREATE TABLE 通用能力、代表性方言（ClickHouse/PARTITION/RowMovement）与 STRUCT/ARRAY 复合列类型，但未逐条移植上游全量方言测试
+- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06 + T089 + T090 已移植 CREATE TABLE 通用能力、代表性方言、STRUCT/ARRAY 复合列类型与 9 项边缘缺口，但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T090 | Azrng.JSqlParser CREATE TABLE 边缘遗留项一次性清完（9 缺口：character varying 列类型、TIMESTAMP WITH/WITHOUT TIME ZONE、MySQL USING BTREE/HASH 索引选项、功能性索引 (expr)、set('a','b') 类型、数组带尺寸 int[5]、::text[] 数组 cast、表级 WITH(fillfactor=70)、Spanner OPTIONS(k=true)；全量 1080 测试通过，净增 16） | DONE | 2026-07-09 |
 | T089 | Azrng.JSqlParser STRUCT/ARRAY 复合列类型移植（CREATE TABLE 列类型支持 ARRAY<T> 尖括号扁平化 + STRUCT(x INT) 圆括号字段进 ArgumentsStringList，含嵌套 ARRAY<ARRAY<T>>/STRUCT(x ARRAY<T>)，Spanner 风格多 ARRAY 列；全量 1064 测试通过，净增 12） | DONE | 2026-07-09 |
 | T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化（破坏性重构对齐上游 11 类模型，新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 TableOptions/CTAS/LIKE/OrReplace/Unlocked/CreateOptions；约束结构化 FK/CHECK/EXCLUDE；全量 1052 测试通过，净增 31） | DONE | 2026-07-09 |
 | T087 | Azrng.JSqlParser BL-02 补全 JSON_TABLE Oracle/Trino 全量方言子句（函数级 ON EMPTY/TYPE/FORMAT JSON/PLAN + 列级 EXISTS/WRAPPER/QUOTES/SCALARS/ON EMPTY/ON ERROR，全量 1021 测试通过） | DONE | 2026-07-09 |
 | T086 | Azrng.JSqlParser BL-05 修复 JSON_OBJECT 无空格冒号 lexer 冲突（grammar 接受 S_JDBC_NAMED_PARAM 作分隔符，visitor 去前导冒号，全量 1011 测试通过） | DONE | 2026-07-08 |
-| T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
-| T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
 
 > 更早的 T079~T082 已归档，详见下方各任务归档说明章节。
+
+### T090 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：一次性清完 CREATE TABLE 剩余 9 个边缘遗留缺口（全量核查上游 CreateTableTest 后识别）
+- **完成情况**：单次提交，全量 1080 测试通过（1064 → 1080，净增 16）。9 缺口逐项：
+  - **缺口1 character varying/character 列类型**：dataType 增加 `CHARACTER VARYING [(n)]` 分支（CHARACTER/VARYING 为保留 token）
+  - **缺口2 TIMESTAMP WITH/WITHOUT TIME ZONE**：colDataType 新增 `timeZoneSuffix` 产生式（`(WITH|WITHOUT) LOCAL? TIME ZONE`），visitor 并入 DataType 文本
+  - **缺口3 MySQL USING BTREE/HASH 索引选项**：tableConstraint PK/UNIQUE/KEY/INDEX 分支追加 `indexOption*`，新增 indexOption 产生式（USING/COMMENT/兜底）；Constraint 新增 IndexOptions 字段，ToString 追加
+  - **缺口4 功能性索引 (expr)**：indexColumn 增加 `OPENING_PAREN expression CLOSING_PAREN` 分支；ExtractIndexColumnList 适配输出 `(expr)`
+  - **缺口5 set('a','b') 类型**：dataType 增加 `SET (...)` 分支（SET 为保留 token）
+  - **缺口6 数组带尺寸 int[5]**：colDataType 数组维度改为 `arrayDimension`（`LBRACKET LONG_VALUE? RBRACKET`），visitor 读尺寸填 ArrayData；ColDataType.ToString 数组括号去空格
+  - **缺口7 ::text[] 数组 cast**：postfixExpr 的 `DOUBLE_COLON dataType` 改为 `DOUBLE_COLON colDataType`（含数组维度），visitor 适配
+  - **缺口8 表级 WITH(fillfactor=70)**：createParameter 增加 `WITH OPENING_PAREN parameterListItem+ CLOSING_PAREN` 分支；新增 parameterListItem（`atom EQUALS atom`）
+  - **缺口9 Spanner OPTIONS(k=v)**：createParameterAtom 括号内改用 parameterListItem 支持 key=value；createParameterAtom 增加 TRUE/FALSE（allow_commit_timestamp = true）
+- **阻塞项**：无
+- **未做的事**：Spanner 完整 testCreateTableSpanner 的生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED`（AS(...) 已解析，STORED 走兜底，但 AS 在列级 createParameter 与 DEFAULT 语义可能冲突需专项验证）；`::text[]` cast 的 ToString 空格既有行为（无空格）保持不变，仅测试用例适配
 
 ### T089 归档说明
 

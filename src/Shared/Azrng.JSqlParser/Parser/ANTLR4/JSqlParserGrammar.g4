@@ -549,7 +549,17 @@ columnDefinition
 colDataType
     : ARRAY MINOR_THAN colDataType GREATER_THAN
     | STRUCT OPENING_PAREN structColField (COMMA structColField)* CLOSING_PAREN
-    | dataType (LBRACKET RBRACKET)*
+    | dataType (arrayDimension)* (timeZoneSuffix)?    // 普通类型 + PostgreSQL 数组维度 int[5] + TIME ZONE 后缀
+    ;
+
+// PostgreSQL 数组维度：[] 或 [n]，带尺寸时 n 进 ArrayData
+arrayDimension
+    : LBRACKET LONG_VALUE? RBRACKET
+    ;
+
+// TIMESTAMP WITH/WITHOUT [LOCAL] TIME ZONE 后缀（对齐上游 DT_ZONE special-sequence）
+timeZoneSuffix
+    : (WITH | WITHOUT) LOCAL? TIME ZONE
     ;
 
 // STRUCT 字段：字段名 类型（类型递归 colDataType 支持嵌套 ARRAY/STRUCT）
@@ -563,7 +573,9 @@ dataTypeArgument
     ;
 
 dataType
-    : identifier (DOT identifier)? (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
+    : CHARACTER VARYING (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?   // SQL 标准 character varying(n)
+    | SET (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?   // MySQL set('a','b')，SET 是保留 token 需显式分支
+    | identifier (DOT identifier)? (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
     | dataTypeKeyword (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
     ;
 
@@ -600,12 +612,18 @@ createParameter
     | DEFAULT expression
     | CHECK OPENING_PAREN expression CLOSING_PAREN
     | MATERIALIZED expression
+    | WITH OPENING_PAREN parameterListItem (COMMA parameterListItem)* CLOSING_PAREN   // 表级 WITH (fillfactor=70)，对齐上游
     | createParameterAtom (EQUALS? createParameterAtom)*    // ENGINE = InnoDB / CHARSET utf8 / AUTO_INCREMENT / UNSIGNED 等
     ;
 
+// 括号内 key=value 列表（WITH / OPTIONS 参数），对齐上游 AList
+parameterListItem
+    : createParameterAtom (EQUALS createParameterAtom)?
+    ;
+
 createParameterAtom
-    : identifier (OPENING_PAREN (createParameterAtom (COMMA createParameterAtom)*)? CLOSING_PAREN)?   // 支持 MergeTree() / tuple() 等函数形式（含空参）
-    | LONG_VALUE | S_CHAR_LITERAL | MAX
+    : identifier (OPENING_PAREN (parameterListItem (COMMA parameterListItem)*)? CLOSING_PAREN)?   // 支持 MergeTree() / OPTIONS (k = v) 等形式
+    | LONG_VALUE | S_CHAR_LITERAL | MAX | TRUE | FALSE   // 布尔值（Spanner OPTIONS allow_commit_timestamp = true）
     | ORDER | BY | SAMPLE | HASH | PARTITION   // 表级选项保留关键字（ORDER BY / SAMPLE BY / PARTITION BY HASH）；PARTITIONS/STORE/IN 等非保留字走 identifier
     ;
 
@@ -620,16 +638,24 @@ referentialAction
 
 tableConstraint
     : (CONSTRAINT identifier)? (
-        PRIMARY KEY OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause?
-      | UNIQUE OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause?
+        PRIMARY KEY OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
+      | UNIQUE OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
       | CHECK OPENING_PAREN expression CLOSING_PAREN
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
         (ON (DELETE | UPDATE) referentialAction)*
       | EXCLUDE WHERE OPENING_PAREN expression CLOSING_PAREN
-      | (UNIQUE | FULLTEXT | SPATIAL)? (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
-      | (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
+      | (UNIQUE | FULLTEXT | SPATIAL)? (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN indexOption*
+      | (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN indexOption*
       )
+    ;
+
+// MySQL 索引尾选项：USING BTREE/HASH、COMMENT '...'、KEY_BLOCK_SIZE n、VISIBLE/INVISIBLE 等
+// USING/COMMENT 单独结构化；其余（KEY_BLOCK_SIZE/VISIBLE/INVISIBLE/AUTO_INCREMENT）走 identifier 兜底透传
+indexOption
+    : USING identifier
+    | COMMENT S_CHAR_LITERAL
+    | identifier (EQUALS? (identifier | LONG_VALUE | S_CHAR_LITERAL))?
     ;
 
 // Spanner INTERLEAVE IN PARENT table [ON DELETE CASCADE|NO ACTION]
@@ -643,13 +669,13 @@ usingIndexClause
     : USING INDEX identifier?
     ;
 
-// MySQL 索引列：col [ASC|DESC]，commit 763e92d7
+// MySQL 索引列：col [ASC|DESC] 或 (表达式) [ASC|DESC]（功能性索引），对齐上游 IndexColumnWithParams
 indexColumnList
     : indexColumn (COMMA indexColumn)*
     ;
 
 indexColumn
-    : identifier (ASC | DESC)?
+    : (identifier | OPENING_PAREN expression CLOSING_PAREN) (ASC | DESC)?
     ;
 
 likeOption
@@ -1077,7 +1103,7 @@ postfixExpr
       | OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
         withinGroupClause? filterClause? overClause?
       | AT TIME ZONE expression
-      | DOUBLE_COLON dataType
+      | DOUBLE_COLON colDataType
       | LBRACKET expression (COLON expression)? RBRACKET
       | LBRACKET COLON expression RBRACKET
       )*

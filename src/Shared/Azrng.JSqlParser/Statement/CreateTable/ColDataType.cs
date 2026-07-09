@@ -38,7 +38,8 @@ public class ColDataType : ASTNodeAccessImpl
         {
             foreach (var dim in ArrayData)
             {
-                sb.Append(" [");
+                // 数组维度括号紧跟类型名无空格（int[5] / text[]），对齐 PostgreSQL round-trip
+                sb.Append('[');
                 if (dim.HasValue) sb.Append(dim.Value);
                 sb.Append(']');
             }
