@@ -542,9 +542,19 @@ columnDefinition
     : identifier colDataType columnConstraint* (createParameter)*
     ;
 
-// 列数据类型，对齐上游 ColDataType 产生式。dataType 自身已含括号参数，colDataType 额外支持数组维度。
+// 列数据类型，对齐上游 ColDataType 产生式。
+// ARRAY<T> 用尖括号（对齐上游 DataType() ARRAY 分支，整体压成扁平字符串）
+// STRUCT(x INT, y STRING) 用圆括号（对齐上游 ColDataType() STRUCT 分支，字段进 ArgumentsStringList）
+// 两者均递归 colDataType，支持 ARRAY<ARRAY<T>> / STRUCT(x ARRAY<T>) 嵌套
 colDataType
-    : dataType (LBRACKET RBRACKET)*
+    : ARRAY MINOR_THAN colDataType GREATER_THAN
+    | STRUCT OPENING_PAREN structColField (COMMA structColField)* CLOSING_PAREN
+    | dataType (LBRACKET RBRACKET)*
+    ;
+
+// STRUCT 字段：字段名 类型（类型递归 colDataType 支持嵌套 ARRAY/STRUCT）
+structColField
+    : identifier colDataType
     ;
 
 // 数据类型参数：支持 LONG_VALUE / MAX / 标识符 / 字符串字面量（如 set('a','b')），对齐上游

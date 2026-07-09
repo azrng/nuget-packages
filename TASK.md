@@ -49,24 +49,35 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1052 测试（截至 T088/BL-06 完成）
+- **Azrng**：1064 测试（截至 T089/STRUCT-ARRAY 列类型完成）
 - **上游 JSqlParser**：2309 测试
-- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06 已移植 CREATE TABLE 通用能力与代表性方言（ClickHouse/PARTITION/RowMovement/Spanner），但未逐条移植上游全量方言测试
+- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06 + T089 已移植 CREATE TABLE 通用能力、代表性方言（ClickHouse/PARTITION/RowMovement）与 STRUCT/ARRAY 复合列类型，但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T089 | Azrng.JSqlParser STRUCT/ARRAY 复合列类型移植（CREATE TABLE 列类型支持 ARRAY<T> 尖括号扁平化 + STRUCT(x INT) 圆括号字段进 ArgumentsStringList，含嵌套 ARRAY<ARRAY<T>>/STRUCT(x ARRAY<T>)，Spanner 风格多 ARRAY 列；全量 1064 测试通过，净增 12） | DONE | 2026-07-09 |
 | T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化（破坏性重构对齐上游 11 类模型，新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 TableOptions/CTAS/LIKE/OrReplace/Unlocked/CreateOptions；约束结构化 FK/CHECK/EXCLUDE；全量 1052 测试通过，净增 31） | DONE | 2026-07-09 |
 | T087 | Azrng.JSqlParser BL-02 补全 JSON_TABLE Oracle/Trino 全量方言子句（函数级 ON EMPTY/TYPE/FORMAT JSON/PLAN + 列级 EXISTS/WRAPPER/QUOTES/SCALARS/ON EMPTY/ON ERROR，全量 1021 测试通过） | DONE | 2026-07-09 |
 | T086 | Azrng.JSqlParser BL-05 修复 JSON_OBJECT 无空格冒号 lexer 冲突（grammar 接受 S_JDBC_NAMED_PARAM 作分隔符，visitor 去前导冒号，全量 1011 测试通过） | DONE | 2026-07-08 |
 | T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
 | T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
-| T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |
-| T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
-| T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
-| T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
+
+> 更早的 T079~T082 已归档，详见下方各任务归档说明章节。
+
+### T089 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：BL-06 留尾项——CREATE TABLE 列类型支持 STRUCT/ARRAY 复合类型
+- **完成情况**：单次提交，全量 1064 测试通过（1052 → 1064，净增 12）
+  - **grammar**：`colDataType` 增加 ARRAY/STRUCT 分支——`ARRAY MINOR_THAN colDataType GREATER_THAN`（尖括号，递归支持嵌套 `ARRAY<ARRAY<INT>>`）、`STRUCT OPENING_PAREN structColField+ CLOSING_PAREN`（圆括号，新增 `structColField` 产生式）
+  - **visitor**：`BuildColDataType` 增加三路——ARRAY 扁平化整体存 `DataType`（对齐上游 `setDataType("ARRAY<" + inner + ">")`）；STRUCT 设 `DataType="STRUCT"`、字段列表进 `ArgumentsStringList`（对齐上游 `argumentsStringList.add(type + " " + colDataType.toString())`）；普通 dataType 保持不变
+  - **模型**：`ColDataType.ToString` 修正参数括号空格（`STRUCT(x INT)` 而非 `STRUCT (x INT)`，此前 ArgumentsStringList 从未被填充所以空格问题从未触发）
+  - **测试**：`CreateTableRoundTripTest` 追加 12 项——ARRAY 基础/带长度/STRING(MAX)/嵌套、STRUCT 基础/单字段/嵌套 ARRAY、Spanner 风格多 ARRAY 列、结构化断言验证扁平化与字段列表
+- **阻塞项**：无
+- **未做的事**：Spanner 完整 `testCreateTableSpanner`（含 `OPTIONS(allow_commit_timestamp = true)` 生成列 OPTIONS、`AS (...) STORED` 生成列、表级 `PRIMARY KEY` 作约束——OPTIONS 不是 lexer token 且等号参数需额外处理，属独立 Spanner 方言特性，非 ARRAY/STRUCT 核心留后续）；尖括号 `STRUCT<x INT>` 列类型（上游不支持，仅 SELECT 表达式支持）；Expression 命名空间的 StructType/ArrayConstructor 未改动（语义不同，是表达式字面量）
 
 ### T088 归档说明
 

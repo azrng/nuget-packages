@@ -31,7 +31,8 @@ public class ColDataType : ASTNodeAccessImpl
         sb.Append(DataType);
         if (ArgumentsStringList is { Count: > 0 })
         {
-            sb.Append(" (").Append(string.Join(", ", ArgumentsStringList)).Append(')');
+            // STRUCT(x INT, y STRING)：括号紧跟类型名无空格（对齐上游 round-trip）
+            sb.Append("(").Append(string.Join(", ", ArgumentsStringList)).Append(')');
         }
         if (ArrayData is { Count: > 0 })
         {

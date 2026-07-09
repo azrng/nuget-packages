@@ -185,6 +185,7 @@ Console.WriteLine(stmt.ToString());
   - **CTAS / LIKE**：`CREATE TABLE t AS SELECT ...`（`Select` 字段）、`CREATE TABLE t (c1,c2) AS SELECT`（仅列名 `Columns` 字段）、`CREATE TABLE a LIKE b`（`LikeTable` 字段）
   - **约束结构化**：`CHECK (expr)`→`CheckConstraint`（持有 `Expression`）、`FOREIGN KEY ... REFERENCES t(c) ON DELETE CASCADE ON UPDATE SET NULL`→`ForeignKeyIndex`（持有 `ReferencedTable`/`ReferencedColumnNames`/`OnDelete`/`OnUpdate` `ReferentialAction`）、`EXCLUDE WHERE (expr)`→`ExcludeConstraint`
   - **列类型结构化**：`ColumnDefinition.DataType`(string) → `ColDataType`（`DataType`/`ArgumentsStringList`/`ArrayData`/`CharacterSet`，支持 `schema.type` 点号、数组维度 `text[]`、`set('a','b')` 字符串参数）
+  - **STRUCT/ARRAY 复合列类型**（T089）：`col ARRAY<INT>`（尖括号，整体扁平化存 `DataType`，对齐上游；递归支持嵌套 `ARRAY<ARRAY<INT>>`）、`col STRUCT(x INT, y VARCHAR(100))`（圆括号，`DataType="STRUCT"`、字段列表进 `ArgumentsStringList`，对齐上游；支持嵌套 `STRUCT(x INT, y ARRAY<INT>)`）；Spanner 风格多 ARRAY 列
   - **列规格透传**：`NOT NULL`/`DEFAULT expr`/`AUTO_INCREMENT`/`GENERATED AS IDENTITY`/`COMMENT '...'`/`MATERIALIZED expr` 等收集到 `ColumnSpecs`（保 round-trip，对齐上游 `columnSpecs`）
   - **Oracle `ENABLE`/`DISABLE ROW MOVEMENT`**（`RowMovement`/`RowMovementMode`）
   - **Spanner `INTERLEAVE IN PARENT t [ON DELETE CASCADE|NO ACTION]`**（`SpannerInterleaveIn`）
@@ -193,8 +194,8 @@ Console.WriteLine(stmt.ToString());
   - `Constraint` 新增子类层次：`ForeignKeyIndex`/`CheckConstraint`/`ExcludeConstraint` 继承 `Constraint`；`VisitTableConstraint` 对 FK/CHECK/EXCLUDE 返回对应子类（外部按 `Constraint` 类型断言的代码需改为 `OfType<ForeignKeyIndex>()` 等）
   - `CreateTable` 新增 `TableOptions`/`CreateOptions`/`Select`/`LikeTable`/`Columns`/`RowMovement`/`InterleaveIn`/`OrReplace`/`Unlogged`/`SelectParenthesis` 字段
 - **新增保留字**：`ORDER`/`BY`/`SAMPLE`/`HASH`/`PARTITION` 在 `createParameterAtom` 上下文作表级选项关键字（这些已是保留 token，本次确认在 CREATE TABLE 表选项中可达）
-- **全量测试**：1052 通过（0 失败 0 跳过，较 beta3 净增 31），新增 `CreateTableRoundTripTest`（31 项，覆盖 ClickHouse/分区/RowMovement/Spanner/CTAS/LIKE/FK/CHECK/EXCLUDE + 结构化断言）
-- **本轮未做**：`STRUCT<x int>`/`ARRAY<T>` 复合列类型（改动最大，需 grammar/模型/visitor 全链路重构，留独立批次）；`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；功能性索引 `Expression` 字段（边缘场景）
+- **全量测试**：1064 通过（0 失败 0 跳过，较 beta3 净增 43），新增 `CreateTableRoundTripTest`（43 项，覆盖 ClickHouse/分区/RowMovement/Spanner/CTAS/LIKE/FK/CHECK/EXCLUDE/STRUCT-ARRAY 列类型 + 结构化断言）
+- **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；功能性索引 `Expression` 字段（边缘场景）；Spanner 完整 `testCreateTableSpanner`（含 `OPTIONS(...)`/生成列 `AS(...) STORED`，OPTIONS 非 token 且等号参数需额外处理，属独立 Spanner 方言特性留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 
 ### 1.0.0-beta3

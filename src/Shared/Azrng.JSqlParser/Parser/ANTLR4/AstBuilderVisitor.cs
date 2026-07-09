@@ -1408,14 +1408,36 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     /// <summary>
     /// 从 colDataType 产生式构造结构化 <see cref="ColDataType"/>（类型名/参数/数组维度），对齐上游。
+    /// 支持三路：ARRAY&lt;T&gt;（扁平化整体存 DataType，对齐上游 DataType() ARRAY 分支）、
+    /// STRUCT(fld type, ...)（DataType="STRUCT"，字段进 ArgumentsStringList，对齐上游 ColDataType() STRUCT 分支）、
+    /// 普通 dataType + 可选 PostgreSQL [] 数组维度。
     /// </summary>
     private static ColDataType BuildColDataType(JSqlParserGrammar.ColDataTypeContext? ctx)
     {
         var result = new ColDataType();
         if (ctx == null) return result;
+
+        // ARRAY<T>：整体扁平化为 "ARRAY<...>"（含嵌套），对齐上游 setDataType("ARRAY<" + inner + ">")
+        if (ctx.ARRAY() != null)
+        {
+            result.DataType = ctx.GetText();
+            return result;
+        }
+
+        // STRUCT(fld type, ...)：DataType="STRUCT"，字段列表进 ArgumentsStringList
+        if (ctx.STRUCT() != null)
+        {
+            result.DataType = "STRUCT";
+            result.ArgumentsStringList = ctx.structColField()
+                .Select(f => $"{f.identifier().GetText()} {BuildColDataType(f.colDataType())}")
+                .ToList();
+            return result;
+        }
+
+        // 普通类型：dataType 文本（含 schema.type 点号）
         var dtCtx = ctx.dataType();
-        // dataType 文本（含 schema.type 点号）
-        result.DataType = dtCtx.GetText();
+        if (dtCtx != null)
+            result.DataType = dtCtx.GetText();
         // 数组维度 text[]
         var brackets = ctx.LBRACKET();
         if (brackets is { Length: > 0 })

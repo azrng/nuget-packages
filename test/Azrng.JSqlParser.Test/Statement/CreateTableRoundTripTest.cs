@@ -204,5 +204,81 @@ public class CreateTableRoundTripTest
         Assert.NotNull(stmt.CreateOptions);
         Assert.Contains("TEMPORARY", stmt.CreateOptions!);
     }
+
+    // ── STRUCT/ARRAY 复合列类型（T089） ──────────────────────────────
+
+    [Fact]
+    public void ArrayColumnType_Basic_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, tags ARRAY<INT>)");
+
+    [Fact]
+    public void ArrayColumnType_WithLength_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, tags ARRAY<VARCHAR(100)>)");
+
+    [Fact]
+    public void ArrayColumnType_StringMax_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, tags ARRAY<STRING(MAX)>)");
+
+    [Fact]
+    public void ArrayColumnType_Nested_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, matrix ARRAY<ARRAY<INT>>)");
+
+    [Fact]
+    public void StructColumnType_Basic_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, addr STRUCT(street VARCHAR(100), city VARCHAR(50)))");
+
+    [Fact]
+    public void StructColumnType_SingleField_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, val STRUCT(x INT))");
+
+    [Fact]
+    public void StructColumnType_NestedArray_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE t (id INT, data STRUCT(x INT, y ARRAY<INT>))");
+
+    [Fact]
+    public void Spanner_MultipleArrayColumns_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TABLE cmd (id INT64, arr_bool ARRAY<BOOL>, arr_bytes ARRAY<BYTES(1024)>, arr_string ARRAY<STRING(MAX)>)");
+
+    // ── STRUCT/ARRAY 结构化断言 ──────────────────────────────────────
+
+    [Fact]
+    public void ArrayColumnType_ShouldFlattenIntoDataType()
+    {
+        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, tags ARRAY<INT>)")!;
+        var col = stmt.ColumnDefinitions![1];
+        Assert.Equal("ARRAY<INT>", col.ColDataType.DataType);
+        // ARRAY 扁平化存储，不拆 ArgumentsStringList
+        Assert.Null(col.ColDataType.ArgumentsStringList);
+    }
+
+    [Fact]
+    public void ArrayColumnType_Nested_ShouldFlattenEntireType()
+    {
+        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, matrix ARRAY<ARRAY<INT>>)")!;
+        var col = stmt.ColumnDefinitions![1];
+        Assert.Equal("ARRAY<ARRAY<INT>>", col.ColDataType.DataType);
+    }
+
+    [Fact]
+    public void StructColumnType_ShouldPopulateArgumentsStringList()
+    {
+        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, addr STRUCT(street VARCHAR(100), city VARCHAR(50)))")!;
+        var col = stmt.ColumnDefinitions![1];
+        Assert.Equal("STRUCT", col.ColDataType.DataType);
+        Assert.NotNull(col.ColDataType.ArgumentsStringList);
+        Assert.Equal(2, col.ColDataType.ArgumentsStringList!.Count);
+        Assert.Contains("street VARCHAR(100)", col.ColDataType.ArgumentsStringList);
+        Assert.Contains("city VARCHAR(50)", col.ColDataType.ArgumentsStringList);
+    }
+
+    [Fact]
+    public void StructColumnType_NestedArray_ShouldKeepFieldTypeInArguments()
+    {
+        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, data STRUCT(x INT, y ARRAY<INT>))")!;
+        var col = stmt.ColumnDefinitions![1];
+        Assert.Equal("STRUCT", col.ColDataType.DataType);
+        Assert.Contains("y ARRAY<INT>", col.ColDataType.ArgumentsStringList!);
+    }
 }
+
 
