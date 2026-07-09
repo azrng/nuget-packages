@@ -229,16 +229,40 @@ subSelect
     ;
 
 jsonTable
-    : JSON_TABLE OPENING_PAREN expression (COMMA S_CHAR_LITERAL)?
+    : JSON_TABLE OPENING_PAREN expression (FORMAT JSON)?
+      (COMMA S_CHAR_LITERAL)?
       (PASSING jsonTablePassingItem (COMMA jsonTablePassingItem)*)?
-      (jsonTableOnError)?
+      (TYPE OPENING_PAREN (STRICT | LAX) CLOSING_PAREN)?
+      (jsonTableBehavior ON EMPTY_KW)?
+      (jsonTableBehavior ON ERROR)?
       COLUMNS OPENING_PAREN jsonTableColumn (COMMA jsonTableColumn)* CLOSING_PAREN
+      (jsonTablePlanClause)?
       CLOSING_PAREN
     ;
 
-jsonTableOnError
-    : NULL ON ERROR
-    | ERROR ON ERROR
+// JSON_TABLE ON EMPTY / ON ERROR 行为（ERROR/NULL/EMPTY/TRUE/FALSE/DEFAULT expr）
+jsonTableBehavior
+    : ERROR
+    | NULL
+    | TRUE
+    | FALSE
+    | EMPTY_KW (ARRAY | OBJECT)?
+    | DEFAULT expression
+    ;
+
+// JSON_TABLE PLAN [DEFAULT] (plan_expr) Oracle 计划子句
+jsonTablePlanClause
+    : PLAN (DEFAULT)? OPENING_PAREN jsonTablePlanExpression CLOSING_PAREN
+    ;
+
+jsonTablePlanExpression
+    : jsonTablePlanTerm ((COMMA | INNER | OUTER | CROSS | UNION) jsonTablePlanTerm)*
+    ;
+
+jsonTablePlanTerm
+    : identifier
+    | OPENING_PAREN jsonTablePlanExpression CLOSING_PAREN
+    | expression
     ;
 
 jsonTablePassingItem
@@ -248,7 +272,15 @@ jsonTablePassingItem
 jsonTableColumn
     : NESTED PATH S_CHAR_LITERAL COLUMNS OPENING_PAREN jsonTableColumn (COMMA jsonTableColumn)* CLOSING_PAREN
     | identifier FOR ORDINALITY
-    | identifier dataType (PATH S_CHAR_LITERAL)?
+    | identifier dataType
+      (EXISTS)?
+      (PATH S_CHAR_LITERAL)?
+      (FORMAT JSON (ENCODING identifier)?)?
+      (jsonWrapperClause)?
+      (jsonQuotesClause)?
+      ((ALLOW | DISALLOW) SCALARS)?
+      (jsonTableBehavior ON EMPTY_KW)?
+      (jsonTableBehavior ON ERROR)?
     ;
 
 joinClause

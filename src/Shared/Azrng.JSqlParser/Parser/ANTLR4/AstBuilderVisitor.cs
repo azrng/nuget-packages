@@ -778,8 +778,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             JsonExpression = (Expression.Expression)Visit(context.expression())
         };
 
+        // 输入 FORMAT JSON（Oracle）
+        if (context.FORMAT() != null) jsonTable.InputFormatJson = true;
+
         // path：第二个参数的 S_CHAR_LITERAL（在 expression 之后、PASSING 之前）
-        // 用 COMMA 数量判断是否有 path 参数
         if (context.COMMA().Length > 0 && context.S_CHAR_LITERAL() != null)
         {
             jsonTable.PathExpression = context.S_CHAR_LITERAL().GetText();
@@ -791,10 +793,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             jsonTable.PassingClauses.Add((JsonTablePassingClause)Visit(p));
         }
 
-        // ON ERROR
-        if (context.jsonTableOnError() != null)
+        // TYPE (STRICT|LAX)
+        if (context.TYPE() != null)
         {
-            jsonTable.OnErrorBehavior = context.jsonTableOnError().NULL() != null ? "NULL" : "ERROR";
+            jsonTable.ParsingType = context.STRICT() != null ? "STRICT" : "LAX";
+        }
+
+        // ON EMPTY / ON ERROR（jsonTableBehavior + ON EMPTY_KW/ON ERROR）
+        var behaviors = context.jsonTableBehavior();
+        bool hasEmpty = context.EMPTY_KW() != null;
+        if (behaviors.Length >= 1 && hasEmpty)
+        {
+            jsonTable.OnEmptyBehavior = ParseJsonTableBehavior(behaviors[0]);
+        }
+        if (behaviors.Length >= 2 || (behaviors.Length >= 1 && !hasEmpty))
+        {
+            // 无 ON EMPTY 时，唯一 behavior 是 ON ERROR；有 ON EMPTY 时第二个是 ON ERROR
+            jsonTable.OnErrorBehavior = ParseJsonTableBehavior(hasEmpty ? behaviors[1] : behaviors[0]);
         }
 
         foreach (var colCtx in context.jsonTableColumn())
@@ -802,7 +817,36 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             jsonTable.Columns.Add((JsonTableColumn)Visit(colCtx));
         }
 
+        // PLAN [DEFAULT] (plan_expr)
+        if (context.jsonTablePlanClause() != null)
+        {
+            jsonTable.Plan = context.jsonTablePlanClause().GetText();
+        }
+
         return jsonTable;
+    }
+
+    /// <summary>将 jsonTableBehavior 上下文解析为 JsonOnResponseBehavior。</summary>
+    private JsonFunction.JsonOnResponseBehavior ParseJsonTableBehavior(JSqlParserGrammar.JsonTableBehaviorContext ctx)
+    {
+        if (ctx.ERROR() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.ERROR);
+        if (ctx.NULL() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
+        if (ctx.TRUE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.TRUE);
+        if (ctx.FALSE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.FALSE);
+        if (ctx.EMPTY_KW() != null)
+        {
+            return ctx.ARRAY() != null
+                ? new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY_ARRAY)
+                : ctx.OBJECT() != null
+                    ? new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY_OBJECT)
+                    : new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.EMPTY);
+        }
+        if (ctx.DEFAULT() != null)
+        {
+            return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.DEFAULT,
+                (Expression.Expression)Visit(ctx.expression()));
+        }
+        return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
     }
 
     public override object VisitJsonTablePassingItem(JSqlParserGrammar.JsonTablePassingItemContext context)
@@ -831,7 +875,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return nested;
         }
 
-        var column = new JsonTableColumn { Name = context.identifier().GetText() };
+        // 列名是首个 identifier（grammar 含列名 + 可选 ENCODING name 两个 identifier）
+        var colIdents = context.identifier();
+        var column = new JsonTableColumn { Name = colIdents[0].GetText() };
 
         if (context.FOR() != null)
         {
@@ -841,9 +887,48 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             // dataType 是组合 token，取原始文本
             column.DataType = context.dataType().GetText();
+            if (context.EXISTS() != null) column.Exists = true;
             if (context.PATH() != null)
             {
                 column.Path = context.S_CHAR_LITERAL().GetText();
+            }
+            // FORMAT JSON [ENCODING name]
+            if (context.FORMAT() != null)
+            {
+                column.FormatJson = true;
+                if (context.ENCODING() != null) column.Encoding = colIdents.Length > 1 ? colIdents[1].GetText() : "";
+            }
+            // WRAPPER
+            if (context.jsonWrapperClause() != null)
+            {
+                var w = context.jsonWrapperClause();
+                column.Wrapper = w.WITHOUT() != null
+                    ? JsonFunction.WrapperType.WITHOUT
+                    : JsonFunction.WrapperType.WITH;
+                if (w.CONDITIONAL() != null) column.WrapperMode = JsonFunction.WrapperMode.CONDITIONAL;
+                if (w.UNCONDITIONAL() != null) column.WrapperMode = JsonFunction.WrapperMode.UNCONDITIONAL;
+                if (w.ARRAY() != null) column.WrapperArray = true;
+            }
+            // QUOTES
+            if (context.jsonQuotesClause() != null)
+            {
+                var q = context.jsonQuotesClause();
+                column.Quotes = q.KEEP() != null ? JsonFunction.QuotesType.KEEP : JsonFunction.QuotesType.OMIT;
+                if (q.SCALAR() != null) column.QuotesOnScalarString = true;
+            }
+            // SCALARS
+            if (context.ALLOW() != null) column.Scalars = JsonFunction.ScalarsType.ALLOW;
+            else if (context.DISALLOW() != null) column.Scalars = JsonFunction.ScalarsType.DISALLOW;
+            // 列级 ON EMPTY / ON ERROR
+            var colBehaviors = context.jsonTableBehavior();
+            bool colHasEmpty = context.EMPTY_KW() != null;
+            if (colBehaviors.Length >= 1 && colHasEmpty)
+            {
+                column.OnEmptyBehavior = ParseJsonTableBehavior(colBehaviors[0]);
+            }
+            if (colBehaviors.Length >= 2 || (colBehaviors.Length >= 1 && !colHasEmpty))
+            {
+                column.OnErrorBehavior = ParseJsonTableBehavior(colHasEmpty ? colBehaviors[1] : colBehaviors[0]);
             }
         }
 

@@ -31,7 +31,7 @@
 | BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
 |---------|------|------|------|----------|------|
 | BL-01 | JSON_QUERY Legacy 额外 path 参数（已完成） | 功能补全 | T076 | — | **已完成（T085）**。`AdditionalQueryPathArguments` 字段此前是死代码（grammar 不接受多 path、visitor 不填、ToString 不输出）；grammar `jsonQueryFunction` 增 `(COMMA expression)*` 尾部重复；visitor 仅在无 PASSING 时收集额外 path（对齐上游 `additionalQueryPathArguments` 仅无 PASSING 时存在的语义）；`AppendQuery` 循环输出额外 path |
-| BL-02 | JSON_TABLE Oracle/Trino 方言子句（PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY） | 方言补全 | T076 | 业务需解析 Oracle/Trino 的 JSON_TABLE 方言高级子句 | T076 已迁 PASSING/ON ERROR/NESTED PATH，剩余 PLAN/WRAPPER/QUOTES/SCALARS/ON EMPTY 待补 |
+| BL-02 | JSON_TABLE Oracle/Trino 方言子句（已完成） | 方言补全 | T076 | — | **已完成（T087）**。函数级补：`ON EMPTY`（ERROR/NULL/EMPTY/TRUE/FALSE/DEFAULT/EMPTY ARRAY/OBJECT）、更丰富的 `ON ERROR`（同上行为集）、`TYPE (STRICT\|LAX)`、`FORMAT JSON` 输入、`PLAN [DEFAULT] (plan_expr)`；列级补：`EXISTS`、`FORMAT JSON [ENCODING]`、`WRAPPER`（WITHOUT/WITH [CONDITIONAL\|UNCONDITIONAL] [ARRAY]）、`QUOTES [ON SCALAR STRING]`、`(ALLOW\|DISALLOW) SCALARS`、列级 `ON EMPTY`/`ON ERROR`。On*Behavior 字段从 string 升级为结构化 `JsonOnResponseBehavior`（**破坏性**：原 `Assert.Equal("NULL", x.OnErrorBehavior)` 需改为 `.Type` 断言） |
 | BL-03 | 聚合函数 OVER 窗口子句（非问题，关闭） | 架构差异 | T076 | — | **已确认非问题（T086 核实）**。原 backlog 判断"Azrng OVER 走 AnalyticExpression 独立路径、需另设计 Function↔窗口接线"不准确：grammar `functionExpr` 已支持任意函数后接 `overClause`，visitor 在检测到 OVER 时构造 `AnalyticExpression`（含 Name/Expression/PartitionExpressionList/OrderByElements/WindowFrame/FilterExpression）。`SUM(x) OVER(...)`、`COUNT(*) OVER(...)`、`RANK() OVER(...)`、窗口帧 ROWS/RANGE/GROUPS、FILTER+OVER 组合均解析并 round-trip（AdvancedExpressionTest 43 项已覆盖）。架构差异仅为风格：上游保留 Function 包裹，Azrng 扁平化到 AnalyticExpression，不影响常用场景 |
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
 | BL-05 | JSON_OBJECT 冒号分隔 lexer 歧义（已完成） | 词法限制 | T076 F7 | — | **已完成（T086）**。原 backlog 判断"ANTLR 与 JavaCC LOOKAHEAD 本质差异、需 lexer 层改造"**不准确**——实为 token 优先级冲突（`:bar` 被 `S_JDBC_NAMED_PARAM` 最大匹配吞掉）。解法：grammar `jsonKeyValuePair` 增加 `S_JDBC_NAMED_PARAM` 分支（把命名参数整体当冒号分隔符+值），visitor 去前导冒号得到值。无需 lexer 层改造 |
@@ -58,6 +58,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T087 | Azrng.JSqlParser BL-02 补全 JSON_TABLE Oracle/Trino 全量方言子句（函数级 ON EMPTY/TYPE/FORMAT JSON/PLAN + 列级 EXISTS/WRAPPER/QUOTES/SCALARS/ON EMPTY/ON ERROR，全量 1021 测试通过） | DONE | 2026-07-09 |
 | T086 | Azrng.JSqlParser BL-05 修复 JSON_OBJECT 无空格冒号 lexer 冲突（grammar 接受 S_JDBC_NAMED_PARAM 作分隔符，visitor 去前导冒号，全量 1011 测试通过） | DONE | 2026-07-08 |
 | T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
 | T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |

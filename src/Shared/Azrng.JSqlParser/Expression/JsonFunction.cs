@@ -51,6 +51,13 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
         OMIT
     }
 
+    /// <summary>(ALLOW|DISALLOW) SCALARS，对齐上游 ScalarsType。用于 JSON_TABLE 列级 Oracle 方言。</summary>
+    public enum ScalarsType
+    {
+        ALLOW,
+        DISALLOW
+    }
+
     public enum OnNullType
     {
         NULL,

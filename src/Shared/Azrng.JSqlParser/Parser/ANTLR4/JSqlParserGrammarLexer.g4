@@ -169,6 +169,7 @@ QUOTED_IDENTIFIER
 // ── Core SQL ──────────────────────────────────
 
 ALL             : [Aa][Ll][Ll] ;
+ALLOW           : [Aa][Ll][Ll][Oo][Ww] ;
 AND             : [Aa][Nn][Dd] ;
 ANY             : [Aa][Nn][Yy] ;
 AS              : [Aa][Ss] ;
@@ -214,6 +215,7 @@ INTO            : [Ii][Nn][Tt][Oo] ;
 IS              : [Ii][Ss] ;
 JOIN            : [Jj][Oo][Ii][Nn] ;
 LATERAL         : [Ll][Aa][Tt][Ee][Rr][Aa][Ll] ;
+LAX             : [Ll][Aa][Xx] ;
 LEFT            : [Ll][Ee][Ff][Tt] ;
 LIKE            : [Ll][Ii][Kk][Ee] ;
 LIMIT           : [Ll][Ii][Mm][Ii][Tt] ;
@@ -426,6 +428,7 @@ DELAYED         : [Dd][Ee][Ll][Aa][Yy][Ee][Dd] ;
 DESCRIBE        : [Dd][Ee][Ss][Cc][Rr][Ii][Bb][Ee] ;
 DISABLE         : [Dd][Ii][Ss][Aa][Bb][Ll][Ee] ;
 DISCARD         : [Dd][Ii][Ss][Cc][Aa][Rr][Dd] ;
+DISALLOW        : [Dd][Ii][Ss][Aa][Ll][Ll][Oo][Ww] ;
 DISCONNECT      : [Dd][Ii][Ss][Cc][Oo][Nn][Nn][Ee][Cc][Tt] ;
 DIV             : [Dd][Ii][Vv] ;
 DDL             : [Dd][Dd][Ll] ;
@@ -496,6 +499,7 @@ UNCONDITIONAL   : [Uu][Nn][Cc][Oo][Nn][Dd][Ii][Tt][Ii][Oo][Nn][Aa][Ll] ;
 WRAPPER         : [Ww][Rr][Aa][Pp][Pp][Ee][Rr] ;
 QUOTES          : [Qq][Uu][Oo][Tt][Ee][Ss] ;
 SCALAR          : [Ss][Cc][Aa][Ll][Aa][Rr] ;
+SCALARS         : [Ss][Cc][Aa][Ll][Aa][Rr][Ss] ;
 OMIT            : [Oo][Mm][Ii][Tt] ;
 OBJECT          : [Oo][Bb][Jj][Ee][Cc][Tt] ;
 KEY             : [Kk][Ee][Yy] ;

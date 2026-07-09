@@ -1,3 +1,4 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
@@ -84,7 +85,7 @@ public class JsonTableTest
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' NULL ON ERROR COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
         var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
-        Assert.Equal("NULL", jsonTable.OnErrorBehavior);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, jsonTable.OnErrorBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
 
@@ -100,4 +101,120 @@ public class JsonTableTest
         Assert.Equal("'$.items'", jsonTable.Columns[1].Path);
         Assert.Equal(sql, select.ToString());
     }
+
+    #region BL-02 Oracle/Trino 方言子句
+
+    /// <summary>BL-02：函数级 ON EMPTY 行为。</summary>
+    [Fact]
+    public void JsonTable_FunctionLevel_OnEmpty_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' NULL ON EMPTY COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, jsonTable.OnEmptyBehavior!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：函数级 EMPTY ON ERROR（比原 NULL/ERROR 更丰富）。</summary>
+    [Fact]
+    public void JsonTable_FunctionLevel_EmptyOnError_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' EMPTY ON ERROR COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.EMPTY, jsonTable.OnErrorBehavior!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：函数级 TYPE (STRICT|LAX)。</summary>
+    [Fact]
+    public void JsonTable_FunctionLevel_TypeStrict_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' TYPE (STRICT) COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.Equal("STRICT", jsonTable.ParsingType);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：函数级 FORMAT JSON 输入（Oracle）。</summary>
+    [Fact]
+    public void JsonTable_FunctionLevel_FormatJsonInput_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}' FORMAT JSON, '$' COLUMNS (id FOR ORDINALITY)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
+        Assert.True(jsonTable.InputFormatJson);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 EXISTS（Oracle）。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_Exists_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id INT EXISTS PATH '$.id')) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.True(col.Exists);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 FORMAT JSON（PATH 在前，对齐上游顺序）。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_FormatJson_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' FORMAT JSON)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.True(col.FormatJson);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 WRAPPER 子句。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_Wrapper_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' WITH ARRAY WRAPPER)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.Equal(JsonFunction.WrapperType.WITH, col.Wrapper);
+        Assert.True(col.WrapperArray);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 QUOTES 子句。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_Quotes_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' KEEP QUOTES)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.Equal(JsonFunction.QuotesType.KEEP, col.Quotes);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 (ALLOW|DISALLOW) SCALARS。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_Scalars_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' ALLOW SCALARS)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.Equal(JsonFunction.ScalarsType.ALLOW, col.Scalars);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    /// <summary>BL-02：列级 ON EMPTY + ON ERROR（含 DEFAULT 表达式）。</summary>
+    [Fact]
+    public void JsonTable_ColumnLevel_OnEmptyOnError_ShouldRoundTrip()
+    {
+        var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' NULL ON EMPTY DEFAULT 'x' ON ERROR)) AS jt";
+        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, col.OnEmptyBehavior!.Type);
+        Assert.Equal(JsonFunction.OnResponseBehaviorType.DEFAULT, col.OnErrorBehavior!.Type);
+        Assert.Equal(sql, select.ToString());
+    }
+
+    #endregion
 }
