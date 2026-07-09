@@ -6,9 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| _无活跃任务_ | | | | | | |
+| T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化 | 破坏性重构对齐上游 CreateTable 模型(11类),补全 tableOptions/CTAS/LIKE/约束结构化/FK引用动作/CHECK表达式/EXCLUDE/RowMovement/SpannerInterleaveIn;不做 STRUCT/ARRAY 复合列类型(留独立批次) | 阶段1 | DOING | high | 2026-07-09 |
 
-> 当前无活跃任务。下一个任务待用户指定。
+> T088 分阶段独立提交:①新建模型类 ②重构现有模型+ToString ③grammar扩展 ④visitor接线 ⑤测试+回归+文档收口。决策:破坏性重构(对齐上游类层次)、STRUCT/ARRAY 复合类型本轮不做、分批提交。
 
 ## 待业务驱动 Backlog
 
@@ -35,7 +35,7 @@
 | BL-03 | 聚合函数 OVER 窗口子句（非问题，关闭） | 架构差异 | T076 | — | **已确认非问题（T086 核实）**。原 backlog 判断"Azrng OVER 走 AnalyticExpression 独立路径、需另设计 Function↔窗口接线"不准确：grammar `functionExpr` 已支持任意函数后接 `overClause`，visitor 在检测到 OVER 时构造 `AnalyticExpression`（含 Name/Expression/PartitionExpressionList/OrderByElements/WindowFrame/FilterExpression）。`SUM(x) OVER(...)`、`COUNT(*) OVER(...)`、`RANK() OVER(...)`、窗口帧 ROWS/RANGE/GROUPS、FILTER+OVER 组合均解析并 round-trip（AdvancedExpressionTest 43 项已覆盖）。架构差异仅为风格：上游保留 Function 包裹，Azrng 扁平化到 AnalyticExpression，不影响常用场景 |
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
 | BL-05 | JSON_OBJECT 冒号分隔 lexer 歧义（已完成） | 词法限制 | T076 F7 | — | **已完成（T086）**。原 backlog 判断"ANTLR 与 JavaCC LOOKAHEAD 本质差异、需 lexer 层改造"**不准确**——实为 token 优先级冲突（`:bar` 被 `S_JDBC_NAMED_PARAM` 最大匹配吞掉）。解法：grammar `jsonKeyValuePair` 增加 `S_JDBC_NAMED_PARAM` 分支（把命名参数整体当冒号分隔符+值），visitor 去前导冒号得到值。无需 lexer 层改造 |
-| BL-06 | 方言专项 CREATE TABLE 等方言特性（按需启动，经核实确认不铺开） | 方言补全 | T075（子项 69-77 除 72/73） | 业务出现上述方言的 CREATE TABLE 或专属语法场景 | **经核实确认工作量巨大**：上游 create table 模型 11 个类 vs Azrng 3 个，grammar 含 643 个 LOOKAHEAD 需逐个转化为 ANTLR 谓词/模式。各方言（ClickHouse engine/DuckDB STRUCT/Snowflake clustering/BigQuery 分区）相互独立，仅业务出现时才有价值。**决策：保留 backlog，按具体方言逐项迁移，不一次性铺开**（需先建测试安全网） |
+| BL-06 | 方言专项 CREATE TABLE 等方言特性（开发中） | 方言补全 | T075（子项 69-77 除 72/73） | — | **开发中（T088）**。破坏性重构对齐上游 11 类模型：新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 TableOptions/CTAS/LIKE/OrReplace/Unlogged/CreateOptions；约束结构化(FK引用动作/CHECK表达式/EXCLUDE)。**本轮不做 STRUCT/ARRAY 复合列类型**（改动最大，留独立批次）。tableOptions/列规格按上游策略字符串透传(保 round-trip) |
 
 ### BL-15 对齐基线说明
 

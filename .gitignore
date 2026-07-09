@@ -356,3 +356,5 @@ NUL
 .cursor
 .codegraph
 .learnings
+# ZCode agent internals
+.zcode/
