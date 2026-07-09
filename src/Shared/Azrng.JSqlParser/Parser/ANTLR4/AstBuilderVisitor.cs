@@ -3791,6 +3791,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.jsonArrayAggFunction());
         }
 
+        // SQL 标准命名参数字符串函数 SUBSTRING(x FROM 1 FOR 3) / POSITION(a IN b) / OVERLAY(x PLACING y FROM 1)
+        if (context.specialStringFunction() != null)
+        {
+            return Visit(context.specialStringFunction());
+        }
+
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
         if ((context.NEXTVAL() != null || context.NEXT() != null) && context.FOR() != null)
@@ -3891,6 +3897,39 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         ApplyFunctionClauses(context, func);
+        return func;
+    }
+
+    // SQL 标准命名参数字符串函数：SUBSTRING(x FROM 1 FOR 3) / POSITION(a IN b) / OVERLAY(x PLACING y FROM 1)
+    public override object VisitSpecialStringFunction(JSqlParserGrammar.SpecialStringFunctionContext context)
+    {
+        var func = new Function { Name = context.identifier().GetText() };
+        var tail = context.namedFunctionParamTail();
+        var named = new NamedExpressionList();
+
+        // 首个表达式前缀为空；第二个表达式前缀为 FROM/IN/PLACING（specialStringFunction 中的命名关键字）
+        var firstExpr = (Expression.Expression)Visit(context.expression());
+        var secondExpr = (Expression.Expression)Visit(tail.expression(0));
+        var firstKw = context.FROM() != null ? "FROM" : context.IN() != null ? "IN" : "PLACING";
+
+        named.Expressions.Add(firstExpr);
+        named.Names.Add("");
+        named.Expressions.Add(secondExpr);
+        named.Names.Add(firstKw);
+
+        // 可选第三段（FROM/FOR）与第四段（FOR）：OVERLAY(x PLACING y FROM z FOR w)
+        if (tail.expression().Length > 1)
+        {
+            named.Expressions.Add((Expression.Expression)Visit(tail.expression(1)));
+            named.Names.Add(tail.FROM() != null ? "FROM" : "FOR");
+        }
+        if (tail.expression().Length > 2)
+        {
+            named.Expressions.Add((Expression.Expression)Visit(tail.expression(2)));
+            named.Names.Add("FOR");
+        }
+
+        func.NamedParameters = named;
         return func;
     }
 

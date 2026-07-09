@@ -49,6 +49,12 @@ public class Function : ASTNodeAccessImpl, Expression
     /// </summary>
     public KeepExpression? Keep { get; set; }
 
+    /// <summary>
+    /// 命名参数列表（SQL 标准 SUBSTRING(x FROM 1 FOR 3) / POSITION(a IN b) / OVERLAY(x PLACING y FROM 1)）。
+    /// 对齐上游 Function.namedParameters。非 null 时表示该函数使用命名参数语法。
+    /// </summary>
+    public NamedExpressionList? NamedParameters { get; set; }
+
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -62,7 +68,11 @@ public class Function : ASTNodeAccessImpl, Expression
         else
         {
             if (Distinct) sb.Append("DISTINCT ");
-            sb.Append(Parameters);
+            // 命名参数优先（SUBSTRING(x FROM 1 FOR 3)），对齐上游 namedParameters.toString()
+            if (NamedParameters != null)
+                sb.Append(NamedParameters);
+            else
+                sb.Append(Parameters);
             if (OrderByElements is { Count: > 0 })
             {
                 sb.Append(" ORDER BY ").Append(string.Join(", ", OrderByElements));

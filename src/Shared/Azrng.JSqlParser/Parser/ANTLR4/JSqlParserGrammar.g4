@@ -1306,6 +1306,7 @@ functionExpr
     | jsonQueryFunction
     | jsonObjectAggFunction
     | jsonArrayAggFunction
+    | specialStringFunction          // SQL 标准 SUBSTRING(x FROM 1 FOR 3) / POSITION(a IN b) / OVERLAY(x PLACING y FROM 1)
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -1314,6 +1315,16 @@ functionExpr
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
     | NEXTVAL FOR columnRef
     | NEXT VALUE FOR columnRef
+    ;
+
+// SQL 标准命名参数字符串函数：SUBSTRING/SUBSTR/POSITION/OVERLAY
+// 语法：name(expr [FROM|IN|PLACING] expr [FOR|FROM expr [FOR expr]])
+specialStringFunction
+    : identifier OPENING_PAREN expression (FROM | IN | PLACING) namedFunctionParamTail CLOSING_PAREN
+    ;
+
+namedFunctionParamTail
+    : expression ((FROM | FOR) expression (FOR expression)?)?
     ;
 
 // CONVERT / TRY_CONVERT / SAFE_CONVERT 双风格转码函数

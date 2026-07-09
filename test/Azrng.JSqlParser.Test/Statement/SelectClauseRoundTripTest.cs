@@ -101,5 +101,32 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void RefreshMaterializedView_Concurrently_ShouldRoundTrip()
         => AssertRoundTrip("REFRESH MATERIALIZED VIEW CONCURRENTLY mv");
+
+    // ── P1-3: SUBSTRING/POSITION/OVERLAY 命名参数语法 ──
+
+    [Fact]
+    public void Substring_FromFor_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT SUBSTRING(x FROM 1 FOR 3) FROM t");
+
+    [Fact]
+    public void Substring_FromOnly_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT SUBSTRING(x FROM 1) FROM t");
+
+    [Fact]
+    public void Position_In_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT POSITION(a IN b) FROM t");
+
+    [Fact]
+    public void Overlay_PlacingFromFor_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT OVERLAY(x PLACING y FROM 1 FOR 2) FROM t");
+
+    [Fact]
+    public void Substring_ShouldPopulateNamedParameters()
+    {
+        var stmt = CCJSqlParserUtil.Parse("SELECT SUBSTRING(x FROM 1 FOR 3) FROM t")!;
+        Assert.NotNull(stmt.ToString());
+        Assert.Contains("SUBSTRING(x FROM 1 FOR 3)", stmt.ToString()!);
+    }
 }
+
 
