@@ -6,15 +6,24 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| _无活跃任务_ | | | | | | |
+| T091 | Azrng.JSqlParser 三维核查后 P0+P1 缺口逐项修复 | 修复 P0 静默丢弃(WINDOW命名窗口/QUALIFY)+P1 功能缺口(GROUP BY ROLLUP/CUBE/CONNECT BY/SUBSTRING FROM-FOR/OUTPUT/JSON_TRANSFORM/REFRESH/CURRVAL/UPSERT) | 阶段1 | DOING | high | 2026-07-09 |
 
-> 当前无活跃任务。下一个任务待用户指定。CREATE TABLE 方言能力已与上游全面对齐（T088/T089/T090）。
+> T091 经三维系统核查(Expression/Statement/grammar)发现缺口。之前"backlog 清零"判定不准确——BL-15 仅对比 5 维度且深度不足。按 P0→P1 逐项修，P2 小众方言按需。
 
 ## 待业务驱动 Backlog
 
 > 以下事项已识别为未做或差异，当前无业务需求驱动，**不进入活跃任务**。出现具体业务场景时按触发条件择项启动，新建对应 `T-` 编号任务并引用本表 `BL-` 编号。
 
-> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。**BL-01~14 全部完成（T080/T081/T083~T088），backlog 清零，仅保留历史记录。** `BL-07/08/09` 静默丢弃缺陷已由 T080 修复并移出本表。
+> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。BL-01~14 已完成。**BL-16~18 为 T091 三维核查（2026-07-09）新发现的缺口。**
+
+### P1 真缺口（经验证确认，非架构差异）
+
+| BL 编号 | 待办 | 类别 | 出处 | 触发条件 | 备注 |
+|---------|------|------|------|----------|------|
+| BL-16 | P0 静默丢弃：WINDOW 命名窗口 + QUALIFY 子句（grammar 已解析但 visitor 不读，AST 丢失） | 静默丢弃缺陷 | T091 三维核查 | — | T091 修复中 |
+| BL-17 | P1 功能缺口：GROUP BY ROLLUP/CUBE/GROUPING SETS、CONNECT BY/START WITH、SUBSTRING FROM-FOR/POSITION IN/OVERLAY、MSSQL OUTPUT、JSON_TRANSFORM、REFRESH MATERIALIZED VIEW、CURRVAL、UPSERT/REPLACE | 功能缺口 | T091 三维核查 | — | T091 逐项修复中 |
+| BL-18 | P1 部分：AnalyticType 字段、COMMENT ON 扩展对象、ALTER 5.4→HEAD +694 行字段、Table/Column/Sequence 字段扩展 | 部分缺口 | T091 三维核查 | — | T091 逐项修复中 |
+| BL-19 | P2 小众方言/基础设施：EXPORT/IMPORT(Exasol)+CSV/文件/连接(30+类)、Oracle MODEL、KSQL 窗口、子 visitor 适配层 | 小众方言 | T091 三维核查 | 业务出现上述方言 | 按需启动 |
 
 ### P1 真缺口（经验证确认，非架构差异）
 

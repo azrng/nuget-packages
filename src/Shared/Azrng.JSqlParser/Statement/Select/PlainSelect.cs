@@ -40,6 +40,12 @@ public class PlainSelect : Select
     /// <summary>Oracle 优化器提示（SELECT 关键字后紧跟的 /*+ ... */ 或 --+ ... 注释）。</summary>
     public OracleHint? OracleHint { get; set; }
 
+    /// <summary>命名窗口定义（WINDOW w AS (...)），透传原始文本保 round-trip。对齐上游 windowDefinitions。</summary>
+    public System.Collections.Generic.List<string>? WindowDefinitions { get; set; }
+
+    /// <summary>QUALIFY 过滤表达式（Snowflake/Teradata），对齐上游 qualify。</summary>
+    public Expression.Expression? Qualify { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -76,6 +82,13 @@ public class PlainSelect : Select
         if (Where != null) builder.Append(" WHERE ").Append(Where);
         if (GroupBy != null) builder.Append(' ').Append(GroupBy);
         if (Having != null) builder.Append(" HAVING ").Append(Having);
+
+        // WINDOW 命名窗口定义（HAVING 之后）：WINDOW w1 AS (...), w2 AS (...)
+        if (WindowDefinitions is { Count: > 0 })
+            builder.Append(" WINDOW ").Append(string.Join(", ", WindowDefinitions));
+
+        // QUALIFY 过滤（Snowflake/Teradata，ORDER BY/LIMIT 之前但在 WINDOW 之后）
+        if (Qualify != null) builder.Append(" QUALIFY ").Append(Qualify);
 
         // MySQL INTO OUTFILE/DUMPFILE 尾部位置
         if (MySqlIntoOutfile is { BeforeFrom: false }) builder.Append(' ').Append(MySqlIntoOutfile);

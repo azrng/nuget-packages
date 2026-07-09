@@ -397,6 +397,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.OptimizeFor = long.Parse(context.optimizeForClause().LONG_VALUE().GetText());
         }
 
+        // WINDOW 命名窗口定义：透传 windowItem 原始文本保 round-trip（对齐上游 windowDefinitions）
+        if (context.windowClause() is { } windowCtx)
+        {
+            select.WindowDefinitions = windowCtx.windowItem().Select(GetOriginalText).ToList();
+        }
+
+        // QUALIFY 过滤表达式（Snowflake/Teradata）
+        if (context.qualifyClause() is { } qualifyCtx)
+        {
+            select.Qualify = (Expression.Expression)Visit(qualifyCtx.expression());
+        }
+
         return select;
     }
 
