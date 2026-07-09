@@ -69,6 +69,12 @@ statement
     | createPolicy
     | createSequence
     | createSchema
+    | refreshStatement
+    ;
+
+// PostgreSQL REFRESH MATERIALIZED VIEW [CONCURRENTLY] name [WITH [NO] DATA]
+refreshStatement
+    : REFRESH MATERIALIZED VIEW CONCURRENTLY? table (WITH NO? DATA)?
     ;
 
 // ══════════════════════════════════════════════

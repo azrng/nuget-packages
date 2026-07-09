@@ -565,4 +565,10 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Create.Sequence.CreateSequence createSequence, S context) => null;
 
     public object? Visit<S>(Statement.Create.Schema.CreateSchema createSchema, S context) => null;
+
+    public object? Visit<S>(Statement.Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context)
+    {
+        if (refreshMaterializedView.View != null) AddTable(refreshMaterializedView.View);
+        return null;
+    }
 }

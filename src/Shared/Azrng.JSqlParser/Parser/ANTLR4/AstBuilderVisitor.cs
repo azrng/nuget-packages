@@ -93,6 +93,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createPolicy() != null) return Visit(context.createPolicy());
         if (context.createSequence() != null) return Visit(context.createSequence());
         if (context.createSchema() != null) return Visit(context.createSchema());
+        if (context.refreshStatement() != null) return Visit(context.refreshStatement());
 
         return new UnsupportedStatement();
     }
@@ -2554,6 +2555,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (authId != null) schema.Authorization = authId.GetText();
         }
         return schema;
+    }
+
+    // ── REFRESH MATERIALIZED VIEW ──────────────
+
+    public override object VisitRefreshStatement(JSqlParserGrammar.RefreshStatementContext context)
+    {
+        var refresh = new Statement.Refresh.RefreshMaterializedViewStatement();
+        if (context.table() is { } viewCtx) refresh.View = (Table)Visit(viewCtx);
+        if (context.CONCURRENTLY() != null) refresh.Concurrently = true;
+        // WITH [NO] DATA
+        if (context.WITH() != null && context.DATA() != null)
+        {
+            refresh.RefreshMode = context.NO() != null
+                ? Statement.Refresh.RefreshMode.WithNoData
+                : Statement.Refresh.RefreshMode.WithData;
+        }
+        return refresh;
     }
 
     // ── MERGE ──────────────────────────────────

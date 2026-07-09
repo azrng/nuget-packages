@@ -83,4 +83,23 @@ public class SelectClauseRoundTripTest
         Assert.NotNull(plain.GroupBy?.GroupingSets);
         Assert.Equal(2, plain.GroupBy!.GroupingSets!.Count);
     }
+
+    // ── P1-6: REFRESH MATERIALIZED VIEW ──
+
+    [Fact]
+    public void RefreshMaterializedView_Basic_ShouldRoundTrip()
+        => AssertRoundTrip("REFRESH MATERIALIZED VIEW mv");
+
+    [Fact]
+    public void RefreshMaterializedView_WithData_ShouldRoundTrip()
+        => AssertRoundTrip("REFRESH MATERIALIZED VIEW mv WITH DATA");
+
+    [Fact]
+    public void RefreshMaterializedView_WithNoData_ShouldRoundTrip()
+        => AssertRoundTrip("REFRESH MATERIALIZED VIEW mv WITH NO DATA");
+
+    [Fact]
+    public void RefreshMaterializedView_Concurrently_ShouldRoundTrip()
+        => AssertRoundTrip("REFRESH MATERIALIZED VIEW CONCURRENTLY mv");
 }
+

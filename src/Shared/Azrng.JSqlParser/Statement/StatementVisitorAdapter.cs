@@ -70,4 +70,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // JSqlParser 5.4+ - CREATE SCHEMA (上游 commit ac46c434)
     public virtual T Visit<S>(Create.Schema.CreateSchema createSchema, S context) => default!;
+
+    // REFRESH MATERIALIZED VIEW (T091 P1-6)
+    public virtual T Visit<S>(Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context) => default!;
 }

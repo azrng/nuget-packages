@@ -410,6 +410,7 @@ COLUMNS         : [Cc][Oo][Ll][Uu][Mm][Nn][Ss] ;
 COMMIT          : [Cc][Oo][Mm][Mm][Ii][Tt] ;
 COMMENT         : [Cc][Oo][Mm][Mm][Ee][Nn][Tt] ;
 COMMENTS        : [Cc][Oo][Mm][Mm][Ee][Nn][Tt][Ss] ;
+CONCURRENTLY    : [Cc][Oo][Nn][Cc][Uu][Rr][Rr][Ee][Nn][Tt][Ll][Yy] ;
 CONFLICT        : [Cc][Oo][Nn][Ff][Ll][Ii][Cc][Tt] ;
 CONSTRAINTS     : [Cc][Oo][Nn][Ss][Tt][Rr][Aa][Ii][Nn][Tt][Ss] ;
 CONVERT         : [Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;
