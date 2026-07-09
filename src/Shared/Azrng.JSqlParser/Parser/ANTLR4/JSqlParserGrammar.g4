@@ -447,6 +447,7 @@ fetchClause
 
 insertStatement
     : INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+      outputClause?
       ( selectStatement
       | VALUES valuesList
       | DEFAULT VALUES
@@ -454,6 +455,11 @@ insertStatement
       onDuplicateKey?
       onConflictClause?
       returningClause?
+    ;
+
+// MSSQL OUTPUT 子句：OUTPUT selectItems [INTO @var | table [(cols)]]，透传保 round-trip
+outputClause
+    : OUTPUT selectColumnList (INTO table (OPENING_PAREN identifierList CLOSING_PAREN)?)?
     ;
 
 // PostgreSQL ON CONFLICT [(cols) | ON CONSTRAINT name] DO NOTHING | DO UPDATE SET ...

@@ -1118,6 +1118,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
+        // MSSQL OUTPUT 子句（透传原始文本保 round-trip）
+        if (context.outputClause() is { } outputCtx)
+            insert.OutputClause = GetOriginalText(outputCtx);
+
         if (context.selectStatement() != null)
         {
             insert.Select = (Select)Visit(context.selectStatement());

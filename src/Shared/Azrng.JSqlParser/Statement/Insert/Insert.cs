@@ -60,6 +60,9 @@ public class Insert : ASTNodeAccessImpl, Statement
     /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
     public ReturningClause? Returning { get; set; }
 
+    /// <summary>MSSQL OUTPUT 子句（OUTPUT inserted.col [INTO ...]），透传原始文本保 round-trip。未指定时为 null。</summary>
+    public string? OutputClause { get; set; }
+
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -95,6 +98,7 @@ public class Insert : ASTNodeAccessImpl, Statement
         {
             sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
+        if (OutputClause != null) sb.Append(' ').Append(OutputClause);
         if (Select != null) sb.Append(" ").Append(Select);
         else if (ValuesItems != null && ValuesItems.Count > 0)
         {

@@ -172,7 +172,18 @@ public class SelectClauseRoundTripTest
         Assert.NotNull(plain.OracleHierarchical);
         Assert.False(plain.OracleHierarchical!.ConnectFirst);  // START WITH 在前
     }
+
+    // ── P1-4: MSSQL OUTPUT 子句 ──
+
+    [Fact]
+    public void Insert_OutputClause_ShouldRoundTrip()
+        => AssertRoundTrip("INSERT INTO t (a) OUTPUT inserted.a VALUES (1)");
+
+    [Fact]
+    public void Insert_OutputIntoTable_ShouldRoundTrip()
+        => AssertRoundTrip("INSERT INTO t (a) OUTPUT inserted.a INTO archive (a) VALUES (1)");
 }
+
 
 
 

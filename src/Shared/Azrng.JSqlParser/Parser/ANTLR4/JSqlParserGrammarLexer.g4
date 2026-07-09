@@ -226,6 +226,7 @@ NESTED          : [Nn][Ee][Ss][Tt][Ee][Dd] ;
 NOT             : [Nn][Oo][Tt] ;
 NULL            : [Nn][Uu][Ll][Ll] ;
 OFFSET          : [Oo][Ff][Ff][Ss][Ee][Tt] ;
+OUTPUT          : [Oo][Uu][Tt][Pp][Uu][Tt] ;
 OPTIMIZE        : [Oo][Pp][Tt][Ii][Mm][Ii][Zz][Ee] ;
 ON              : [Oo][Nn] ;
 ONLY            : [Oo][Nn][Ll][Yy] ;
