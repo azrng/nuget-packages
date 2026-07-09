@@ -1349,7 +1349,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var colDef = new ColumnDefinition();
         colDef.ColumnName = context.identifier().GetText();
-        colDef.DataType = context.dataType().GetText();
+        // 阶段2 临时：仅填 DataType 名，结构化参数/数组维度/字符集与列规格在阶段4 接线
+        colDef.ColDataType = new ColDataType { DataType = context.dataType().GetText() };
         return colDef;
     }
 
@@ -1779,7 +1780,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
                 };
             }
             return expr;
@@ -1825,7 +1826,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
                 };
             }
             return expr;
@@ -1842,7 +1843,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.DataType }
+                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
                 };
             }
             return expr;
