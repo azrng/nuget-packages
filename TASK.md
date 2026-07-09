@@ -6,15 +6,15 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化 | 破坏性重构对齐上游 CreateTable 模型(11类),补全 tableOptions/CTAS/LIKE/约束结构化/FK引用动作/CHECK表达式/EXCLUDE/RowMovement/SpannerInterleaveIn;不做 STRUCT/ARRAY 复合列类型(留独立批次) | 阶段1 | DOING | high | 2026-07-09 |
+| _无活跃任务_ | | | | | | |
 
-> T088 分阶段独立提交:①新建模型类 ②重构现有模型+ToString ③grammar扩展 ④visitor接线 ⑤测试+回归+文档收口。决策:破坏性重构(对齐上游类层次)、STRUCT/ARRAY 复合类型本轮不做、分批提交。
+> 当前无活跃任务。下一个任务待用户指定。
 
 ## 待业务驱动 Backlog
 
 > 以下事项已识别为未做或差异，当前无业务需求驱动，**不进入活跃任务**。出现具体业务场景时按触发条件择项启动，新建对应 `T-` 编号任务并引用本表 `BL-` 编号。
 
-> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。`BL-07/08/09` 静默丢弃缺陷已由 T080 修复并移出本表。
+> 全量对比已完成（见 BL-15 对齐说明），上游 HEAD `2b141568`（5.4-SNAPSHOT，2026-04-12）无新提交。下表为识别出的缺口，按优先级分组。**BL-01~14 全部完成（T080/T081/T083~T088），backlog 清零，仅保留历史记录。** `BL-07/08/09` 静默丢弃缺陷已由 T080 修复并移出本表。
 
 ### P1 真缺口（经验证确认，非架构差异）
 
@@ -35,7 +35,7 @@
 | BL-03 | 聚合函数 OVER 窗口子句（非问题，关闭） | 架构差异 | T076 | — | **已确认非问题（T086 核实）**。原 backlog 判断"Azrng OVER 走 AnalyticExpression 独立路径、需另设计 Function↔窗口接线"不准确：grammar `functionExpr` 已支持任意函数后接 `overClause`，visitor 在检测到 OVER 时构造 `AnalyticExpression`（含 Name/Expression/PartitionExpressionList/OrderByElements/WindowFrame/FilterExpression）。`SUM(x) OVER(...)`、`COUNT(*) OVER(...)`、`RANK() OVER(...)`、窗口帧 ROWS/RANGE/GROUPS、FILTER+OVER 组合均解析并 round-trip（AdvancedExpressionTest 43 项已覆盖）。架构差异仅为风格：上游保留 Function 包裹，Azrng 扁平化到 AnalyticExpression，不影响常用场景 |
 | BL-04 | 上游 `MYSQL_OBJECT` 类型（OBJECTAGG 逗号分隔输出，已完成） | 输出差异 | T076 F7 | — | **已完成（T084）**。`JsonAggregateFunction` 新增 `UseCommaSeparator` 字段；visitor `VisitJsonObjectAggFunction` 增加 COMMA 分支（此前逗号静默归入非 VALUE 导致冒号输出）；`AppendObjectAgg` 三路输出（VALUE/逗号/冒号），对齐上游 MYSQL_OBJECT |
 | BL-05 | JSON_OBJECT 冒号分隔 lexer 歧义（已完成） | 词法限制 | T076 F7 | — | **已完成（T086）**。原 backlog 判断"ANTLR 与 JavaCC LOOKAHEAD 本质差异、需 lexer 层改造"**不准确**——实为 token 优先级冲突（`:bar` 被 `S_JDBC_NAMED_PARAM` 最大匹配吞掉）。解法：grammar `jsonKeyValuePair` 增加 `S_JDBC_NAMED_PARAM` 分支（把命名参数整体当冒号分隔符+值），visitor 去前导冒号得到值。无需 lexer 层改造 |
-| BL-06 | 方言专项 CREATE TABLE 等方言特性（开发中） | 方言补全 | T075（子项 69-77 除 72/73） | — | **开发中（T088）**。破坏性重构对齐上游 11 类模型：新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 TableOptions/CTAS/LIKE/OrReplace/Unlogged/CreateOptions；约束结构化(FK引用动作/CHECK表达式/EXCLUDE)。**本轮不做 STRUCT/ARRAY 复合列类型**（改动最大，留独立批次）。tableOptions/列规格按上游策略字符串透传(保 round-trip) |
+| BL-06 | 方言专项 CREATE TABLE 等方言特性（已完成） | 方言补全 | T075（子项 69-77 除 72/73） | — | **已完成（T088）**。破坏性重构对齐上游 11 类模型：新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 OrReplace/Unlogged/CreateOptions/TableOptions/Select(CTAS)/LikeTable/Columns/RowMovement/InterleaveIn；约束结构化（FK→ForeignKeyIndex 含 ReferencedTable/ReferencedColumnNames/OnDelete/OnUpdate、CHECK→CheckConstraint 持有 Expression、EXCLUDE→ExcludeConstraint）；grammar 新增 createParameter 产生式透传表级选项（ENGINE/CHARSET/PARTITION BY/ORDER BY/SAMPLE BY 等）与列规格（NOT NULL/MATERIALIZED/COMMENT 等），用 InputStream 区间获取原始文本保 round-trip。**未做**：STRUCT/ARRAY 复合列类型（改动最大，留独立批次）；PartitionDefinition 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 TableOptions 字符串透传）；功能性索引 Expression 字段（边缘场景）。**破坏性 API 变更**：ColumnDefinition.DataType(string)→ColDataType；Constraint 新增 FK/CHECK/EXCLUDE 子类层次。全量 1052 测试通过（净增 31） |
 
 ### BL-15 对齐基线说明
 
@@ -49,24 +49,37 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：845 测试
+- **Azrng**：1052 测试（截至 T088/BL-06 完成）
 - **上游 JSqlParser**：2309 测试
-- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等），这些是 Azrng 明确不在迁移范围内的（对应 BL-06）
+- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06 已移植 CREATE TABLE 通用能力与代表性方言（ClickHouse/PARTITION/RowMovement/Spanner），但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化（破坏性重构对齐上游 11 类模型，新建 ColDataType/ReferentialAction/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement/SpannerInterleaveIn；CreateTable 补 TableOptions/CTAS/LIKE/OrReplace/Unlocked/CreateOptions；约束结构化 FK/CHECK/EXCLUDE；全量 1052 测试通过，净增 31） | DONE | 2026-07-09 |
 | T087 | Azrng.JSqlParser BL-02 补全 JSON_TABLE Oracle/Trino 全量方言子句（函数级 ON EMPTY/TYPE/FORMAT JSON/PLAN + 列级 EXISTS/WRAPPER/QUOTES/SCALARS/ON EMPTY/ON ERROR，全量 1021 测试通过） | DONE | 2026-07-09 |
 | T086 | Azrng.JSqlParser BL-05 修复 JSON_OBJECT 无空格冒号 lexer 冲突（grammar 接受 S_JDBC_NAMED_PARAM 作分隔符，visitor 去前导冒号，全量 1011 测试通过） | DONE | 2026-07-08 |
 | T085 | Azrng.JSqlParser BL-01 修复 JSON_QUERY Legacy 多 path 参数死代码（grammar+visitor+ToString 接线 AdditionalQueryPathArguments，全量 1008 测试通过） | DONE | 2026-07-08 |
 | T084 | Azrng.JSqlParser BL-04 修复 JSON_OBJECTAGG 逗号分隔静默退化为冒号（新增 UseCommaSeparator 三路输出，对齐上游 MYSQL_OBJECT，全量 1007 测试通过） | DONE | 2026-07-08 |
-| T083 | Azrng.JSqlParser BL-10/11/12 backlog 状态同步 + BL-11 死代码清理（删除 DateValue/TimestampValue/TimeValue 三个零实例化类及 visitor 签名，全量 1006 测试通过） | DONE | 2026-07-08 |
 | T082 | EFCore Provider 日志工厂复用修复（四个关系型 provider 复用宿主 ILoggerFactory，移除包内 ConsoleLoggerProvider 重复创建；Postgres 升至 1.7.1，MySQL/SQLServer/SQLite 升至 1.6.2；日志配置文档已补充，新增 2 项回归测试） | DONE | 2026-07-08 |
 | T081 | Azrng.JSqlParser BL-13/BL-14 收口（ClickHouse JOIN GLOBAL/ANY/ALL + Snowflake 时间旅行接线 + ALTER round-trip 14 处缺陷修复，全量 1006 测试通过，净增 48） | DONE | 2026-07-08 |
 | T080 | Azrng.JSqlParser 修复 3 个静默丢弃缺陷（OVERLAPS / MEMBER OF / SELECT TOP，全量 861 测试通过，净增 16） | DONE | 2026-07-07 |
 | T079 | Azrng.AspNetCore.Job.Quartz 代码审查 P0 缺陷修复（scope 泄漏/监听器未注册/时区/暂停/扫描割裂 + 历史清理，全量 25 测试通过） | DONE | 2026-07-07 |
+
+### T088 归档说明
+
+- **目标仓库**：`src/Shared/Azrng.JSqlParser`，测试：`test/Azrng.JSqlParser.Test`
+- **任务目标**：BL-06 方言专项 CREATE TABLE 全量移植，破坏性重构对齐上游 CreateTable 11 类模型
+- **完成情况**：5 阶段独立提交，全量 1052 测试通过（1021 → 1052，净增 31）
+  - **阶段1（模型类新建）**：ColDataType/ReferentialAction(+Type/Mode 枚举)/ForeignKeyIndex/CheckConstraint/ExcludeConstraint/RowMovement(+Mode 枚举)/SpannerInterleaveIn 共 7 个类
+  - **阶段2（模型重构）**：ColumnDefinition.DataType(string)→ColDataType（破坏性）；CreateTable 新增 OrReplace/Unlogged/CreateOptions/TableOptions/Select/LikeTable/SelectParenthesis/RowMovement/InterleaveIn/Columns 共 10 字段；ToString 按上游序列化顺序重写
+  - **阶段3+4（grammar+visitor）**：grammar createTable 重构（括号内定义可选支持纯 CTAS、createParameter 透传表级选项、rowMovementClause、LIKE、spannerInterleaveIn）；dataType 支持 schema.type 点号；新增 colDataType/createParameter/createParameterAtom/createOption/simpleColumnNames 产生式；tableConstraint 新增 EXCLUDE WHERE；visitor VisitCreateTable/VisitColumnDefinition/VisitTableConstraint 完全重写
+  - **阶段5（测试+收口）**：CreateTableRoundTripTest 31 项（覆盖表选项/ClickHouse/分区/RowMovement/CTAS/LIKE/FK/CHECK/EXCLUDE + 结构化断言）；修复表级选项空格丢失（InputStream 区间取原始文本）、createParameterAtom 函数形式 MergeTree()、ROW 关键字、FK 引用括号空格
+- **阻塞项**：无
+- **未做的事**：STRUCT/ARRAY 复合列类型（改动最大，需 grammar/模型/visitor 全链路重构，留独立批次）；PartitionDefinition 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 TableOptions 字符串透传）；功能性索引 Expression 字段（Index.ColumnParams.expression，边缘场景）；DeParser 双轨（Azrng 单轨设计，序列化全靠模型 ToString）
+- **破坏性 API 变更**：ColumnDefinition.DataType(string)→ColDataType；Constraint 新增 ForeignKeyIndex/CheckConstraint/ExcludeConstraint 子类层次（VisitTableConstraint 对 FK/CHECK/EXCLUDE 返回对应子类）
 
 ### T082 归档说明
 
