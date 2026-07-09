@@ -177,21 +177,27 @@ Console.WriteLine(stmt.ToString());
 
 ### 1.0.0-beta3
 
-完成 BL-13/BL-14 剩余子特性收口，同步核实并归档 BL-10/11/12，清理 BL-11 遗留死代码。
+完成 BL-13/BL-14 剩余子特性收口，同步核实并归档 BL-10/11/12，清理 BL-11 遗留死代码，修复 JSON 方言系列缺陷（BL-01/02/04/05），核实关闭 BL-03。
 
 - **新增特性**：
   - ClickHouse JOIN 修饰符 `GLOBAL`/`ANY`/`ALL`（`Join` 新增三个布尔字段，对齐上游 isGlobal/isAny/isAll）
   - Snowflake 时间旅行 `AT`/`BEFORE (TIMESTAMP|OFFSET|STATEMENT => expr)` 接线（grammar 新增 `timeTravelClause` 产生式，填 `Table.TimeTravel`）
+  - JSON_QUERY Legacy 多 path 参数 `JSON_QUERY(input, path1, path2...)`（BL-01，接线 `AdditionalQueryPathArguments`）
+  - JSON_TABLE Oracle/Trino 全量方言子句（BL-02）：函数级 `ON EMPTY`/`TYPE (STRICT|LAX)`/`FORMAT JSON` 输入/`PLAN`；列级 `EXISTS`/`FORMAT JSON`/`WRAPPER`/`QUOTES`/`SCALARS`/列级 `ON EMPTY`/`ON ERROR`
 - **修复的静默丢弃缺陷**（grammar 此前已接受但 AST 丢语义，round-trip 会丢数据）：
   - ALTER 操作 14 处 round-trip 缺陷——`DROP PRIMARY/UNIQUE/FOREIGN KEY/CONSTRAINT`、`RENAME INDEX/KEY/CONSTRAINT`、`ENGINE`/`COMMENT`（含等号）、分区操作族（`ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION` 此前只设 Operation 枚举不填结构化字段）、`ALTER SEQUENCE` 此前用 GetText 原样拼接导致空格丢失
   - `TimeTravelClause.ToString` 此前缺括号（`AT TIMESTAMP => x` 现修正为 `AT (TIMESTAMP => x)`）
-- **核实归档（状态同步，非新实现）**：经逐项核实，BL-10（`LATERAL`→`LateralSubSelect`）、BL-11（`DATE`/`TIMESTAMP` 字面量→`DateTimeLiteralExpression`）、BL-12（14 个语句类型）均已在 beta2 周期实现，仅 TASK.md backlog 未同步；本版本已将 backlog 状态修正为已完成
+  - `JSON_OBJECTAGG(foo, bar)` 逗号分隔静默退化为冒号（BL-04，对齐上游 MYSQL_OBJECT）
+  - `JSON_OBJECT(foo:bar)` 无空格冒号此前解析失败（BL-05，原 backlog 误判为 JavaCC LOOKAHEAD 差异，实为 token 优先级冲突，grammar 接受 `S_JDBC_NAMED_PARAM` 作分隔符解决）
+- **核实归档（状态同步，非新实现）**：经逐项核实，BL-10（`LATERAL`→`LateralSubSelect`）、BL-11（`DATE`/`TIMESTAMP` 字面量→`DateTimeLiteralExpression`）、BL-12（14 个语句类型）均已在 beta2 周期实现，仅 TASK.md backlog 未同步；本版本已将 backlog 状态修正为已完成。BL-03（聚合函数 OVER 窗口）经核实为非问题——`SUM(x) OVER(...)` 等已通过 `AnalyticExpression` 完整工作并有测试覆盖
 - **破坏性 API 变更**：
   - 删除零实例化的 `DateValue`/`TimestampValue`/`TimeValue` 三个类及 `ExpressionVisitor<T>` 中对应 `Visit` 方法签名——外部直接实现 `ExpressionVisitor<T>` 接口的代码需移除这三个 Visit 方法（改用 `DateTimeLiteralExpression`）
   - `GLOBAL` 从 identifier 兜底列表移除（保留为关键字），消除 `table alias?` 贪婪吞掉 `GLOBAL JOIN` 的歧义——以 `global` 作列名/表名/别名的 SQL 将无法解析（对齐上游 `K_GLOBAL` 保留字行为）
+  - `JsonTable.On*Behavior` 从 `string?` 升级为结构化 `JsonOnResponseBehavior`（BL-02）——外部按字符串断言需改为 `.Type`
+  - 新增保留字 `LAX`/`SCALARS`/`ALLOW`/`DISALLOW`（BL-02 JSON_TABLE 方言）
 - **ALTER 覆盖度澄清**：经 Explore 逐值核对，`AlterOperation` 枚举已 **47/47 全量对齐**上游（原 backlog "11/47" 记载过时）；上游不存在 `ALTER INDEX`/`ALTER SCHEMA` 语句类（用 `UnsupportedStatement` 兜底），非对齐缺口
-- **全量测试**：1006 通过（0 失败 0 跳过，较 beta2 净增 145）
-- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-01~06（均为方言/架构差异，按需启动）。BL-07~14 已全部完成
+- **全量测试**：1021 通过（0 失败 0 跳过，较 beta2 净增 160）
+- **已知缺口**：见 `TASK.md`「待业务驱动 Backlog」BL-06（方言专项 CREATE TABLE，经核实确认工作量巨大，按具体方言逐项迁移）。BL-01~05、BL-07~14 已全部完成
 
 ### 1.0.0-beta2
 
