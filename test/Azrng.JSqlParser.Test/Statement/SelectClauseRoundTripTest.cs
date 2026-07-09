@@ -149,7 +149,31 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Upsert_WithSelect_ShouldRoundTrip()
         => AssertRoundTrip("REPLACE INTO t SELECT * FROM src");
+
+    // ── P1-2: CONNECT BY / START WITH 层次查询 ──
+
+    [Fact]
+    public void ConnectBy_StartWithConnectBy_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t START WITH id = 1 CONNECT BY PRIOR id = parent_id");
+
+    [Fact]
+    public void ConnectBy_ConnectByStartWith_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t CONNECT BY PRIOR id = parent_id START WITH id = 1");
+
+    [Fact]
+    public void ConnectBy_NoCycle_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t CONNECT BY NOCYCLE PRIOR id = parent_id");
+
+    [Fact]
+    public void ConnectBy_ShouldPopulateOracleHierarchical()
+    {
+        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT * FROM t START WITH id = 1 CONNECT BY PRIOR id = parent_id")!;
+        var plain = Assert.IsType<PlainSelect>(stmt);
+        Assert.NotNull(plain.OracleHierarchical);
+        Assert.False(plain.OracleHierarchical!.ConnectFirst);  // START WITH 在前
+    }
 }
+
 
 
 

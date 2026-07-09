@@ -116,6 +116,7 @@ plainSelect
       fromClause?
       whereClause?
       preferringClause?
+      connectByClause?
       groupByClause?
       havingClause?
       windowClause?
@@ -323,6 +324,12 @@ joinCondition
 
 whereClause
     : WHERE expression
+    ;
+
+// Oracle 层次查询：START WITH expr CONNECT BY [NOCYCLE] expr 或 CONNECT BY [NOCYCLE] expr [START WITH expr]
+connectByClause
+    : START WITH expression CONNECT BY NOCYCLE? expression
+    | CONNECT BY NOCYCLE? expression (START WITH expression)?
     ;
 
 groupByClause

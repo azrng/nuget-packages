@@ -412,6 +412,7 @@ COMMENT         : [Cc][Oo][Mm][Mm][Ee][Nn][Tt] ;
 COMMENTS        : [Cc][Oo][Mm][Mm][Ee][Nn][Tt][Ss] ;
 CONCURRENTLY    : [Cc][Oo][Nn][Cc][Uu][Rr][Rr][Ee][Nn][Tt][Ll][Yy] ;
 CONFLICT        : [Cc][Oo][Nn][Ff][Ll][Ii][Cc][Tt] ;
+CONNECT         : [Cc][Oo][Nn][Nn][Ee][Cc][Tt] ;
 CONSTRAINTS     : [Cc][Oo][Nn][Ss][Tt][Rr][Aa][Ii][Nn][Tt][Ss] ;
 CONVERT         : [Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;
 TRY_CONVERT     : [Tt][Rr][Yy]'_'[Cc][Oo][Nn][Vv][Ee][Rr][Tt] ;

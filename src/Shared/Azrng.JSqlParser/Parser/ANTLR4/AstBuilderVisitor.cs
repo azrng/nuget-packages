@@ -340,6 +340,40 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.Preferring = (PreferringClause)Visit(context.preferringClause());
         }
 
+        // Oracle 层次查询（START WITH ... CONNECT BY ...）
+        if (context.connectByClause() is { } connectByCtx)
+        {
+            var hier = new OracleHierarchicalExpression();
+            var expressions = connectByCtx.expression();
+            // 判断 START 与 CONNECT 的相对顺序：遍历子节点找首个 START/CONNECT token
+            bool startBeforeConnect = false;
+            for (int i = 0; i < connectByCtx.ChildCount; i++)
+            {
+                if (connectByCtx.GetChild(i) is Antlr4.Runtime.Tree.ITerminalNode tn)
+                {
+                    if (tn.Symbol.Type == JSqlParserGrammarLexer.START) { startBeforeConnect = true; break; }
+                    if (tn.Symbol.Type == JSqlParserGrammarLexer.CONNECT) { break; }
+                }
+            }
+
+            if (startBeforeConnect)
+            {
+                // START WITH expr CONNECT BY expr
+                hier.StartExpression = (Expression.Expression)Visit(expressions[0]);
+                hier.ConnectExpression = (Expression.Expression)Visit(expressions[1]);
+            }
+            else
+            {
+                // CONNECT BY expr [START WITH expr]
+                hier.ConnectFirst = true;
+                hier.ConnectExpression = (Expression.Expression)Visit(expressions[0]);
+                if (expressions.Length > 1)
+                    hier.StartExpression = (Expression.Expression)Visit(expressions[1]);
+            }
+            if (connectByCtx.NOCYCLE() != null) hier.NoCycle = true;
+            select.OracleHierarchical = hier;
+        }
+
         if (context.groupByClause() != null)
         {
             select.GroupBy = BuildGroupByElement(context.groupByClause());

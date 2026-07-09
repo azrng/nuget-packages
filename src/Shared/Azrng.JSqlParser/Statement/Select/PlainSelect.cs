@@ -46,6 +46,9 @@ public class PlainSelect : Select
     /// <summary>QUALIFY 过滤表达式（Snowflake/Teradata），对齐上游 qualify。</summary>
     public Expression.Expression? Qualify { get; set; }
 
+    /// <summary>Oracle 层次查询（START WITH ... CONNECT BY ...），对齐上游 oracleHierarchical。</summary>
+    public OracleHierarchicalExpression? OracleHierarchical { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -80,6 +83,8 @@ public class PlainSelect : Select
         }
 
         if (Where != null) builder.Append(" WHERE ").Append(Where);
+        // Oracle 层次查询（WHERE 之后、GROUP BY 之前）
+        if (OracleHierarchical != null) builder.Append(' ').Append(OracleHierarchical);
         if (GroupBy != null) builder.Append(' ').Append(GroupBy);
         if (Having != null) builder.Append(" HAVING ").Append(Having);
 
