@@ -74,6 +74,9 @@ public interface StatementVisitor<T>
     // REFRESH MATERIALIZED VIEW (T091 P1-6)
     T Visit<S>(Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context);
 
+    // UPSERT / REPLACE (T091 P1-8)
+    T Visit<S>(Insert.UpsertStatement upsert, S context);
+
     // Convenience overloads (no context)
     void Visit(Statements stmts) => Visit<object?>(stmts, default);
     void Visit(Select.Select select) => Visit<object?>(select, default);
@@ -125,4 +128,5 @@ public interface StatementVisitor<T>
     void Visit(Insert.MultiInsert multiInsert) => Visit<object?>(multiInsert, default);
     void Visit(Create.Schema.CreateSchema createSchema) => Visit<object?>(createSchema, default);
     void Visit(Refresh.RefreshMaterializedViewStatement refreshMaterializedView) => Visit<object?>(refreshMaterializedView, default);
+    void Visit(Insert.UpsertStatement upsert) => Visit<object?>(upsert, default);
 }

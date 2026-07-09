@@ -127,6 +127,29 @@ public class SelectClauseRoundTripTest
         Assert.NotNull(stmt.ToString());
         Assert.Contains("SUBSTRING(x FROM 1 FOR 3)", stmt.ToString()!);
     }
+
+    // ── P1-8: UPSERT / REPLACE INTO ──
+
+    [Fact]
+    public void Upsert_WithSet_ShouldRoundTrip()
+        => AssertRoundTrip("UPSERT INTO t (a, b) SET a = 1, b = 2");
+
+    [Fact]
+    public void Replace_WithValues_ShouldRoundTrip()
+        => AssertRoundTrip("REPLACE INTO t (a, b) VALUES (1, 2)");
+
+    [Fact]
+    public void InsertOrReplace_WithSet_ShouldRoundTrip()
+        => AssertRoundTrip("INSERT OR REPLACE INTO t SET a = 1");
+
+    [Fact]
+    public void Upsert_WithOnDuplicateKey_ShouldRoundTrip()
+        => AssertRoundTrip("UPSERT INTO t SET a = 1 ON DUPLICATE KEY UPDATE a = 2");
+
+    [Fact]
+    public void Upsert_WithSelect_ShouldRoundTrip()
+        => AssertRoundTrip("REPLACE INTO t SELECT * FROM src");
 }
+
 
 

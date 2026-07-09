@@ -584,6 +584,7 @@ REJECT          : [Rr][Ee][Jj][Ee][Cc][Tt] ;
 RENAME          : [Rr][Ee][Nn][Aa][Mm][Ee] ;
 REPLACE         : [Rr][Ee][Pp][Ll][Aa][Cc][Ee] ;
 RESET           : [Rr][Ee][Ss][Ee][Tt] ;
+UPSERT          : [Uu][Pp][Ss][Ee][Rr][Tt] ;
 RESTART         : [Rr][Ee][Ss][Tt][Aa][Rr][Tt] ;
 RESUME          : [Rr][Ee][Ss][Uu][Mm][Ee] ;
 RESTRICT        : [Rr][Ee][Ss][Tt][Rr][Ii][Cc][Tt] ;

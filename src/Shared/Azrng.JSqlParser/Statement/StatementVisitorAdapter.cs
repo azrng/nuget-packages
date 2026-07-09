@@ -73,4 +73,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // REFRESH MATERIALIZED VIEW (T091 P1-6)
     public virtual T Visit<S>(Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context) => default!;
+
+    // UPSERT / REPLACE (T091 P1-8)
+    public virtual T Visit<S>(Insert.UpsertStatement upsert, S context) => default!;
 }

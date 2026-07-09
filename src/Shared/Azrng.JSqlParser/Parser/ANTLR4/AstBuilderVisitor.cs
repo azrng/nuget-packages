@@ -94,6 +94,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createSequence() != null) return Visit(context.createSequence());
         if (context.createSchema() != null) return Visit(context.createSchema());
         if (context.refreshStatement() != null) return Visit(context.refreshStatement());
+        if (context.upsertStatement() != null) return Visit(context.upsertStatement());
 
         return new UnsupportedStatement();
     }
@@ -2572,6 +2573,89 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 : Statement.Refresh.RefreshMode.WithData;
         }
         return refresh;
+    }
+
+    // ── UPSERT / REPLACE ───────────────────────
+
+    public override object VisitUpsertStatement(JSqlParserGrammar.UpsertStatementContext context)
+    {
+        var upsert = new Statement.Insert.UpsertStatement();
+        // 类型判定
+        if (context.UPSERT() != null) upsert.UpsertType = Statement.Insert.UpsertType.Upsert;
+        else if (context.REPLACE() != null && context.INSERT() == null) upsert.UpsertType = Statement.Insert.UpsertType.Replace;
+        else upsert.UpsertType = Statement.Insert.UpsertType.InsertOrReplace;
+
+        if (context.INTO() != null) upsert.UseInto = true;
+        if (context.table() is { } tblCtx) upsert.Table = (Table)Visit(tblCtx);
+
+        // 列
+        if (context.identifierList() != null)
+        {
+            upsert.Columns = new List<Column>();
+            foreach (var id in context.identifierList().identifier())
+                upsert.Columns.Add(new Column { ColumnName = id.GetText() });
+        }
+
+        // SET / SELECT / VALUES 三选一
+        if (context.SET() != null)
+        {
+            upsert.SetUpdateSets = new List<UpdateSet>();
+            foreach (var assignment in context.assignmentItem())
+            {
+                var updateSet = new UpdateSet
+                {
+                    Columns = new List<Column>(),
+                    Values = new List<Expression.Expression>()
+                };
+                foreach (var target in assignment.assignmentTarget())
+                    updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
+                updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                upsert.SetUpdateSets.Add(updateSet);
+            }
+        }
+        else if (context.selectStatement() != null)
+        {
+            upsert.Select = (Select)Visit(context.selectStatement());
+        }
+        else if (context.valuesList() != null)
+        {
+            upsert.UseValues = true;
+            upsert.ValuesItems = new List<ExpressionList>();
+            foreach (var itemCtx in context.valuesList().valuesItem())
+            {
+                var exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+                foreach (var exprCtx in itemCtx.expression())
+                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                upsert.ValuesItems.Add(exprList);
+            }
+        }
+
+        // ON DUPLICATE KEY UPDATE
+        if (context.onDuplicateKey() is { } dupCtx)
+        {
+            if (dupCtx.NOTHING() != null)
+            {
+                upsert.DuplicateUpdateNothing = true;
+            }
+            else
+            {
+                upsert.DuplicateUpdateSets = new List<UpdateSet>();
+                foreach (var assignment in dupCtx.assignmentItem())
+                {
+                    var updateSet = new UpdateSet
+                    {
+                        Columns = new List<Column>(),
+                        Values = new List<Expression.Expression>()
+                    };
+                    foreach (var target in assignment.assignmentTarget())
+                        updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
+                    updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                    upsert.DuplicateUpdateSets.Add(updateSet);
+                }
+            }
+        }
+
+        return upsert;
     }
 
     // ── MERGE ──────────────────────────────────

@@ -70,6 +70,18 @@ statement
     | createSequence
     | createSchema
     | refreshStatement
+    | upsertStatement
+    ;
+
+// UPSERT / REPLACE / INSERT OR REPLACE（上游 Upsert）
+upsertStatement
+    : (UPSERT | REPLACE | INSERT OR REPLACE) INTO? table
+      (OPENING_PAREN identifierList CLOSING_PAREN)?
+      (SET assignmentItem (COMMA assignmentItem)*
+      | selectStatement
+      | VALUES valuesList
+      )
+      onDuplicateKey?
     ;
 
 // PostgreSQL REFRESH MATERIALIZED VIEW [CONCURRENTLY] name [WITH [NO] DATA]

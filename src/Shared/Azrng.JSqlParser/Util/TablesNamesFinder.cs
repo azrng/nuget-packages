@@ -571,4 +571,10 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         if (refreshMaterializedView.View != null) AddTable(refreshMaterializedView.View);
         return null;
     }
+
+    public object? Visit<S>(Statement.Insert.UpsertStatement upsert, S context)
+    {
+        if (upsert.Table != null) AddTable(upsert.Table);
+        return null;
+    }
 }
