@@ -1325,21 +1325,67 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitCreateTable(JSqlParserGrammar.CreateTableContext context)
     {
         var create = new CreateTable();
-        create.Table = (Table)Visit(context.table());
+        // createTable 产生式含多个 table 引用（主表 / LIKE 表 / spannerInterleaveIn 表），第一个为主表
+        var tables = context.table();
+        create.Table = tables.Length > 0 ? (Table)Visit(tables[0]) : null;
 
-        create.ColumnDefinitions = new List<ColumnDefinition>();
-        create.Constraints = new List<Constraint>();
+        // CREATE 子句选项
+        create.OrReplace = context.OR() != null;
+        create.Unlogged = context.UNLOGGED() != null;
+        if (context.IF() != null) create.IfNotExists = true;
+        if (context.createOption() is { Length: > 0 } opts)
+            create.CreateOptions = opts.Select(o => o.GetText()).ToList();
 
-        foreach (var defCtx in context.createTableDefinition())
+        // 括号内定义：simpleColumnNames（仅列名）或 createTableDefinition 列表
+        if (context.simpleColumnNames() != null)
         {
-            if (defCtx.columnDefinition() != null)
+            create.Columns = context.simpleColumnNames().identifier().Select(i => i.GetText()).ToList();
+        }
+        else
+        {
+            create.ColumnDefinitions = new List<ColumnDefinition>();
+            create.Constraints = new List<Constraint>();
+            foreach (var defCtx in context.createTableDefinition())
             {
-                create.ColumnDefinitions.Add((ColumnDefinition)Visit(defCtx.columnDefinition()));
+                if (defCtx.columnDefinition() != null)
+                    create.ColumnDefinitions.Add((ColumnDefinition)Visit(defCtx.columnDefinition()));
+                else if (defCtx.tableConstraint() != null)
+                    create.Constraints.Add((Constraint)Visit(defCtx.tableConstraint()));
             }
-            else if (defCtx.tableConstraint() != null)
+        }
+
+        // 表级选项（ENGINE/CHARSET/PARTITION BY/ORDER BY/SAMPLE BY 等），createParameter 透传为字符串
+        create.TableOptions = CollectCreateParameters(context.createParameter());
+
+        // Oracle ROW MOVEMENT
+        if (context.rowMovementClause() is { } rmCtx)
+        {
+            var mode = rmCtx.ENABLE() != null ? RowMovementMode.Enable : RowMovementMode.Disable;
+            create.RowMovement = new RowMovement { Mode = mode };
+        }
+
+        // AS SELECT (CTAS)
+        if (context.selectStatement() != null)
+            create.Select = (Statement.Select.Select)Visit(context.selectStatement());
+
+        // LIKE table
+        if (context.LIKE() != null && tables.Length > 1)
+            create.LikeTable = (Table)Visit(tables[1]);
+
+        // Spanner INTERLEAVE IN PARENT
+        if (context.spannerInterleaveIn() is { } interleaveCtx)
+        {
+            create.InterleaveIn = new SpannerInterleaveIn
             {
-                create.Constraints.Add((Constraint)Visit(defCtx.tableConstraint()));
-            }
+                Table = interleaveCtx.table() is { } parentTable ? (Table)Visit(parentTable) : null,
+                OnDelete = interleaveCtx.ON() != null && interleaveCtx.DELETE() != null
+                    ? new ReferentialAction
+                    {
+                        Type = ReferentialActionType.Delete,
+                        Action = interleaveCtx.CASCADE() != null ? ReferentialActionMode.Cascade : ReferentialActionMode.NoAction
+                    }
+                    : null
+            };
         }
 
         return create;
@@ -1349,25 +1395,103 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var colDef = new ColumnDefinition();
         colDef.ColumnName = context.identifier().GetText();
-        // 阶段2 临时：仅填 DataType 名，结构化参数/数组维度/字符集与列规格在阶段4 接线
-        colDef.ColDataType = new ColDataType { DataType = context.dataType().GetText() };
+        colDef.ColDataType = BuildColDataType(context.colDataType());
+        // 列规格透传为字符串（NOT NULL / DEFAULT expr / MATERIALIZED / COMMENT '...' 等），对齐上游 columnSpecs
+        // 结构化 columnConstraint + 兜底 createParameter 均收集原始文本，保 round-trip
+        var specs = new List<string>();
+        foreach (var cc in context.columnConstraint())
+            specs.Add(cc.GetText());
+        specs.AddRange(CollectCreateParameters(context.createParameter()));
+        colDef.ColumnSpecs = specs;
         return colDef;
+    }
+
+    /// <summary>
+    /// 从 colDataType 产生式构造结构化 <see cref="ColDataType"/>（类型名/参数/数组维度），对齐上游。
+    /// </summary>
+    private static ColDataType BuildColDataType(JSqlParserGrammar.ColDataTypeContext? ctx)
+    {
+        var result = new ColDataType();
+        if (ctx == null) return result;
+        var dtCtx = ctx.dataType();
+        // dataType 文本（含 schema.type 点号）
+        result.DataType = dtCtx.GetText();
+        // 数组维度 text[]
+        var brackets = ctx.LBRACKET();
+        if (brackets is { Length: > 0 })
+            result.ArrayData = brackets.Select(_ => (int?)null).ToList();
+        return result;
+    }
+
+    /// <summary>
+    /// 收集 createParameter 产生式的原始文本为字符串列表（保 round-trip），对齐上游 CreateParameter + tableOptionsStrings/columnSpecs。
+    /// </summary>
+    private static List<string> CollectCreateParameters(JSqlParserGrammar.CreateParameterContext[]? parameters)
+    {
+        var result = new List<string>();
+        if (parameters == null) return result;
+        foreach (var p in parameters)
+        {
+            // 整个 createParameter 节点的原始文本（保留空格/等号/大小写）
+            result.Add(p.GetText());
+        }
+        return result;
     }
 
     public override object VisitTableConstraint(JSqlParserGrammar.TableConstraintContext context)
     {
-        var constraint = new Constraint();
-
         // CONSTRAINT name 中的 name 是第一个 identifier（若有 CONSTRAINT 关键字）
         var identifiers = context.identifier();
+        string? name = null;
         if (context.CONSTRAINT() != null && identifiers.Length > 0)
+            name = identifiers[0].GetText();
+
+        // EXCLUDE WHERE (expr) — PostgreSQL
+        if (context.EXCLUDE() != null)
         {
-            constraint.Name = identifiers[0].GetText();
+            var exclude = new ExcludeConstraint { Name = name };
+            if (context.expression() != null)
+                exclude.Expression = (Expression.Expression)Visit(context.expression());
+            return exclude;
         }
 
-        // 判断约束类型并提取列
-        var identifierLists = context.identifierList();
-        JSqlParserGrammar.IdentifierListContext? firstList = identifierLists.Length > 0 ? identifierLists[0] : null;
+        // CHECK (expr) — 持有表达式
+        if (context.CHECK() != null)
+        {
+            var check = new CheckConstraint { Name = name };
+            if (context.expression() != null)
+                check.Expression = (Expression.Expression)Visit(context.expression());
+            return check;
+        }
+
+        // FOREIGN KEY — 持有引用表/引用列/ON DELETE/UPDATE 动作
+        if (context.FOREIGN() != null)
+        {
+            var identifierLists = context.identifierList();
+            var localList = identifierLists.Length > 0 ? identifierLists[0] : null;
+            var fk = new ForeignKeyIndex
+            {
+                Name = name,
+                Type = "FOREIGN KEY",
+                Columns = ExtractIdentifierList(localList)
+            };
+            // REFERENCES table (cols)
+            var refTable = context.table();
+            if (refTable != null)
+                fk.ReferencedTable = (Table)Visit(refTable);
+            if (identifierLists.Length > 1)
+                fk.ReferencedColumnNames = ExtractIdentifierList(identifierLists[1]);
+            // ON DELETE / ON UPDATE 动作
+            var (onDelete, onUpdate) = ExtractReferentialActions(context.ON(), context.DELETE(), context.UPDATE(), context.referentialAction());
+            fk.OnDelete = onDelete;
+            fk.OnUpdate = onUpdate;
+            return fk;
+        }
+
+        // 其余类型（PRIMARY KEY / UNIQUE / KEY|INDEX）沿用扁平 Constraint
+        var constraint = new Constraint { Name = name };
+        var identifierLists2 = context.identifierList();
+        JSqlParserGrammar.IdentifierListContext? firstList = identifierLists2.Length > 0 ? identifierLists2[0] : null;
 
         if (context.PRIMARY() != null)
         {
@@ -1387,31 +1511,76 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var prefix = context.UNIQUE() != null ? "UNIQUE"
                 : context.FULLTEXT() != null ? "FULLTEXT"
                 : context.SPATIAL() != null ? "SPATIAL" : "";
-            // 保留原始关键字（KEY 或 INDEX），有前缀时组合为 "UNIQUE INDEX" 等
             var kw = context.INDEX() != null ? "INDEX" : "KEY";
             constraint.Type = string.IsNullOrEmpty(prefix) ? kw : $"{prefix} {kw}";
-            // 索引名：CONSTRAINT 关键字存在时跳过第一个 identifier
             int nameIdx = context.CONSTRAINT() != null ? 1 : 0;
             if (identifiers.Length > nameIdx)
-            {
                 constraint.Name = identifiers[nameIdx].GetText();
-            }
-            // 索引列（含 ASC/DESC）：写入 IndexColumnParams，同时填充 Columns 保持兼容
             var (colParams, colNames) = ExtractIndexColumnList(context.indexColumnList());
             constraint.IndexColumnParams = colParams;
             constraint.Columns = colNames;
         }
-        else if (context.CHECK() != null)
-        {
-            constraint.Type = "CHECK";
-        }
-        else if (context.FOREIGN() != null)
-        {
-            constraint.Type = "FOREIGN KEY";
-            constraint.Columns = ExtractIdentifierList(firstList);
-        }
-
         return constraint;
+    }
+
+    /// <summary>
+    /// 从 ON DELETE/UPDATE + referentialAction 节点提取引用动作，返回 (OnDelete, OnUpdate)。
+    /// </summary>
+    private static (ReferentialAction? onDelete, ReferentialAction? onUpdate) ExtractReferentialActions(
+        Antlr4.Runtime.Tree.ITerminalNode[]? onNodes,
+        Antlr4.Runtime.Tree.ITerminalNode[]? deleteNodes,
+        Antlr4.Runtime.Tree.ITerminalNode[]? updateNodes,
+        JSqlParserGrammar.ReferentialActionContext[]? actionContexts)
+    {
+        ReferentialAction? onDelete = null;
+        ReferentialAction? onUpdate = null;
+        if (onNodes == null || onNodes.Length == 0) return (onDelete, onUpdate);
+
+        // ON 节点按顺序与 DELETE/UPDATE 配对
+        int actionIdx = 0;
+        var delCount = deleteNodes?.Length ?? 0;
+        var updCount = updateNodes?.Length ?? 0;
+        int delUsed = 0, updUsed = 0;
+        for (int i = 0; i < onNodes.Length; i++)
+        {
+            ReferentialActionType type;
+            // 判断当前 ON 后跟 DELETE 还是 UPDATE
+            if (delUsed < delCount && updUsed < updCount)
+            {
+                // 两者都还有：按源码顺序判断（ON 节点后紧跟的 terminal）
+                // 简化：DELETE 优先匹配（实际 SQL 中 ON DELETE 通常在 ON UPDATE 前）
+                type = ReferentialActionType.Delete;
+                delUsed++;
+            }
+            else if (delUsed < delCount)
+            {
+                type = ReferentialActionType.Delete;
+                delUsed++;
+            }
+            else
+            {
+                type = ReferentialActionType.Update;
+                updUsed++;
+            }
+            var action = actionIdx < (actionContexts?.Length ?? 0)
+                ? ParseReferentialActionMode(actionContexts![actionIdx])
+                : ReferentialActionMode.NoAction;
+            actionIdx++;
+            var ra = new ReferentialAction { Type = type, Action = action };
+            if (type == ReferentialActionType.Delete) onDelete = ra;
+            else onUpdate = ra;
+        }
+        return (onDelete, onUpdate);
+    }
+
+    /// <summary>解析 referentialAction 产生式为动作模式枚举。</summary>
+    private static ReferentialActionMode ParseReferentialActionMode(JSqlParserGrammar.ReferentialActionContext ctx)
+    {
+        if (ctx.CASCADE() != null) return ReferentialActionMode.Cascade;
+        if (ctx.SET() != null && ctx.NULL() != null) return ReferentialActionMode.SetNull;
+        if (ctx.SET() != null && ctx.DEFAULT() != null) return ReferentialActionMode.SetDefault;
+        if (ctx.RESTRICT() != null) return ReferentialActionMode.Restrict;
+        return ReferentialActionMode.NoAction; // NO ACTION
     }
 
     /// <summary>

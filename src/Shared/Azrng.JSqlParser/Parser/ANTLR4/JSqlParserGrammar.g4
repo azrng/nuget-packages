@@ -509,27 +509,52 @@ mergeWhenClause
 // ══════════════════════════════════════════════
 
 createTable
-    : CREATE (OR REPLACE)? (TEMPORARY | TEMP)? UNLOGGED? EXTERNAL? TABLE (IF NOT EXISTS)? table
-      OPENING_PAREN
-        createTableDefinition (COMMA createTableDefinition)*
-      CLOSING_PAREN
-      tableOptions?
+    : CREATE (OR REPLACE)? UNLOGGED? createOption* TABLE (IF NOT EXISTS)? table
+      ( OPENING_PAREN
+          ( simpleColumnNames
+          | createTableDefinition (COMMA createTableDefinition)*
+          )
+        CLOSING_PAREN
+      )?
+      createParameter*               // 表级选项（ENGINE/CHARSET/PARTITION BY/ORDER BY/SAMPLE BY 等），透传为字符串
+      rowMovementClause?             // Oracle ENABLE/DISABLE ROW MOVEMENT
       (AS selectStatement)?
+      (LIKE table likeOption*)?
+      (COMMA spannerInterleaveIn)?
+    ;
+
+// CREATE 关键字之后的选项（GLOBAL/TEMPORARY/TEMP/EXTERNAL）
+createOption
+    : GLOBAL | TEMPORARY | TEMP | EXTERNAL
+    ;
+
+// 仅列名形式：CREATE TABLE t (c1, c2) AS SELECT
+simpleColumnNames
+    : identifier (COMMA identifier)*
     ;
 
 createTableDefinition
     : columnDefinition
     | tableConstraint
-    | LIKE table likeOption*
     ;
 
 columnDefinition
-    : identifier dataType columnConstraint* columnOptions
+    : identifier colDataType columnConstraint* (createParameter)*
+    ;
+
+// 列数据类型，对齐上游 ColDataType 产生式。dataType 自身已含括号参数，colDataType 额外支持数组维度。
+colDataType
+    : dataType (LBRACKET RBRACKET)*
+    ;
+
+// 数据类型参数：支持 LONG_VALUE / MAX / 标识符 / 字符串字面量（如 set('a','b')），对齐上游
+dataTypeArgument
+    : LONG_VALUE | MAX | identifier | S_CHAR_LITERAL
     ;
 
 dataType
-    : identifier (OPENING_PAREN LONG_VALUE (COMMA LONG_VALUE)? CLOSING_PAREN)?
-    | dataTypeKeyword (OPENING_PAREN LONG_VALUE (COMMA LONG_VALUE)? CLOSING_PAREN)?
+    : identifier (DOT identifier)? (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
+    | dataTypeKeyword (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
     ;
 
 dataTypeKeyword
@@ -541,6 +566,7 @@ dataTypeKeyword
     | UUID | JSON | JSONB | XML
     ;
 
+// 结构化列约束（NOT NULL / DEFAULT / CHECK / REFERENCES / AUTO_INCREMENT / GENERATED AS IDENTITY / UNIQUE / PRIMARY KEY）
 columnConstraint
     : (CONSTRAINT identifier)? (
         NOT NULL
@@ -556,12 +582,28 @@ columnConstraint
       )
     ;
 
-referentialAction
-    : CASCADE | SET NULL | SET DEFAULT | RESTRICT | NO ACTION
+// 列规格兜底透传（COMMENT '...' / MATERIALIZED expr / STORED / AS expr 等未结构化的方言选项）
+// 表级选项同样使用此产生式，按上游 CreateParameter 透传为字符串
+createParameter
+    : COMMENT S_CHAR_LITERAL
+    | AS expression
+    | DEFAULT expression
+    | CHECK OPENING_PAREN expression CLOSING_PAREN
+    | MATERIALIZED expression
+    | createParameterAtom (EQUALS? createParameterAtom)*    // ENGINE = InnoDB / CHARSET utf8 / AUTO_INCREMENT / UNSIGNED 等
     ;
 
-columnOptions
-    : (COMMENT S_CHAR_LITERAL)?
+createParameterAtom
+    : identifier | LONG_VALUE | S_CHAR_LITERAL | MAX
+    ;
+
+// Oracle ENABLE/DISABLE ROW MOVEMENT
+rowMovementClause
+    : (ENABLE | DISABLE) identifier identifier   // identifier 匹配 ROW、MOVEMENT（非保留字）
+    ;
+
+referentialAction
+    : CASCADE | SET NULL | SET DEFAULT | RESTRICT | NO ACTION
     ;
 
 tableConstraint
@@ -572,9 +614,16 @@ tableConstraint
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
         (ON (DELETE | UPDATE) referentialAction)*
+      | EXCLUDE WHERE OPENING_PAREN expression CLOSING_PAREN
       | (UNIQUE | FULLTEXT | SPATIAL)? (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
       | (KEY | INDEX) identifier? OPENING_PAREN indexColumnList CLOSING_PAREN
       )
+    ;
+
+// Spanner INTERLEAVE IN PARENT table [ON DELETE CASCADE|NO ACTION]
+// PARENT 为非保留字，按上游走 identifier 匹配
+spannerInterleaveIn
+    : INTERLEAVE IN identifier? table (ON DELETE (CASCADE | NO ACTION))?
     ;
 
 // Oracle/DB2: USING INDEX [index_name] — 约束使用指定索引，commit c7b3bdbd
@@ -593,14 +642,6 @@ indexColumn
 
 likeOption
     : (INCLUDING | EXCLUDING) (DEFAULTS | CONSTRAINTS | INDEXES | COMMENTS | IDENTITY | ALL)
-    ;
-
-tableOptions
-    : tableOption+
-    ;
-
-tableOption
-    : identifier (EQUALS? (identifier | LONG_VALUE | S_CHAR_LITERAL))?
     ;
 
 // ══════════════════════════════════════════════
