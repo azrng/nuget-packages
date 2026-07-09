@@ -46,4 +46,41 @@ public class SelectClauseRoundTripTest
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.Qualify);
     }
+
+    // ── P1-1: GROUP BY ROLLUP/CUBE/GROUPING SETS ──
+    // 注：ROLLUP(a,b)/CUBE(a,b) 作为函数式表达式解析（走 GroupByExpressions），round-trip 一致
+
+    [Fact]
+    public void GroupBy_Rollup_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT a, b, COUNT(*) FROM t GROUP BY ROLLUP(a, b)");
+
+    [Fact]
+    public void GroupBy_Cube_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT a, b, COUNT(*) FROM t GROUP BY CUBE(a, b)");
+
+    [Fact]
+    public void GroupBy_GroupingSets_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT a, b, COUNT(*) FROM t GROUP BY GROUPING SETS ((a, b), (a), ())");
+
+    [Fact]
+    public void GroupBy_MysqlWithRollup_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT a, COUNT(*) FROM t GROUP BY a WITH ROLLUP");
+
+    [Fact]
+    public void GroupBy_Rollup_ShouldParseAsFunction()
+    {
+        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT a, b FROM t GROUP BY ROLLUP(a, b)")!;
+        var plain = Assert.IsType<PlainSelect>(stmt);
+        Assert.NotNull(plain.GroupBy);
+        Assert.Single(plain.GroupBy!.GroupByExpressions);  // ROLLUP(a,b) 作为单个函数表达式
+    }
+
+    [Fact]
+    public void GroupBy_GroupingSets_ShouldPopulateGroupingSets()
+    {
+        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT a, b FROM t GROUP BY GROUPING SETS ((a, b), (a))")!;
+        var plain = Assert.IsType<PlainSelect>(stmt);
+        Assert.NotNull(plain.GroupBy?.GroupingSets);
+        Assert.Equal(2, plain.GroupBy!.GroupingSets!.Count);
+    }
 }

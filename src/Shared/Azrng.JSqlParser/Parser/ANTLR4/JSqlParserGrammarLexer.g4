@@ -590,6 +590,7 @@ RETURN          : [Rr][Ee][Tt][Uu][Rr][Nn] ;
 RETURNS         : [Rr][Ee][Tt][Uu][Rr][Nn][Ss] ;
 ROLLBACK        : [Rr][Oo][Ll][Ll][Bb][Aa][Cc][Kk] ;
 ROLLUP          : [Rr][Oo][Ll][Ll][Uu][Pp] ;
+CUBE            : [Cc][Uu][Bb][Ee] ;
 SAMPLE          : [Ss][Aa][Mm][Pp][Ll][Ee] ;
 SAVEPOINT       : [Ss][Aa][Vv][Ee][Pp][Oo][Ii][Nn][Tt] ;
 SCHEMA          : [Ss][Cc][Hh][Ee][Mm][Aa] ;

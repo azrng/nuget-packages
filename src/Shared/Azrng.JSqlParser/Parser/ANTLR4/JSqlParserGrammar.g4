@@ -308,7 +308,26 @@ whereClause
     ;
 
 groupByClause
-    : GROUP BY expression (COMMA expression)*
+    : GROUP BY expression (COMMA expression)* (WITH ROLLUP)?
+    | GROUP BY GROUPING identifier OPENING_PAREN groupingSetItem (COMMA groupingSetItem)* CLOSING_PAREN
+    | GROUP BY groupByRollupCubeList
+    ;
+
+// ROLLUP(a,b)/CUBE(a,b) 列表，可与普通表达式混用
+groupByRollupCubeList
+    : groupByRollupCubeItem (COMMA groupByRollupCubeItem)*
+    ;
+
+groupByRollupCubeItem
+    : ROLLUP OPENING_PAREN expression (COMMA expression)* CLOSING_PAREN
+    | CUBE OPENING_PAREN expression (COMMA expression)* CLOSING_PAREN
+    | expression
+    ;
+
+// GROUPING SETS 单项：(a, b) 或 a 或 ()（空集合=总计行）
+groupingSetItem
+    : OPENING_PAREN (expression (COMMA expression)*)? CLOSING_PAREN
+    | expression
     ;
 
 havingClause

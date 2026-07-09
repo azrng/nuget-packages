@@ -340,13 +340,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.groupByClause() != null)
         {
-            select.GroupBy = new GroupByElement();
-            var exprs = context.groupByClause().expression();
-            select.GroupBy.GroupByExpressions = new List<Expression.Expression>();
-            foreach (var expr in exprs)
-            {
-                select.GroupBy.GroupByExpressions.Add((Expression.Expression)Visit(expr));
-            }
+            select.GroupBy = BuildGroupByElement(context.groupByClause());
         }
 
         if (context.havingClause() != null)
@@ -410,6 +404,53 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return select;
+    }
+
+    /// <summary>
+    /// 从 groupByClause 构造 GroupByElement，支持普通表达式 / GROUPING SETS / ROLLUP / CUBE / WITH ROLLUP。
+    /// 对齐上游 GroupByColumnReferences。
+    /// </summary>
+    private GroupByElement BuildGroupByElement(JSqlParserGrammar.GroupByClauseContext ctx)
+    {
+        var gb = new GroupByElement();
+
+        // MySQL WITH ROLLUP（普通表达式分支末尾）
+        if (ctx.WITH() != null && ctx.ROLLUP() != null)
+            gb.MySqlWithRollup = true;
+
+        // GROUPING SETS ((a,b), (c))
+        if (ctx.GROUPING() != null)
+        {
+            gb.GroupingSets = ctx.groupingSetItem().Select(GetOriginalText).ToList();
+            return gb;
+        }
+
+        // ROLLUP(a,b) / CUBE(a,b) 与普通表达式混用
+        if (ctx.groupByRollupCubeList() is { } rcList)
+        {
+            foreach (var item in rcList.groupByRollupCubeItem())
+            {
+                var rollupExprs = item.expression();
+                if (item.ROLLUP() != null)
+                {
+                    gb.RollupExpressions = rollupExprs.Select(GetOriginalText).ToList();
+                }
+                else if (item.CUBE() != null)
+                {
+                    gb.CubeExpressions = rollupExprs.Select(GetOriginalText).ToList();
+                }
+                else if (rollupExprs.Length > 0)
+                {
+                    // 普通表达式
+                    gb.GroupByExpressions.Add((Expression.Expression)Visit(rollupExprs[0]));
+                }
+            }
+            return gb;
+        }
+
+        // 普通表达式列表
+        gb.GroupByExpressions = ctx.expression().Select(e => (Expression.Expression)Visit(e)).ToList();
+        return gb;
     }
 
     /// <summary>
