@@ -1,3 +1,4 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
@@ -196,7 +197,36 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Comment_OnView_ShouldRoundTrip()
         => AssertRoundTrip("COMMENT ON VIEW myview IS 'view comment'");
+
+    // ── BL-18b: AnalyticType（WITHIN GROUP / FILTER ONLY） ──
+
+    [Fact]
+    public void WithinGroup_WithoutOver_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM t");
+
+    [Fact]
+    public void FilterOnly_WithoutOver_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT COUNT(*) FILTER (WHERE active = TRUE) FROM t");
+
+    [Fact]
+    public void WithinGroup_ShouldPopulateAnalyticType()
+    {
+        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM t")!;
+        var plain = Assert.IsType<PlainSelect>(stmt);
+        var analytic = Assert.IsType<AnalyticExpression>(plain.SelectItems![0].Expression!);
+        Assert.Equal(AnalyticType.WithinGroup, analytic.Type);
+    }
+
+    [Fact]
+    public void FilterOnly_ShouldPopulateAnalyticType()
+    {
+        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT COUNT(*) FILTER (WHERE x = 1) FROM t")!;
+        var plain = Assert.IsType<PlainSelect>(stmt);
+        var analytic = Assert.IsType<AnalyticExpression>(plain.SelectItems![0].Expression!);
+        Assert.Equal(AnalyticType.FilterOnly, analytic.Type);
+    }
 }
+
 
 
 

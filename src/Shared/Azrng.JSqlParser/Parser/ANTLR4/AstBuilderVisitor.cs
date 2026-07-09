@@ -3946,11 +3946,21 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
-        if (context.overClause() != null)
+        // 构造 AnalyticExpression 的条件：有 OVER，或有 WITHIN GROUP，或有 FILTER（对齐上游 AnalyticType 四态）
+        bool hasOver = context.overClause() != null;
+        bool hasWithinGroup = context.withinGroupClause() != null;
+        bool hasFilter = context.filterClause() != null;
+        if (hasOver || hasWithinGroup || hasFilter)
         {
             var analytic = new AnalyticExpression();
             analytic.Name = funcName;
             ApplyFunctionClauses(context, analytic);
+
+            // 按 OVER/WITHIN GROUP/FILTER 组合设置 AnalyticType，对齐上游
+            if (hasWithinGroup && hasOver) analytic.Type = AnalyticType.WithinGroupOver;
+            else if (hasWithinGroup) analytic.Type = AnalyticType.WithinGroup;
+            else if (hasFilter && !hasOver) analytic.Type = AnalyticType.FilterOnly;
+            else analytic.Type = AnalyticType.Over;
 
             if (context.MULTIPLY() != null ||
                 (parameters != null && parameters.Expressions.Count == 1 && parameters.Expressions[0] is AllColumns))
@@ -3969,29 +3979,32 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 if (parameters.Expressions.Count > 2) analytic.DefaultValue = parameters.Expressions[2];
             }
 
-            var overCtx = context.overClause();
-            if (overCtx.identifier() != null)
+            if (hasOver)
             {
-                analytic.WindowName = overCtx.identifier().GetText();
-            }
-            else if (overCtx.windowSpecification() != null)
-            {
-                var winSpec = overCtx.windowSpecification();
-                if (winSpec.PARTITION() != null)
+                var overCtx = context.overClause();
+                if (overCtx.identifier() != null)
                 {
-                    analytic.PartitionExpressionList = new List<Expression.Expression>();
-                    foreach (var partExpr in winSpec.expression())
+                    analytic.WindowName = overCtx.identifier().GetText();
+                }
+                else if (overCtx.windowSpecification() != null)
+                {
+                    var winSpec = overCtx.windowSpecification();
+                    if (winSpec.PARTITION() != null)
                     {
-                        analytic.PartitionExpressionList.Add((Expression.Expression)Visit(partExpr));
+                        analytic.PartitionExpressionList = new List<Expression.Expression>();
+                        foreach (var partExpr in winSpec.expression())
+                        {
+                            analytic.PartitionExpressionList.Add((Expression.Expression)Visit(partExpr));
+                        }
                     }
-                }
-                if (winSpec.orderByClause() != null)
-                {
-                    analytic.OrderByElements = (List<OrderByElement>)Visit(winSpec.orderByClause());
-                }
-                if (winSpec.windowFrame() != null)
-                {
-                    analytic.WindowFrame = (WindowFrame)Visit(winSpec.windowFrame());
+                    if (winSpec.orderByClause() != null)
+                    {
+                        analytic.OrderByElements = (List<OrderByElement>)Visit(winSpec.orderByClause());
+                    }
+                    if (winSpec.windowFrame() != null)
+                    {
+                        analytic.WindowFrame = (WindowFrame)Visit(winSpec.windowFrame());
+                    }
                 }
             }
 

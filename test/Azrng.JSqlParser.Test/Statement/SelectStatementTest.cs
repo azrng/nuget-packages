@@ -700,9 +700,11 @@ public class SelectStatementTest
     {
         var select = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM users")!;
-        var function = Assert.IsType<Function>(select.SelectItems![0].Expression);
-        Assert.NotNull(function.WithinGroupOrderByElements);
-        Assert.Single(function.WithinGroupOrderByElements!);
+        // WITHIN GROUP 构造为 AnalyticExpression（WithinGroup 类型），对齐上游
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.Equal(AnalyticType.WithinGroup, analytic.Type);
+        Assert.NotNull(analytic.WithinGroupOrderByElements);
+        Assert.Single(analytic.WithinGroupOrderByElements!);
     }
 
     [Fact]
@@ -710,10 +712,12 @@ public class SelectStatementTest
     {
         var select = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT COUNT(*) FILTER (WHERE active = TRUE) FROM users")!;
-        var function = Assert.IsType<Function>(select.SelectItems![0].Expression);
-        Assert.True(function.AllColumns);
-        Assert.NotNull(function.FilterExpression);
-        Assert.IsType<EqualsTo>(function.FilterExpression);
+        // FILTER ONLY（无 OVER）构造为 AnalyticExpression（FilterOnly 类型），对齐上游
+        var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
+        Assert.Equal(AnalyticType.FilterOnly, analytic.Type);
+        Assert.True(analytic.AllColumns);
+        Assert.NotNull(analytic.FilterExpression);
+        Assert.IsType<EqualsTo>(analytic.FilterExpression);
     }
 
     [Fact]

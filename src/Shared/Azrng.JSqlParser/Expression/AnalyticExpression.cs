@@ -23,6 +23,11 @@ public class AnalyticExpression : ASTNodeAccessImpl, Expression
     public Expression? FilterExpression { get; set; }
 
     /// <summary>
+    /// 分析函数类型，决定 ToString 输出形态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY），对齐上游 AnalyticType。
+    /// </summary>
+    public AnalyticType Type { get; set; } = AnalyticType.Over;
+
+    /// <summary>
     /// OVER 子句中的窗口框架（ROWS/RANGE/GROUPS BETWEEN ...）。
     /// 未指定时为 null。对应上游 WindowElement。
     /// </summary>
@@ -43,30 +48,51 @@ public class AnalyticExpression : ASTNodeAccessImpl, Expression
 
         if (IgnoreNulls) sb.Append(" IGNORE NULLS");
 
-        if (WithinGroupOrderByElements != null && WithinGroupOrderByElements.Count > 0)
-            sb.Append(" WITHIN GROUP (ORDER BY ").Append(string.Join(", ", WithinGroupOrderByElements)).Append(')');
-
+        // FILTER 子句（FILTER_ONLY 模式下是唯一输出，其它模式在 OVER/WITHIN GROUP 前输出）
         if (FilterExpression != null)
             sb.Append(" FILTER (WHERE ").Append(FilterExpression).Append(')');
 
-        sb.Append(" OVER (");
-        if (WindowName != null) sb.Append(WindowName);
-        else
+        // 按 AnalyticType 分支输出，对齐上游 switch(type) 逻辑
+        switch (Type)
         {
-            if (PartitionExpressionList != null && PartitionExpressionList.Count > 0)
-                sb.Append("PARTITION BY ").Append(string.Join(", ", PartitionExpressionList));
-            if (OrderByElements != null && OrderByElements.Count > 0)
-            {
-                if (PartitionExpressionList != null && PartitionExpressionList.Count > 0) sb.Append(' ');
-                sb.Append("ORDER BY ").Append(string.Join(", ", OrderByElements));
-            }
+            case AnalyticType.FilterOnly:
+                return sb.ToString();
+
+            case AnalyticType.WithinGroup:
+                sb.Append(" WITHIN GROUP (");
+                if (WithinGroupOrderByElements is { Count: > 0 })
+                    sb.Append("ORDER BY ").Append(string.Join(", ", WithinGroupOrderByElements));
+                sb.Append(')');
+                break;
+
+            case AnalyticType.WithinGroupOver:
+                // WITHIN GROUP (ORDER BY ...) OVER (PARTITION BY ...) — OVER 中只发 partitionBy
+                sb.Append(" WITHIN GROUP (");
+                if (WithinGroupOrderByElements is { Count: > 0 })
+                    sb.Append("ORDER BY ").Append(string.Join(", ", WithinGroupOrderByElements));
+                sb.Append(") OVER (");
+                if (PartitionExpressionList is { Count: > 0 })
+                    sb.Append("PARTITION BY ").Append(string.Join(", ", PartitionExpressionList));
+                sb.Append(')');
+                break;
+
+            default: // Over
+                sb.Append(" OVER (");
+                if (WindowName != null) sb.Append(WindowName);
+                else
+                {
+                    if (PartitionExpressionList != null && PartitionExpressionList.Count > 0)
+                        sb.Append("PARTITION BY ").Append(string.Join(", ", PartitionExpressionList));
+                    if (OrderByElements != null && OrderByElements.Count > 0)
+                    {
+                        if (PartitionExpressionList != null && PartitionExpressionList.Count > 0) sb.Append(' ');
+                        sb.Append("ORDER BY ").Append(string.Join(", ", OrderByElements));
+                    }
+                    if (WindowFrame != null) sb.Append(' ').Append(WindowFrame);
+                }
+                sb.Append(')');
+                break;
         }
-        // 输出窗口框架（ROWS/RANGE/GROUPS BETWEEN ...）
-        if (WindowFrame != null)
-        {
-            sb.Append(' ').Append(WindowFrame);
-        }
-        sb.Append(')');
 
         return sb.ToString();
     }
