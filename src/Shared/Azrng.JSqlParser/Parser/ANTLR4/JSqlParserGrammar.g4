@@ -774,7 +774,7 @@ analyzeStatement
 
 // COMMENT ON TABLE/COLUMN ... IS 'xxx'
 commentStatement
-    : COMMENT ON (TABLE table | COLUMN identifier) IS S_CHAR_LITERAL
+    : COMMENT ON (TABLE table | COLUMN columnRef | VIEW table) IS S_CHAR_LITERAL
     ;
 
 // EXECUTE / EXEC / CALL proc(args)

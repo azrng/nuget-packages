@@ -1844,10 +1844,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitCommentStatement(JSqlParserGrammar.CommentStatementContext context)
     {
         var comment = new Comment();
-        if (context.table() != null)
-            comment.Table = (Table)Visit(context.table());
-        else if (context.identifier() != null)
-            comment.Column = new Column { ColumnName = context.identifier().GetText() };
+        // grammar: COMMENT ON (TABLE table | COLUMN identifier | VIEW table)
+        if (context.VIEW() != null && context.table() is { } viewCtx)
+            comment.View = (Table)Visit(viewCtx);
+        else if (context.table() is { } tableCtx)
+            comment.Table = (Table)Visit(tableCtx);
+        else if (context.columnRef() is { } colCtx)
+            comment.Column = new Column { ColumnName = colCtx.GetText() };
         comment.CommentText = new StringValue(context.S_CHAR_LITERAL().GetText());
         return comment;
     }

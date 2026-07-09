@@ -182,7 +182,22 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Insert_OutputIntoTable_ShouldRoundTrip()
         => AssertRoundTrip("INSERT INTO t (a) OUTPUT inserted.a INTO archive (a) VALUES (1)");
+
+    // ── BL-18a: COMMENT ON VIEW 扩展 ──
+
+    [Fact]
+    public void Comment_OnTable_ShouldRoundTrip()
+        => AssertRoundTrip("COMMENT ON TABLE t IS 'table comment'");
+
+    [Fact]
+    public void Comment_OnColumn_ShouldRoundTrip()
+        => AssertRoundTrip("COMMENT ON COLUMN t.col IS 'column comment'");
+
+    [Fact]
+    public void Comment_OnView_ShouldRoundTrip()
+        => AssertRoundTrip("COMMENT ON VIEW myview IS 'view comment'");
 }
+
 
 
 
