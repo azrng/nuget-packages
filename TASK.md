@@ -6,9 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T093 | Azrng.JSqlParser ALTER 字段结构化 | ALTER COLUMN 子句接线(SET DEFAULT/DROP DEFAULT/SET NOT NULL/DROP NOT NULL/TYPE)、SET DATA TYPE/VISIBLE、CONVERT TO CHARACTER SET、ADD KEY 结构化 | 阶段1 | DOING | high | 2026-07-10 |
+| _无活跃任务_ | | | | | | |
 
-> T093 最高优先：ALTER COLUMN 子句（SET DEFAULT/DROP DEFAULT/SET NOT NULL/DROP NOT NULL/TYPE）grammar 已解析但 visitor 静默丢弃，round-trip 丢数据（与 WINDOW/QUALIFY 同类静默丢弃缺陷）。
+> 当前无活跃任务。ALTER COLUMN 子句接线 + CONVERT/CHARACTER SET 已由 T093 修复（1230 测试通过）。
 
 > 当前无活跃任务。核心 SQL 功能已与上游 JSqlParser 全面对标（1217 测试通过，含 84 项上游覆盖度探针）。下方 Backlog 为剩余未迁移项，按需启动。
 
@@ -22,7 +22,6 @@
 | 编号 | 待办 | 类别 | 现状 | 触发条件 | 备注 |
 |------|------|------|------|----------|------|
 | BL-18c | WithSearchClause grammar 接线 | 模型就绪待接线 | WithItem.SearchClause 字段已建、withSearchClause 产生式已定义，但未接入 withItem（与 AS(select) 括号产生 LL 预测冲突） | 标准 SQL 递归 CTE（`WITH RECURSIVE ... SEARCH DEPTH FIRST BY col SET seq`） | 需语义谓词或产生式重排精细处理 |
-| BL-18c | ALTER 字段结构化 | 字段扩展 | 当前 ALTER 操作通过透传字符串（OptionalSpecifier 等）已能 round-trip（BL-14 已修 14 处缺陷），但 Index/OldIndex/ColumnDropNotNull/ColumnDropDefault/ConvertType/ConstraintState 等结构化字段未建模 | 需结构化访问 ALTER 操作的索引/约束细节时 | 上游 AlterExpression 5.4→HEAD +694 行 + 5 个伴生类，改动量大，round-trip 不受影响 |
 
 ### P4 未迁移（小众方言/低频，按需启动）
 
@@ -58,7 +57,7 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1217 测试（截至 T092 长期对标缺口修复完成）
+- **Azrng**：1230 测试（截至 T093 ALTER 字段结构化完成）
 - **上游 JSqlParser**：2309 测试
 - **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）及 EXPORT/IMPORT/KSQL 等小众方言；Azrng 测试独立设计，覆盖核心 SQL 路径 + 84 项上游代表性 SQL 解析覆盖度探针
 - **上游覆盖度探针**：`UpstreamCoverageProbeTest`（84 项），从上游 CreateTableTest/SelectTest 抽取代表性 SQL，84/84 全通过
@@ -67,10 +66,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T093 | Azrng.JSqlParser ALTER 字段结构化（ALTER COLUMN 子句接线修复静默丢弃 + SET DATA TYPE/VISIBLE/INVISIBLE + CONVERT/CHARACTER SET；全量 1230 测试通过） | DONE | 2026-07-10 |
 | T092 | Azrng.JSqlParser 长期对标剩余缺口（P2 UPDATE/DELETE修饰符、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug、P3b LateralView、P3c JoinHint LOOP/HASH/MERGE、P3d WithSearchClause模型就绪；全量 1217 测试通过） | DONE | 2026-07-10 |
 | T091 | Azrng.JSqlParser 三维核查后 P0+P1 缺口修复（P0: WINDOW/QUALIFY 静默丢弃；P1: GROUP BY ROLLUP/CUBE/GROUPING SETS、CONNECT BY、SUBSTRING FROM-FOR、MSSQL OUTPUT、REFRESH MATERIALIZED VIEW、UPSERT/REPLACE；取消 JSON_TRANSFORM/CURRVAL 上游不支持；全量 1111 测试通过） | DONE | 2026-07-09 |
 | T090 | Azrng.JSqlParser CREATE TABLE 边缘遗留项一次性清完（9 缺口：character varying、TIMESTAMP WITH TIME ZONE、USING BTREE/HASH、功能性索引、set 类型、数组尺寸、::text[] cast、表级 WITH、Spanner OPTIONS；全量 1080 测试通过） | DONE | 2026-07-09 |
 | T089 | Azrng.JSqlParser STRUCT/ARRAY 复合列类型移植（ARRAY<T> 扁平化 + STRUCT(x INT) 字段进 ArgumentsStringList，含嵌套；全量 1064 测试通过） | DONE | 2026-07-09 |
-| T088 | Azrng.JSqlParser BL-06 全量移植 CREATE TABLE 方言与约束结构化（破坏性重构对齐上游 11 类模型，约束结构化 FK/CHECK/EXCLUDE，CTAS/LIKE/RowMovement/Spanner；全量 1052 测试通过） | DONE | 2026-07-09 |
 
 文件结束。
