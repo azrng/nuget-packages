@@ -88,8 +88,8 @@ upsertStatement
     : (UPSERT | REPLACE | INSERT OR REPLACE) INTO? table
       (OPENING_PAREN identifierList CLOSING_PAREN)?
       (SET assignmentItem (COMMA assignmentItem)*
-      | selectStatement
       | VALUES valuesList
+      | selectStatement
       )
       onDuplicateKey?
     ;
@@ -182,6 +182,12 @@ withSearchClause
 
 selectBody
     : plainSelect (setOperator plainSelect)*
+    | valuesClause (setOperator valuesClause)*
+    ;
+
+// VALUES 表构造器：VALUES (1,2),(3,4)，复用 INSERT 的 valuesList/valuesItem 规则
+valuesClause
+    : VALUES valuesList
     ;
 
 plainSelect
@@ -555,8 +561,8 @@ fetchClause
 insertStatement
     : INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
       outputClause?
-      ( selectStatement
-      | VALUES valuesList
+      ( VALUES valuesList
+      | selectStatement
       | DEFAULT VALUES
       )
       onDuplicateKey?

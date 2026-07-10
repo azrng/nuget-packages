@@ -8,7 +8,7 @@
 |----|----------|------|------|------|--------|----------|
 | _无活跃任务_ | | | | | | |
 
-> 当前无活跃任务。P4 剩余方言清零（TableStatement/EXPORT/IMPORT/WITH FUNCTION/WITH ISOLATION/FOR CLAUSE）已由 T096 完成（1275 测试通过）。**全部 backlog 清零**。
+> 当前无活跃任务。VALUES 表构造器（T097）已补齐，全量 1284 测试通过。**与上游 JSqlParser 已无已知语法层缺口**（剩余差异均为架构等价合并或上游死代码）。
 
 > 当前无活跃任务。核心 SQL 功能已与上游 JSqlParser 全面对标（1275 测试通过，含 84 项上游覆盖度探针）。**全部 backlog 已清零，无已知未迁移缺口**。
 
@@ -61,10 +61,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T097 | Azrng.JSqlParser VALUES 表构造器（补齐唯一语法层缺口：新增 Values 模型类继承 Select+FromItem、grammar selectBody 增加 valuesClause 分支、VisitValuesClause/VisitSelectBody 接入、SelectVisitor/TablesNamesFinder 补 Values、修复 INSERT/UPSERT VALUES 语义冲突；全量 1284 测试通过，净增 9 项，**与上游无已知语法层缺口**） | DONE | 2026-07-11 |
 | T096 | Azrng.JSqlParser P4 剩余方言清零（BL-19d TableStatement MySQL 8.2、BL-19a EXPORT/IMPORT Exasol 透传、BL-19h-1 WITH FUNCTION、BL-19h-2 WITH ISOLATION DB2、BL-19h-3 FOR CLAUSE 透传扩展；全量 1275 测试通过，净增 21 项，**全部 backlog 清零**） | DONE | 2026-07-10 |
 | T095 | Azrng.JSqlParser P4 小众方言批量补齐（BL-19b KSQL 窗口 HOPPING/TUMBLING/SESSION+WITHIN+EMIT CHANGES、BL-19c CREATE VIEW FORCE/SECURE/WITH READ ONLY、BL-19e PivotXml、BL-19f ParenthesedFromItem alias 保真、BL-19g ON DUPLICATE KEY UPDATE WHERE；全量 1254 测试通过，净增 20 项） | DONE | 2026-07-10 |
 | T094 | Azrng.JSqlParser WithSearchClause grammar 接线（withItem 接 withSearchClause? + 结构化 WithSearchClause 模型类 + VisitWithSearchClause；修正"破坏 LL 预测"误判；全量 1234 测试通过，P3 backlog 清零） | DONE | 2026-07-10 |
 | T093 | Azrng.JSqlParser ALTER 字段结构化（ALTER COLUMN 子句接线修复静默丢弃 + SET DATA TYPE/VISIBLE/INVISIBLE + CONVERT/CHARACTER SET；全量 1230 测试通过） | DONE | 2026-07-10 |
-| T092 | Azrng.JSqlParser 长期对标剩余缺口（P2 UPDATE/DELETE修饰符、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug、P3b LateralView、P3c JoinHint LOOP/HASH/MERGE、P3d WithSearchClause模型就绪；全量 1217 测试通过） | DONE | 2026-07-10 |
 
 文件结束。

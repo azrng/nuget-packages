@@ -11,6 +11,7 @@ public interface SelectVisitor<T>
     T Visit<S>(WithItem withItem, S context);
     T Visit<S>(Piped.FromQuery fromQuery, S context);
     T Visit<S>(TableStatement tableStatement, S context);
+    T Visit<S>(Values values, S context);
 
     // Convenience overloads (no context)
     void Visit(PlainSelect plainSelect) => Visit<object?>(plainSelect, default);
@@ -18,4 +19,5 @@ public interface SelectVisitor<T>
     void Visit(WithItem withItem) => Visit<object?>(withItem, default);
     void Visit(Piped.FromQuery fromQuery) => Visit<object?>(fromQuery, default);
     void Visit(TableStatement tableStatement) => Visit<object?>(tableStatement, default);
+    void Visit(Values values) => Visit<object?>(values, default);
 }

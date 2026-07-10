@@ -386,25 +386,66 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitSelectBody(JSqlParserGrammar.SelectBodyContext context)
     {
+        // VALUES 表构造器分支：VALUES (1,2),(3,4) [setOperator VALUES ...]
+        var valuesClauses = context.valuesClause();
+        if (valuesClauses is { Length: > 0 })
+        {
+            var firstValues = (Select)Visit(valuesClauses[0]);
+            if (valuesClauses.Length == 1)
+            {
+                return firstValues;
+            }
+
+            var setOpList = new SetOperationList();
+            setOpList.Selects = new List<Select> { firstValues };
+            for (int i = 1; i < valuesClauses.Length; i++)
+            {
+                setOpList.Selects.Add((Select)Visit(valuesClauses[i]));
+                setOpList.Operations.Add(CreateSetOperation(context.setOperator(i - 1)));
+            }
+            return setOpList;
+        }
+
         var plainSelects = context.plainSelect();
         if (plainSelects.Length == 1)
         {
             return Visit(plainSelects[0]);
         }
 
-        var setOpList = new SetOperationList();
-        setOpList.Selects = new List<Select>();
+        var setOpList2 = new SetOperationList();
+        setOpList2.Selects = new List<Select>();
 
-        setOpList.Selects.Add((Select)Visit(plainSelects[0]));
+        setOpList2.Selects.Add((Select)Visit(plainSelects[0]));
 
         for (int i = 1; i < plainSelects.Length; i++)
         {
-            setOpList.Selects.Add((Select)Visit(plainSelects[i]));
+            setOpList2.Selects.Add((Select)Visit(plainSelects[i]));
             var setOp = context.setOperator(i - 1);
-            setOpList.Operations.Add(CreateSetOperation(setOp));
+            setOpList2.Operations.Add(CreateSetOperation(setOp));
         }
 
-        return setOpList;
+        return setOpList2;
+    }
+
+    /// <summary>
+    /// VALUES 表构造器：VALUES (1,2),(3,4)。复用 INSERT 的 valuesList/valuesItem 解析。
+    /// </summary>
+    public override object VisitValuesClause(JSqlParserGrammar.ValuesClauseContext context)
+    {
+        var values = new Values();
+        foreach (var itemCtx in context.valuesList().valuesItem())
+        {
+            var exprList = new ExpressionList
+            {
+                Expressions = new List<Expression.Expression>()
+            };
+            foreach (var exprCtx in itemCtx.expression())
+            {
+                exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+            }
+            values.Rows.Add(exprList);
+        }
+        return values;
     }
 
     public override object VisitPlainSelect(JSqlParserGrammar.PlainSelectContext context)

@@ -328,6 +328,8 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
             VisitSetOperationList(setOpList);
         else if (select is Statement.Piped.FromQuery fromQuery)
             VisitFromQuery(fromQuery);
+        else if (select is Values values)
+            VisitValues(values);
         return null;
     }
 
@@ -384,6 +386,15 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         {
             if (op is Statement.Piped.JoinPipeOperator joinOp && joinOp.Join.RightItem is Table pipeJoinTable)
                 AddTable(pipeJoinTable);
+        }
+    }
+
+    private void VisitValues(Values values)
+    {
+        foreach (var row in values.Rows)
+        {
+            foreach (var expr in row.Expressions)
+                expr.Accept(this);
         }
     }
 
