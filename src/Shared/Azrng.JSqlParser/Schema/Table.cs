@@ -34,6 +34,9 @@ public class Table : ASTNodeAccessImpl, FromItem
     /// <summary>FROM 子句 UNPIVOT，未指定时为 null。</summary>
     public Statement.Select.UnPivot? UnPivot { get; set; }
 
+    /// <summary>别名后的 time-travel（BigQuery @ / FOR SYSTEM_TIME AS OF 出现在 alias 之后），对齐上游 timeTravelStrAfterAlias。</summary>
+    public TimeTravelClause? TimeTravelAfterAlias { get; set; }
+
     public string GetFullyQualifiedName()
     {
         var parts = new System.Collections.Generic.List<string>();
@@ -51,6 +54,7 @@ public class Table : ASTNodeAccessImpl, FromItem
     {
         var name = GetFullyQualifiedName();
         var result = Alias != null ? $"{name} {Alias}" : name;
+        if (TimeTravelAfterAlias != null) result += $" {TimeTravelAfterAlias}";
         if (SqlServerHints != null) result += SqlServerHints;
         if (MySqlIndexHint != null) result += MySqlIndexHint;
         if (TableSample != null) result += $" {TableSample}";
