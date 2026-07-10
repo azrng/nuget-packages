@@ -49,6 +49,21 @@ public class AlterExpression : ASTNodeAccessImpl
     public List<ColumnSetVisibility>? ColumnSetVisibilityList { get; set; }
 
     /// <summary>
+    /// ALTER COLUMN x 的具体动作（SET DEFAULT/DROP DEFAULT/SET NOT NULL/DROP NOT NULL/TYPE/SET DATA TYPE）。
+    /// 对齐上游 ALTER 分支的列级约束变更，此前 grammar 已解析但 visitor 静默丢弃。
+    /// </summary>
+    public AlterColumnAction? ColumnAlterAction { get; set; }
+
+    /// <summary>ALTER COLUMN ... TYPE dataType 的类型文本（ColumnAlterAction=Type/SetDataType 时）。</summary>
+    public string? AlterColumnType { get; set; }
+
+    /// <summary>ALTER COLUMN ... SET DEFAULT expr 的表达式文本（ColumnAlterAction=SetDefault 时）。</summary>
+    public string? AlterColumnDefaultExpression { get; set; }
+
+    /// <summary>ALTER/MODIFY/CHANGE/DROP/ADD 操作是否显式使用 COLUMN 关键字（ALTER COLUMN x / ALTER x）。</summary>
+    public bool UseColumnKeyword { get; set; }
+
+    /// <summary>
     /// Column definitions for ADD COLUMN operations.
     /// </summary>
     public List<ColumnDataType>? ColDataTypeList { get; set; }
@@ -120,6 +135,53 @@ public class AlterExpression : ASTNodeAccessImpl
                 if (UseEqualsForComment || Operation == AlterOperation.COMMENT_WITH_EQUAL_SIGN) sb.Append(" =");
                 if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
                 return sb.ToString();
+            }
+            case AlterOperation.CONVERT:
+            {
+                var sbConv = new System.Text.StringBuilder("CONVERT TO CHARACTER SET ");
+                if (CharacterSet != null) sbConv.Append(CharacterSet);
+                if (Collation != null)
+                {
+                    sbConv.Append(" COLLATE");
+                    if (UseEqualsForComment) sbConv.Append(" =");
+                    sbConv.Append(' ').Append(Collation);
+                }
+                return sbConv.ToString();
+            }
+            case AlterOperation.COLLATE:
+            {
+                // DEFAULT CHARACTER SET x / CHARACTER SET x [COLLATE y]
+                var sbCs = new System.Text.StringBuilder();
+                if (DefaultCollateSpecified) sbCs.Append("DEFAULT ");
+                sbCs.Append("CHARACTER SET ");
+                if (CharacterSet != null) sbCs.Append(CharacterSet);
+                if (Collation != null)
+                {
+                    sbCs.Append(" COLLATE");
+                    if (UseEqualsForComment) sbCs.Append(" =");
+                    sbCs.Append(' ').Append(Collation);
+                }
+                return sbCs.ToString();
+            }
+            case AlterOperation.ALTER when ColumnAlterAction != null:
+            {
+                // ALTER [COLUMN] x SET DEFAULT expr / DROP DEFAULT / SET NOT NULL / DROP NOT NULL / TYPE dataType / SET DATA TYPE dataType
+                var sbAlter = new System.Text.StringBuilder("ALTER ");
+                if (UseColumnKeyword) sbAlter.Append("COLUMN ");
+                if (ColumnName != null) sbAlter.Append(ColumnName).Append(' ');
+                sbAlter.Append(ColumnAlterAction switch
+                {
+                    AlterColumnAction.SetDefault => $"SET DEFAULT {AlterColumnDefaultExpression}",
+                    AlterColumnAction.DropDefault => "DROP DEFAULT",
+                    AlterColumnAction.SetNotNull => "SET NOT NULL",
+                    AlterColumnAction.DropNotNull => "DROP NOT NULL",
+                    AlterColumnAction.Type => $"TYPE {AlterColumnType}",
+                    AlterColumnAction.SetDataType => $"SET DATA TYPE {AlterColumnType}",
+                    AlterColumnAction.SetVisible => "SET VISIBLE",
+                    AlterColumnAction.SetInvisible => "SET INVISIBLE",
+                    _ => "",
+                });
+                return sbAlter.ToString();
             }
             case AlterOperation.REMOVE_PARTITIONING:
                 return "REMOVE PARTITIONING";
@@ -259,6 +321,43 @@ public class AlterExpression : ASTNodeAccessImpl
         public string ColumnName { get; set; } = "";
         public string DataType { get; set; } = "";
 
-        public override string ToString() => $"{ColumnName} {DataType}";
+        /// <summary>ALTER COLUMN x TYPE int 是否显式输出 TYPE 关键字（对齐上游 withType）。</summary>
+        public bool WithType { get; set; }
+
+        public override string ToString()
+        {
+            var typeKw = WithType ? "TYPE " : "";
+            return $"{ColumnName} {typeKw}{DataType}";
+        }
     }
+}
+
+/// <summary>
+/// ALTER COLUMN x 的具体动作，对齐上游 ALTER 分支列级约束变更。
+/// </summary>
+public enum AlterColumnAction
+{
+    /// <summary>ALTER COLUMN x SET DEFAULT expr</summary>
+    SetDefault,
+
+    /// <summary>ALTER COLUMN x DROP DEFAULT</summary>
+    DropDefault,
+
+    /// <summary>ALTER COLUMN x SET NOT NULL</summary>
+    SetNotNull,
+
+    /// <summary>ALTER COLUMN x DROP NOT NULL</summary>
+    DropNotNull,
+
+    /// <summary>ALTER COLUMN x TYPE dataType</summary>
+    Type,
+
+    /// <summary>ALTER COLUMN x SET DATA TYPE dataType（SQL 标准）</summary>
+    SetDataType,
+
+    /// <summary>ALTER COLUMN x SET VISIBLE</summary>
+    SetVisible,
+
+    /// <summary>ALTER COLUMN x SET INVISIBLE</summary>
+    SetInvisible,
 }

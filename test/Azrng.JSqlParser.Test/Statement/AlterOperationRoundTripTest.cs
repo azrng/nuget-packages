@@ -38,6 +38,20 @@ public class AlterOperationRoundTripTest
         // ALTER SEQUENCE
         "ALTER SEQUENCE seq RESTART WITH 100 INCREMENT BY 1 MINVALUE 1 MAXVALUE 999 CACHE 20 CYCLE",
         "ALTER SEQUENCE s RESTART",
+        // ALTER COLUMN 子句（T093：此前 grammar 已解析但 visitor 静默丢弃）
+        "ALTER TABLE t ALTER COLUMN b SET DEFAULT 100",
+        "ALTER TABLE t ALTER COLUMN b DROP DEFAULT",
+        "ALTER TABLE t ALTER COLUMN b SET NOT NULL",
+        "ALTER TABLE t ALTER COLUMN b DROP NOT NULL",
+        "ALTER TABLE t ALTER COLUMN b TYPE VARCHAR(255)",
+        // ALTER COLUMN 扩展（SET DATA TYPE / VISIBLE / INVISIBLE）
+        "ALTER TABLE t ALTER COLUMN b SET DATA TYPE INT",
+        "ALTER TABLE t ALTER COLUMN b SET VISIBLE",
+        "ALTER TABLE t ALTER COLUMN b SET INVISIBLE",
+        // CONVERT / CHARACTER SET（MySQL 字符集转换）
+        "ALTER TABLE t CONVERT TO CHARACTER SET utf8",
+        "ALTER TABLE t CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin",
+        "ALTER TABLE t CHARACTER SET utf8",
     };
 
     [Theory]
@@ -141,5 +155,25 @@ public class AlterOperationRoundTripTest
         Assert.Equal("seq", stmt.Sequence!.Name);
         Assert.NotNull(stmt.Sequence.Parameters);
         Assert.True(stmt.Sequence.Parameters!.Count >= 6);
+    }
+
+    // ── T093: ALTER COLUMN 子句结构化断言（round-trip 由 RoundTripCases 覆盖） ──
+
+    [Fact]
+    public void AlterColumn_SetDefault_ShouldPopulateAction()
+    {
+        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ALTER COLUMN b SET DEFAULT 100")!;
+        var expr = Assert.Single(stmt.AlterExpressions!);
+        Assert.Equal(AlterColumnAction.SetDefault, expr.ColumnAlterAction);
+        Assert.Equal("100", expr.AlterColumnDefaultExpression);
+    }
+
+    [Fact]
+    public void AlterColumn_Type_ShouldPopulateAction()
+    {
+        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ALTER COLUMN b TYPE INT")!;
+        var expr = Assert.Single(stmt.AlterExpressions!);
+        Assert.Equal(AlterColumnAction.Type, expr.ColumnAlterAction);
+        Assert.Equal("INT", expr.AlterColumnType);
     }
 }

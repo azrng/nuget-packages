@@ -6,7 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| _无活跃任务_ | | | | | | |
+| T093 | Azrng.JSqlParser ALTER 字段结构化 | ALTER COLUMN 子句接线(SET DEFAULT/DROP DEFAULT/SET NOT NULL/DROP NOT NULL/TYPE)、SET DATA TYPE/VISIBLE、CONVERT TO CHARACTER SET、ADD KEY 结构化 | 阶段1 | DOING | high | 2026-07-10 |
+
+> T093 最高优先：ALTER COLUMN 子句（SET DEFAULT/DROP DEFAULT/SET NOT NULL/DROP NOT NULL/TYPE）grammar 已解析但 visitor 静默丢弃，round-trip 丢数据（与 WINDOW/QUALIFY 同类静默丢弃缺陷）。
 
 > 当前无活跃任务。核心 SQL 功能已与上游 JSqlParser 全面对标（1217 测试通过，含 84 项上游覆盖度探针）。下方 Backlog 为剩余未迁移项，按需启动。
 

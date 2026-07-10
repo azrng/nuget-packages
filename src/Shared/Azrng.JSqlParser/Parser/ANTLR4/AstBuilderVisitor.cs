@@ -2153,7 +2153,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         // DROP 分支：DROP COLUMN / DROP PRIMARY KEY / DROP UNIQUE / DROP FOREIGN KEY / DROP CONSTRAINT
-        if (context.DROP() != null)
+        // 注：排除 ALTER COLUMN ... DROP DEFAULT/DROP NOT NULL（ALTER 分支内含 DROP token，但操作类型是 ALTER）
+        if (context.DROP() != null && context.ALTER() == null)
         {
             if (context.PRIMARY() != null)
             {
@@ -2219,8 +2220,48 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.ALTER() != null)
         {
             expr.Operation = AlterOperation.ALTER;
+            expr.UseColumnKeyword = context.COLUMN() != null;
             if (identifiers.Length > 0)
                 expr.ColumnName = identifiers[0].GetText();
+            // 接线 ALTER COLUMN 子句（此前静默丢弃，对齐上游）
+            if (context.DEFAULT() != null && context.SET() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.SetDefault;
+                if (context.expression() != null)
+                    expr.AlterColumnDefaultExpression = GetOriginalText(context.expression());
+            }
+            else if (context.DEFAULT() != null && context.DROP() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.DropDefault;
+            }
+            else if (context.NOT() != null && context.SET() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.SetNotNull;
+            }
+            else if (context.NOT() != null && context.DROP() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.DropNotNull;
+            }
+            else if (context.TYPE() != null && context.DATA() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.SetDataType;
+                if (context.dataType() != null)
+                    expr.AlterColumnType = GetOriginalText(context.dataType());
+            }
+            else if (context.TYPE() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.Type;
+                if (context.dataType() != null)
+                    expr.AlterColumnType = GetOriginalText(context.dataType());
+            }
+            else if (context.VISIBLE() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.SetVisible;
+            }
+            else if (context.INVISIBLE() != null)
+            {
+                expr.ColumnAlterAction = AlterColumnAction.SetInvisible;
+            }
             return expr;
         }
 
@@ -2310,6 +2351,22 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             expr.Operation = context.EQUALS() != null ? AlterOperation.COMMENT_WITH_EQUAL_SIGN : AlterOperation.COMMENT;
             expr.UseEqualsForComment = context.EQUALS() != null;
             if (context.S_CHAR_LITERAL() != null) expr.OptionalSpecifier = context.S_CHAR_LITERAL().GetText();
+            return expr;
+        }
+
+        // CONVERT TO CHARACTER SET x [COLLATE [=] y] / DEFAULT CHARACTER SET x / CHARACTER SET x
+        if (context.CONVERT() != null || context.CHARACTER() != null)
+        {
+            expr.Operation = context.CONVERT() != null ? AlterOperation.CONVERT : AlterOperation.COLLATE;
+            expr.DefaultCollateSpecified = context.DEFAULT() != null; // 区分 DEFAULT CHARACTER SET
+            // CHARACTER SET 后的 identifier 是字符集名（grammar 有 3 个 identifier 分支，取 CHARACTER SET 后的那个）
+            var charSetIds = context.identifier();
+            if (charSetIds.Length > 0) expr.CharacterSet = charSetIds[0].GetText();
+            if (context.COLLATE() != null && charSetIds.Length > 1)
+            {
+                expr.Collation = charSetIds[1].GetText();
+                expr.UseEqualsForComment = context.EQUALS() != null; // 复用标记记录 COLLATE 是否带等号
+            }
             return expr;
         }
 

@@ -898,7 +898,7 @@ alterOperation
     | DROP UNIQUE (identifier | OPENING_PAREN identifierList CLOSING_PAREN)
     | DROP FOREIGN KEY identifier
     | DROP CONSTRAINT identifier
-    | ALTER COLUMN? identifier (SET DEFAULT expression | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE dataType)
+    | ALTER COLUMN? identifier (SET DEFAULT expression | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE dataType | SET DATA TYPE dataType | SET VISIBLE | SET INVISIBLE)
     | RENAME COLUMN? identifier TO identifier
     | RENAME TO identifier
     | RENAME INDEX identifier TO identifier
@@ -908,6 +908,9 @@ alterOperation
     | NO FORCE ROW LEVEL SECURITY
     | ENGINE EQUALS? identifier
     | COMMENT EQUALS? S_CHAR_LITERAL
+    | CONVERT TO CHARACTER SET identifier (COLLATE EQUALS? identifier)?
+    | DEFAULT CHARACTER SET identifier (COLLATE EQUALS? identifier)?
+    | CHARACTER SET identifier (COLLATE EQUALS? identifier)?
     | ADD PARTITION OPENING_PAREN? partitionDef? CLOSING_PAREN?
     | DROP PARTITION identifierList
     | TRUNCATE PARTITION identifierList
