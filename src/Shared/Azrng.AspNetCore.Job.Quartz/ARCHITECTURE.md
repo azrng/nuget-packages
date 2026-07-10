@@ -70,20 +70,31 @@ Azrng.AspNetCore.Job.Quartz/
 ├── Options/                          # 配置选项
 │   └── QuartzOptions.cs              # Quartz 配置选项类
 ├── Schedules/                        # 调度核心
+│   ├── AssemblyResolver.cs           # 程序集解析
+│   ├── DependencyInjectionJobFactory.cs  # DI 作业工厂
 │   ├── JobHostedService.cs           # 托管服务实现
-│   └── DependencyInjectionJobFactory.cs  # DI 作业工厂
+│   └── JobHistoryCleanupHostedService.cs # 历史记录清理服务
 ├── Listeners/                        # 监听器
 │   └── QuartzJobListener.cs          # 作业执行监听器
-├── Services/                         # 应用服务
-│   ├── JobService.cs                 # 作业管理服务
-│   ├── JobStatusService.cs           # 状态查询服务
-│   └── InMemoryJobExecutionHistoryService.cs  # 历史记录服务
+├── Services/                         # 应用服务实现（命名空间 .Services）
+│   ├── JobService.cs                 # 作业管理服务实现（接口 IJobService 在根目录）
+│   ├── TriggerService.cs             # 触发器服务实现（接口 ITriggerService 在根目录）
+│   ├── SchedulerService.cs           # 调度器服务实现（接口 ISchedulerService 在根目录）
+│   ├── IJobStatusService.cs          # 状态查询服务接口
+│   ├── JobStatusService.cs           # 状态查询服务实现
+│   ├── IJobExecutionHistoryService.cs # 历史记录服务接口
+│   └── InMemoryJobExecutionHistoryService.cs  # 历史记录服务实现
 ├── Model/                            # 数据模型
+│   ├── JobDetailInfo.cs              # 作业详情模型
 │   ├── JobExecutionHistory.cs        # 执行历史模型
-│   └── ScheduleViewModel.cs          # 调度视图模型
-├── IJobService.cs                    # 作业服务接口
-├── ITriggerService.cs                # 触发器服务接口
-├── ISchedulerService.cs              # 调度器服务接口
+│   ├── JobExecutionStatistics.cs     # 执行统计模型
+│   ├── RunningJobInfo.cs             # 运行中作业模型
+│   ├── ScheduleViewModel.cs          # 调度视图模型
+│   ├── ScheduledJobInfo.cs           # 已调度作业模型
+│   └── TriggerInfo.cs                # 触发器信息模型
+├── IJobService.cs                    # 作业服务接口（命名空间 .Quartz）
+├── ITriggerService.cs                # 触发器服务接口（命名空间 .Quartz）
+├── ISchedulerService.cs              # 调度器服务接口（命名空间 .Quartz）
 ├── JobConfigAttribute.cs             # 作业配置特性
 └── ServiceCollectionExtensions.cs    # DI 注册扩展
 ```

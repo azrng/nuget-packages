@@ -1,4 +1,5 @@
 using Azrng.AspNetCore.Job.Quartz.Model;
+using Azrng.AspNetCore.Job.Quartz.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Quartz;

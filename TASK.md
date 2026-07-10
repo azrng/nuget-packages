@@ -6,9 +6,20 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| _无活跃任务_ | | | | | | |
+| T082 | Job.Quartz 实现类归位 | 将 JobService/TriggerService/SchedulerService 从接口文件拆出,归入 Services/ 目录,统一文件组织 | 阶段1 | DONE | 中 | 2026-07-10 |
 
-> 当前无活跃任务。下一个任务待用户指定。
+### T082 详情
+
+- **目标**:解决 `Azrng.AspNetCore.Job.Quartz` 内部文件组织不一致——三个应用服务的实现类与接口混在同一文件且留在根目录,而同类服务 JobStatusService 却在 Services/ 下,违反"同类职责归同一目录"。
+- **已完成步骤**:
+  1. 确认方案:接口留根目录(命名空间 `.Quartz`),实现类拆进 `Services/`(命名空间 `.Quartz.Services`),与现有 JobStatusService 一致。
+  2. 新增 `Services/JobService.cs`、`Services/TriggerService.cs`、`Services/SchedulerService.cs`。
+  3. 清理 `IJobService.cs`/`ITriggerService.cs`/`ISchedulerService.cs`,只保留接口定义。
+  4. 修复 `TriggerServiceTests.cs` 直接 `new TriggerService` 的 using。
+  5. 更新 `ARCHITECTURE.md` 目录树与实际一致。
+  6. 编译 net8.0 通过(0 警告 0 错误),测试 25/25 通过。
+- **下一步**:无。
+- **阻塞项**:无。
 
 ## 待业务驱动 Backlog
 
