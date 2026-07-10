@@ -6,9 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T092 | Azrng.JSqlParser 长期对标剩余缺口逐项修复 | UPDATE/DELETE修饰符、CREATE VIEW补齐、JoinHint、WithSearchClause(模型就绪)、LateralView、EXPORT/IMPORT 等 | 阶段1 | DOING | high | 2026-07-10 |
+| T092 | Azrng.JSqlParser 长期对标剩余缺口逐项修复 | UPDATE/DELETE修饰符、CREATE VIEW补齐、LateralView、JoinHint、WithSearchClause(模型就绪) | 阶段1 | DOING | high | 2026-07-10 |
 
-> T092 进展：P2 UPDATE/DELETE修饰符✅、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug✅、P3c JoinHint✅、P3d WithSearchClause模型就绪(grammar接线待优化)。剩余：P3b LateralView、P4 EXPORT/IMPORT+CREATE VIEW FORCE等。经核查已排除架构差异(Skip/First/OptimizeFor/SampleClause等价实现)与上游不存在项(MODEL/CURRVAL/JSON_TRANSFORM)。
+> T092 进展：P2 UPDATE/DELETE修饰符✅、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug✅、P3b LateralView✅、P3c JoinHint✅、P3d WithSearchClause模型就绪(grammar接线待优化)。剩余：P4 EXPORT/IMPORT+CREATE VIEW FORCE等低频项。经核查已排除架构差异(Skip/First/OptimizeFor/SampleClause等价实现)与上游不存在项(MODEL/CURRVAL/JSON_TRANSFORM)。
 
 ## 待业务驱动 Backlog
 
@@ -58,7 +58,7 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1214 测试（截至 T092 P2/P3a/P3c/P3d 长期对标缺口修复）
+- **Azrng**：1217 测试（截至 T092 P2/P3a/P3b/P3c/P3d 长期对标缺口修复）
 - **上游 JSqlParser**：2309 测试
 - **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06~T091+BL-18 已移植 CREATE TABLE 通用能力、STRUCT/ARRAY 列类型、9 项边缘缺口、P0 静默丢弃修复、P1 功能缺口与部分字段扩展（AnalyticType/COMMENT VIEW/Column-Table 字段），但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
