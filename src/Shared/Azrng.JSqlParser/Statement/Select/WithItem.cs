@@ -26,6 +26,9 @@ public class WithItem : Select
     public ParenthesedUpdate? ParenthesedUpdate { get; set; }
     public ParenthesedDelete? ParenthesedDelete { get; set; }
 
+    /// <summary>标准递归 CTE 序列化子句原始文本（SEARCH DEPTH FIRST BY cols SET seqcol），透传保 round-trip。对齐上游 WithSearchClause。</summary>
+    public string? SearchClause { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -47,6 +50,7 @@ public class WithItem : Select
         else if (ParenthesedUpdate != null) builder.Append(ParenthesedUpdate);
         else if (ParenthesedDelete != null) builder.Append(ParenthesedDelete);
         else if (Select != null) Select.AppendTo(builder);
+        if (SearchClause != null) builder.Append(' ').Append(SearchClause);
         return builder;
     }
 }
