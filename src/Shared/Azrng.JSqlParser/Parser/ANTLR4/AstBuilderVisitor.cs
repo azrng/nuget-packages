@@ -206,8 +206,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             withItem.ParenthesedDelete = new ParenthesedDelete { Delete = delete };
         }
 
-        // 注：标准递归 CTE 序列化子句（SEARCH ... FIRST BY ... SET ...）grammar 接线待优化
-        // （当前产生式与 AS (select) 括号产生 LL 预测冲突），模型字段 SearchClause 已就绪，留后续接入
+        // 注：标准递归 CTE 序列化子句（SEARCH ... FIRST BY ... SET ...）grammar 接线需 ANTLR4 谓词高级处理
+        // （withItem 产生式过长，直接追加 withSearchClause 破坏 LL 预测），模型字段 SearchClause 已就绪，
+        // SEARCH/BREADTH/DEPTH token 已添加，留后续用自定义 parser 方法接入
 
         return withItem;
     }

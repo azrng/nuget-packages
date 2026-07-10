@@ -114,9 +114,10 @@ withItem
     ;
 
 // 标准递归 CTE 序列化子句：SEARCH BREADTH|DEPTH FIRST BY cols SET seqcol（对齐上游 WithSearchClause）
-// 注：grammar 接线待优化（当前产生式与 withItem 的 AS (select) 括号产生 LL 预测冲突，模型字段已就绪）
+// 注：grammar 接线需 ANTLR4 谓词高级处理（withItem 产生式过长，直接追加 withSearchClause 破坏 LL 预测），
+// 模型字段 WithItem.SearchClause 已就绪，SEARCH/BREADTH/DEPTH token 已添加，留后续用自定义 parser 方法接入
 withSearchClause
-    : identifier identifier FIRST BY identifierList SET identifier
+    : SEARCH (BREADTH | DEPTH) FIRST BY identifierList SET identifier
     ;
 
 selectBody
