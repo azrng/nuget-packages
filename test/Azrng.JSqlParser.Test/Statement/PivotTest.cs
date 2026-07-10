@@ -75,4 +75,20 @@ public class PivotTest
         Assert.Single(table.UnPivot.UnpivotForClause);
         Assert.Equal(2, table.UnPivot.UnpivotInClause.Count);
     }
+
+    /// <summary>
+    /// Oracle PIVOT XML 变体应正确解析并保 round-trip（BL-19e）。
+    /// </summary>
+    [Fact]
+    public void PivotXml_ShouldParseAndRoundTrip()
+    {
+        var sql = "SELECT * FROM sales PIVOT XML (SUM(amount) FOR product IN ('A', 'B'))";
+        var stmt = CCJSqlParserUtil.Parse(sql);
+        var plainSelect = Assert.IsType<PlainSelect>(stmt);
+        var table = Assert.IsType<Table>(plainSelect.FromItem);
+
+        Assert.NotNull(table.Pivot);
+        Assert.True(table.Pivot!.IsXml);
+        Assert.Equal(sql, stmt!.ToString());
+    }
 }

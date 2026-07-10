@@ -43,6 +43,12 @@ public class PlainSelect : Select
     /// <summary>命名窗口定义（WINDOW w AS (...)），透传原始文本保 round-trip。对齐上游 windowDefinitions。</summary>
     public System.Collections.Generic.List<string>? WindowDefinitions { get; set; }
 
+    /// <summary>ksqlDB 流式窗口（WINDOW HOPPING/TUMBLING/SESSION），对齐上游 ksqlWindow。与 WindowDefinitions 互斥。</summary>
+    public KSQLWindow? KsqlWindow { get; set; }
+
+    /// <summary>ksqlDB EMIT CHANGES 标志，对齐上游 emitChanges。</summary>
+    public bool EmitChanges { get; set; }
+
     /// <summary>QUALIFY 过滤表达式（Snowflake/Teradata），对齐上游 qualify。</summary>
     public Expression.Expression? Qualify { get; set; }
 
@@ -81,6 +87,9 @@ public class PlainSelect : Select
                 else builder.Append(' ').Append(join);
             }
         }
+
+        // ksqlDB 流式窗口（FROM/JOIN 之后、WHERE 之前）
+        if (KsqlWindow != null) builder.Append(" WINDOW ").Append(KsqlWindow);
 
         if (Where != null) builder.Append(" WHERE ").Append(Where);
         // Oracle 层次查询（WHERE 之后、GROUP BY 之前）

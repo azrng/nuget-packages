@@ -14,6 +14,9 @@ public class Pivot
     /// <summary>聚合函数项（如 SUM(amount)）。</summary>
     public Function Function { get; set; } = null!;
 
+    /// <summary>是否 PIVOT XML 变体（Oracle）：PIVOT XML (...) 输出 XML 格式结果。</summary>
+    public bool IsXml { get; set; }
+
     /// <summary>FOR 列（如 FOR product_type）。</summary>
     public List<Column> ForColumns { get; set; } = new();
 
@@ -25,7 +28,9 @@ public class Pivot
 
     public override string ToString()
     {
-        var sb = new StringBuilder("PIVOT (");
+        var sb = new StringBuilder("PIVOT");
+        if (IsXml) sb.Append(" XML");
+        sb.Append(" (");
         sb.Append(Function);
         sb.Append(" FOR ");
         sb.Append(string.Join(", ", ForColumns));

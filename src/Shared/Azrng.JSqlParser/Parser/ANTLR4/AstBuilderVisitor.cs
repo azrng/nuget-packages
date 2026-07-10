@@ -125,6 +125,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.OrderByElements = (List<OrderByElement>)Visit(context.orderByClause());
         }
 
+        // ksqlDB EMIT CHANGES（ORDER BY 之后、LIMIT 之前）
+        if (context.ksqlEmitClause() != null && select is PlainSelect emitPlainSelect)
+        {
+            emitPlainSelect.EmitChanges = true;
+        }
+
         if (context.limitClause() != null)
         {
             select.Limit = (Limit)Visit(context.limitClause());
@@ -456,6 +462,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             select.WindowDefinitions = windowCtx.windowItem().Select(GetOriginalText).ToList();
         }
 
+        // ksqlDB 流式窗口（FROM/JOIN 之后、WHERE 之前）：WINDOW HOPPING/TUMBLING/SESSION (...)
+        if (context.ksqlWindowClause() != null)
+        {
+            select.KsqlWindow = (KSQLWindow)Visit(context.ksqlWindowClause().ksqlWindowSpec());
+        }
+
         // QUALIFY 过滤表达式（Snowflake/Teradata）
         if (context.qualifyClause() is { } qualifyCtx)
         {
@@ -463,6 +475,66 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return select;
+    }
+
+    /// <summary>构建 ksqlDB 流式窗口 KSQLWindow（HOPPING/TUMBLING/SESSION）。</summary>
+    public override object VisitKsqlWindowSpec(JSqlParserGrammar.KsqlWindowSpecContext context)
+    {
+        var window = new KSQLWindow();
+        var timeUnits = context.ksqlTimeUnit();
+
+        if (context.HOPPING() != null)
+        {
+            window.Hopping = true;
+            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
+            window.AdvanceDuration = long.Parse(context.LONG_VALUE(1).GetText());
+            window.AdvanceTimeUnit = ParseKsqlTimeUnit(timeUnits[1]);
+        }
+        else if (context.TUMBLING() != null)
+        {
+            window.Tumbling = true;
+            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
+        }
+        else if (context.SESSION() != null)
+        {
+            window.Session = true;
+            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
+        }
+        return window;
+    }
+
+    /// <summary>构建 ksqlDB JOIN WITHIN 窗口 KSQLJoinWindow。</summary>
+    private KSQLJoinWindow BuildKsqlJoinWindow(JSqlParserGrammar.KsqlJoinWindowClauseContext context)
+    {
+        var durations = context.LONG_VALUE();
+        var timeUnits = context.ksqlTimeUnit();
+        var joinWindow = new KSQLJoinWindow();
+
+        if (durations.Length == 1)
+        {
+            // 单值窗口：WITHIN (n unit)
+            joinWindow.Duration = long.Parse(durations[0].GetText());
+            joinWindow.TimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
+        }
+        else
+        {
+            // before/after 双值窗口：WITHIN (n unit, n unit)
+            joinWindow.BeforeAfter = true;
+            joinWindow.BeforeDuration = long.Parse(durations[0].GetText());
+            joinWindow.BeforeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
+            joinWindow.AfterDuration = long.Parse(durations[1].GetText());
+            joinWindow.AfterTimeUnit = ParseKsqlTimeUnit(timeUnits[1]);
+        }
+        return joinWindow;
+    }
+
+    /// <summary>解析 ksqlDB 时间单位文本为枚举（大写化匹配）。</summary>
+    private static KSQLTimeUnit ParseKsqlTimeUnit(JSqlParserGrammar.KsqlTimeUnitContext context)
+    {
+        return Enum.Parse<KSQLTimeUnit>(context.GetText().ToUpperInvariant());
     }
 
     /// <summary>
@@ -721,6 +793,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         join.RightItem = (FromItem)Visit(context.tableOrSubquery());
 
+        // ksqlDB WITHIN 窗口（RightItem 之后、ON/USING 之前）
+        if (context.ksqlJoinWindowClause() != null)
+        {
+            join.JoinWindow = BuildKsqlJoinWindow(context.ksqlJoinWindowClause());
+        }
+
         if (context.joinCondition() != null)
         {
             var cond = context.joinCondition();
@@ -818,6 +896,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.subSelect());
         }
 
+        // 括号 FROM 项：OPENING_PAREN fromItem CLOSING_PAREN alias?
+        // 递归访问内部 fromItem，并保留可选 alias（此前兜底 GetChild(0) 丢弃 alias）
+        if (context.fromItem() != null)
+        {
+            var inner = Visit(context.fromItem());
+            if (context.alias() != null && inner is FromItem fromItem)
+            {
+                fromItem.SetAlias(new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null));
+            }
+            return inner;
+        }
+
         return Visit(context.GetChild(0));
     }
 
@@ -870,12 +961,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     /// <summary>构建 PIVOT/UNPIVOT 子句并挂到 Table。</summary>
     private void BuildPivotClause(Table table, JSqlParserGrammar.PivotClauseContext context)
     {
-        // PIVOT (func FOR cols IN (vals)) [AS alias]
+        // PIVOT [XML] (func FOR cols IN (vals)) [AS alias]
         if (context.PIVOT() != null)
         {
             var pivot = new Pivot
             {
                 Function = (Function)Visit(context.functionExpr()),
+                IsXml = context.XML() != null,
                 ForColumns = context.columnList(0).identifier()
                     .Select(i => new Column { ColumnName = i.GetText() }).ToList(),
                 InItems = ((ExpressionList)Visit(context.expressionList())).Expressions
@@ -1209,6 +1301,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     updateSet.Values = new List<Expression.Expression>();
                     updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
                     insert.DuplicateUpdateSets.Add(updateSet);
+                }
+                // MySQL 8.0.20+ ON DUPLICATE KEY UPDATE ... WHERE
+                if (dupCtx.whereClause() != null)
+                {
+                    insert.DuplicateUpdateWhereExpression =
+                        (Expression.Expression)Visit(dupCtx.whereClause().expression());
                 }
             }
         }
@@ -3131,17 +3229,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         createView.View = (Table)Visit(context.table());
         createView.OrReplace = context.REPLACE() != null;
         createView.IfNotExists = context.EXISTS() != null;
+        // FORCE / NO FORCE（Oracle）
+        if (context.FORCE() != null && context.NO() == null) createView.Force = true;
+        else if (context.FORCE() != null && context.NO() != null) createView.Force = false;
         // TEMPORARY/TEMP（此前 grammar 已解析但 visitor 丢弃）
         if (context.TEMPORARY() != null) createView.Temporary = "TEMPORARY";
         else if (context.TEMP() != null) createView.Temporary = "TEMP";
         // RECURSIVE
         if (context.RECURSIVE() != null) createView.Recursive = true;
+        // SECURE（Snowflake/SAP HANA）
+        if (context.SECURE() != null) createView.Secure = true;
         // WITH [CASCADED|LOCAL] CHECK OPTION（此前丢弃）
         if (context.CHECK() != null)
         {
             createView.WithCheckOption = context.CASCADED() != null ? "CASCADED"
                 : context.LOCAL() != null ? "LOCAL" : "";
         }
+        // WITH READ ONLY（Oracle）
+        if (context.READ() != null && context.ONLY() != null) createView.WithReadOnly = true;
         createView.Select = (Select)Visit(context.selectStatement());
         return createView;
     }

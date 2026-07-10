@@ -13,6 +13,9 @@ public class Insert : ASTNodeAccessImpl, Statement
     public System.Collections.Generic.List<Column>? Columns { get; set; }
     public Select.Select? Select { get; set; }
     public System.Collections.Generic.List<Update.UpdateSet>? DuplicateUpdateSets { get; set; }
+
+    /// <summary>MySQL 8.0.20+ ON DUPLICATE KEY UPDATE ... WHERE 的条件表达式，未指定时为 null。</summary>
+    public Expression.Expression? DuplicateUpdateWhereExpression { get; set; }
     public System.Collections.Generic.List<Update.UpdateSet>? SetUpdateSets { get; set; }
     public bool UseValues { get; set; } = true;
 
@@ -113,6 +116,8 @@ public class Insert : ASTNodeAccessImpl, Statement
         else if (DuplicateUpdateSets != null && DuplicateUpdateSets.Count > 0)
         {
             sb.Append(" ON DUPLICATE KEY UPDATE ").Append(string.Join(", ", DuplicateUpdateSets));
+            if (DuplicateUpdateWhereExpression != null)
+                sb.Append(" WHERE ").Append(DuplicateUpdateWhereExpression);
         }
         if (ConflictAction != null)
         {

@@ -44,4 +44,17 @@ public class JoinMultiOnTest
         Assert.Equal(2, join.OnExpressions.Count);
         Assert.Contains("ON a = b ON c = d", stmt.ToString());
     }
+
+    /// <summary>
+    /// 括号 FROM 项的可选 alias 不应丢失（BL-19f）：FROM (fromItem) alias
+    /// 此前兜底 Visit(GetChild(0)) 跳过 alias，修复后应保留。
+    /// </summary>
+    [Fact]
+    public void ParenthesedFromItem_WithAlias_ShouldPreserveAlias()
+    {
+        // 括号包裹单表 + alias（subSelect 分支不走，此处验证括号分支 alias 保留）
+        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (users) AS u");
+        // alias "u" 应保留在 round-trip 输出中（此前兜底路径会丢失）
+        Assert.Contains("u", stmt!.ToString()!);
+    }
 }

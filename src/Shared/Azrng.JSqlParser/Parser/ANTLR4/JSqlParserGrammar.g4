@@ -101,8 +101,13 @@ refreshStatement
 // ══════════════════════════════════════════════
 
 selectStatement
-    : withClause? selectBody orderByClause? limitClause? offsetClause? fetchClause? forUpdateClause? (FOR XML PATH (OPENING_PAREN S_CHAR_LITERAL CLOSING_PAREN)?)?
+    : withClause? selectBody orderByClause? ksqlEmitClause? limitClause? offsetClause? fetchClause? forUpdateClause? (FOR XML PATH (OPENING_PAREN S_CHAR_LITERAL CLOSING_PAREN)?)?
     | withClause? fromQuery
+    ;
+
+// ksqlDB EMIT CHANGES（ORDER BY 之后、LIMIT 之前）
+ksqlEmitClause
+    : EMIT CHANGES
     ;
 
 withClause
@@ -126,6 +131,7 @@ plainSelect
     : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? informixSkipFirstClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
       intoClause?
       fromClause?
+      ksqlWindowClause?
       whereClause?
       preferringClause?
       connectByClause?
@@ -223,7 +229,7 @@ timeTravelClause
 
 // PIVOT / UNPIVOT 子句（FROM 子句行列转换）
 pivotClause
-    : PIVOT OPENING_PAREN functionExpr FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
+    : PIVOT XML? OPENING_PAREN functionExpr FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
     | UNPIVOT (INCLUDE NULLS)? OPENING_PAREN columnList FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
     ;
 
@@ -320,11 +326,16 @@ jsonTableColumn
     ;
 
 joinClause
-    : GLOBAL? (ANY | ALL)? joinType? joinHint? JOIN FETCH? tableOrSubquery joinCondition?
+    : GLOBAL? (ANY | ALL)? joinType? joinHint? JOIN FETCH? tableOrSubquery ksqlJoinWindowClause? joinCondition?
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?
     | lateralViewClause          // Hive/Spark LATERAL VIEW [OUTER] function() AS col（接在表后，语义类似 join）
+    ;
+
+// ksqlDB 流式 JOIN WITHIN 窗口：WITHIN (n unit) 或 WITHIN (n unit, n unit)
+ksqlJoinWindowClause
+    : WITHIN OPENING_PAREN LONG_VALUE ksqlTimeUnit (COMMA LONG_VALUE ksqlTimeUnit)? CLOSING_PAREN
     ;
 
 // SQL Server Join 提示：LOOP/HASH/MERGE（强制连接策略），对齐上游 JoinHint
@@ -384,6 +395,22 @@ havingClause
 
 windowClause
     : WINDOW windowItem (COMMA windowItem)*
+    ;
+
+// ksqlDB 流式窗口：WINDOW HOPPING/TUMBLING/SESSION (...)（FROM/JOIN 之后、WHERE 之前）
+ksqlWindowClause
+    : WINDOW ksqlWindowSpec
+    ;
+
+ksqlWindowSpec
+    : HOPPING OPENING_PAREN SIZE LONG_VALUE ksqlTimeUnit COMMA ADVANCE BY LONG_VALUE ksqlTimeUnit CLOSING_PAREN
+    | TUMBLING OPENING_PAREN SIZE LONG_VALUE ksqlTimeUnit CLOSING_PAREN
+    | SESSION OPENING_PAREN LONG_VALUE ksqlTimeUnit CLOSING_PAREN
+    ;
+
+// ksqlDB 时间单位：接受单数保留字（DAY/HOUR/MINUTE/SECOND）和复数/其他形式（IDENTIFIER，如 DAYS/HOURS/MILLISECONDS）
+ksqlTimeUnit
+    : DAY | HOUR | MINUTE | SECOND | IDENTIFIER
     ;
 
 windowItem
@@ -526,7 +553,7 @@ valuesItem
 
 onDuplicateKey
     : ON DUPLICATE KEY UPDATE NOTHING
-    | ON DUPLICATE KEY UPDATE assignmentItem (COMMA assignmentItem)*
+    | ON DUPLICATE KEY UPDATE assignmentItem (COMMA assignmentItem)* whereClause?
     ;
 
 // ══════════════════════════════════════════════
@@ -760,10 +787,11 @@ likeOption
 // ══════════════════════════════════════════════
 
 createView
-    : CREATE (OR REPLACE)? (TEMPORARY | TEMP)? RECURSIVE? VIEW (IF NOT EXISTS)? table
+    : CREATE (OR REPLACE)? (FORCE | NO FORCE)? (TEMPORARY | TEMP)? RECURSIVE? SECURE? VIEW (IF NOT EXISTS)? table
       (OPENING_PAREN identifierList CLOSING_PAREN)?
       AS selectStatement
       (WITH (CASCADED | LOCAL)? CHECK OPTION)?
+      (WITH READ ONLY)?
     ;
 
 // ══════════════════════════════════════════════

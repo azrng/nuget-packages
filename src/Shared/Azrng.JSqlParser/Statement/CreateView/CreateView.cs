@@ -19,6 +19,15 @@ public class CreateView : ASTNodeAccessImpl, Statement
     /// <summary>CREATE RECURSIVE VIEW（PostgreSQL）。</summary>
     public bool Recursive { get; set; }
 
+    /// <summary>FORCE/NO FORCE（Oracle）：null=未指定，true=FORCE，false=NO FORCE。</summary>
+    public bool? Force { get; set; }
+
+    /// <summary>CREATE SECURE VIEW（Snowflake/SAP HANA）。</summary>
+    public bool Secure { get; set; }
+
+    /// <summary>WITH READ ONLY（Oracle，只读视图约束）。</summary>
+    public bool WithReadOnly { get; set; }
+
     /// <summary>WITH CHECK OPTION：null=无，"CASCADED"/"LOCAL"=对应修饰，""=无修饰 CHECK OPTION。</summary>
     public string? WithCheckOption { get; set; }
 
@@ -28,8 +37,11 @@ public class CreateView : ASTNodeAccessImpl, Statement
     {
         var sb = new System.Text.StringBuilder("CREATE ");
         if (OrReplace) sb.Append("OR REPLACE ");
+        if (Force == true) sb.Append("FORCE ");
+        else if (Force == false) sb.Append("NO FORCE ");
         if (Temporary != null) sb.Append(Temporary).Append(' ');
         if (Recursive) sb.Append("RECURSIVE ");
+        if (Secure) sb.Append("SECURE ");
         sb.Append("VIEW ");
         if (IfNotExists) sb.Append("IF NOT EXISTS ");
         sb.Append(View);
@@ -39,6 +51,11 @@ public class CreateView : ASTNodeAccessImpl, Statement
             sb.Append(" WITH ");
             if (!string.IsNullOrEmpty(WithCheckOption)) sb.Append(WithCheckOption).Append(' ');
             sb.Append("CHECK OPTION");
+            if (WithReadOnly) sb.Append(" WITH READ ONLY");
+        }
+        else if (WithReadOnly)
+        {
+            sb.Append(" WITH READ ONLY");
         }
         return sb.ToString();
     }

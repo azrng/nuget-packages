@@ -87,6 +87,12 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
             AppendOrderByTo(builder);
         }
 
+        // ksqlDB EMIT CHANGES（ORDER BY 之后、LIMIT 之前）
+        if (this is PlainSelect { EmitChanges: true })
+        {
+            builder.Append(" EMIT CHANGES");
+        }
+
         if (LimitBy != null) builder.Append(LimitBy);
         if (Limit != null) builder.Append(Limit);
         if (Offset != null) builder.Append(Offset);

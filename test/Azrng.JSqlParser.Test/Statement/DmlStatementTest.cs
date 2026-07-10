@@ -82,6 +82,19 @@ public class DmlStatementTest
     }
 
     /// <summary>
+    /// MySQL 8.0.20+ 的 ON DUPLICATE KEY UPDATE ... WHERE 条件应正确解析（BL-19g）。
+    /// </summary>
+    [Fact]
+    public void Insert_OnDuplicateKeyUpdate_WithWhere_ShouldParse()
+    {
+        var sql = "INSERT INTO users (id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = 'b' WHERE id > 0";
+        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(insert.DuplicateUpdateSets);
+        Assert.NotNull(insert.DuplicateUpdateWhereExpression);
+        Assert.Contains("WHERE id > 0", insert.ToString()!);
+    }
+
+    /// <summary>
     /// INSERT VALUES 的值数据应正确保存并往返序列化。
     /// 此前 VisitInsertStatement 仅设 UseValues 标志但未保存值，ToString 丢失 VALUES 子句，已修复。
     /// </summary>

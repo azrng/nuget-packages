@@ -133,6 +133,52 @@ public class DdlStatementTest
         Assert.NotNull(stmt.Select);
     }
 
+    [Fact]
+    public void CreateView_Force_ShouldParse()
+    {
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+            "CREATE FORCE VIEW v AS SELECT * FROM users")!;
+        Assert.True(stmt.Force == true);
+        Assert.Contains("CREATE FORCE VIEW", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void CreateView_NoForce_ShouldParse()
+    {
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+            "CREATE NO FORCE VIEW v AS SELECT * FROM users")!;
+        Assert.True(stmt.Force == false);
+        Assert.Contains("CREATE NO FORCE VIEW", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void CreateView_Secure_ShouldParse()
+    {
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+            "CREATE SECURE VIEW v AS SELECT * FROM users")!;
+        Assert.True(stmt.Secure);
+        Assert.Contains("SECURE VIEW", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void CreateView_WithReadOnly_ShouldParse()
+    {
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+            "CREATE VIEW v AS SELECT * FROM users WITH READ ONLY")!;
+        Assert.True(stmt.WithReadOnly);
+        Assert.Contains("WITH READ ONLY", stmt.ToString()!);
+    }
+
+    [Fact]
+    public void CreateView_ForceOrReplace_WithCheckOption_ReadOnly_ShouldRoundTrip()
+    {
+        var sql = "CREATE OR REPLACE FORCE VIEW v AS SELECT * FROM users WITH CHECK OPTION WITH READ ONLY";
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(sql)!;
+        Assert.True(stmt.OrReplace);
+        Assert.True(stmt.Force == true);
+        Assert.True(stmt.WithReadOnly);
+    }
+
     #endregion
 
     #region CREATE INDEX

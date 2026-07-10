@@ -39,6 +39,9 @@ public class Join : ASTNodeAccessImpl
 
     public FromItem RightItem { get; set; } = null!;
 
+    /// <summary>ksqlDB 流式 JOIN 的 WITHIN 窗口，对齐上游 joinWindow。在 RightItem 之后、ON 之前输出。</summary>
+    public KSQLJoinWindow? JoinWindow { get; set; }
+
     /// <summary>JOIN 的 ON 表达式列表，支持多个 ON（如 JOIN t ON a ON b）。对齐上游 onExpressions。</summary>
     public List<Expression.Expression> OnExpressions { get; set; } = new();
 
@@ -97,6 +100,9 @@ public class Join : ASTNodeAccessImpl
         sb.Append(Straight ? "STRAIGHT_JOIN " : "JOIN ");
         if (Fetch) sb.Append("FETCH ");
         sb.Append(RightItem);
+
+        // ksqlDB WITHIN 窗口（RightItem 之后、ON/USING 之前）
+        if (JoinWindow != null) sb.Append(" WITHIN ").Append(JoinWindow);
 
         // 支持多个 ON 表达式（JOIN t ON a ON b），对齐上游 onExpressions
         foreach (var onExpr in OnExpressions)

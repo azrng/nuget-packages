@@ -203,6 +203,13 @@ Console.WriteLine(stmt.ToString());
 - **长期对标缺口修复（T092）**：UPDATE/DELETE 修饰符（`LOW_PRIORITY`/`IGNORE`/`QUICK`）、CREATE VIEW 补齐（`TEMPORARY`/`RECURSIVE`/`WITH CHECK OPTION` + 修复 CHECK OPTION 位置 bug）、Hive/Spark `LATERAL VIEW [OUTER] function() AS col`、SQL Server JoinHint（`LOOP`/`HASH`/`MERGE`）、WithSearchClause 模型就绪、BEGIN TRANSACTION 支持
 - **ALTER 字段结构化（T093）**：ALTER COLUMN 子句接线修复静默丢弃（`SetOperation`/`DropColumnOperation`），SET DATA TYPE/VISIBLE/INVISIBLE、CONVERT/CHARACTER SET 全方言覆盖
 - **WithSearchClause grammar 接线（T094）**：标准递归 CTE 序列化子句 `SEARCH {BREADTH|DEPTH} FIRST BY cols SET seqcol` 从模型就绪升级为完整接线——grammar `withItem` 末尾接 `withSearchClause?`（此前注释称"破坏 LL 预测"经实测为误判，ANTLR4 LL(*) 可正常处理）、新增结构化 `WithSearchClause` 模型类（`SearchOrder`/`SearchColumns`/`SequenceColumnName`，替代原 `string?` 透传）、`AstBuilderVisitor.VisitWithSearchClause` 填充结构化字段、round-trip 保真。全量 1234 测试通过（净增 4 项 SEARCH 子句测试）
+- **P4 小众方言批量补齐（T095）**：
+  - BL-19b KSQL 窗口（ksqlDB）：新增 `KSQLWindow`（HOPPING/TUMBLING/SESSION）+ `KSQLJoinWindow`（WITHIN 单值/双值）模型类 + `KSQLTimeUnit` 枚举，`PlainSelect.KsqlWindow`/`EmitChanges` + `Join.JoinWindow` 字段，grammar `ksqlWindowClause`/`ksqlJoinWindowClause`/`ksqlEmitClause` 产生式（位置精确：窗口在 FROM/JOIN 后 WHERE 前、EMIT CHANGES 在 ORDER BY 后 LIMIT 前），visitor `VisitKsqlWindowSpec`/`BuildKsqlJoinWindow` 接线
+  - BL-19c CREATE VIEW 方言：`FORCE`/`NO FORCE`/`SECURE`/`WITH READ ONLY` 字段扩展（`CreateView.Force?`/`Secure`/`WithReadOnly`），新增 `SECURE` token
+  - BL-19e PivotXml（Oracle）：`Pivot.IsXml` 字段 + grammar `PIVOT XML?` 可选关键字 + visitor 接线
+  - BL-19f ParenthesedFromItem alias 保真：修正括号 FROM 项兜底路径 `Visit(GetChild(0))` 丢失 alias 的缺陷，改为显式递归 `fromItem()` 并透传 alias
+  - BL-19g ON DUPLICATE KEY UPDATE ... WHERE（MySQL 8.0.20+）：grammar `onDuplicateKey` 加可选 `whereClause`，`Insert.DuplicateUpdateWhereExpression` 字段 + visitor 接线
+  - 全量 1254 测试通过（净增 20 项：KSQL 12 + CreateView 5 + PivotXml 1 + ParenthesedFromItem 1 + ON DUPLICATE WHERE 1）
 - **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；Spanner 生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED` 的 STORED 后缀专项验证（AS 已解析，STORED 走兜底，列级 AS 与 DEFAULT 语义冲突需专项验证留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 
