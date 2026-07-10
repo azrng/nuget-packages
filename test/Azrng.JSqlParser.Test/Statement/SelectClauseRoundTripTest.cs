@@ -243,7 +243,30 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Delete_Quick_ShouldRoundTrip()
         => AssertRoundTrip("DELETE QUICK FROM t WHERE id = 1");
+
+    // ── T092 P3a: CREATE VIEW 已解析项补齐 ──
+
+    [Fact]
+    public void CreateView_Temporary_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE TEMPORARY VIEW v AS SELECT * FROM t");
+
+    [Fact]
+    public void CreateView_Recursive_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE RECURSIVE VIEW v AS SELECT * FROM t");
+
+    [Fact]
+    public void CreateView_WithCheckOption_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE VIEW v AS SELECT * FROM t WITH CHECK OPTION");
+
+    [Fact]
+    public void CreateView_WithCascadedCheckOption_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE VIEW v AS SELECT * FROM t WITH CASCADED CHECK OPTION");
+
+    [Fact]
+    public void CreateView_OrReplaceTemporary_ShouldRoundTrip()
+        => AssertRoundTrip("CREATE OR REPLACE TEMPORARY VIEW v AS SELECT * FROM t");
 }
+
 
 
 

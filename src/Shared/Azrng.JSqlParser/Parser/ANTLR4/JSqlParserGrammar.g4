@@ -746,8 +746,8 @@ likeOption
 createView
     : CREATE (OR REPLACE)? (TEMPORARY | TEMP)? RECURSIVE? VIEW (IF NOT EXISTS)? table
       (OPENING_PAREN identifierList CLOSING_PAREN)?
-      (WITH (CASCADED | LOCAL)? CHECK OPTION)?
       AS selectStatement
+      (WITH (CASCADED | LOCAL)? CHECK OPTION)?
     ;
 
 // ══════════════════════════════════════════════

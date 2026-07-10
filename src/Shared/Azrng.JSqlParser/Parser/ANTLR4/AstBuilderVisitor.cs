@@ -3031,6 +3031,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         createView.View = (Table)Visit(context.table());
         createView.OrReplace = context.REPLACE() != null;
         createView.IfNotExists = context.EXISTS() != null;
+        // TEMPORARY/TEMP（此前 grammar 已解析但 visitor 丢弃）
+        if (context.TEMPORARY() != null) createView.Temporary = "TEMPORARY";
+        else if (context.TEMP() != null) createView.Temporary = "TEMP";
+        // RECURSIVE
+        if (context.RECURSIVE() != null) createView.Recursive = true;
+        // WITH [CASCADED|LOCAL] CHECK OPTION（此前丢弃）
+        if (context.CHECK() != null)
+        {
+            createView.WithCheckOption = context.CASCADED() != null ? "CASCADED"
+                : context.LOCAL() != null ? "LOCAL" : "";
+        }
         createView.Select = (Select)Visit(context.selectStatement());
         return createView;
     }
