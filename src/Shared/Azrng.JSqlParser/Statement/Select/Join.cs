@@ -34,6 +34,9 @@ public class Join : ASTNodeAccessImpl
     /// <summary>是否为 JPQL/HQL 的 JOIN FETCH（预加载关联）。</summary>
     public bool Fetch { get; set; }
 
+    /// <summary>SQL Server Join 提示（LOOP/HASH/MERGE），强制连接策略。未指定时为 null。对齐上游 JoinHint。</summary>
+    public string? JoinHint { get; set; }
+
     public FromItem RightItem { get; set; } = null!;
 
     /// <summary>JOIN 的 ON 表达式列表，支持多个 ON（如 JOIN t ON a ON b）。对齐上游 onExpressions。</summary>
@@ -83,6 +86,8 @@ public class Join : ASTNodeAccessImpl
         if (Outer) sb.Append("OUTER ");
         if (Cross) sb.Append("CROSS ");
         if (Semi) sb.Append("SEMI ");
+        // SQL Server Join 提示（方向词后、JOIN 前）
+        if (JoinHint != null) sb.Append(JoinHint).Append(' ');
 
         if (RightItem == null)
             throw new InvalidOperationException("Join requires a right item.");

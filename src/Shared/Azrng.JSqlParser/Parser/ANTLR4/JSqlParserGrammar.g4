@@ -310,10 +310,15 @@ jsonTableColumn
     ;
 
 joinClause
-    : GLOBAL? (ANY | ALL)? joinType? JOIN FETCH? tableOrSubquery joinCondition?
+    : GLOBAL? (ANY | ALL)? joinType? joinHint? JOIN FETCH? tableOrSubquery joinCondition?
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?
+    ;
+
+// SQL Server Join 提示：LOOP/HASH/MERGE（强制连接策略），对齐上游 JoinHint
+joinHint
+    : LOOP | HASH | MERGE
     ;
 
 joinType

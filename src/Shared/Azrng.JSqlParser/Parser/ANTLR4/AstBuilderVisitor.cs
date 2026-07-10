@@ -669,6 +669,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 SetJoinType(join, context.joinType());
             }
+            // SQL Server Join 提示（LOOP/HASH/MERGE）
+            if (context.joinHint() is { } hintCtx)
+                join.JoinHint = hintCtx.GetText().ToUpperInvariant();
         }
 
         if (context.FETCH() != null)

@@ -265,7 +265,22 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void CreateView_OrReplaceTemporary_ShouldRoundTrip()
         => AssertRoundTrip("CREATE OR REPLACE TEMPORARY VIEW v AS SELECT * FROM t");
+
+    // ── T092 P3c: JoinHint（SQL Server LOOP/HASH/MERGE） ──
+
+    [Fact]
+    public void Join_InnerLoopHint_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM a INNER LOOP JOIN b ON a.id = b.id");
+
+    [Fact]
+    public void Join_LeftHashHint_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM a LEFT HASH JOIN b ON a.id = b.id");
+
+    [Fact]
+    public void Join_InnerMergeHint_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM a INNER MERGE JOIN b ON a.id = b.id");
 }
+
 
 
 
