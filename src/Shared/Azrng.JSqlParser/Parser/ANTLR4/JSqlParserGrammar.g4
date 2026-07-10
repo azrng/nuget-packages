@@ -110,12 +110,10 @@ withClause
     ;
 
 withItem
-    : identifier (OPENING_PAREN identifierList CLOSING_PAREN)? AS (MATERIALIZED | NOT MATERIALIZED)? OPENING_PAREN (selectStatement | insertStatement | updateStatement | deleteStatement) CLOSING_PAREN
+    : identifier (OPENING_PAREN identifierList CLOSING_PAREN)? AS (MATERIALIZED | NOT MATERIALIZED)? OPENING_PAREN (selectStatement | insertStatement | updateStatement | deleteStatement) CLOSING_PAREN withSearchClause?
     ;
 
 // 标准递归 CTE 序列化子句：SEARCH BREADTH|DEPTH FIRST BY cols SET seqcol（对齐上游 WithSearchClause）
-// 注：grammar 接线需 ANTLR4 谓词高级处理（withItem 产生式过长，直接追加 withSearchClause 破坏 LL 预测），
-// 模型字段 WithItem.SearchClause 已就绪，SEARCH/BREADTH/DEPTH token 已添加，留后续用自定义 parser 方法接入
 withSearchClause
     : SEARCH (BREADTH | DEPTH) FIRST BY identifierList SET identifier
     ;

@@ -206,11 +206,29 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             withItem.ParenthesedDelete = new ParenthesedDelete { Delete = delete };
         }
 
-        // 注：标准递归 CTE 序列化子句（SEARCH ... FIRST BY ... SET ...）grammar 接线需 ANTLR4 谓词高级处理
-        // （withItem 产生式过长，直接追加 withSearchClause 破坏 LL 预测），模型字段 SearchClause 已就绪，
-        // SEARCH/BREADTH/DEPTH token 已添加，留后续用自定义 parser 方法接入
+        // 标准递归 CTE 序列化子句：SEARCH {BREADTH|DEPTH} FIRST BY cols SET seqcol
+        if (context.withSearchClause() != null)
+        {
+            withItem.SearchClause = (WithSearchClause)Visit(context.withSearchClause());
+        }
 
         return withItem;
+    }
+
+    public override object VisitWithSearchClause(JSqlParserGrammar.WithSearchClauseContext context)
+    {
+        var searchClause = new WithSearchClause
+        {
+            SearchOrder = context.BREADTH() != null ? SearchOrder.BREADTH : SearchOrder.DEPTH,
+            SequenceColumnName = context.identifier().GetText()
+        };
+
+        foreach (var id in context.identifierList().identifier())
+        {
+            searchClause.SearchColumns.Add(id.GetText());
+        }
+
+        return searchClause;
     }
 
     public override object VisitSelectBody(JSqlParserGrammar.SelectBodyContext context)

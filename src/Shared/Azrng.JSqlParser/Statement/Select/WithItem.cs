@@ -26,8 +26,8 @@ public class WithItem : Select
     public ParenthesedUpdate? ParenthesedUpdate { get; set; }
     public ParenthesedDelete? ParenthesedDelete { get; set; }
 
-    /// <summary>标准递归 CTE 序列化子句原始文本（SEARCH DEPTH FIRST BY cols SET seqcol），透传保 round-trip。对齐上游 WithSearchClause。</summary>
-    public string? SearchClause { get; set; }
+    /// <summary>标准递归 CTE 序列化子句（SEARCH DEPTH FIRST BY cols SET seqcol），结构化对齐上游 WithSearchClause。</summary>
+    public WithSearchClause? SearchClause { get; set; }
 
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {

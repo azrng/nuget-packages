@@ -201,6 +201,8 @@ Console.WriteLine(stmt.ToString());
 - **全量测试**：1217 通过（0 失败 0 跳过，较 beta3 净增 196），新增 `CreateTableRoundTripTest`（59 项）+ `SelectClauseRoundTripTest`（48 项）+ `UpstreamCoverageProbeTest`（84 项）
 - **字段补齐（BL-18）**：COMMENT ON VIEW + COLUMN 多段列名、AnalyticType 四态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY，修复 WITHIN GROUP/FILTER 退化为 Function）、Column.CommentText/ArrayConstructor、Table.TimeTravelAfterAlias
 - **长期对标缺口修复（T092）**：UPDATE/DELETE 修饰符（`LOW_PRIORITY`/`IGNORE`/`QUICK`）、CREATE VIEW 补齐（`TEMPORARY`/`RECURSIVE`/`WITH CHECK OPTION` + 修复 CHECK OPTION 位置 bug）、Hive/Spark `LATERAL VIEW [OUTER] function() AS col`、SQL Server JoinHint（`LOOP`/`HASH`/`MERGE`）、WithSearchClause 模型就绪、BEGIN TRANSACTION 支持
+- **ALTER 字段结构化（T093）**：ALTER COLUMN 子句接线修复静默丢弃（`SetOperation`/`DropColumnOperation`），SET DATA TYPE/VISIBLE/INVISIBLE、CONVERT/CHARACTER SET 全方言覆盖
+- **WithSearchClause grammar 接线（T094）**：标准递归 CTE 序列化子句 `SEARCH {BREADTH|DEPTH} FIRST BY cols SET seqcol` 从模型就绪升级为完整接线——grammar `withItem` 末尾接 `withSearchClause?`（此前注释称"破坏 LL 预测"经实测为误判，ANTLR4 LL(*) 可正常处理）、新增结构化 `WithSearchClause` 模型类（`SearchOrder`/`SearchColumns`/`SequenceColumnName`，替代原 `string?` 透传）、`AstBuilderVisitor.VisitWithSearchClause` 填充结构化字段、round-trip 保真。全量 1234 测试通过（净增 4 项 SEARCH 子句测试）
 - **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；Spanner 生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED` 的 STORED 后缀专项验证（AS 已解析，STORED 走兜底，列级 AS 与 DEFAULT 语义冲突需专项验证留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 

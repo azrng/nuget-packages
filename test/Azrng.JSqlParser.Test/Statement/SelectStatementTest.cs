@@ -672,6 +672,58 @@ public class SelectStatementTest
         Assert.Equal(2, select.WithItemsList!.Count);
     }
 
+    [Fact]
+    public void Select_WithSearchClause_DepthFirst_ShouldParseStructuredFields()
+    {
+        var sql = "WITH RECURSIVE r(n) AS " +
+                  "(SELECT 1 AS n UNION ALL SELECT n+1 FROM r WHERE n < 10) " +
+                  "SEARCH DEPTH FIRST BY n SET seq SELECT * FROM r";
+        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        Assert.NotNull(select.WithItemsList);
+        var item = select.WithItemsList![0];
+        Assert.NotNull(item.SearchClause);
+        Assert.Equal(SearchOrder.DEPTH, item.SearchClause!.SearchOrder);
+        Assert.Single(item.SearchClause.SearchColumns);
+        Assert.Equal("n", item.SearchClause.SearchColumns[0]);
+        Assert.Equal("seq", item.SearchClause.SequenceColumnName);
+    }
+
+    [Fact]
+    public void Select_WithSearchClause_BreadthFirst_MultiColumns_ShouldParse()
+    {
+        var sql = "WITH RECURSIVE t(a, b) AS " +
+                  "(SELECT 1, 2 UNION ALL SELECT a+1, b+1 FROM t WHERE a < 5) " +
+                  "SEARCH BREADTH FIRST BY a, b SET order_col SELECT * FROM t";
+        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var item = select.WithItemsList![0];
+        Assert.NotNull(item.SearchClause);
+        Assert.Equal(SearchOrder.BREADTH, item.SearchClause!.SearchOrder);
+        Assert.Equal(2, item.SearchClause.SearchColumns.Count);
+        Assert.Equal("a", item.SearchClause.SearchColumns[0]);
+        Assert.Equal("b", item.SearchClause.SearchColumns[1]);
+        Assert.Equal("order_col", item.SearchClause.SequenceColumnName);
+    }
+
+    [Fact]
+    public void Select_WithSearchClause_RoundTrip_ShouldPreserveText()
+    {
+        var sql = "WITH RECURSIVE r AS " +
+                  "(SELECT 1 AS n UNION ALL SELECT n+1 FROM r WHERE n < 10) " +
+                  "SEARCH DEPTH FIRST BY n SET seq SELECT * FROM r";
+        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var output = select.ToString();
+        Assert.Contains("SEARCH DEPTH FIRST BY n SET seq", output);
+    }
+
+    [Fact]
+    public void Select_WithSearchClause_NoClause_ShouldBeNull()
+    {
+        var sql = "WITH r AS (SELECT 1 AS n) SELECT * FROM r";
+        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var item = select.WithItemsList![0];
+        Assert.Null(item.SearchClause);
+    }
+
     #endregion
 
     #region AllTableColumns / AnalyticExpression 类型断言
