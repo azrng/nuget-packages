@@ -279,7 +279,22 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Join_InnerMergeHint_ShouldRoundTrip()
         => AssertRoundTrip("SELECT * FROM a INNER MERGE JOIN b ON a.id = b.id");
+
+    // ── T092 P3b: LateralView（Hive/Spark LATERAL VIEW） ──
+
+    [Fact]
+    public void LateralView_Explode_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t LATERAL VIEW explode(arr) t1 AS c");
+
+    [Fact]
+    public void LateralView_Outer_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t LATERAL VIEW OUTER explode(arr) t1 AS c");
+
+    [Fact]
+    public void LateralView_MultiColumn_ShouldRoundTrip()
+        => AssertRoundTrip("SELECT * FROM t LATERAL VIEW posexplode(arr) t1 AS pos, val");
 }
+
 
 
 

@@ -212,6 +212,11 @@ tableOrSubquery
     | LATERAL subSelect alias?
     ;
 
+// Hive/Spark LATERAL VIEW [OUTER] generator_function() [tableAlias] AS colAlias (COMMA colAlias)*
+lateralViewClause
+    : LATERAL VIEW OUTER? functionExpr identifier? AS identifier (COMMA identifier)*
+    ;
+
 // Snowflake 时间旅行（AT/BEFORE (TIMESTAMP|OFFSET|STATEMENT => expr)）
 timeTravelClause
     : (AT | BEFORE) OPENING_PAREN (TIMESTAMP | OFFSET | STATEMENT) ARROW expression CLOSING_PAREN
@@ -320,6 +325,7 @@ joinClause
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?
+    | lateralViewClause          // Hive/Spark LATERAL VIEW [OUTER] function() AS col（接在表后，语义类似 join）
     ;
 
 // SQL Server Join 提示：LOOP/HASH/MERGE（强制连接策略），对齐上游 JoinHint

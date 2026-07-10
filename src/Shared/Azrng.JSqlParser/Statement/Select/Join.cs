@@ -69,7 +69,8 @@ public class Join : ASTNodeAccessImpl
             if (RightItem == null)
                 throw new InvalidOperationException("Simple join requires a right item.");
 
-            sb.Append(", ").Append(RightItem);
+            // LATERAL VIEW 用空格连接（Hive 语义），普通 Simple Join 用逗号（MySQL 多表）
+            sb.Append(RightItem is LateralView ? " " : ", ").Append(RightItem);
             return sb.ToString();
         }
 

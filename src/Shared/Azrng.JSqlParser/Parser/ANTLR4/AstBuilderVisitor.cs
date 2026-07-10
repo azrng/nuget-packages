@@ -647,6 +647,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitJoinClause(JSqlParserGrammar.JoinClauseContext context)
     {
+        // Hive/Spark LATERAL VIEW [OUTER] function() AS col（接在表后，语义类似 join）
+        if (context.lateralViewClause() is { } lateralViewCtx)
+        {
+            // GeneratorFunction 取 functionExpr 起到 lateralViewClause 结尾的整体原始文本（含 tblAlias AS col，保 round-trip）
+            var fnStart = lateralViewCtx.functionExpr().Start;
+            var fnStop = lateralViewCtx.Stop;
+            var interval = new Antlr4.Runtime.Misc.Interval(fnStart.StartIndex, fnStop.StopIndex);
+            var generatorText = fnStart.InputStream?.GetText(interval) ?? "";
+
+            var lv = new LateralView
+            {
+                UsingOuter = lateralViewCtx.OUTER() != null,
+                GeneratorFunction = generatorText,
+            };
+            // 包装为 Simple Join（RightItem = LateralView），放入 joinClause* 列表
+            return new Join { Simple = true, RightItem = lv };
+        }
+
         var join = new Join();
 
         // STRAIGHT_JOIN（ClickHouse/MySQL 强制连接顺序）
