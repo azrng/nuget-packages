@@ -32,12 +32,6 @@ namespace Azrng.AspNetCore.Job.Quartz.Options
         public List<string> AssemblyNamesToScan { get; set; } = new();
 
         /// <summary>
-        /// 是否扫描所有已加载的程序集
-        /// 警告：启用此选项会扫描所有已加载的程序集，包括系统程序集
-        /// </summary>
-        public bool ScanAllLoadedAssemblies { get; set; } = false;
-
-        /// <summary>
         /// 排除的程序集名称模式列表（支持通配符）
         /// 例如：["System.*", "Microsoft.*", "Newtonsoft.*"]
         /// </summary>
