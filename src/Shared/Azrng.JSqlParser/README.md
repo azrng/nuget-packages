@@ -198,8 +198,9 @@ Console.WriteLine(stmt.ToString());
 - **SELECT 子句缺口修复（T091）**：
   - P0 静默丢弃修复：`WINDOW w AS (...)` 命名窗口（`PlainSelect.WindowDefinitions`）、`QUALIFY expr` 子句（`PlainSelect.Qualify`）——此前 grammar 已解析但 visitor 丢弃导致 round-trip 丢数据
   - P1 功能缺口：`GROUP BY ROLLUP(a,b)`/`CUBE(a,b)`/`GROUPING SETS(...)`/`WITH ROLLUP`（`GroupByElement` 扩展）、`START WITH ... CONNECT BY [NOCYCLE]` Oracle 层次查询（`OracleHierarchicalExpression`）、`SUBSTRING(x FROM 1 FOR 3)`/`POSITION(a IN b)`/`OVERLAY(x PLACING y FROM 1)` 命名参数（`NamedExpressionList` + `Function.NamedParameters`）、MSSQL `OUTPUT inserted.col [INTO ...]`（`Insert.OutputClause`）、`REFRESH MATERIALIZED VIEW [CONCURRENTLY] mv [WITH [NO] DATA]`（`RefreshMaterializedViewStatement`）、`UPSERT`/`REPLACE INTO`/`INSERT OR REPLACE`（`UpsertStatement`）
-- **全量测试**：1118 通过（0 失败 0 跳过，较 beta3 净增 97），新增 `CreateTableRoundTripTest`（59 项）+ `SelectClauseRoundTripTest`（38 项）
+- **全量测试**：1214 通过（0 失败 0 跳过，较 beta3 净增 193），新增 `CreateTableRoundTripTest`（59 项）+ `SelectClauseRoundTripTest`（45 项）+ `UpstreamCoverageProbeTest`（84 项）
 - **字段补齐（BL-18）**：COMMENT ON VIEW + COLUMN 多段列名、AnalyticType 四态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY，修复 WITHIN GROUP/FILTER 退化为 Function）、Column.CommentText/ArrayConstructor、Table.TimeTravelAfterAlias
+- **长期对标缺口修复（T092）**：UPDATE/DELETE 修饰符（`LOW_PRIORITY`/`IGNORE`/`QUICK`）、CREATE VIEW 补齐（`TEMPORARY`/`RECURSIVE`/`WITH CHECK OPTION` + 修复 CHECK OPTION 位置 bug）、SQL Server JoinHint（`LOOP`/`HASH`/`MERGE`）、WithSearchClause 模型就绪、BEGIN TRANSACTION 支持
 - **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；Spanner 生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED` 的 STORED 后缀专项验证（AS 已解析，STORED 走兜底，列级 AS 与 DEFAULT 语义冲突需专项验证留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 

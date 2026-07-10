@@ -6,9 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| T092 | Azrng.JSqlParser 长期对标剩余缺口逐项修复 | UPDATE/DELETE修饰符、CREATE VIEW补齐、LateralView、JoinHint、WithSearchClause、EXPORT/IMPORT 等 | 阶段1 | DOING | high | 2026-07-10 |
+| T092 | Azrng.JSqlParser 长期对标剩余缺口逐项修复 | UPDATE/DELETE修饰符、CREATE VIEW补齐、JoinHint、WithSearchClause(模型就绪)、LateralView、EXPORT/IMPORT 等 | 阶段1 | DOING | high | 2026-07-10 |
 
-> T092 经 Select/INSERT-UPDATE-DELETE 双维核查确认真实缺口（排除架构差异/枚举拆分/上游不存在）。按 P2→P3→P4 逐项推进。
+> T092 进展：P2 UPDATE/DELETE修饰符✅、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug✅、P3c JoinHint✅、P3d WithSearchClause模型就绪(grammar接线待优化)。剩余：P3b LateralView、P4 EXPORT/IMPORT+CREATE VIEW FORCE等。经核查已排除架构差异(Skip/First/OptimizeFor/SampleClause等价实现)与上游不存在项(MODEL/CURRVAL/JSON_TRANSFORM)。
 
 ## 待业务驱动 Backlog
 
@@ -58,7 +58,7 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1118 测试（截至 BL-18 a/b/c 部分字段扩展完成）
+- **Azrng**：1214 测试（截至 T092 P2/P3a/P3c/P3d 长期对标缺口修复）
 - **上游 JSqlParser**：2309 测试
 - **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06~T091+BL-18 已移植 CREATE TABLE 通用能力、STRUCT/ARRAY 列类型、9 项边缘缺口、P0 静默丢弃修复、P1 功能缺口与部分字段扩展（AnalyticType/COMMENT VIEW/Column-Table 字段），但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
@@ -67,6 +67,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T092 | Azrng.JSqlParser 长期对标剩余缺口（P2 UPDATE/DELETE修饰符、P3a CREATE VIEW补齐+修复CHECK OPTION位置bug、P3c JoinHint LOOP/HASH/MERGE、P3d WithSearchClause模型就绪；全量 1214 测试通过） | DOING | 2026-07-10 |
 | T091 | Azrng.JSqlParser 三维核查后 P0+P1 缺口修复（P0: WINDOW/QUALIFY 静默丢弃；P1: GROUP BY ROLLUP/CUBE/GROUPING SETS、CONNECT BY、SUBSTRING FROM-FOR、MSSQL OUTPUT、REFRESH MATERIALIZED VIEW、UPSERT/REPLACE；取消 JSON_TRANSFORM/CURRVAL 上游不支持；全量 1111 测试通过，净增 31） | DONE | 2026-07-09 |
 | T090 | Azrng.JSqlParser CREATE TABLE 边缘遗留项一次性清完（9 缺口：character varying 列类型、TIMESTAMP WITH/WITHOUT TIME ZONE、MySQL USING BTREE/HASH 索引选项、功能性索引 (expr)、set('a','b') 类型、数组带尺寸 int[5]、::text[] 数组 cast、表级 WITH(fillfactor=70)、Spanner OPTIONS(k=true)；全量 1080 测试通过，净增 16） | DONE | 2026-07-09 |
 | T089 | Azrng.JSqlParser STRUCT/ARRAY 复合列类型移植（CREATE TABLE 列类型支持 ARRAY<T> 尖括号扁平化 + STRUCT(x INT) 圆括号字段进 ArgumentsStringList，含嵌套 ARRAY<ARRAY<T>>/STRUCT(x ARRAY<T>)，Spanner 风格多 ARRAY 列；全量 1064 测试通过，净增 12） | DONE | 2026-07-09 |
