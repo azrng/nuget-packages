@@ -96,6 +96,7 @@ Azrng.AspNetCore.Job.Quartz/
 ├── ITriggerService.cs                # 触发器服务接口（命名空间 .Quartz）
 ├── ISchedulerService.cs              # 调度器服务接口（命名空间 .Quartz）
 ├── JobConfigAttribute.cs             # 作业配置特性
+├── CronPresets.cs                   # 常用 Cron 表达式预设
 └── ServiceCollectionExtensions.cs    # DI 注册扩展
 ```
 
@@ -220,14 +221,27 @@ public void ReturnJob(IJob job)
 **核心代码**: [JobConfigAttribute.cs:24](JobConfigAttribute.cs#L24-L42)
 
 ```csharp
-[JobConfig(nameof(HelloJob), "default", "0/5 * * * * ?")]
+[JobConfig(nameof(HelloJob), "default", CronPresets.Every5Seconds)]
 public class HelloJob : IJob { }
 ```
 
 **参数**:
 - `name` - 作业名称
 - `group` - 作业分组
-- `cronExpression` - Cron 表达式
+- `cronExpression` - Cron 表达式（可使用 `CronPresets` 内置常量，也可手写字符串）
+
+### 7.1 CronPresets (Cron 表达式预设)
+
+**职责**: 提供常用 Quartz Cron 表达式常量，避免手写易错的字符串。
+
+**核心代码**: [CronPresets.cs](CronPresets.cs)
+
+```csharp
+[JobConfig(nameof(HelloJob), "default", CronPresets.EveryDayMidnight)] // 每天 00:00
+public class DailyJob : IJob { }
+```
+
+内置秒/分钟级、分钟/小时级、每日固定时刻、周/月级四档预设，完整列表见 README「内置 Cron 预设」。未覆盖的场景仍可直接传入 Cron 字符串。
 
 ### 8. 作业执行历史与自动清理
 

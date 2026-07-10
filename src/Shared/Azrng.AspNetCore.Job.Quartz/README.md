@@ -49,7 +49,7 @@ using Azrng.AspNetCore.Job.Quartz;
 using Quartz;
 using Microsoft.Extensions.Logging;
 
-[JobConfig(nameof(HelloJob), "default", "0/5 * * * * ?")] // 每5秒执行一次
+[JobConfig(nameof(HelloJob), "default", CronPresets.Every5Seconds)] // 每5秒执行一次
 [DisallowConcurrentExecution] // 禁止并发执行
 public class HelloJob : IJob
 {
@@ -67,6 +67,8 @@ public class HelloJob : IJob
     }
 }
 ```
+
+> 💡 第三参数除了手写 Cron 字符串，也可直接使用内置预设常量 `CronPresets.Every5Seconds`，避免记忆复杂的表达式。完整预设见 [内置 Cron 预设](#内置-cron-预设)。
 
 #### 方式二：通过服务动态调度（按需任务）
 
@@ -217,6 +219,38 @@ builder.Services.AddQuartzService(
 | `JobHistoryRetentionDays` | int | 30 | 作业执行历史保留天数，超过由清理服务自动删除 |
 | `AssemblyNamesToScan` | List\<string\> | 空 | 要扫描的程序集名称列表，为空时自动扫描入口程序集和调用程序集 |
 | `ExcludedAssemblyPatterns` | List\<string\> | 空 | 排除的程序集名称模式列表（支持通配符 * 和 ?）|
+
+## 内置 Cron 预设
+
+`CronPresets` 提供常用 Quartz Cron 表达式常量（格式：秒 分 时 日 月 周），可直接用于 `[JobConfig]` 第三参数，避免手写易错的字符串：
+
+```csharp
+[JobConfig(nameof(HelloJob), "default", CronPresets.Every5Seconds)]
+```
+
+| 预设 | 表达式 | 说明 |
+|------|--------|------|
+| `Every5Seconds` | `0/5 * * * * ?` | 每 5 秒 |
+| `Every10Seconds` | `0/10 * * * * ?` | 每 10 秒 |
+| `Every30Seconds` | `0/30 * * * * ?` | 每 30 秒 |
+| `EveryMinute` | `0 * * * * ?` | 每分钟 |
+| `Every5Minutes` | `0 0/5 * * * ?` | 每 5 分钟 |
+| `Every10Minutes` | `0 0/10 * * * ?` | 每 10 分钟 |
+| `Every15Minutes` | `0 0/15 * * * ?` | 每 15 分钟 |
+| `Every30Minutes` | `0 0/30 * * * ?` | 每 30 分钟 |
+| `EveryHour` | `0 0 * * * ?` | 每小时整点 |
+| `EveryDayMidnight` | `0 0 0 * * ?` | 每天 00:00 |
+| `EveryDayAt6Am` | `0 0 6 * * ?` | 每天 06:00 |
+| `EveryDayAt8Am` | `0 0 8 * * ?` | 每天 08:00 |
+| `EveryDayNoon` | `0 0 12 * * ?` | 每天 12:00 |
+| `EveryDayAt6Pm` | `0 0 18 * * ?` | 每天 18:00 |
+| `EveryDayAt11Pm` | `0 0 23 * * ?` | 每天 23:00 |
+| `EveryMondayMidnight` | `0 0 0 ? * MON` | 每周一 00:00 |
+| `EverySundayMidnight` | `0 0 0 ? * SUN` | 每周日 00:00 |
+| `MonthlyFirstDayMidnight` | `0 0 0 1 * ?` | 每月 1 号 00:00 |
+| `MonthlyLastDayAt11Pm` | `0 0 23 L * ?` | 每月最后一天 23:00 |
+
+> 上述预设未覆盖的场景，仍可直接传入 Cron 字符串。
 
 ## 高级功能
 
