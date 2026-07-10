@@ -579,4 +579,22 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     }
 
     public object? Visit<S>(Statement.BeginTransactionStatement beginTransaction, S context) => null;
+
+    public object? Visit<S>(Statement.Select.TableStatement tableStatement, S context)
+    {
+        if (tableStatement.Table != null) _tables.Add(tableStatement.Table.Name);
+        return null;
+    }
+
+    public object? Visit<S>(Statement.Export.ExportStatement export, S context)
+    {
+        if (export.Table != null) _tables.Add(export.Table.Name);
+        return null;
+    }
+
+    public object? Visit<S>(Statement.Import.ImportStatement import, S context)
+    {
+        if (import.Table != null) _tables.Add(import.Table.Name);
+        return null;
+    }
 }

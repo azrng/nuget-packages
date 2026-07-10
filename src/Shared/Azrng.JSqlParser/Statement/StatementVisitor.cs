@@ -80,6 +80,11 @@ public interface StatementVisitor<T>
     // BEGIN TRANSACTION (BL-20 增强，上游不支持)
     T Visit<S>(BeginTransactionStatement beginTransaction, S context);
 
+    // T096 P4 方言补全
+    T Visit<S>(Select.TableStatement tableStatement, S context);
+    T Visit<S>(Export.ExportStatement export, S context);
+    T Visit<S>(Import.ImportStatement import, S context);
+
     // Convenience overloads (no context)
     void Visit(Statements stmts) => Visit<object?>(stmts, default);
     void Visit(Select.Select select) => Visit<object?>(select, default);
@@ -133,4 +138,7 @@ public interface StatementVisitor<T>
     void Visit(Refresh.RefreshMaterializedViewStatement refreshMaterializedView) => Visit<object?>(refreshMaterializedView, default);
     void Visit(Insert.UpsertStatement upsert) => Visit<object?>(upsert, default);
     void Visit(BeginTransactionStatement beginTransaction) => Visit<object?>(beginTransaction, default);
+    void Visit(Select.TableStatement tableStatement) => Visit<object?>(tableStatement, default);
+    void Visit(Export.ExportStatement export) => Visit<object?>(export, default);
+    void Visit(Import.ImportStatement import) => Visit<object?>(import, default);
 }

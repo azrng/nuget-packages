@@ -72,6 +72,9 @@ statement
     | createSchema
     | refreshStatement
     | upsertStatement
+    | tableStatement
+    | exportStatement
+    | importStatement
     ;
 
 // BEGIN WORK|TRANSACTION — 标准事务开始语句（PostgreSQL/MySQL，上游不支持，Azrng 增强）
@@ -101,13 +104,53 @@ refreshStatement
 // ══════════════════════════════════════════════
 
 selectStatement
-    : withClause? selectBody orderByClause? ksqlEmitClause? limitClause? offsetClause? fetchClause? forUpdateClause? (FOR XML PATH (OPENING_PAREN S_CHAR_LITERAL CLOSING_PAREN)?)?
+    : withClause? selectBody orderByClause? ksqlEmitClause? limitClause? offsetClause? fetchClause? forUpdateClause? isolationClause? forClauseSpec?
     | withClause? fromQuery
+    ;
+
+// DB2 WITH ISOLATION 隔离级别（UR/RS/RR/CS，大小写不敏感透传）
+isolationClause
+    : WITH IDENTIFIER
+    ;
+
+// SQL Server FOR CLAUSE（FOR BROWSE / FOR XML RAW|AUTO|EXPLICIT|PATH / FOR JSON AUTO|PATH），整体透传
+forClauseSpec
+    : FOR (BROWSE | forXmlJsonSpec)
+    ;
+
+// FOR XML/JSON 子句透传：FOR XML RAW|AUTO|EXPLICIT|PATH ... 或 FOR JSON AUTO|PATH ...
+forXmlJsonSpec
+    : (XML | JSON) ~(SEMICOLON | EOF)+
     ;
 
 // ksqlDB EMIT CHANGES（ORDER BY 之后、LIMIT 之前）
 ksqlEmitClause
     : EMIT CHANGES
+    ;
+
+// MySQL 8.2 TABLE 简写语句：TABLE name [ORDER BY] [LIMIT] [OFFSET]
+tableStatement
+    : TABLE table orderByClause? limitClause? offsetClause?
+    ;
+
+// Exasol EXPORT（简化透传版，BL-19a）：EXPORT [table (cols) | (select)] INTO <destination>
+exportStatement
+    : EXPORT (table (OPENING_PAREN identifierList CLOSING_PAREN)? | OPENING_PAREN selectStatement CLOSING_PAREN) INTO exportDestination
+    ;
+
+// destination 透传：匹配到语句结束（非分号、非 EOF 的任意字符序列）
+exportDestination
+    : ~(SEMICOLON | EOF)+
+    ;
+
+// Exasol IMPORT（简化透传版，BL-19a）：IMPORT [INTO table (cols)] FROM <source>
+importStatement
+    : IMPORT (INTO table (OPENING_PAREN identifierList CLOSING_PAREN)?)? FROM importSource
+    ;
+
+// source 透传：匹配到语句结束
+importSource
+    : ~(SEMICOLON | EOF)+
     ;
 
 withClause
@@ -116,6 +159,20 @@ withClause
 
 withItem
     : identifier (OPENING_PAREN identifierList CLOSING_PAREN)? AS (MATERIALIZED | NOT MATERIALIZED)? OPENING_PAREN (selectStatement | insertStatement | updateStatement | deleteStatement) CLOSING_PAREN withSearchClause?
+    | withFunctionDeclaration
+    ;
+
+// WITH FUNCTION 内联函数声明（SQL 标准新语法）：FUNCTION name(params) RETURNS type RETURN expr
+withFunctionDeclaration
+    : FUNCTION identifier (OPENING_PAREN withFunctionParameterList? CLOSING_PAREN)? RETURNS dataType RETURN expression
+    ;
+
+withFunctionParameterList
+    : withFunctionParameter (COMMA withFunctionParameter)*
+    ;
+
+withFunctionParameter
+    : identifier dataType
     ;
 
 // 标准递归 CTE 序列化子句：SEARCH BREADTH|DEPTH FIRST BY cols SET seqcol（对齐上游 WithSearchClause）
@@ -1661,11 +1718,11 @@ nonReservedKeyword
     | DISABLE | DISCARD | DISCONNECT | DIV | DDL | DML | DO | DOMAIN | DRIVER | DUPLICATE
     | ELEMENTS | EMPTY_KW | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE
     | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
-    | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXPORT | EXTERNAL
-    | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | FUNCTION | GENERATED
+    | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXTERNAL
+    | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | GENERATED
     | GRANT | GROUP_CONCAT | GROUPING
     | HASH | HIGH | HISTORY
-    | IDENTIFIED | IDENTITY | IGNORE | IMPORT | INCLUDE | INCLUDING | INCREMENT
+    | IDENTIFIED | IDENTITY | IGNORE | INCLUDE | INCLUDING | INCREMENT
     | INDEX | INFORMATION | INSERT | INTERLEAVE | INVALIDATE | INVERSE | INVISIBLE | ISNULL
     | KEEP | KEY | KEYS | KILL
     | LAST | LEADING | LESS | LEVEL | LINES | LOCAL | LOCALTIME | LOCALTIMESTAMP | LOCK | LOCKED | LOG | LOOP | LOW

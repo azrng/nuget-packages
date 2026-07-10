@@ -39,6 +39,9 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
     /// </summary>
     public bool ForUpdateBeforeOrderBy { get; set; }
 
+    /// <summary>DB2 WITH ISOLATION 隔离级别（UR/RS/RR/CS），未指定时为 null。对齐上游 isolation。</summary>
+    public string? Isolation { get; set; }
+
     public abstract T Accept<T, S>(SelectVisitor<T> selectVisitor, S context);
 
     public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
@@ -98,6 +101,9 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
         if (Offset != null) builder.Append(Offset);
         if (Fetch != null) builder.Append(Fetch);
 
+        // DB2 WITH ISOLATION 隔离级别（FETCH 之后、FOR UPDATE 之前）
+        if (Isolation != null) builder.Append(" WITH ").Append(Isolation);
+
         // FOR UPDATE / FOR SHARE 子句
         if (ForMode != null)
         {
@@ -125,11 +131,19 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
             AppendOrderByTo(builder);
         }
 
-        // SQL Server FOR XML PATH（selectStatement 层）
-        if (this is PlainSelect ps && ps.ForXmlPath != null)
+        // SQL Server FOR CLAUSE（FOR XML PATH / FOR XML RAW|AUTO|EXPLICIT / FOR JSON / FOR BROWSE）
+        if (this is PlainSelect ps2)
         {
-            builder.Append(" FOR XML PATH");
-            if (ps.ForXmlPath.Length > 0) builder.Append("(").Append(ps.ForXmlPath).Append(")");
+            // ForClause（透传）优先于 ForXmlPath（向后兼容）
+            if (ps2.ForClause != null)
+            {
+                builder.Append(" FOR ").Append(ps2.ForClause);
+            }
+            else if (ps2.ForXmlPath != null)
+            {
+                builder.Append(" FOR XML PATH");
+                if (ps2.ForXmlPath.Length > 0) builder.Append("(").Append(ps2.ForXmlPath).Append(")");
+            }
         }
 
         return builder;

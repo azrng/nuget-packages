@@ -210,6 +210,13 @@ Console.WriteLine(stmt.ToString());
   - BL-19f ParenthesedFromItem alias 保真：修正括号 FROM 项兜底路径 `Visit(GetChild(0))` 丢失 alias 的缺陷，改为显式递归 `fromItem()` 并透传 alias
   - BL-19g ON DUPLICATE KEY UPDATE ... WHERE（MySQL 8.0.20+）：grammar `onDuplicateKey` 加可选 `whereClause`，`Insert.DuplicateUpdateWhereExpression` 字段 + visitor 接线
   - 全量 1254 测试通过（净增 20 项：KSQL 12 + CreateView 5 + PivotXml 1 + ParenthesedFromItem 1 + ON DUPLICATE WHERE 1）
+- **P4 剩余方言清零（T096）**：全部 backlog 清零，简化透传版策略（与 LateralView/WindowDefinitions 风格一致）
+  - BL-19d TableStatement（MySQL 8.2）：新增 `TableStatement`（继承 Select），`TABLE name [ORDER BY] [LIMIT] [OFFSET]`，复用 Select 基类 ORDER BY/LIMIT/OFFSET
+  - BL-19a EXPORT/IMPORT（Exasol）：新增 `ExportStatement`/`ImportStatement`，destination/source 透传保 round-trip，EXPORT/IMPORT 提升为保留关键字
+  - BL-19h-1 WITH FUNCTION（SQL 标准）：新增 `WithFunctionDeclaration`/`WithFunctionParameter` 模型，withItem 加 FUNCTION 分支（FUNCTION 从 nonReserved 移除避免 CTE 名冲突）
+  - BL-19h-2 WITH ISOLATION（DB2）：`Select.Isolation` 字段 + grammar `WITH IDENTIFIER`（UR/RS/RR/CS 透传，保大小写）
+  - BL-19h-3 FOR CLAUSE 透传扩展：`PlainSelect.ForClause` 字段（FOR BROWSE / FOR XML RAW|AUTO|EXPLICIT / FOR JSON AUTO|PATH 整体透传），向后兼容 FOR XML PATH 仍填充 ForXmlPath 字段
+  - 全量 1275 测试通过（净增 21 项：TableStatement 4 + WITH ISOLATION 3 + FOR CLAUSE 5 + WITH FUNCTION 2 + EXPORT 4 + IMPORT 3）
 - **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；Spanner 生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED` 的 STORED 后缀专项验证（AS 已解析，STORED 走兜底，列级 AS 与 DEFAULT 语义冲突需专项验证留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 

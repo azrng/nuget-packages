@@ -79,4 +79,9 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // BEGIN TRANSACTION (BL-20 增强)
     public virtual T Visit<S>(BeginTransactionStatement beginTransaction, S context) => default!;
+
+    // T096 P4 方言补全
+    public virtual T Visit<S>(Select.TableStatement tableStatement, S context) => default!;
+    public virtual T Visit<S>(Export.ExportStatement export, S context) => default!;
+    public virtual T Visit<S>(Import.ImportStatement import, S context) => default!;
 }

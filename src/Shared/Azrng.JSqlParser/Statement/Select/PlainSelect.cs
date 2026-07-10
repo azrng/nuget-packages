@@ -37,6 +37,12 @@ public class PlainSelect : Select
     /// <summary>SQL Server FOR XML PATH('name') 的路径名，无 FOR XML PATH 时为 null，空字符串表示无参数的 FOR XML PATH。</summary>
     public string? ForXmlPath { get; set; }
 
+    /// <summary>
+    /// SQL Server FOR CLAUSE 透传文本（FOR BROWSE / FOR XML RAW|AUTO|EXPLICIT|PATH / FOR JSON AUTO|PATH），
+    /// 含 FOR 关键字后的完整子句文本。与 ForXmlPath 互斥（ForClause 优先）。对齐上游 ForClause。
+    /// </summary>
+    public string? ForClause { get; set; }
+
     /// <summary>Oracle 优化器提示（SELECT 关键字后紧跟的 /*+ ... */ 或 --+ ... 注释）。</summary>
     public OracleHint? OracleHint { get; set; }
 

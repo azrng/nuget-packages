@@ -29,6 +29,9 @@ public class WithItem : Select
     /// <summary>标准递归 CTE 序列化子句（SEARCH DEPTH FIRST BY cols SET seqcol），结构化对齐上游 WithSearchClause。</summary>
     public WithSearchClause? SearchClause { get; set; }
 
+    /// <summary>WITH FUNCTION 内联函数声明（SQL 标准新语法）。设置时替代 CTE alias/select 路径。</summary>
+    public WithFunctionDeclaration? WithFunctionDeclaration { get; set; }
+
     public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -36,6 +39,13 @@ public class WithItem : Select
 
     public override StringBuilder AppendSelectBodyTo(StringBuilder builder)
     {
+        // WITH FUNCTION 内联函数声明（替代 CTE alias/select 路径）
+        if (WithFunctionDeclaration != null)
+        {
+            builder.Append(WithFunctionDeclaration);
+            return builder;
+        }
+
         builder.Append(Recursive ? "RECURSIVE " : "");
         if (Alias != null) builder.Append(Alias.Name);
         if (WithItemList != null && WithItemList.Count > 0)

@@ -601,6 +601,7 @@ ROLLBACK        : [Rr][Oo][Ll][Ll][Bb][Aa][Cc][Kk] ;
 ROLLUP          : [Rr][Oo][Ll][Ll][Uu][Pp] ;
 CUBE            : [Cc][Uu][Bb][Ee] ;
 BREADTH         : [Bb][Rr][Ee][Aa][Dd][Tt][Hh] ;
+BROWSE          : [Bb][Rr][Oo][Ww][Ss][Ee] ;
 DEPTH           : [Dd][Ee][Pp][Tt][Hh] ;
 SAMPLE          : [Ss][Aa][Mm][Pp][Ll][Ee] ;
 SAVEPOINT       : [Ss][Aa][Vv][Ee][Pp][Oo][Ii][Nn][Tt] ;

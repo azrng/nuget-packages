@@ -96,6 +96,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.refreshStatement() != null) return Visit(context.refreshStatement());
         if (context.upsertStatement() != null) return Visit(context.upsertStatement());
         if (context.beginTransactionStatement() != null) return Visit(context.beginTransactionStatement());
+        if (context.tableStatement() != null) return Visit(context.tableStatement());
+        if (context.exportStatement() != null) return Visit(context.exportStatement());
+        if (context.importStatement() != null) return Visit(context.importStatement());
 
         return new UnsupportedStatement();
     }
@@ -151,14 +154,125 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             VisitForUpdateClause(context.forUpdateClause(), select);
         }
 
-        // SQL Server FOR XML PATH（selectStatement 层，ORDER BY 之后）
-        if (context.XML() != null && select is PlainSelect plainSelect)
+        // SQL Server FOR CLAUSE（FOR XML PATH/RAW/AUTO/EXPLICIT / FOR JSON / FOR BROWSE，透传保 round-trip）
+        if (context.forClauseSpec() != null && select is PlainSelect forClausePlainSelect)
         {
-            plainSelect.ForXmlPath = context.S_CHAR_LITERAL() != null
-                ? context.S_CHAR_LITERAL().GetText() : "";
+            var forCtx = context.forClauseSpec();
+            if (forCtx.BROWSE() != null)
+            {
+                forClausePlainSelect.ForClause = "BROWSE";
+            }
+            else if (forCtx.forXmlJsonSpec() != null)
+            {
+                // 透传 FOR XML/JSON 后的完整子句文本（含 RAW/AUTO/EXPLICIT/PATH 及选项）
+                var xmlJsonCtx = forCtx.forXmlJsonSpec();
+                var start = xmlJsonCtx.Start;
+                var stop = xmlJsonCtx.Stop;
+                var interval = new Antlr4.Runtime.Misc.Interval(start.StartIndex, stop.StopIndex);
+                var forClauseText = start.InputStream?.GetText(interval) ?? "";
+
+                // 向后兼容：FOR XML PATH 走 ForXmlPath 字段（提取括号内路径名），其他走 ForClause 透传
+                if (forClauseText.StartsWith("XML PATH", StringComparison.OrdinalIgnoreCase))
+                {
+                    // XML PATH 后可选 ('name')，提取引号内容
+                    var pathContent = forClauseText["XML PATH".Length..].Trim();
+                    if (pathContent.StartsWith('(') && pathContent.EndsWith(')'))
+                    {
+                        forClausePlainSelect.ForXmlPath = pathContent[1..^1];
+                    }
+                    else
+                    {
+                        forClausePlainSelect.ForXmlPath = "";
+                    }
+                }
+                else
+                {
+                    forClausePlainSelect.ForClause = forClauseText;
+                }
+            }
+        }
+
+        // DB2 WITH ISOLATION 隔离级别（保留原始大小写）
+        if (context.isolationClause() != null)
+        {
+            select.Isolation = context.isolationClause().IDENTIFIER().GetText();
         }
 
         return select;
+    }
+
+    public override object VisitTableStatement(JSqlParserGrammar.TableStatementContext context)
+    {
+        var tableStmt = new TableStatement
+        {
+            Table = (Table)Visit(context.table())
+        };
+
+        if (context.orderByClause() != null)
+        {
+            tableStmt.OrderByElements = (List<OrderByElement>)Visit(context.orderByClause());
+        }
+        if (context.limitClause() != null)
+        {
+            tableStmt.Limit = (Limit)Visit(context.limitClause());
+        }
+        if (context.offsetClause() != null)
+        {
+            tableStmt.Offset = (Offset)Visit(context.offsetClause());
+        }
+        return tableStmt;
+    }
+
+    public override object VisitExportStatement(JSqlParserGrammar.ExportStatementContext context)
+    {
+        var export = new Statement.Export.ExportStatement();
+        if (context.selectStatement() != null)
+        {
+            export.Select = (Select)Visit(context.selectStatement());
+        }
+        else if (context.table() != null)
+        {
+            export.Table = (Table)Visit(context.table());
+            if (context.identifierList() != null)
+            {
+                export.Columns = context.identifierList().identifier()
+                    .Select(id => new Column { ColumnName = id.GetText() }).ToList();
+            }
+        }
+        // destination 透传文本
+        if (context.exportDestination() != null)
+        {
+            var destCtx = context.exportDestination();
+            var start = destCtx.Start;
+            var stop = destCtx.Stop;
+            var interval = new Antlr4.Runtime.Misc.Interval(start.StartIndex, stop.StopIndex);
+            export.IntoItem = start.InputStream?.GetText(interval) ?? "";
+        }
+        return export;
+    }
+
+    public override object VisitImportStatement(JSqlParserGrammar.ImportStatementContext context)
+    {
+        var import = new Statement.Import.ImportStatement();
+        if (context.table() != null)
+        {
+            import.Table = (Table)Visit(context.table());
+            if (context.identifierList() != null)
+            {
+                import.Columns = context.identifierList().identifier()
+                    .Select(id => new Column { ColumnName = id.GetText() }).ToList();
+            }
+        }
+        // source 透传文本
+        if (context.importSource() != null)
+        {
+            var srcCtx = context.importSource();
+            var start = srcCtx.Start;
+            var stop = srcCtx.Stop;
+            var interval = new Antlr4.Runtime.Misc.Interval(start.StartIndex, stop.StopIndex);
+            import.FromItem = start.InputStream?.GetText(interval) ?? "";
+        }
+        return import;
     }
 
     public override object VisitWithClause(JSqlParserGrammar.WithClauseContext context)
@@ -174,6 +288,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitWithItem(JSqlParserGrammar.WithItemContext context)
     {
         var withItem = new WithItem();
+
+        // WITH FUNCTION 内联函数声明分支（与 CTE alias/select 互斥）
+        if (context.withFunctionDeclaration() != null)
+        {
+            withItem.WithFunctionDeclaration =
+                (WithFunctionDeclaration)Visit(context.withFunctionDeclaration());
+            return withItem;
+        }
+
         withItem.Alias = new Alias(context.identifier().GetText());
 
         if (context.identifierList() != null)
@@ -235,6 +358,30 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return searchClause;
+    }
+
+    public override object VisitWithFunctionDeclaration(JSqlParserGrammar.WithFunctionDeclarationContext context)
+    {
+        var funcDecl = new WithFunctionDeclaration
+        {
+            FunctionName = context.identifier().GetText(),
+            ReturnType = context.dataType().GetText(),
+            ReturnExpression = (Expression.Expression)Visit(context.expression())
+        };
+
+        if (context.withFunctionParameterList() != null)
+        {
+            foreach (var paramCtx in context.withFunctionParameterList().withFunctionParameter())
+            {
+                funcDecl.Parameters.Add(new WithFunctionParameter
+                {
+                    Name = paramCtx.identifier().GetText(),
+                    Type = paramCtx.dataType().GetText()
+                });
+            }
+        }
+
+        return funcDecl;
     }
 
     public override object VisitSelectBody(JSqlParserGrammar.SelectBodyContext context)
