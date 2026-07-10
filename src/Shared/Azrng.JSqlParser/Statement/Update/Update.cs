@@ -14,6 +14,12 @@ public class Update : ASTNodeAccessImpl, Statement
     public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
     public System.Collections.Generic.List<UpdateSet> UpdateSets { get; set; } = new();
 
+    /// <summary>MySQL LOW_PRIORITY 修饰符。</summary>
+    public bool ModifierLowPriority { get; set; }
+
+    /// <summary>MySQL IGNORE 修饰符。</summary>
+    public bool ModifierIgnore { get; set; }
+
     /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
     public ReturningClause? Returning { get; set; }
 
@@ -22,7 +28,10 @@ public class Update : ASTNodeAccessImpl, Statement
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append("UPDATE ").Append(Table);
+        sb.Append("UPDATE");
+        if (ModifierLowPriority) sb.Append(" LOW_PRIORITY");
+        if (ModifierIgnore) sb.Append(" IGNORE");
+        sb.Append(' ').Append(Table);
         if (Joins != null)
         {
             foreach (var join in Joins) sb.Append(' ').Append(join);

@@ -225,7 +225,26 @@ public class SelectClauseRoundTripTest
         var analytic = Assert.IsType<AnalyticExpression>(plain.SelectItems![0].Expression!);
         Assert.Equal(AnalyticType.FilterOnly, analytic.Type);
     }
+
+    // ── T092 P2: UPDATE/DELETE 修饰符 ──
+
+    [Fact]
+    public void Update_LowPriority_ShouldRoundTrip()
+        => AssertRoundTrip("UPDATE LOW_PRIORITY t SET a = 1");
+
+    [Fact]
+    public void Update_Ignore_ShouldRoundTrip()
+        => AssertRoundTrip("UPDATE IGNORE t SET a = 1 WHERE id = 1");
+
+    [Fact]
+    public void Delete_LowPriorityQuickIgnore_ShouldRoundTrip()
+        => AssertRoundTrip("DELETE LOW_PRIORITY QUICK IGNORE FROM t WHERE id = 1");
+
+    [Fact]
+    public void Delete_Quick_ShouldRoundTrip()
+        => AssertRoundTrip("DELETE QUICK FROM t WHERE id = 1");
 }
+
 
 
 

@@ -6,9 +6,9 @@
 
 | ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
 |----|----------|------|------|------|--------|----------|
-| _无活跃任务_ | | | | | | |
+| T092 | Azrng.JSqlParser 长期对标剩余缺口逐项修复 | UPDATE/DELETE修饰符、CREATE VIEW补齐、LateralView、JoinHint、WithSearchClause、EXPORT/IMPORT 等 | 阶段1 | DOING | high | 2026-07-10 |
 
-> 当前无活跃任务。P0+P1 缺口已由 T091 修复完毕，BL-18 a/b/c(部分) 已完成（1118 测试通过）。BL-18c 剩余 ALTER 字段结构化与 BL-19 小众方言按需启动。
+> T092 经 Select/INSERT-UPDATE-DELETE 双维核查确认真实缺口（排除架构差异/枚举拆分/上游不存在）。按 P2→P3→P4 逐项推进。
 
 ## 待业务驱动 Backlog
 

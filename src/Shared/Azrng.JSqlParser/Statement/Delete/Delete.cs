@@ -19,6 +19,15 @@ public class Delete : ASTNodeAccessImpl, Statement
 
     public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
 
+    /// <summary>MySQL LOW_PRIORITY 修饰符。</summary>
+    public bool ModifierLowPriority { get; set; }
+
+    /// <summary>MySQL QUICK 修饰符。</summary>
+    public bool ModifierQuick { get; set; }
+
+    /// <summary>MySQL IGNORE 修饰符。</summary>
+    public bool ModifierIgnore { get; set; }
+
     /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
     public ReturningClause? Returning { get; set; }
 
@@ -27,7 +36,11 @@ public class Delete : ASTNodeAccessImpl, Statement
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append("DELETE FROM ").Append(Table);
+        sb.Append("DELETE");
+        if (ModifierLowPriority) sb.Append(" LOW_PRIORITY");
+        if (ModifierQuick) sb.Append(" QUICK");
+        if (ModifierIgnore) sb.Append(" IGNORE");
+        sb.Append(" FROM ").Append(Table);
         if (UsingItems is { Count: > 0 })
         {
             sb.Append(" USING ").Append(string.Join(", ", UsingItems));

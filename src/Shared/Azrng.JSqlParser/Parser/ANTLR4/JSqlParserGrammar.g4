@@ -518,7 +518,7 @@ onDuplicateKey
 // ══════════════════════════════════════════════
 
 updateStatement
-    : UPDATE table alias? joinClause* SET assignmentItem (COMMA assignmentItem)*
+    : UPDATE LOW_PRIORITY? IGNORE? table alias? joinClause* SET assignmentItem (COMMA assignmentItem)*
       (FROM fromItem)?
       whereClause?
       returningClause?
@@ -539,7 +539,7 @@ assignmentTarget
 // ══════════════════════════════════════════════
 
 deleteStatement
-    : DELETE (identifierList FROM)? FROM? table alias?
+    : DELETE LOW_PRIORITY? QUICK? IGNORE? (identifierList FROM)? FROM? table alias?
       (USING fromItem (COMMA fromItem)*)?
       whereClause?
       returningClause?

@@ -1343,6 +1343,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitUpdateStatement(JSqlParserGrammar.UpdateStatementContext context)
     {
         var update = new Update();
+        // MySQL 修饰符：LOW_PRIORITY / IGNORE
+        if (context.LOW_PRIORITY() != null) update.ModifierLowPriority = true;
+        if (context.IGNORE() != null) update.ModifierIgnore = true;
         update.Table = (Table)Visit(context.table());
 
         var joinClauses = context.joinClause();
@@ -1387,6 +1390,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitDeleteStatement(JSqlParserGrammar.DeleteStatementContext context)
     {
         var delete = new Delete();
+        // MySQL 修饰符：LOW_PRIORITY / QUICK / IGNORE
+        if (context.LOW_PRIORITY() != null) delete.ModifierLowPriority = true;
+        if (context.QUICK() != null) delete.ModifierQuick = true;
+        if (context.IGNORE() != null) delete.ModifierIgnore = true;
         delete.Table = (Table)Visit(context.table());
 
         // DELETE ... USING fromItem (COMMA fromItem)*
