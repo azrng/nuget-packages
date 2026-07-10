@@ -8,7 +8,7 @@
 |----|----------|------|------|------|--------|----------|
 | _无活跃任务_ | | | | | | |
 
-> 当前无活跃任务。P0+P1 缺口已由 T091 修复完毕（1111 测试通过）。BL-18 部分字段扩展与 BL-19 小众方言按需启动。
+> 当前无活跃任务。P0+P1 缺口已由 T091 修复完毕，BL-18 a/b/c(部分) 已完成（1118 测试通过）。BL-18c 剩余 ALTER 字段结构化与 BL-19 小众方言按需启动。
 
 ## 待业务驱动 Backlog
 
@@ -22,7 +22,7 @@
 |---------|------|------|------|----------|------|
 | BL-16 | P0 静默丢弃：WINDOW 命名窗口 + QUALIFY 子句（已完成） | 静默丢弃缺陷 | T091 三维核查 | — | **已完成（T091）**。PlainSelect 新增 WindowDefinitions/Qualify 字段，visitor 接线 windowClause/qualifyClause |
 | BL-17 | P1 功能缺口：GROUP BY ROLLUP/CUBE/GROUPING SETS、CONNECT BY/START WITH、SUBSTRING FROM-FOR/POSITION IN/OVERLAY、MSSQL OUTPUT、REFRESH MATERIALIZED VIEW、UPSERT/REPLACE（已完成） | 功能缺口 | T091 三维核查 | — | **已完成（T091）**。GROUP BY 三分支+GroupByElement 扩展、OracleHierarchicalExpression、NamedExpressionList+Function.NamedParameters、Insert.OutputClause、RefreshMaterializedViewStatement、UpsertStatement。**取消**：JSON_TRANSFORM/CURRVAL（核查确认上游 main 不支持，非缺口） |
-| BL-18 | P1 部分：AnalyticType 字段、COMMENT ON 扩展对象、ALTER 5.4→HEAD +694 行字段、Table/Column/Sequence 字段扩展 | 部分缺口 | T091 三维核查 | 业务出现相关查询/字段访问 | 待启动。核心解析不受影响，仅特定字段/对象类型访问缺字段 |
+| BL-18 | P1 部分：AnalyticType 字段、COMMENT ON 扩展对象、ALTER 5.4→HEAD +694 行字段、Table/Column/Sequence 字段扩展 | 部分缺口 | T091 三维核查 | — | **a/b 已完成**：COMMENT ON VIEW+COLUMN多段列名、AnalyticType 四态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY，破坏性：WITHIN GROUP/FILTER 返回类型 Function→AnalyticExpression）。**c 部分完成**：Column.CommentText/ArrayConstructor、Table.TimeTravelAfterAlias 已补。**c 剩余**：ALTER 字段结构化（Index/OldIndex/ColumnDropNotNull/ConvertType/ConstraintState 等，数量多需重构 visitor，当前透传字符串已能 round-trip 留后续） |
 | BL-19 | P2 小众方言/基础设施：EXPORT/IMPORT(Exasol)+CSV/文件/连接(30+类)、Oracle MODEL、KSQL 窗口、子 visitor 适配层 | 小众方言 | T091 三维核查 | 业务出现上述方言 | 按需启动 |
 
 ### 已完成 P1 真缺口（历史记录）
@@ -58,9 +58,9 @@
 
 ### 测试规模差异说明（非缺陷，仅供参考）
 
-- **Azrng**：1111 测试（截至 T091/P0+P1 缺口修复完成）
+- **Azrng**：1118 测试（截至 BL-18 a/b/c 部分字段扩展完成）
 - **上游 JSqlParser**：2309 测试
-- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06~T091 已移植 CREATE TABLE 通用能力、STRUCT/ARRAY 列类型、9 项边缘缺口、P0 静默丢弃修复与 P1 功能缺口（GROUP BY 扩展/CONNECT BY/SUBSTRING/OUTPUT/REFRESH/UPSERT），但未逐条移植上游全量方言测试
+- **差距来源**：主要来自方言专项测试（ClickHouse/Snowflake/BigQuery 等上游 CreateTableTest/SelectTest 方言用例）；BL-06~T091+BL-18 已移植 CREATE TABLE 通用能力、STRUCT/ARRAY 列类型、9 项边缘缺口、P0 静默丢弃修复、P1 功能缺口与部分字段扩展（AnalyticType/COMMENT VIEW/Column-Table 字段），但未逐条移植上游全量方言测试
 - **核心 SQL 路径**：Azrng 测试独立设计，非上游测试逐条移植
 
 ## 最近完成
