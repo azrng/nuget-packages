@@ -23,7 +23,7 @@
 | BL-16 | P0 静默丢弃：WINDOW 命名窗口 + QUALIFY 子句（已完成） | 静默丢弃缺陷 | T091 三维核查 | — | **已完成（T091）**。PlainSelect 新增 WindowDefinitions/Qualify 字段，visitor 接线 windowClause/qualifyClause |
 | BL-17 | P1 功能缺口：GROUP BY ROLLUP/CUBE/GROUPING SETS、CONNECT BY/START WITH、SUBSTRING FROM-FOR/POSITION IN/OVERLAY、MSSQL OUTPUT、REFRESH MATERIALIZED VIEW、UPSERT/REPLACE（已完成） | 功能缺口 | T091 三维核查 | — | **已完成（T091）**。GROUP BY 三分支+GroupByElement 扩展、OracleHierarchicalExpression、NamedExpressionList+Function.NamedParameters、Insert.OutputClause、RefreshMaterializedViewStatement、UpsertStatement。**取消**：JSON_TRANSFORM/CURRVAL（核查确认上游 main 不支持，非缺口） |
 | BL-18 | P1 部分：AnalyticType 字段、COMMENT ON 扩展对象、ALTER 5.4→HEAD +694 行字段、Table/Column/Sequence 字段扩展 | 部分缺口 | T091 三维核查 | — | **a/b 已完成**：COMMENT ON VIEW+COLUMN多段列名、AnalyticType 四态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY，破坏性：WITHIN GROUP/FILTER 返回类型 Function→AnalyticExpression）。**c 部分完成**：Column.CommentText/ArrayConstructor、Table.TimeTravelAfterAlias 已补。**c 剩余**：ALTER 字段结构化（Index/OldIndex/ColumnDropNotNull/ConvertType/ConstraintState 等，数量多需重构 visitor，当前透传字符串已能 round-trip 留后续） |
-| BL-19 | P2 小众方言/基础设施：EXPORT/IMPORT(Exasol)+CSV/文件/连接(30+类)、Oracle MODEL、KSQL 窗口、子 visitor 适配层 | 小众方言 | T091 三维核查 | 业务出现上述方言 | 按需启动 |
+| BL-19 | P2 小众方言（按需启动，经核查无硬缺口） | 小众方言 | T091 三维核查 | 业务出现上述方言 | **经核查修正**：(1) Oracle MODEL 子句**上游根本不存在**（grammar 零命中），从缺口剔除；(2) 子 visitor 适配层是**架构差异非缺口**（Azrng 扁平 visitor 已覆盖，强行移植是负优化）；(3) EXPORT/IMPORT 是 Exasol 专用极小众（10类+174行grammar），投入产出比差；(4) KSQL 窗口是 ksqlDB 专用（改动可控，2类+65行grammar）。**仅 KSQL/EXPORT 在业务出现时按需启动** |
 
 ### 已完成 P1 真缺口（历史记录）
 

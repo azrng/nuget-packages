@@ -95,6 +95,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createSchema() != null) return Visit(context.createSchema());
         if (context.refreshStatement() != null) return Visit(context.refreshStatement());
         if (context.upsertStatement() != null) return Visit(context.upsertStatement());
+        if (context.beginTransactionStatement() != null) return Visit(context.beginTransactionStatement());
 
         return new UnsupportedStatement();
     }
@@ -2697,6 +2698,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         return upsert;
+    }
+
+    // ── BEGIN TRANSACTION ──────────────────────
+
+    public override object VisitBeginTransactionStatement(JSqlParserGrammar.BeginTransactionStatementContext context)
+    {
+        return new BeginTransactionStatement
+        {
+            UseTransactionKeyword = context.TRANSACTION() != null
+        };
     }
 
     // ── MERGE ──────────────────────────────────

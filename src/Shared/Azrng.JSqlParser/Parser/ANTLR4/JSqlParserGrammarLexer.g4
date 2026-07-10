@@ -630,6 +630,7 @@ VALIDATE        : [Vv][Aa][Ll][Ii][Dd][Aa][Tt][Ee] ;
 VERIFY          : [Vv][Ee][Rr][Ii][Ff][Yy] ;
 VISIBLE         : [Vv][Ii][Ss][Ii][Bb][Ll][Ee] ;
 VOLATILE        : [Vv][Oo][Ll][Aa][Tt][Ii][Ll][Ee] ;
+TRANSACTION     : [Tt][Rr][Aa][Nn][Ss][Aa][Cc][Tt][Ii][Oo][Nn] ;
 WORK            : [Ww][Oo][Rr][Kk] ;
 ZONE            : [Zz][Oo][Nn][Ee] ;
 

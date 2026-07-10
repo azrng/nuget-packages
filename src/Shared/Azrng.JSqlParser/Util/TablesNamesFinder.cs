@@ -577,4 +577,6 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         if (upsert.Table != null) AddTable(upsert.Table);
         return null;
     }
+
+    public object? Visit<S>(Statement.BeginTransactionStatement beginTransaction, S context) => null;
 }

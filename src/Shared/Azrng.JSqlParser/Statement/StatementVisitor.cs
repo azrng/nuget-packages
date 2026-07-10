@@ -77,6 +77,9 @@ public interface StatementVisitor<T>
     // UPSERT / REPLACE (T091 P1-8)
     T Visit<S>(Insert.UpsertStatement upsert, S context);
 
+    // BEGIN TRANSACTION (BL-20 增强，上游不支持)
+    T Visit<S>(BeginTransactionStatement beginTransaction, S context);
+
     // Convenience overloads (no context)
     void Visit(Statements stmts) => Visit<object?>(stmts, default);
     void Visit(Select.Select select) => Visit<object?>(select, default);
@@ -129,4 +132,5 @@ public interface StatementVisitor<T>
     void Visit(Create.Schema.CreateSchema createSchema) => Visit<object?>(createSchema, default);
     void Visit(Refresh.RefreshMaterializedViewStatement refreshMaterializedView) => Visit<object?>(refreshMaterializedView, default);
     void Visit(Insert.UpsertStatement upsert) => Visit<object?>(upsert, default);
+    void Visit(BeginTransactionStatement beginTransaction) => Visit<object?>(beginTransaction, default);
 }

@@ -48,6 +48,7 @@ statement
     | alterSystemStatement
     | alterSequenceStatement
     | createSynonymStatement
+    | beginTransactionStatement
     | blockStatement
     | declareStatement
     | ifElseStatement
@@ -71,6 +72,12 @@ statement
     | createSchema
     | refreshStatement
     | upsertStatement
+    ;
+
+// BEGIN WORK|TRANSACTION — 标准事务开始语句（PostgreSQL/MySQL，上游不支持，Azrng 增强）
+// 仅匹配带 WORK/TRANSACTION 后缀的形式；裸 BEGIN 走 blockStatement（PL/SQL 块）以避免歧义
+beginTransactionStatement
+    : BEGIN (WORK | TRANSACTION)
     ;
 
 // UPSERT / REPLACE / INSERT OR REPLACE（上游 Upsert）

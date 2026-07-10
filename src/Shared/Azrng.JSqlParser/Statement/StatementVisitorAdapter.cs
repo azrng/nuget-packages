@@ -76,4 +76,7 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
 
     // UPSERT / REPLACE (T091 P1-8)
     public virtual T Visit<S>(Insert.UpsertStatement upsert, S context) => default!;
+
+    // BEGIN TRANSACTION (BL-20 增强)
+    public virtual T Visit<S>(BeginTransactionStatement beginTransaction, S context) => default!;
 }
