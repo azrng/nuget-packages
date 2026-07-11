@@ -6,14 +6,6 @@
 
 > 当前无活跃任务。
 
-### 迁移完结说明
-
-- **Azrng.JSqlParser 迁移已完结**：自 JSqlParser 5.4 起的多轮迁移与对齐工作全部完成（T088~T099），无已知未迁移缺口。
-- **对齐基线**：上游 commit `2b141568`（5.4-SNAPSHOT，2026-04-12），无后续 commit 需追赶。
-- **全量测试**：1355 通过（0 失败 0 跳过）。
-- **明确不迁移项**（非缺口，属架构差异或等价实现）见 `src/Shared/Azrng.JSqlParser/ARCHITECTURE.md` 开头「迁移排除项」。
-- 保留决策（非缺陷，不修）：SetOperationList + FOR XML/EMIT CHANGES 组合（SQL Server FOR XML 与 UNION 混用极罕见，上游亦不支持）；ASTNodeAccess token 回放基础设施保留（SetASTNode 零调用，L3 已修复循环漏末 token 的潜在缺陷，未来可按需启用）。
-
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
