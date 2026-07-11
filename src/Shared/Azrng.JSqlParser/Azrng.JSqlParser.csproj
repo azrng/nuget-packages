@@ -9,7 +9,7 @@
         <Company>Azrng</Company>
         <Version>1.0.0-beta4</Version>
         <PackageId>Azrng.JSqlParser</PackageId>
-        <Copyright>Azrng</Copyright>
+        <Copyright>Copyright (c) 2024-2026 Azrng; JSqlParser Copyright (C) 2004-2024 JSQLParser</Copyright>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
         <NoWarn>1701;1702;1591;CA1716</NoWarn>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -17,10 +17,14 @@
         <Title>Sql Parser</Title>
         <PackageTags>sql;database;parser;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="LICENSE" Pack="true" PackagePath="\"/>
+        <None Include="NOTICE" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
     <ItemGroup>

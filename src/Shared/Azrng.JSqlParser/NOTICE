@@ -1,0 +1,11 @@
+Azrng.JSqlParser
+Copyright (c) 2024-2026 Azrng
+
+This product is a .NET port derived from JSqlParser.
+
+  JSqlParser
+  Copyright (C) 2004-2024 JSQLParser
+  https://github.com/JSQLParser/JSqlParser
+
+  Licensed under the Apache License, Version 2.0 (selected from the upstream
+  dual license of Apache License 2.0 or GNU LGPL 2.1).

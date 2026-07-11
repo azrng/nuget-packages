@@ -284,4 +284,6 @@ Console.WriteLine(stmt.ToString());
 
 ## 许可证
 
-移植自 [JSqlParser](https://github.com/JSQLParser/JSqlParser)（Apache License 2.0）。
+本项目基于 [Apache License 2.0](LICENSE) 发布。
+
+Azrng.JSqlParser 是从 [JSqlParser](https://github.com/JSQLParser/JSqlParser)（`Copyright (C) 2004-2024 JSQLParser`，上游双重许可 Apache 2.0 / LGPL 2.1）移植而来的 .NET 衍生作品。本库在发布时从上游双重许可中选择采用 **Apache License 2.0**。详见 [NOTICE](NOTICE)。
