@@ -8,7 +8,13 @@
 |----|----------|------|------|------|--------|----------|
 | T082 | Job.Quartz 实现类归位 | 将 JobService/TriggerService/SchedulerService 从接口文件拆出,归入 Services/ 目录,统一文件组织 | 阶段1 | DONE | 中 | 2026-07-10 |
 
-> 当前无活跃任务。库代码审查修复（T098）已完成，全量 1318 测试通过。审查发现的 H1-H4/M1-M10/L1-L7 共 22 项缺陷已全部修复（M5 误报、M6 边缘跳过）。**与上游 JSqlParser 已无已知语法层缺口**。
+> 当前无活跃任务。库代码审查修复（T098）已完成，全量 1355 测试通过（T099 补充回归测试 +25）。审查发现的 H1-H4/M1-M10/L1-L7 共 22 项缺陷已全部修复（M5 误报、M6 边缘跳过）。**与上游 JSqlParser 已无已知语法层缺口**。
+
+### 最近完成
+
+| ID | 任务名称 | 目标 | 阶段 | 状态 | 优先级 | 更新时间 |
+|----|----------|------|------|------|--------|----------|
+| T099 | T098 缺陷修复补充回归测试 | 为 T098 修复项补回归保护：ExpressionVisitorAdapter 子树遍历(M1/M2)、JsonFunction null 路径(M3)、ParenthesedSelect.GetPlainSelect 异常(L8)、Merge round-trip(H1)、Validation CREATE/ALTER/DROP/MERGE/TRUNCATE/MINUS 能力(M7) | 阶段1 | DONE | 中 | 2026-07-11 |
 
 > **保留决策（非缺陷，不修）**：SetOperationList + FOR XML/EMIT CHANGES 组合（SQL Server FOR XML 与 UNION 混用极罕见，上游亦不支持）；ASTNodeAccess token 回放基础设施保留（SetASTNode 零调用，但 L3 已修复循环漏末 token 的潜在缺陷，未来可按需启用）。
 

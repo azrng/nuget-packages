@@ -200,4 +200,105 @@ public class ValidationTest
     }
 
     #endregion
+
+    #region CREATE / ALTER / DROP / MERGE / TRUNCATE 校验（M7 补全）
+
+    [Fact]
+    public void Validation_DropNotAllowed_ShouldReturnError()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities, "DROP TABLE users").Validate();
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.DROP);
+    }
+
+    [Fact]
+    public void Validation_DropAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.DROP };
+        Assert.Empty(new Validation(capabilities, "DROP TABLE users").Validate());
+    }
+
+    [Fact]
+    public void Validation_CreateNotAllowed_ShouldReturnError()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities, "CREATE TABLE t (a INT)").Validate();
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.CREATE);
+    }
+
+    [Fact]
+    public void Validation_CreateAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.CREATE };
+        Assert.Empty(new Validation(capabilities, "CREATE TABLE t (a INT)").Validate());
+    }
+
+    [Fact]
+    public void Validation_AlterNotAllowed_ShouldReturnError()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities, "ALTER TABLE t ADD COLUMN b INT").Validate();
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.ALTER);
+    }
+
+    [Fact]
+    public void Validation_AlterAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.ALTER };
+        Assert.Empty(new Validation(capabilities, "ALTER TABLE t ADD COLUMN b INT").Validate());
+    }
+
+    [Fact]
+    public void Validation_MergeNotAllowed_ShouldReturnError()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities,
+            "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE").Validate();
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.MERGE);
+    }
+
+    [Fact]
+    public void Validation_MergeAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.MERGE };
+        Assert.Empty(new Validation(capabilities,
+            "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE").Validate());
+    }
+
+    [Fact]
+    public void Validation_TruncateNotAllowed_ShouldReturnError()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities, "TRUNCATE TABLE t").Validate();
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.TRUNCATE);
+    }
+
+    [Fact]
+    public void Validation_TruncateAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.TRUNCATE };
+        Assert.Empty(new Validation(capabilities, "TRUNCATE TABLE t").Validate());
+    }
+
+    #endregion
+
+    #region MINUS 归入 EXCEPT（M7）
+
+    [Fact]
+    public void Validation_Minus_RequiresExceptFeature()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
+        var errors = new Validation(capabilities, "SELECT 1 MINUS SELECT 2").Validate();
+        // Oracle MINUS 归入 EXCEPT 能力
+        Assert.Contains(errors, e => e.RequiredFeature == FeaturesAllowed.EXCEPT);
+    }
+
+    [Fact]
+    public void Validation_Minus_WithExceptAllowed_ShouldPass()
+    {
+        var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT, FeaturesAllowed.EXCEPT };
+        Assert.Empty(new Validation(capabilities, "SELECT 1 MINUS SELECT 2").Validate());
+    }
+
+    #endregion
 }
