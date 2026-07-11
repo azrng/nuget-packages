@@ -1,4 +1,21 @@
-﻿### Visitor 模式
+﻿# 架构说明
+
+## 迁移排除项（明确不迁移，非缺陷）
+
+> 以下项经多轮核查（T088~T092）确认为**非缺口**，不计入未迁移范围。属于上游根本不存在、架构差异或等价实现，强行移植属负优化。
+
+| 项 | 排除原因 |
+|----|----------|
+| Oracle MODEL 子句 | **上游根本不存在**（grammar 零命中），非 Azrng 缺口 |
+| 子 visitor 适配层（FromItemVisitor/OrderByVisitor 等 7 套） | **架构差异**：Azrng 扁平 visitor（StatementVisitor/ExpressionVisitor）已覆盖功能，强行移植是负优化 |
+| Skip/First/OptimizeFor/SampleClause | **等价实现**：Azrng 内联为 PlainSelect 字段/Table.TableSample，功能等价 |
+| MySQLGroupConcat/UserVariable/VariableAssignment/AllValue/JsonExpression/XMLSerializeExpr | **等价合并**：已合入 Function.cs/SetStatement/AnyType.All 等 |
+| CURRVAL / JSON_TRANSFORM | **上游不支持**：核查确认上游 main/ 无此特性 |
+| Index/NamedConstraint 等枚举伴生类拆分 | **风格差异**：Azrng 用扁平 Constraint 类，功能等价 |
+
+---
+
+## Visitor 模式
 
 Azrng.JSqlParser 提供三种 Visitor 接口，均采用双泛型签名 `T Visit<S>(X node, S context)`：
 

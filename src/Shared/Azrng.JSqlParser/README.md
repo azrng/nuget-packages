@@ -175,6 +175,25 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
+### 1.0.0-beta4（迁移完结版）
+
+**本次迁移已完结。** 自 JSqlParser 5.4 起的多轮迁移与对齐工作全部完成，无已知未迁移缺口。
+
+- **迁移对齐基线**：上游 [JSqlParser](https://github.com/JSQLParser/JSqlParser) commit `2b141568`（5.4-SNAPSHOT，2026-04-12，`feat: add ForUpdateClause class with multi-table and ORDER BY support (#2426)`）
+- **迁移起点版本**：JSqlParser 5.4（tag `jsqlparser-5.4`，commit `7d2e6b65324ce5770681115202c47b6cb5412c1b`，2025-05-25）
+- **本版本对应提交**：`b85d8f6`（T097~T099 收口）
+- **全量测试**：1355 通过（0 失败 0 跳过）
+
+#### 本轮收口内容（T097~T099）
+
+- **T097 VALUES 表构造器**：补齐唯一语法层缺口——新增 `Values` 模型类（继承 `Select`+`FromItem`）、grammar `selectBody` 增加 `valuesClause` 分支、`VisitValuesClause`/`VisitSelectBody` 接入、`SelectVisitor`/`TablesNamesFinder` 补 Values 分派、修复 INSERT/UPSERT VALUES 语义冲突。commit `59f8019`（feat）+ `fa745d3`（test）
+- **T098 库代码审查修复**：全量审查发现的 H1-H4/M1-M10/L1-L7 共 22 项缺陷全部修复——Merge 三连失（SourceTable/WHEN AND/InsertValues）、区域性数值解析静默数据损坏、多语句静默丢弃、TablesNamesFinder 表名提取遗漏、ExpressionVisitorAdapter context 丢失与子树遍历不全、JsonFunction null 非法 SQL、Validation 校验补全、CTE 括号、Offset ROWS、ASTNode 漏末 token、死代码/死变量清理等。commit `8fffc55`
+- **T099 补充回归测试**：为 T098 修复项补 25 项回归保护——ExpressionVisitorAdapter 子树遍历、JsonFunction null 路径、ParenthesedSelect 异常、Merge round-trip、Validation 能力校验。commit `b85d8f6`
+
+> 明确不迁移的项（经核查非缺口，属架构差异或等价实现）见 `ARCHITECTURE.md` 开头「迁移排除项」。
+
+---
+
 ### 1.0.0-beta4
 
 完成 BL-06 方言专项 CREATE TABLE 全量移植（破坏性重构对齐上游 CreateTable 11 类模型），BL-01~05、BL-07~14 已全部完成，全部 backlog 清零。
