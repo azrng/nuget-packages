@@ -55,15 +55,7 @@ namespace Azrng.AspNetCore.Job.Quartz.Schedules
                 return FilterExcluded(assemblies, options, logger);
             }
 
-            // 3. 扫描所有已加载的程序集
-            if (options.ScanAllLoadedAssemblies)
-            {
-                logger?.LogWarning("启用了扫描所有已加载程序集选项，这可能包含系统程序集");
-                assemblies.AddRange(AppDomain.CurrentDomain.GetAssemblies());
-                return FilterExcluded(assemblies, options, logger);
-            }
-
-            // 4. 默认行为：入口程序集 + 调用程序集
+            // 3. 默认行为：入口程序集 + 调用程序集
             if (entryAssembly != null)
             {
                 assemblies.Add(entryAssembly);

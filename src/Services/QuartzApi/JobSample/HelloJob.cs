@@ -3,7 +3,7 @@ using Quartz;
 
 namespace QuartzApi.JobSample;
 
-[JobConfig(nameof(HelloJob), "default", "0/5 * * * * ?")]
+[JobConfig(nameof(HelloJob), "default", CronPresets.Every5Seconds)]
 [DisallowConcurrentExecution]
 public class HelloJob : IJob
 {
