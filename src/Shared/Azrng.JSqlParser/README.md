@@ -175,28 +175,11 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
-### 1.0.0-beta4（迁移完结版）
-
-**本次迁移已完结。** 自 JSqlParser 5.4 起的多轮迁移与对齐工作全部完成，无已知未迁移缺口。
-
-- **迁移对齐基线**：上游 [JSqlParser](https://github.com/JSQLParser/JSqlParser) commit `2b141568`（5.4-SNAPSHOT，2026-04-12，`feat: add ForUpdateClause class with multi-table and ORDER BY support (#2426)`）
-- **迁移起点版本**：JSqlParser 5.4（tag `jsqlparser-5.4`，commit `7d2e6b65324ce5770681115202c47b6cb5412c1b`，2025-05-25）
-- **本版本对应提交**：`b85d8f6`（T097~T099 收口）
-- **全量测试**：1355 通过（0 失败 0 跳过）
-
-#### 本轮收口内容（T097~T099）
-
-- **T097 VALUES 表构造器**：补齐唯一语法层缺口——新增 `Values` 模型类（继承 `Select`+`FromItem`）、grammar `selectBody` 增加 `valuesClause` 分支、`VisitValuesClause`/`VisitSelectBody` 接入、`SelectVisitor`/`TablesNamesFinder` 补 Values 分派、修复 INSERT/UPSERT VALUES 语义冲突。commit `59f8019`（feat）+ `fa745d3`（test）
-- **T098 库代码审查修复**：全量审查发现的 H1-H4/M1-M10/L1-L7 共 22 项缺陷全部修复——Merge 三连失（SourceTable/WHEN AND/InsertValues）、区域性数值解析静默数据损坏、多语句静默丢弃、TablesNamesFinder 表名提取遗漏、ExpressionVisitorAdapter context 丢失与子树遍历不全、JsonFunction null 非法 SQL、Validation 校验补全、CTE 括号、Offset ROWS、ASTNode 漏末 token、死代码/死变量清理等。commit `8fffc55`
-- **T099 补充回归测试**：为 T098 修复项补 25 项回归保护——ExpressionVisitorAdapter 子树遍历、JsonFunction null 路径、ParenthesedSelect 异常、Merge round-trip、Validation 能力校验。commit `b85d8f6`
-
-> 明确不迁移的项（经核查非缺口，属架构差异或等价实现）见 `ARCHITECTURE.md` 开头「迁移排除项」。
-
----
-
 ### 1.0.0-beta4
 
 完成 BL-06 方言专项 CREATE TABLE 全量移植（破坏性重构对齐上游 CreateTable 11 类模型），BL-01~05、BL-07~14 已全部完成，全部 backlog 清零。
+
+**迁移基线**：上游 [JSqlParser](https://github.com/JSQLParser/JSqlParser) commit `2b141568`（5.4-SNAPSHOT，2026-04-12，`feat: add ForUpdateClause class with multi-table and ORDER BY support (#2426)`）；迁移起点 JSqlParser 5.4（tag `jsqlparser-5.4`，commit `7d2e6b65324ce5770681115202c47b6cb5412c1b`，2025-05-25）。**本版本迁移已完结**，无已知未迁移缺口。明确不迁移的项（经核查非缺口，属架构差异或等价实现）见 `ARCHITECTURE.md` 开头「迁移排除项」。
 
 - **新增特性（BL-06 CREATE TABLE 方言与约束结构化）**：
   - **表级选项透传**：`ENGINE = InnoDB`、`CHARSET`/`COLLATE`/`COMMENT`/`AUTO_INCREMENT`/`ROW_FORMAT`、`PARTITION BY HASH(x) PARTITIONS n`、ClickHouse `ENGINE = MergeTree() ORDER BY id SAMPLE BY id`、`ORDER BY tuple()` 等全部以原始字符串透传到 `CreateTable.TableOptions`（保 round-trip，对齐上游 `tableOptionsStrings`）
@@ -236,6 +219,9 @@ Console.WriteLine(stmt.ToString());
   - BL-19h-2 WITH ISOLATION（DB2）：`Select.Isolation` 字段 + grammar `WITH IDENTIFIER`（UR/RS/RR/CS 透传，保大小写）
   - BL-19h-3 FOR CLAUSE 透传扩展：`PlainSelect.ForClause` 字段（FOR BROWSE / FOR XML RAW|AUTO|EXPLICIT / FOR JSON AUTO|PATH 整体透传），向后兼容 FOR XML PATH 仍填充 ForXmlPath 字段
   - 全量 1275 测试通过（净增 21 项：TableStatement 4 + WITH ISOLATION 3 + FOR CLAUSE 5 + WITH FUNCTION 2 + EXPORT 4 + IMPORT 3）
+- **VALUES 表构造器（T097）**：补齐唯一语法层缺口——新增 `Values` 模型类（继承 `Select`+`FromItem`）、grammar `selectBody` 增加 `valuesClause` 分支、`VisitValuesClause`/`VisitSelectBody` 接入、`SelectVisitor`/`TablesNamesFinder` 补 Values 分派、修复 INSERT/UPSERT VALUES 语义冲突。全量 1303 测试通过
+- **库代码审查修复（T098）**：全量审查发现的 H1-H4/M1-M10/L1-L7 共 22 项缺陷全部修复——Merge 三连失（SourceTable/WHEN AND/InsertValues）、区域性数值解析静默数据损坏、多语句静默丢弃、TablesNamesFinder 表名提取遗漏、ExpressionVisitorAdapter context 丢失与子树遍历不全、JsonFunction null 非法 SQL、Validation 校验补全、CTE 括号、Offset ROWS、ASTNode 漏末 token、死代码/死变量清理等（M5 误报、M6 边缘跳过）。全量 1318 测试通过
+- **补充回归测试（T099）**：为 T098 修复项补 25 项回归保护——ExpressionVisitorAdapter 子树遍历、JsonFunction null 路径、ParenthesedSelect 异常、Merge round-trip、Validation 能力校验。全量 1355 测试通过
 - **本轮未做**：`PartitionDefinition` 不复用于 CREATE TABLE（上游该类仅服务 ALTER，CREATE TABLE 分区走 `TableOptions` 字符串透传）；Spanner 生成列 `SEARCH STRING(MAX) AS (UPPER(AUTHOR)) STORED` 的 STORED 后缀专项验证（AS 已解析，STORED 走兜底，列级 AS 与 DEFAULT 语义冲突需专项验证留后续）
 - **Backlog 清零**：BL-01~14 全部完成，无已知缺口
 
