@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression;
@@ -18,10 +19,10 @@ public class LongValue : ASTNodeAccessImpl, Expression
 
     public LongValue(string value)
     {
-        Value = long.Parse(value);
+        Value = long.Parse(value, CultureInfo.InvariantCulture);
     }
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public override string ToString() => Value.ToString();
+    public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 }

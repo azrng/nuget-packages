@@ -17,7 +17,12 @@ public class SyntaxError
         OffendingToken = offendingToken;
     }
 
-    public override string ToString() => $"Line {Line}:{Column} - {Message}";
+    public override string ToString()
+    {
+        // L4 改进：附 offending token 文本，便于调用方定位
+        var token = OffendingToken != null ? $" near '{OffendingToken.Text}'" : "";
+        return $"Line {Line}:{Column}{token} - {Message}";
+    }
 }
 
 public class CollectingErrorListener : IAntlrErrorListener<IToken>, IAntlrErrorListener<int>
@@ -34,16 +39,5 @@ public class CollectingErrorListener : IAntlrErrorListener<IToken>, IAntlrErrorL
         int line, int charPositionInLine, string msg, RecognitionException e)
     {
         Errors.Add(new SyntaxError(line, charPositionInLine, msg, null));
-    }
-}
-
-public static class ParserExtensions
-{
-    public static List<SyntaxError> GetSyntaxErrors(this JSqlParserGrammar parser)
-    {
-        var listener = new CollectingErrorListener();
-        parser.RemoveErrorListeners();
-        parser.AddErrorListener(listener);
-        return listener.Errors;
     }
 }

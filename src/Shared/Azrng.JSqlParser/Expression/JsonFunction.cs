@@ -284,6 +284,13 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
         {
             InputExpression.AppendTo(sb);
         }
+        // M3 修复：JsonPathExpression 为 null 会产出非法 SQL（JSON_VALUE(input, )）。
+        // 合法 JSON 函数必有 path（grammar 保证解析路径非 null），此处防御程序化构造的半初始化状态。
+        if (JsonPathExpression == null)
+        {
+            throw new InvalidOperationException(
+                "JsonFunction.JsonPathExpression is null. A JSON function requires a path expression.");
+        }
         sb.Append(", ").Append(JsonPathExpression);
     }
 

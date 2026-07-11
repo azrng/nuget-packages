@@ -19,7 +19,9 @@ public class ParenthesedSelect : ASTNodeAccessImpl, Expression.Expression, FromI
     public PlainSelect GetPlainSelect()
     {
         if (Select is PlainSelect plainSelect) return plainSelect;
-        return (PlainSelect)Select;
+        // L8 修复：非 PlainSelect（如 SetOperationList/Values）时抛明确异常，而非裸 InvalidCastException
+        throw new JSqlParserException(
+            $"Subquery is not a PlainSelect but {Select?.GetType().Name ?? "null"}.");
     }
 
     public override string ToString()

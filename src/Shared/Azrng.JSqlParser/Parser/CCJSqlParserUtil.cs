@@ -24,15 +24,32 @@ public static class CCJSqlParserUtil
             throw new JSqlParserException($"Syntax error: {errorListener.Errors[0]}");
         }
 
-        var visitor = new AstBuilderVisitor();
-        var result = visitor.Visit(tree);
-
-        if (result is Statement.Statements statements && statements.StatementList.Count > 0)
+        Statement.Statement result;
+        try
         {
+            var visitor = new AstBuilderVisitor();
+            result = (Statement.Statement)visitor.Visit(tree);
+        }
+        catch (InvalidCastException ex)
+        {
+            // visitor 未覆盖分支时强转失败，转为统一的解析异常
+            throw new JSqlParserException("Failed to build AST: unexpected node type.", ex);
+        }
+
+        if (result is Statement.Statements statements)
+        {
+            if (statements.StatementList.Count == 0) return null;
+            if (statements.StatementList.Count > 1)
+            {
+                // 多语句静默丢弃会掩盖 SQL 注入，显式报错并提示用 ParseStatements
+                throw new JSqlParserException(
+                    "Input contains multiple statements separated by ';'. " +
+                    "Use ParseStatements() to parse all of them.");
+            }
             return statements.StatementList[0];
         }
 
-        return (Statement.Statement)result;
+        return result;
     }
 
     /// <summary>
@@ -93,7 +110,8 @@ public static class CCJSqlParserUtil
     }
 
     /// <summary>
-    /// Try to parse SQL, returning null on failure.
+    /// Try to parse SQL, returning null only on syntax errors (<see cref="JSqlParserException"/>).
+    /// 其他异常（OOM、NRE 等程序缺陷）继续上抛，不被吞没。
     /// </summary>
     public static Statement.Statement? ParseNullable(string sql)
     {
@@ -101,7 +119,7 @@ public static class CCJSqlParserUtil
         {
             return Parse(sql);
         }
-        catch
+        catch (JSqlParserException)
         {
             return null;
         }

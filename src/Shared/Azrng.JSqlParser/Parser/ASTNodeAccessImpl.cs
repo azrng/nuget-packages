@@ -25,7 +25,9 @@ public class ASTNodeAccessImpl : ASTNodeAccess
         var token = simpleNode.JjtGetFirstToken();
         var lastToken = simpleNode.JjtGetLastToken();
 
-        while (token?.Next != null && token.AbsoluteEnd <= lastToken.AbsoluteEnd)
+        // L3 修复：去掉 token?.Next != null 前置条件（会漏掉区间内最后一个 token），
+        // 改由 AbsoluteEnd 边界控制循环。token 为 null 时直接退出。
+        while (token != null && token.AbsoluteEnd <= lastToken.AbsoluteEnd)
         {
             builder.Append(' ').Append(token.Image);
             token = token.Next;

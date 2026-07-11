@@ -1,7 +1,14 @@
 using Azrng.JSqlParser.Parser;
+using Azrng.JSqlParser.Statement.Alter;
+using Azrng.JSqlParser.Statement.CreateIndex;
+using Azrng.JSqlParser.Statement.CreateTable;
+using Azrng.JSqlParser.Statement.CreateView;
 using Azrng.JSqlParser.Statement.Delete;
+using Azrng.JSqlParser.Statement.Drop;
 using Azrng.JSqlParser.Statement.Insert;
+using Azrng.JSqlParser.Statement.Merge;
 using Azrng.JSqlParser.Statement.Select;
+using Azrng.JSqlParser.Statement.Truncate;
 using Azrng.JSqlParser.Statement.Update;
 
 namespace Azrng.JSqlParser.Util.Validation;
@@ -85,6 +92,8 @@ public class Validation
                                 RequireFeature(FeaturesAllowed.UNION);
                                 break;
                             case SetOperation.OperationType.EXCEPT:
+                            case SetOperation.OperationType.MINUS:
+                                // Oracle MINUS 等价 EXCEPT，归入同一能力
                                 RequireFeature(FeaturesAllowed.EXCEPT);
                                 break;
                             case SetOperation.OperationType.INTERSECT:
@@ -103,17 +112,43 @@ public class Validation
             case Delete:
                 RequireFeature(FeaturesAllowed.DELETE);
                 break;
+            case Merge:
+                RequireFeature(FeaturesAllowed.MERGE);
+                break;
+            case CreateTable:
+                RequireFeature(FeaturesAllowed.CREATE);
+                break;
+            case CreateView:
+                RequireFeature(FeaturesAllowed.CREATE);
+                break;
+            case CreateIndex:
+                RequireFeature(FeaturesAllowed.CREATE);
+                break;
+            case Alter:
+            case AlterView:
+            case AlterSequence:
+                RequireFeature(FeaturesAllowed.ALTER);
+                break;
+            case Drop:
+                RequireFeature(FeaturesAllowed.DROP);
+                break;
+            case Truncate:
+                RequireFeature(FeaturesAllowed.TRUNCATE);
+                break;
         }
     }
 
     private void ValidateSubquery(Expression.Expression? expression)
     {
         if (expression == null) return;
-        // Basic subquery detection - if expression contains a ParenthesedSelect
+        // 子查询检测：通过 ToString 文本启发式判断是否含 SELECT 子查询。
+        // 局限性：字面量或列名含 "SELECT" 子串可能误报；精确检测需 visitor 遍历表达式树。
+        // 为降低误报，要求 SELECT 前有左括号（子查询形如 (SELECT ...)）或作为 IN/EXISTS 操作数。
         var text = expression.ToString();
         if (text == null) return;
 
-        if (text.Contains("SELECT", StringComparison.OrdinalIgnoreCase))
+        if (text.Contains("(SELECT", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("( SELECT", StringComparison.OrdinalIgnoreCase))
         {
             RequireFeature(FeaturesAllowed.SUBQUERY);
         }

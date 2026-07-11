@@ -48,10 +48,10 @@ public class StatementVisitorAdapter<T> : StatementVisitor<T>
     public virtual T Visit<S>(GrantStatement grant, S context) => default!;
     public virtual T Visit<S>(UnsupportedStatement unsupportedStatement, S context) => default!;
 
-    // JSqlParser 5.1 - Parenthesized DML for CTEs
-    public virtual T Visit<S>(Select.ParenthesedInsert parenthesedInsert, S context) => default!;
-    public virtual T Visit<S>(Select.ParenthesedUpdate parenthesedUpdate, S context) => default!;
-    public virtual T Visit<S>(Select.ParenthesedDelete parenthesedDelete, S context) => default!;
+    // JSqlParser 5.1 - Parenthesized DML for CTEs（递归内部语句，M9 修复）
+    public virtual T Visit<S>(Select.ParenthesedInsert parenthesedInsert, S context) { parenthesedInsert.Insert?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(Select.ParenthesedUpdate parenthesedUpdate, S context) { parenthesedUpdate.Update?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(Select.ParenthesedDelete parenthesedDelete, S context) { parenthesedDelete.Delete?.Accept(this, context); return default!; }
 
     // JSqlParser 5.4
     public virtual T Visit<S>(SessionStatement sessionStatement, S context) => default!;

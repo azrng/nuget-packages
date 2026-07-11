@@ -1,5 +1,6 @@
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
+using System.Globalization;
 using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Expression.Operators.Arithmetic;
 using Azrng.JSqlParser.Expression.Operators.Conditional;
@@ -641,7 +642,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // DB2 OPTIMIZE FOR n ROWS
         if (context.optimizeForClause() != null)
         {
-            select.OptimizeFor = long.Parse(context.optimizeForClause().LONG_VALUE().GetText());
+            select.OptimizeFor = ParseLong(context.optimizeForClause().LONG_VALUE().GetText());
         }
 
         // WINDOW 命名窗口定义：透传 windowItem 原始文本保 round-trip（对齐上游 windowDefinitions）
@@ -674,21 +675,21 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.HOPPING() != null)
         {
             window.Hopping = true;
-            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeDuration = ParseLong(context.LONG_VALUE(0).GetText());
             window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
-            window.AdvanceDuration = long.Parse(context.LONG_VALUE(1).GetText());
+            window.AdvanceDuration = ParseLong(context.LONG_VALUE(1).GetText());
             window.AdvanceTimeUnit = ParseKsqlTimeUnit(timeUnits[1]);
         }
         else if (context.TUMBLING() != null)
         {
             window.Tumbling = true;
-            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeDuration = ParseLong(context.LONG_VALUE(0).GetText());
             window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
         }
         else if (context.SESSION() != null)
         {
             window.Session = true;
-            window.SizeDuration = long.Parse(context.LONG_VALUE(0).GetText());
+            window.SizeDuration = ParseLong(context.LONG_VALUE(0).GetText());
             window.SizeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
         }
         return window;
@@ -704,25 +705,30 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (durations.Length == 1)
         {
             // 单值窗口：WITHIN (n unit)
-            joinWindow.Duration = long.Parse(durations[0].GetText());
+            joinWindow.Duration = ParseLong(durations[0].GetText());
             joinWindow.TimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
         }
-        else
+        else if (durations.Length >= 2)
         {
             // before/after 双值窗口：WITHIN (n unit, n unit)
             joinWindow.BeforeAfter = true;
-            joinWindow.BeforeDuration = long.Parse(durations[0].GetText());
+            joinWindow.BeforeDuration = ParseLong(durations[0].GetText());
             joinWindow.BeforeTimeUnit = ParseKsqlTimeUnit(timeUnits[0]);
-            joinWindow.AfterDuration = long.Parse(durations[1].GetText());
+            joinWindow.AfterDuration = ParseLong(durations[1].GetText());
             joinWindow.AfterTimeUnit = ParseKsqlTimeUnit(timeUnits[1]);
         }
+        // L6 修复：durations.Length == 0 的异常情况兜底为 null（不抛 IOORE，与其它兜底风格一致）
         return joinWindow;
     }
 
     /// <summary>解析 ksqlDB 时间单位文本为枚举（大写化匹配）。</summary>
     private static KSQLTimeUnit ParseKsqlTimeUnit(JSqlParserGrammar.KsqlTimeUnitContext context)
     {
-        return Enum.Parse<KSQLTimeUnit>(context.GetText().ToUpperInvariant());
+        // L6 修复（Parser #14）：未知时间单位用 TryParse 兜底，避免裸 ArgumentException
+        var text = context.GetText().ToUpperInvariant();
+        return Enum.TryParse<KSQLTimeUnit>(text, out var unit)
+            ? unit
+            : throw new JSqlParserException($"Unknown ksqlDB time unit: {text}");
     }
 
     /// <summary>
@@ -845,7 +851,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.WAIT() != null)
         {
-            select.Wait = new Wait { Timeout = long.Parse(context.LONG_VALUE().GetText()) };
+            select.Wait = new Wait { Timeout = ParseLong(context.LONG_VALUE().GetText()) };
         }
 
         if (context.NOWAIT() != null)
@@ -1417,6 +1423,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var offset = new Offset();
         offset.OffsetExpression = (Expression.Expression)Visit(context.expression());
+        // L2 修复：保留 ROW/ROWS 修饰符，避免 round-trip 丢失
+        if (context.ROW() != null) offset.OffsetParam = "ROW";
+        else if (context.ROWS() != null) offset.OffsetParam = "ROWS";
         return offset;
     }
 
@@ -1881,7 +1890,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             result.ArrayData = dims.Select(d =>
             {
                 var n = d.LONG_VALUE();
-                return n != null ? int.Parse(n.GetText()) : (int?)null;
+                return n != null ? ParseInt(n.GetText()) : (int?)null;
             }).ToList();
         }
         return result;
@@ -2305,20 +2314,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var p = new SequenceParameter(SequenceParameterType.RESTART_WITH);
             if (ctx.WITH() != null && ctx.LONG_VALUE() != null)
-                p.Value = long.Parse(ctx.LONG_VALUE().GetText());
+                p.Value = ParseLong(ctx.LONG_VALUE().GetText());
             return p;
         }
         if (ctx.INCREMENT() != null && ctx.LONG_VALUE() != null)
-            return new SequenceParameter(SequenceParameterType.INCREMENT_BY).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+            return new SequenceParameter(SequenceParameterType.INCREMENT_BY).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
         if (ctx.NOMINVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMINVALUE);
         if (ctx.MINVALUE() != null && ctx.LONG_VALUE() != null)
-            return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+            return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
         if (ctx.NOMAXVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMAXVALUE);
         if (ctx.MAXVALUE() != null && ctx.LONG_VALUE() != null)
-            return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+            return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
         if (ctx.NOCACHE() != null) return new SequenceParameter(SequenceParameterType.NOCACHE);
         if (ctx.CACHE() != null && ctx.LONG_VALUE() != null)
-            return new SequenceParameter(SequenceParameterType.CACHE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+            return new SequenceParameter(SequenceParameterType.CACHE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
         if (ctx.NOCYCLE() != null) return new SequenceParameter(SequenceParameterType.NOCYCLE);
         if (ctx.CYCLE() != null) return new SequenceParameter(SequenceParameterType.CYCLE);
         if (ctx.NOORDER() != null) return new SequenceParameter(SequenceParameterType.NOORDER);
@@ -2715,7 +2724,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             expr.Operation = AlterOperation.COALESCE_PARTITION;
             if (context.LONG_VALUE() != null)
-                expr.CoalescePartitionNumber = int.Parse(context.LONG_VALUE().GetText());
+                expr.CoalescePartitionNumber = ParseInt(context.LONG_VALUE().GetText());
         }
         else if (context.REORGANIZE() != null)
         {
@@ -2927,28 +2936,28 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // 有值参数
         if (ctx.INCREMENT() != null)
         {
-            var value = long.Parse(ctx.LONG_VALUE().GetText());
+            var value = ParseLong(ctx.LONG_VALUE().GetText());
             return new SequenceParameter(
                 ctx.BY() != null ? SequenceParameterType.INCREMENT_BY : SequenceParameterType.INCREMENT)
                 .WithValue(value);
         }
         if (ctx.START() != null)
         {
-            var value = ctx.LONG_VALUE() != null ? long.Parse(ctx.LONG_VALUE().GetText()) : (long?)null;
+            var value = ctx.LONG_VALUE() != null ? ParseLong(ctx.LONG_VALUE().GetText()) : (long?)null;
             return new SequenceParameter(
                 ctx.WITH() != null ? SequenceParameterType.START_WITH : SequenceParameterType.START)
                 .WithValue(value ?? 0);
         }
         if (ctx.RESTART() != null)
         {
-            var value = ctx.LONG_VALUE() != null ? long.Parse(ctx.LONG_VALUE().GetText()) : (long?)null;
+            var value = ctx.LONG_VALUE() != null ? ParseLong(ctx.LONG_VALUE().GetText()) : (long?)null;
             var p = new SequenceParameter(SequenceParameterType.RESTART_WITH);
             if (value != null) p.WithValue(value.Value);
             return p;
         }
-        if (ctx.MAXVALUE() != null) return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
-        if (ctx.MINVALUE() != null) return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
-        if (ctx.CACHE() != null) return new SequenceParameter(SequenceParameterType.CACHE).WithValue(long.Parse(ctx.LONG_VALUE().GetText()));
+        if (ctx.MAXVALUE() != null) return new SequenceParameter(SequenceParameterType.MAXVALUE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
+        if (ctx.MINVALUE() != null) return new SequenceParameter(SequenceParameterType.MINVALUE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
+        if (ctx.CACHE() != null) return new SequenceParameter(SequenceParameterType.CACHE).WithValue(ParseLong(ctx.LONG_VALUE().GetText()));
 
         // 无值参数
         if (ctx.NOMAXVALUE() != null) return new SequenceParameter(SequenceParameterType.NOMAXVALUE);
@@ -3109,14 +3118,37 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var merge = new Statement.Merge.Merge();
         merge.Table = (Table)Visit(context.table());
+
+        // MERGE INTO t alias USING ...（目标表别名）
+        if (context.alias() != null)
+        {
+            merge.Alias = new Alias(context.alias().identifier().GetText(),
+                context.alias().AS() != null);
+        }
+
+        // USING 源（表/子查询），grammar 保证必现
+        if (context.fromItem() != null)
+        {
+            merge.SourceTable = (FromItem)Visit(context.fromItem());
+        }
+
         merge.OnCondition = (Expression.Expression)Visit(context.expression());
 
         foreach (var whenCtx in context.mergeWhenClause())
         {
+            // WHEN [NOT] MATCHED (AND expression)? THEN ...
+            // mergeWhenClause 内 AND 后的 expression（单个，grammar 每分支至多一个）
+            Expression.Expression? whenAndCondition = null;
+            if (whenCtx.AND() != null && whenCtx.expression() != null)
+            {
+                whenAndCondition = (Expression.Expression)Visit(whenCtx.expression());
+            }
+
             if (whenCtx.UPDATE() != null)
             {
                 var op = new Statement.Merge.MergeUpdate();
                 if (whenCtx.NOT() != null) op.Not = true;
+                op.Condition = whenAndCondition;
                 foreach (var assignment in whenCtx.assignmentItem())
                 {
                     var updateSet = new UpdateSet();
@@ -3135,18 +3167,29 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 var op = new Statement.Merge.MergeDelete();
                 if (whenCtx.NOT() != null) op.Not = true;
+                op.Condition = whenAndCondition;
                 merge.Operations.Add(op);
             }
             else if (whenCtx.INSERT() != null)
             {
                 var op = new Statement.Merge.MergeInsert();
                 if (whenCtx.NOT() != null) op.Not = true;
+                op.Condition = whenAndCondition;
                 if (whenCtx.identifierList() != null)
                 {
                     op.Columns = new List<Column>();
                     foreach (var id in whenCtx.identifierList().identifier())
                     {
                         op.Columns.Add(new Column { ColumnName = id.GetText() });
+                    }
+                }
+                // VALUES valuesItem（grammar 保证 INSERT 分支必现）
+                if (whenCtx.valuesItem() != null)
+                {
+                    op.Values = new List<Expression.Expression>();
+                    foreach (var exprCtx in whenCtx.valuesItem().expression())
+                    {
+                        op.Values.Add((Expression.Expression)Visit(exprCtx));
                     }
                 }
                 merge.Operations.Add(op);
@@ -3189,7 +3232,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
         else if (context.WAIT() != null)
         {
-            stmt.WaitSeconds = long.Parse(context.LONG_VALUE().GetText());
+            stmt.WaitSeconds = ParseLong(context.LONG_VALUE().GetText());
         }
 
         return stmt;
@@ -4144,9 +4187,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitLiteral(JSqlParserGrammar.LiteralContext context)
     {
         if (context.LONG_VALUE() != null)
-            return new LongValue(long.Parse(context.LONG_VALUE().GetText()));
+            return new LongValue(ParseLong(context.LONG_VALUE().GetText()));
         if (context.S_DOUBLE() != null)
-            return new DoubleValue(double.Parse(context.S_DOUBLE().GetText()));
+            return new DoubleValue(ParseDouble(context.S_DOUBLE().GetText()));
         if (context.S_CHAR_LITERAL() != null)
         {
             // S_CHAR_LITERAL 可能含可选前缀（N/E/U/R/B/RB/_utf8），交给 StringValue 构造函数识别
@@ -4215,7 +4258,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var param = new JdbcParameter();
         if (context.S_PARAMETER() != null)
         {
-            param.Index = int.Parse(context.S_PARAMETER().GetText()[1..]);
+            param.Index = ParseInt(context.S_PARAMETER().GetText()[1..]);
         }
         return param;
     }
@@ -5259,14 +5302,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             op.GroupBy = new List<Expression.Expression>();
             // GROUP BY expressions are after the GROUP BY keywords
             var expressions = context.expression();
-            // The first expressions in the list are GROUP BY ones (before HAVING)
-            int groupByCount = 0;
+            // L7 修复：删除从未被读取的死变量 groupByCount；
+            // HAVING（若存在）是最后一个 expression，循环跳过它
             for (int i = 0; i < expressions.Length; i++)
             {
                 if (context.HAVING() != null && i == expressions.Length - 1)
                     break;
                 op.GroupBy.Add((Expression.Expression)Visit(expressions[i]));
-                groupByCount++;
             }
 
             if (context.HAVING() != null)
@@ -5544,4 +5586,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             };
         return new FrameBound();
     }
+
+    // ── 区域无关数值解析 helper（H2 修复）────────────────
+    // SQL 数值字面量按规范永远用 . 小数点、无千分位，必须用 InvariantCulture，
+    // 否则在 de-DE 等区域下 SELECT 1.5 会被静默解析成 15（数据损坏）。
+    private static long ParseLong(string s) => long.Parse(s, CultureInfo.InvariantCulture);
+    private static int ParseInt(string s) => int.Parse(s, CultureInfo.InvariantCulture);
+    private static double ParseDouble(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 }

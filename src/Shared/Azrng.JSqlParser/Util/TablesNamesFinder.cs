@@ -330,6 +330,18 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
             VisitFromQuery(fromQuery);
         else if (select is Values values)
             VisitValues(values);
+        else if (select is TableStatement tableStatement)
+        {
+            if (tableStatement.Table != null) AddTable(tableStatement.Table);
+        }
+
+        // ORDER BY 表达式可能含子查询（如 ORDER BY (SELECT ... FROM t2)），
+        // 挂在 Select 基类，对所有 Select 子类统一遍历
+        if (select.OrderByElements != null)
+        {
+            foreach (var ob in select.OrderByElements)
+                ob.Expression.Accept(this);
+        }
         return null;
     }
 
@@ -360,7 +372,17 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
                 item.Expression.Accept(this);
         }
 
+        // GROUP BY 表达式可能含子查询
+        if (plainSelect.GroupBy?.GroupByExpressions != null)
+        {
+            foreach (var expr in plainSelect.GroupBy.GroupByExpressions)
+                expr.Accept(this);
+        }
+
         plainSelect.Having?.Accept(this);
+
+        // QUALIFY（Snowflake/Teradata）过滤表达式可能含子查询
+        plainSelect.Qualify?.Accept(this);
     }
 
     private void VisitSetOperationList(SetOperationList setOpList)
@@ -406,7 +428,21 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         }
         else if (fromItem is ParenthesedSelect parenthesedSelect)
         {
+            // LateralSubSelect 继承 ParenthesedSelect，一并覆盖
             ((Statement.StatementVisitor<object?>)this).Visit(parenthesedSelect.Select, (object?)null);
+        }
+        else if (fromItem is Values values)
+        {
+            VisitValues(values);
+        }
+        else if (fromItem is TableFunction tableFunction)
+        {
+            // FROM generate_series(...) 等，遍历函数参数内的列引用
+            tableFunction.Function.Parameters?.Accept(this);
+        }
+        else if (fromItem is JsonTable jsonTable)
+        {
+            jsonTable.JsonExpression?.Accept(this);
         }
     }
 
@@ -415,7 +451,27 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         AddTable(insert.Table);
         if (insert.Select != null)
             ((Statement.StatementVisitor<object?>)this).Visit(insert.Select, (object?)null);
+
+        // INSERT INTO t VALUES ((SELECT ... FROM t2), ...) — VALUES 项可能含子查询
+        if (insert.ValuesItems != null)
+        {
+            foreach (var row in insert.ValuesItems)
+                foreach (var expr in row.Expressions) expr.Accept(this);
+        }
+
+        // ON DUPLICATE KEY UPDATE / SET 赋值右值可能含子查询
+        VisitUpdateSetList(insert.DuplicateUpdateSets);
+        VisitUpdateSetList(insert.SetUpdateSets);
+        insert.DuplicateUpdateWhereExpression?.Accept(this);
+
         return null;
+    }
+
+    private void VisitUpdateSetList(System.Collections.Generic.List<Statement.Update.UpdateSet>? sets)
+    {
+        if (sets == null) return;
+        foreach (var us in sets)
+            foreach (var val in us.Values) val.Accept(this);
     }
 
     public object? Visit<S>(Statement.Insert.MultiInsert multiInsert, S context)
@@ -438,6 +494,26 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Update.Update update, S context)
     {
         AddTable(update.Table);
+
+        // UPDATE a JOIN b SET ... — JOIN 右侧表
+        if (update.Joins != null)
+        {
+            foreach (var join in update.Joins)
+            {
+                VisitFromItem(join.RightItem);
+                foreach (var onExpr in join.OnExpressions) onExpr.Accept(this);
+            }
+        }
+
+        // SET x = (SELECT ... FROM t2) — 赋值右值可能含子查询
+        if (update.UpdateSets != null)
+        {
+            foreach (var us in update.UpdateSets)
+            {
+                foreach (var val in us.Values) val.Accept(this);
+            }
+        }
+
         update.Where?.Accept(this);
         return null;
     }
@@ -459,7 +535,31 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Merge.Merge merge, S context)
     {
         AddTable(merge.Table);
+
+        // USING 源表/子查询
+        if (merge.SourceTable != null)
+            VisitFromItem(merge.SourceTable);
+
         merge.OnCondition?.Accept(this);
+
+        // WHEN 子句：UPDATE 赋值右值 / INSERT VALUES / AND 条件均可能含子查询
+        if (merge.Operations != null)
+        {
+            foreach (var op in merge.Operations)
+            {
+                op.Condition?.Accept(this);
+                if (op is Statement.Merge.MergeUpdate mu)
+                {
+                    foreach (var us in mu.UpdateSets)
+                        foreach (var val in us.Values) val.Accept(this);
+                }
+                else if (op is Statement.Merge.MergeInsert mi)
+                {
+                    if (mi.Values != null)
+                        foreach (var val in mi.Values) val.Accept(this);
+                }
+            }
+        }
         return null;
     }
 

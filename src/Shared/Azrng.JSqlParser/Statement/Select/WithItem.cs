@@ -59,7 +59,11 @@ public class WithItem : Select
         if (ParenthesedInsert != null) builder.Append(ParenthesedInsert);
         else if (ParenthesedUpdate != null) builder.Append(ParenthesedUpdate);
         else if (ParenthesedDelete != null) builder.Append(ParenthesedDelete);
-        else if (Select != null) Select.AppendTo(builder);
+        else if (Select != null)
+        {
+            // CTE 子查询必须用括号包裹：WITH t AS (<select>)，否则 round-trip 丢括号（L1 修复）
+            builder.Append('(').Append(Select).Append(')');
+        }
         if (SearchClause != null) builder.Append(' ').Append(SearchClause);
         return builder;
     }

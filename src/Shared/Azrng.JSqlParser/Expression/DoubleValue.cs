@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression;
@@ -12,9 +13,9 @@ public class DoubleValue : ASTNodeAccessImpl, Expression
     public DoubleValue() { }
 
     public DoubleValue(double value) => Value = value;
-    public DoubleValue(string value) => Value = double.Parse(value);
+    public DoubleValue(string value) => Value = double.Parse(value, CultureInfo.InvariantCulture);
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public override string ToString() => Value.ToString();
+    public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 }
