@@ -10,10 +10,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T105 | JwtBearer 版本号修正（包版本与 README 最新版本说明从 1.5.1 改回 1.5.0，并验证 nupkg 产物版本为 1.5.0） | DONE | 2026-07-13 |
 | T104 | JwtBearer 当前未提交改动审查与提交（修正 UseJwtBearerDefaultResponses 命名一致性、README/ARCHITECTURE/测试同步，示例保留 AddMyAuthentication 的 Basic+Bearer 分发并显式启用预置响应，纯 JWT helper 设置 Bearer 默认方案） | DONE | 2026-07-13 |
 | T103 | JwtBearer README 补充事件扩展配置说明（补充 UseAzrngJwtBearerDefaultResponses、UseTokenExpiredHeader、UseUnauthorizedJsonResponse 的拆分说明、单独启用、组合启用、参数自定义和与 SignalR/自定义事件组合方式） | DONE | 2026-07-13 |
 | T102 | Azrng.AspNetCore.Authorization.Default 库审查修复（P0 匿名路径 Contains 子串匹配越权缺陷改用 StartsWithSegments 路径段前缀匹配、P1 认证检查改用 result.Succeeded、P2 PermissionRequirement 收紧为只读 + null 防御、P1 修正 README 双重注册与 ARCHITECTURE 示例编译错误，版本 1.1.0→1.2.0，测试 5→20 项） | DONE | 2026-07-13 |
 | T101 | JwtBearer 包审查后修复（升级认证依赖到各 TFM 最新 patch、移除配置热更新语义、默认回到 ASP.NET Core JwtBearer 标准事件行为，新增 UseTokenExpiredHeader/UseUnauthorizedJsonResponse/UseAzrngJwtBearerDefaultResponses 辅助扩展，测试 26→28 项） | DONE | 2026-07-13 |
-| T100 | Azrng.AspNetCore.Authentication.JwtBearer 审查修复与测试补充（默认密钥清空+IValidateOptions 收口、CreateToken/ValidateToken/GetJwtInfo 异常处理修正、共享 TVP、Singleton+IOptionsMonitor、OnChallenge 开关，测试 7→27 项，commit 662c35e） | DONE | 2026-07-13 |
 
 文件结束。

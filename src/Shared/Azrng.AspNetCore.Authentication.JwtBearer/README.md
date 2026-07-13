@@ -332,13 +332,11 @@ services.AddAuthentication()
 
 ## 版本历史
 
-### 1.5.1 (最新)
+### 1.5.0 (最新)
 - 🔒 **安全**：升级 `Microsoft.AspNetCore.Authentication.JwtBearer` 到各目标框架最新 patch 版本，避免已知 IdentityModel JWT 传递依赖漏洞
 - 🏗️ 调整：移除配置热更新语义，`IBearerAuthService` 构造期读取 `IOptions<JwtTokenConfig>`，避免服务签发与中间件校验配置分叉
 - 🧹 调整：移除库内置默认 `JwtBearerEvents`，不再自动写入 `Token-Expired` 响应头或自定义 401 JSON，默认回到 ASP.NET Core 标准行为
 - 🆕 新增：提供 `UseTokenExpiredHeader`、`UseUnauthorizedJsonResponse`、`UseJwtBearerDefaultResponses` 扩展方法，显式启用旧响应行为时更简洁
-
-### 1.5.0
 - 🔒 **安全**：移除硬编码默认密钥，改为必填并强制校验（长度 ≥ 32、至少 8 种不同字符），通过 `IValidateOptions` 收口，任何注册路径都会校验
 - 🔒 **安全**：`CreateToken` 移除掩盖真实异常的 try-catch；`ValidateToken`/`GetJwt*` 对空 token 显式抛 `ArgumentException`，仅吞 `SecurityTokenException`
 - 🐛 修复：`GetJwtInfo` 在 claim 值为 null 时不再抛 NRE
