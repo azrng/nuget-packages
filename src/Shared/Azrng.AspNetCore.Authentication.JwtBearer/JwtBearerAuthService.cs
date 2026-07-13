@@ -12,25 +12,15 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
     {
         private static readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-        private readonly IOptionsMonitor<JwtTokenConfig> _optionsMonitor;
+        private readonly JwtTokenConfig _config;
+        private readonly SymmetricSecurityKey _securityKey;
+        private readonly SigningCredentials _signingCredentials;
 
-        public JwtBearerAuthService(IOptionsMonitor<JwtTokenConfig> optionsMonitor)
+        public JwtBearerAuthService(IOptions<JwtTokenConfig> options)
         {
-            _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
-        }
-
-        /// <summary>
-        /// 当前配置（每次访问读取最新值，支持热更新）
-        /// </summary>
-        private JwtTokenConfig Config => _optionsMonitor.CurrentValue;
-
-        /// <summary>
-        /// 基于当前密钥构建签名凭证，每次按需创建（密钥可能变化）
-        /// </summary>
-        private SigningCredentials CreateSigningCredentials()
-        {
-            var securityKey = JwtTokenValidationParametersFactory.CreateSecurityKey(Config.JwtSecretKey);
-            return new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            _config = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _securityKey = JwtTokenValidationParametersFactory.CreateSecurityKey(_config.JwtSecretKey);
+            _signingCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256);
         }
 
         public string CreateToken(string id)
@@ -62,13 +52,12 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
             if (claims == null)
                 throw new ArgumentNullException(nameof(claims));
 
-            var config = Config;
             var token = new JwtSecurityToken(
-                issuer: config.JwtIssuer,
-                audience: config.JwtAudience,
+                issuer: _config.JwtIssuer,
+                audience: _config.JwtAudience,
                 claims: claims,
-                expires: DateTime.UtcNow.Add(config.ValidTime),
-                signingCredentials: CreateSigningCredentials());
+                expires: DateTime.UtcNow.Add(_config.ValidTime),
+                signingCredentials: _signingCredentials);
 
             // 直接调用；WriteToken 内部只做序列化，原始异常应向上冒泡便于诊断
             return _tokenHandler.WriteToken(token);
@@ -79,9 +68,7 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
             if (string.IsNullOrEmpty(token))
                 throw new ArgumentException("Token 不能为空", nameof(token));
 
-            var config = Config;
-            var securityKey = JwtTokenValidationParametersFactory.CreateSecurityKey(config.JwtSecretKey);
-            var tokenValidationParameters = JwtTokenValidationParametersFactory.Create(config, securityKey);
+            var tokenValidationParameters = JwtTokenValidationParametersFactory.Create(_config, _securityKey);
 
             try
             {

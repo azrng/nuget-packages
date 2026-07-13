@@ -11,7 +11,7 @@ dotnet add package Azrng.AspNetCore.Authentication.JwtBearer
 ## 功能特性
 
 - ✅ 开箱即用的 JWT Token 生成和验证
-- ✅ 自动处理 Token 过期和认证失败
+- ✅ 保留 ASP.NET Core JwtBearer 默认认证行为，支持按需自定义事件
 - ✅ 内置性能优化（缓存 SecurityKey 和 SigningCredentials）
 - ✅ 完整的 Token 验证（签名、过期时间、颁发者、受众）
 - ✅ 支持自定义 JwtBearerEvents（如 SignalR 支持）
@@ -106,7 +106,7 @@ services.AddAuthentication()
         {
             jwtConfig.JwtAudience = "your-audience";
             jwtConfig.JwtIssuer = "your-issuer";
-            jwtConfig.JwtSecretKey = "your-secret-key";
+            jwtConfig.JwtSecretKey = "your-secret-key-at-least-32-characters-long";
         },
         // JwtBearerEvents 自定义配置
         events =>
@@ -129,7 +129,30 @@ services.AddAuthentication()
         });
 ```
 
-> **注意**：此方法会**保留默认的** `OnAuthenticationFailed` 和 `OnChallenge` 事件处理，不会覆盖它们。
+> **注意**：库不再内置默认 `OnAuthenticationFailed` / `OnChallenge` 响应处理；传入的 `JwtBearerEvents` 会直接应用到 ASP.NET Core JwtBearer 选项。
+
+### 使用预置 Token 过期和 401 响应
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events => events.UseAzrngJwtBearerDefaultResponses());
+```
+
+以上等价于同时启用：
+
+- `UseTokenExpiredHeader()`：Token 过期时添加 `Token-Expired: true` 响应头
+- `UseUnauthorizedJsonResponse()`：认证挑战时返回 Azrng 预置 JSON 401 响应体
+
+也可以只启用其中一项：
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events => events.UseTokenExpiredHeader());
+```
 
 ### 自定义 Token 验证失败响应
 
@@ -163,7 +186,7 @@ services.AddAuthentication()
     .AddJwtBearerAuthentication(options =>
     {
         // JWT 签名密钥（最少 32 位，至少 8 种不同字符）
-        options.JwtSecretKey = "your-very-long-secret-key";
+        options.JwtSecretKey = "your-secret-key-at-least-32-characters-long";
 
         // JWT 颁发者
         options.JwtIssuer = "https://your-domain.com";
@@ -198,43 +221,32 @@ services.AddAuthentication()
 | `JwtAudience` | `string` | `"audience"` | JWT 受众标识 |
 | `ValidTime` | `TimeSpan` | `24小时` | Token 有效期 |
 
-## 默认行为
+## 内置行为
 
-库内置了以下默认行为：
+库内置了以下行为：
 
-1. **Token 过期处理**：过期 Token 会自动添加 `Token-Expired: true` 响应头
-2. **认证失败响应**：返回 JSON 格式的 401 错误
-   ```json
-   {
-     "isSuccess": false,
-     "message": "您无权访问该接口，请确保已经登录",
-     "code": "401"
-   }
-   ```
-   如需回退到 ASP.NET Core 默认 401 行为（保留标准 `WWW-Authenticate` 响应头），可在 `AddJwtBearerAuthentication` 中传入 `useDefaultChallengeResponse: false`：
-   ```csharp
-   services.AddAuthentication()
-       .AddJwtBearerAuthentication(
-           jwtConfig => { /* ... */ },
-           useDefaultChallengeResponse: false);
-   ```
-3. **Token 验证**：完整验证签名、过期时间、颁发者和受众
-4. **密钥强制校验**：配置在首次解析或应用启动时强制校验（非空、长度 ≥ 32、至少 8 种不同字符），无默认密钥
+1. **Token 验证**：完整验证签名、过期时间、颁发者和受众
+2. **密钥强制校验**：配置在首次解析或应用启动时强制校验（非空、长度 ≥ 32、至少 8 种不同字符），无默认密钥
+3. **事件处理**：默认使用 ASP.NET Core JwtBearer 行为；如需 `Token-Expired` 响应头或自定义 401 响应体，可通过 `jwtBearerEventsAction` 显式配置，也可调用预置扩展方法简化配置
 
 ## 版本历史
 
-### 1.5.0 (最新)
+### 1.5.1 (最新)
+- 🔒 **安全**：升级 `Microsoft.AspNetCore.Authentication.JwtBearer` 到各目标框架最新 patch 版本，避免已知 IdentityModel JWT 传递依赖漏洞
+- 🏗️ 调整：移除配置热更新语义，`IBearerAuthService` 构造期读取 `IOptions<JwtTokenConfig>`，避免服务签发与中间件校验配置分叉
+- 🧹 调整：移除库内置默认 `JwtBearerEvents`，不再自动写入 `Token-Expired` 响应头或自定义 401 JSON，默认回到 ASP.NET Core 标准行为
+- 🆕 新增：提供 `UseTokenExpiredHeader`、`UseUnauthorizedJsonResponse`、`UseAzrngJwtBearerDefaultResponses` 扩展方法，显式启用旧响应行为时更简洁
+
+### 1.5.0
 - 🔒 **安全**：移除硬编码默认密钥，改为必填并强制校验（长度 ≥ 32、至少 8 种不同字符），通过 `IValidateOptions` 收口，任何注册路径都会校验
 - 🔒 **安全**：`CreateToken` 移除掩盖真实异常的 try-catch；`ValidateToken`/`GetJwt*` 对空 token 显式抛 `ArgumentException`，仅吞 `SecurityTokenException`
 - 🐛 修复：`GetJwtInfo` 在 claim 值为 null 时不再抛 NRE
-- 🏗️ 重构：`IBearerAuthService` 改为 Singleton（无状态），依赖 `IOptionsMonitor` 支持配置热更新
+- 🏗️ 重构：`IBearerAuthService` 改为 Singleton（无状态）
 - 🏗️ 重构：抽取共享 `TokenValidationParameters`，中间件与 `ValidateToken` 使用一致规则（统一 `ClockSkew = Zero`）
-- 🆕 新增：`AddJwtBearerAuthentication` 新增 `useDefaultChallengeResponse` 开关，可关闭内置自定义 401 响应体
-- 🔧 `OnAuthenticationFailed` 改用 `is` 匹配派生类，`Headers.Append` 避免重复添加头抛异常
-- ✅ 测试：从 7 项扩展到 27 项（覆盖过期 token、空 token、NRE、Singleton、events 叠加、开关等场景），目标框架扩展到 net8/9/10
+- ✅ 测试：从 7 项扩展到 27 项（覆盖过期 token、空 token、NRE、Singleton、events 配置等场景），目标框架扩展到 net8/9/10
 
 ### 1.4.0
-- 🆕 新增：支持自定义 `JwtBearerEvents`，可在默认配置基础上扩展
+- 🆕 新增：支持自定义 `JwtBearerEvents`
 - ⚡ 优化：性能优化，缓存 `SecurityKey` 和 `SigningCredentials`
 - ✅ 优化：增强 `ValidateToken` 方法，完整验证签名、过期时间、颁发者、受众
 - 🔒 安全：添加可空引用类型支持

@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Moq;
 using Xunit;
 
 namespace Azrng.AspNetCore.Authentication.JwtBearer.Test;
@@ -276,7 +275,6 @@ public class JwtBearerAuthServiceTests
         tokenOptions.TokenValidationParameters.ValidateIssuerSigningKey.Should().BeTrue();
         tokenOptions.TokenValidationParameters.ValidateLifetime.Should().BeTrue();
         tokenOptions.TokenValidationParameters.ClockSkew.Should().Be(TimeSpan.Zero);
-        tokenOptions.Events.Should().NotBeNull();
     }
 
     [Fact]
@@ -298,10 +296,8 @@ public class JwtBearerAuthServiceTests
     }
 
     [Fact]
-    public async Task AddJwtBearerAuthentication_ShouldInvokeCustomEventsOnTopOfDefaults()
+    public async Task AddJwtBearerAuthentication_ShouldApplyCustomEventsOnlyWhenProvided()
     {
-        // README 核心卖点：自定义 events 应在默认 events 基础上叠加，而非覆盖
-        // 验证：用户自定义的 OnMessageReceived 生效，且默认 OnAuthenticationFailed 仍标记 Token-Expired
         var services = new ServiceCollection();
         services.AddLogging();
 
@@ -327,8 +323,62 @@ public class JwtBearerAuthServiceTests
             new JwtBearerOptions()));
 
         customReceiverCalled.Should().BeTrue("自定义 OnMessageReceived 应被调用");
+    }
 
-        // 默认 OnAuthenticationFailed 仍存在，过期异常会添加 Token-Expired 头
+    [Fact]
+    public async Task AddJwtBearerAuthentication_ShouldNotWriteCustomDefaultEvents()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearerAuthentication(options => options.JwtSecretKey = ValidSecret);
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+        var tokenOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+                                   .Get(JwtBearerDefaults.AuthenticationScheme);
+
+        if (tokenOptions.Events is not null)
+        {
+            var failedContext = new AuthenticationFailedContext(
+                new DefaultHttpContext(),
+                new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
+                new JwtBearerOptions())
+            {
+                Exception = new SecurityTokenExpiredException { Expires = DateTime.UtcNow }
+            };
+            await tokenOptions.Events.OnAuthenticationFailed(failedContext);
+
+            failedContext.Response.Headers.ContainsKey("Token-Expired").Should().BeFalse();
+
+            var challengeContext = new JwtBearerChallengeContext(
+                new DefaultHttpContext(),
+                new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
+                new JwtBearerOptions(),
+                new AuthenticationProperties());
+
+            await tokenOptions.Events.OnChallenge(challengeContext);
+
+            challengeContext.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+            challengeContext.Response.ContentType.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public async Task UseAzrngJwtBearerDefaultResponses_ShouldAddExpiredHeaderAndUnauthorizedJson()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearerAuthentication(
+                    options => options.JwtSecretKey = ValidSecret,
+                    events => events.UseAzrngJwtBearerDefaultResponses());
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+        var tokenOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+                                   .Get(JwtBearerDefaults.AuthenticationScheme);
+
         var failedContext = new AuthenticationFailedContext(
             new DefaultHttpContext(),
             new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
@@ -336,47 +386,63 @@ public class JwtBearerAuthServiceTests
         {
             Exception = new SecurityTokenExpiredException { Expires = DateTime.UtcNow }
         };
-        await tokenOptions.Events.OnAuthenticationFailed!(failedContext);
+        await tokenOptions.Events!.OnAuthenticationFailed(failedContext);
+
         failedContext.Response.Headers.TryGetValue("Token-Expired", out var expired).Should().BeTrue();
         expired.ToString().Should().Be("true");
-    }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task AddJwtBearerAuthentication_UseDefaultChallengeResponse_ShouldControlCustom401Body(bool useDefault)
-    {
-        // #8：开关控制是否使用内置自定义 401 响应体
-        var services = new ServiceCollection();
-        services.AddLogging();
-
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearerAuthentication(
-                    options => options.JwtSecretKey = ValidSecret,
-                    useDefaultChallengeResponse: useDefault);
-
-        using var provider = services.BuildServiceProvider(validateScopes: true);
-        var tokenOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
-                                   .Get(JwtBearerDefaults.AuthenticationScheme);
-
-        var context = new JwtBearerChallengeContext(
+        var challengeContext = new JwtBearerChallengeContext(
             new DefaultHttpContext(),
             new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
             new JwtBearerOptions(),
             new AuthenticationProperties());
 
-        await tokenOptions.Events!.OnChallenge!(context);
+        await tokenOptions.Events.OnChallenge(challengeContext);
 
-        if (useDefault)
+        challengeContext.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        challengeContext.Response.ContentType.Should().Contain("application/json");
+    }
+
+    [Fact]
+    public async Task JwtBearerEventHelpers_ShouldPreserveExistingEventHandlers()
+    {
+        var events = new JwtBearerEvents();
+        var authenticationFailedCalled = false;
+        var challengeCalled = false;
+
+        events.OnAuthenticationFailed = _ =>
         {
-            context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-            context.Response.ContentType.Should().Contain("application/json");
-        }
-        else
+            authenticationFailedCalled = true;
+            return Task.CompletedTask;
+        };
+        events.OnChallenge = _ =>
         {
-            // 关闭开关时不接管响应，状态码保持默认 200（HandleResponse 未被调用）
-            context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
-        }
+            challengeCalled = true;
+            return Task.CompletedTask;
+        };
+
+        events.UseAzrngJwtBearerDefaultResponses();
+
+        var failedContext = new AuthenticationFailedContext(
+            new DefaultHttpContext(),
+            new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
+            new JwtBearerOptions())
+        {
+            Exception = new SecurityTokenExpiredException { Expires = DateTime.UtcNow }
+        };
+        await events.OnAuthenticationFailed(failedContext);
+
+        var challengeContext = new JwtBearerChallengeContext(
+            new DefaultHttpContext(),
+            new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, JwtBearerDefaults.AuthenticationScheme, typeof(JwtBearerHandler)),
+            new JwtBearerOptions(),
+            new AuthenticationProperties());
+        await events.OnChallenge(challengeContext);
+
+        authenticationFailedCalled.Should().BeTrue();
+        challengeCalled.Should().BeTrue();
+        failedContext.Response.Headers.ContainsKey("Token-Expired").Should().BeTrue();
+        challengeContext.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
     private static AuthenticationBuilder CreateBuilder()
@@ -390,11 +456,7 @@ public class JwtBearerAuthServiceTests
     {
         var config = CreateConfig();
         configure?.Invoke(config);
-        // 构造一个返回固定配置的 IOptionsMonitor mock
-        var monitor = new Mock<IOptionsMonitor<JwtTokenConfig>>();
-        monitor.SetupGet(m => m.CurrentValue).Returns(config);
-        monitor.Setup(m => m.Get(It.IsAny<string>())).Returns(config);
-        return new JwtBearerAuthService(monitor.Object);
+        return new JwtBearerAuthService(Options.Create(config));
     }
 
     private static JwtTokenConfig CreateConfig()

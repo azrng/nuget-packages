@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azrng.AspNetCore.Authentication.JwtBearer
 {
@@ -21,16 +18,13 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
 
         private readonly IOptions<JwtTokenConfig> _jwtOptions;
         private readonly Action<JwtBearerEvents>? _jwtBearerEventsAction;
-        private readonly bool _useDefaultChallengeResponse;
 
         public JwtBearerOptionsSetup(
             IOptions<JwtTokenConfig> jwtOptions,
-            Action<JwtBearerEvents>? jwtBearerEventsAction,
-            bool useDefaultChallengeResponse)
+            Action<JwtBearerEvents>? jwtBearerEventsAction)
         {
             _jwtOptions = jwtOptions;
             _jwtBearerEventsAction = jwtBearerEventsAction;
-            _useDefaultChallengeResponse = useDefaultChallengeResponse;
         }
 
         /// <inheritdoc />
@@ -53,38 +47,11 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
             o.RequireHttpsMetadata = false;
             o.TokenValidationParameters = JwtTokenValidationParametersFactory.Create(config, securityKey);
 
-            o.Events = new JwtBearerEvents
-                       {
-                           // Token 过期时先于 OnChallenge 触发
-                           OnAuthenticationFailed = context =>
-                           {
-                               // 使用 is 匹配派生类，避免精确类型匹配漏掉子类
-                               if (context.Exception is SecurityTokenExpiredException)
-                               {
-                                   // Append 避免重复添加同名头抛 ArgumentException
-                                   context.Response.Headers.Append("Token-Expired", "true");
-                               }
-
-                               return Task.CompletedTask;
-                           },
-
-                           OnChallenge = async context =>
-                           {
-                               if (!_useDefaultChallengeResponse)
-                                   return; // 回退到 ASP.NET Core 默认 401 行为
-
-                               // 跳过默认处理逻辑，返回内置模型
-                               context.HandleResponse();
-
-                               context.Response.ContentType = "application/json;charset=utf-8";
-                               context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-
-                               await context.Response.WriteAsync(ServiceCollectionExtensions.UnauthorizedResponseMessage);
-                           }
-                       };
-
-            // 允许用户在默认事件基础上扩展（不会覆盖上面的默认事件）
-            _jwtBearerEventsAction?.Invoke(o.Events);
+            if (_jwtBearerEventsAction is not null)
+            {
+                o.Events ??= new JwtBearerEvents();
+                _jwtBearerEventsAction.Invoke(o.Events);
+            }
         }
     }
 }

@@ -11,20 +11,16 @@ namespace Microsoft.Extensions.DependencyInjection
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        internal const string UnauthorizedResponseMessage = "{\"isSuccess\":false,\"message\":\"您无权访问该接口，请确保已经登录\",\"code\":\"401\"}";
-
         /// <summary>
         /// 添加 JWT Bearer 认证
         /// </summary>
         /// <param name="builder">认证构建器</param>
         /// <param name="jwtConfigAction">JWT Token 配置</param>
-        /// <param name="jwtBearerEventsAction">JwtBearerEvents 自定义配置（可选，用于扩展默认配置，不会覆盖默认事件）</param>
-        /// <param name="useDefaultChallengeResponse">是否使用库内置的自定义 401 响应体（默认 true，保持向后兼容）；设为 false 则回退到 ASP.NET Core 默认 401 行为（保留 WWW-Authenticate 头）</param>
+        /// <param name="jwtBearerEventsAction">JwtBearerEvents 自定义配置（可选）</param>
         public static AuthenticationBuilder AddJwtBearerAuthentication(
             this AuthenticationBuilder builder,
             Action<JwtTokenConfig>? jwtConfigAction = null,
-            Action<JwtBearerEvents>? jwtBearerEventsAction = null,
-            bool useDefaultChallengeResponse = true)
+            Action<JwtBearerEvents>? jwtBearerEventsAction = null)
         {
             if (builder == null)
                 throw new ArgumentNullException(nameof(builder));
@@ -43,7 +39,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 "JWT 密钥不满足安全要求：非空、长度至少 32 位、至少 8 种不同字符")
                             .ValidateOnStart();
 
-            // 服务无状态，使用 Singleton；依赖 IOptionsMonitor 支持配置热更新
+            // 服务无状态，使用 Singleton；配置在构造期读取，避免签发与中间件校验在配置变更后分叉
             // TryAddSingleton 避免重复注册
             builder.Services.TryAddSingleton<IBearerAuthService, JwtBearerAuthService>();
 
@@ -52,13 +48,11 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.Services.AddSingleton<IConfigureOptions<JwtBearerOptions>>(sp =>
                 new JwtBearerOptionsSetup(
                     sp.GetRequiredService<IOptions<JwtTokenConfig>>(),
-                    jwtBearerEventsAction,
-                    useDefaultChallengeResponse));
+                    jwtBearerEventsAction));
             builder.Services.AddSingleton<IConfigureNamedOptions<JwtBearerOptions>>(sp =>
                 new JwtBearerOptionsSetup(
                     sp.GetRequiredService<IOptions<JwtTokenConfig>>(),
-                    jwtBearerEventsAction,
-                    useDefaultChallengeResponse));
+                    jwtBearerEventsAction));
 
             // 注册 JwtBearer 认证中间件（不在此处配置 TVP/Events，由上面的 ConfigureOptions 负责）
             builder.AddJwtBearer();

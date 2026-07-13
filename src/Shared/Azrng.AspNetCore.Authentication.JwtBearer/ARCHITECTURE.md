@@ -8,8 +8,8 @@
 
 - **简洁易用**：最少的配置即可完成 JWT 认证集成
 - **安全可靠**：内置密钥复杂度验证、完整的 Token 验证机制
-- **高性能**：使用 `Lazy<T>` 缓存加密对象，减少重复创建开销
-- **可扩展**：支持自定义 `JwtBearerEvents`，灵活扩展默认行为
+- **高性能**：缓存加密对象，减少重复创建开销
+- **可扩展**：支持自定义 `JwtBearerEvents`，保持 ASP.NET Core 标准默认行为
 - **多框架支持**：支持 .NET 6.0 - .NET 10.0
 
 ## 2. 项目结构
@@ -18,6 +18,7 @@
 Azrng.AspNetCore.Authentication.JwtBearer/
 ├── IBearerAuthService.cs              # JWT 服务接口定义
 ├── JwtBearerAuthService.cs            # JWT 服务实现
+├── JwtBearerEventsExtensions.cs       # JwtBearerEvents 辅助扩展
 ├── JwtTokenConfig.cs                  # JWT 配置选项类
 ├── ServiceCollectionExtensions.cs     # DI 扩展方法
 ├── GlobalUsings.cs                    # 全局 using 声明
@@ -53,8 +54,8 @@ Azrng.AspNetCore.Authentication.JwtBearer/
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │      JwtBearerAuthService (实现)                         │    │
 │  │  ┌─────────────────────────────────────────────────┐    │    │
-│  │  │ • Lazy<SecurityKey>     (密钥缓存)               │    │    │
-│  │  │ • Lazy<SigningCredentials> (签名凭证缓存)        │    │    │
+│  │  │ • SymmetricSecurityKey     (密钥缓存)             │    │    │
+│  │  │ • SigningCredentials (签名凭证缓存)               │    │    │
 │  │  │ • JwtSecurityTokenHandler (Token 处理器)         │    │    │
 │  │  └─────────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────────┘    │
@@ -83,7 +84,7 @@ Azrng.AspNetCore.Authentication.JwtBearer/
 │  │  │ • AddJwtBearerAuthentication()                   │    │    │
 │  │  │   - 密钥复杂度验证                               │    │    │
 │  │  │   - 注册 JWT Bearer 认证                          │    │    │
-│  │  │   - 配置默认事件处理                             │    │    │
+│  │  │   - 应用用户自定义事件处理                       │    │    │
 │  │  │   - 注册 IBearerAuthService                       │    │    │
 │  │  └─────────────────────────────────────────────────┘    │    │
 │  └─────────────────────────────────────────────────────────┘    │
@@ -127,18 +128,18 @@ public class JwtBearerAuthService : IBearerAuthService
     // 静态 Token 处理器（线程安全，全局共享）
     private static readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-    // 注入 IOptionsMonitor 支持配置热更新；服务注册为 Singleton（无状态）
-    private readonly IOptionsMonitor<JwtTokenConfig> _optionsMonitor;
+    // 构造期读取已校验配置；服务注册为 Singleton（无状态）
+    private readonly JwtTokenConfig _config;
 
-    // 基于当前配置按需创建签名凭证（密钥可能随配置变化）
-    private SigningCredentials CreateSigningCredentials() { /* ... */ }
+    // 基于固定配置缓存签名凭证
+    private readonly SigningCredentials _signingCredentials;
 }
 ```
 
 **设计策略**:
-- 服务无状态，注册为 Singleton；依赖 `IOptionsMonitor<JwtTokenConfig>`，配置变更可即时生效
+- 服务无状态，注册为 Singleton；构造期读取 `IOptions<JwtTokenConfig>`，避免签发与中间件校验在配置变更后分叉
 - `JwtSecurityTokenHandler` 使用 `static readonly`，因为它是线程安全的，全局共享
-- 签名凭证基于当前配置按需构建（配置可能热更新，故不缓存为构造期字段）
+- 签名凭证基于固定配置缓存，减少重复创建
 
 #### 3.2.3 JwtTokenConfig (配置)
 
@@ -284,9 +285,8 @@ sequenceDiagram
         Controller-->>Client: 200 OK
     else Token Invalid/Expired
         TokenHandler-->>JwtBearerMiddleware: SecurityTokenException
-        JwtBearerMiddleware->>JwtBearerMiddleware: OnAuthenticationFailed
-        JwtBearerMiddleware->>JwtBearerMiddleware: OnChallenge
-        JwtBearerMiddleware-->>Client: 401 Unauthorized<br/>{"isSuccess": false, "message": "..."}
+        JwtBearerMiddleware->>JwtBearerMiddleware: 按 ASP.NET Core 默认流程处理
+        JwtBearerMiddleware-->>Client: 401 Unauthorized<br/>WWW-Authenticate
     end
 ```
 
@@ -317,13 +317,13 @@ sequenceDiagram
             │                       │
             ▼                       ▼
      ┌──────────────┐        ┌─────────────────────┐
-     │OnTokenValidated│       │OnAuthenticationFailed│ ← 设置过期标记
+     │OnTokenValidated│       │OnAuthenticationFailed│ ← 用户可自定义
      └──────┬───────┘        └─────────┬───────────┘
             │                          │
             ▼                          ▼
      ┌──────────────┐        ┌───────────────────┐
-     │ 执行请求      │        │    OnChallenge     │ ← 返回 401
-     └──────────────┘        │   自定义错误响应     │
+     │ 执行请求      │        │    OnChallenge     │ ← 用户可自定义
+     └──────────────┘        │   标准 401 响应      │
                              └───────────────────┘
 
 ```
@@ -336,14 +336,14 @@ sequenceDiagram
 // 接口与实现分离；服务无状态，注册为 Singleton
 builder.Services.TryAddSingleton<IBearerAuthService, JwtBearerAuthService>();
 
-// 使用 IOptionsMonitor<T> 模式接收配置，支持热更新
-public JwtBearerAuthService(IOptionsMonitor<JwtTokenConfig> optionsMonitor)
+// 使用 IOptions<T> 模式接收已校验配置
+public JwtBearerAuthService(IOptions<JwtTokenConfig> options)
 {
-    _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
+    _config = options?.Value ?? throw new ArgumentNullException(nameof(options));
 }
 ```
 
-### 5.2 配置校验与热更新 (Options Validation & Hot Reload)
+### 5.2 配置校验 (Options Validation)
 
 配置校验通过 `IValidateOptions<JwtTokenConfig>` 收口，配合 `ValidateOnStart`：
 
@@ -358,7 +358,6 @@ builder.Services.AddOptions<JwtTokenConfig>()
 **好处**:
 - 配置错误在启动时即暴露，而非运行时才报错
 - 默认密钥被清空，避免误用公开密钥
-- 服务依赖 `IOptionsMonitor`，配置变更可即时生效
 
 ### 5.3 策略模式 (Strategy Pattern)
 
@@ -375,21 +374,28 @@ services.AddAuthentication()
     );
 ```
 
-### 5.4 模板方法模式 (Template Method)
+### 5.4 事件配置 (JwtBearer Events)
 
-默认的 `JwtBearerEvents` 作为模板，用户可以在其基础上扩展：
+库不内置默认 `JwtBearerEvents`，用户按需显式配置：
 
 ```csharp
-// 1. 定义默认事件模板
-var defaultEvents = new JwtBearerEvents {
-    OnAuthenticationFailed = /* 默认实现 */,
-    OnChallenge = /* 默认实现 */
-};
-
-// 2. 允许用户扩展
-o.Events = defaultEvents;
-jwtBearerEventsAction?.Invoke(o.Events);  // 用户自定义
+if (jwtBearerEventsAction is not null)
+{
+    o.Events ??= new JwtBearerEvents();
+    jwtBearerEventsAction.Invoke(o.Events);
+}
 ```
+
+如需启用 Azrng 预置响应行为，可通过显式扩展方法配置：
+
+```csharp
+events.UseAzrngJwtBearerDefaultResponses();
+// 或只启用某一项
+events.UseTokenExpiredHeader();
+events.UseUnauthorizedJsonResponse();
+```
+
+这些扩展方法会包装调用前已存在的事件委托，避免直接丢失用户已有事件处理。
 
 ## 6. 扩展点
 
@@ -430,7 +436,7 @@ var token = _bearerAuthService.CreateToken(claims);
             // 记录日志
             _logger.LogError(context.Exception, "Token 验证失败");
 
-            // 保留默认过期标记
+            // 按需添加过期标记
             if (context.Exception is SecurityTokenExpiredException)
                 context.Response.Headers.Add("Token-Expired", "true");
 
@@ -511,7 +517,7 @@ private static readonly JwtSecurityTokenHandler _tokenHandler = new();
 ### 8.3 编码约定
 
 - 使用 `Encoding.UTF8` 而非 `Encoding.Default`
-- 签名凭证按需构建，配置热更新时自动适配
+- 签名凭证构造期缓存，避免重复创建
 
 ## 9. 依赖关系
 
