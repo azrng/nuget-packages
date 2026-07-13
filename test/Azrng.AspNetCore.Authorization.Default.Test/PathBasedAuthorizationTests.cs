@@ -104,6 +104,9 @@ public class PathBasedAuthorizationTests
     // 大小写不敏感（README 宣称的行为）
     [InlineData("/api/login", "/API/LOGIN", true)]
     [InlineData("/api/login", "/Api/Login/Callback", true)]
+    // 配置项会在注册时规范化，避免缺失前导斜杠或尾随斜杠导致请求期异常
+    [InlineData("api/login", "/api/login", true)]
+    [InlineData(" /api/login/ ", "/api/login/callback", true)]
     public async Task AuthorizeAsync_AnonymousPathMatching_ShouldUseSegmentPrefix(
         string configured, string requested, bool expectedSucceed)
     {
@@ -180,15 +183,59 @@ public class PathBasedAuthorizationTests
     {
         var requirement = new PermissionRequirement("/api/login", "/api/health");
 
-        requirement.AllowAnonymousPaths.Should().BeAssignableTo<IReadOnlyCollection<string>>();
+        requirement.AllowAnonymousPaths.Should().BeOfType<string[]>();
         var snapshot = requirement.AllowAnonymousPaths.ToArray();
         snapshot.Should().Equal("/api/login", "/api/health");
+    }
+
+    [Fact]
+    public void PermissionRequirement_Constructor_ShouldDefensivelyCopyInputArray()
+    {
+        var paths = new[] { "/api/login", "/api/health" };
+        var requirement = new PermissionRequirement(paths);
+
+        paths[0] = "/api/changed";
+
+        requirement.AllowAnonymousPaths.Should().Equal("/api/login", "/api/health");
+    }
+
+    [Fact]
+    public void PermissionRequirement_AllowAnonymousPathsGetter_ShouldReturnCopy()
+    {
+        var requirement = new PermissionRequirement("/api/login");
+        var exposed = requirement.AllowAnonymousPaths;
+
+        exposed[0] = "/api/changed";
+
+        requirement.AllowAnonymousPaths.Should().Equal("/api/login");
+    }
+
+    [Fact]
+    public void PermissionRequirement_AllowAnonymousPathsSetter_ShouldNormalizeAndCopy()
+    {
+        var paths = new[] { " api/login/ ", "", null!, @"api\health" };
+        var requirement = new PermissionRequirement();
+
+        requirement.AllowAnonymousPaths = paths;
+        paths[0] = "/api/changed";
+
+        requirement.AllowAnonymousPaths.Should().Equal("/api/login", "/api/health");
     }
 
     [Fact]
     public void PermissionRequirement_Constructor_ShouldThrow_OnNullPaths()
     {
         Action act = () => new PermissionRequirement(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void PermissionRequirement_AllowAnonymousPathsSetter_ShouldThrow_OnNullPaths()
+    {
+        var requirement = new PermissionRequirement();
+
+        Action act = () => requirement.AllowAnonymousPaths = null!;
+
         act.Should().Throw<ArgumentNullException>();
     }
 

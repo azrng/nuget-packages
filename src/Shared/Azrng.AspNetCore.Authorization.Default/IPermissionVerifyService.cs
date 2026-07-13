@@ -27,7 +27,9 @@ public interface IPermissionVerifyService
     ///
     ///     // 从数据库获取用户权限
     ///     var userPermissions = await _userRepository.GetUserPermissionsAsync(userId);
-    ///     return userPermissions.Any(p => path.Contains(p.Path.ToLowerInvariant()));
+    ///     var requestPath = new PathString(path);
+    ///     return userPermissions.Any(p =>
+    ///         requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     /// }
     /// </code>
     /// </example>

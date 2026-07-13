@@ -76,7 +76,9 @@ public class MyPermissionService : IPermissionVerifyService
 
         // 检查用户是否有访问该路径的权限
         var permissions = userPermissions[userId];
-        return permissions.Any(p => path.Contains(p.ToLowerInvariant()));
+        var requestPath = new PathString(path);
+        return permissions.Any(p =>
+            requestPath.StartsWithSegments(new PathString(p), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
@@ -151,7 +153,9 @@ public class DatabasePermissionService : IPermissionVerifyService
         var permissions = await _repository.GetUserPermissionsAsync(userId);
 
         // 检查是否有权限访问该路径
-        return permissions.Any(p => path.Contains(p.Path.ToLowerInvariant()));
+        var requestPath = new PathString(path);
+        return permissions.Any(p =>
+            requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
@@ -256,7 +260,7 @@ public class CachedPermissionService : IPermissionVerifyService
 ### 1.2.0 (最新)
 - 🔒 **安全修复**：匿名路径匹配从 `string.Contains` 子串匹配改为 `PathString.StartsWithSegments` 路径段前缀匹配，修复子串命中导致越权放行的缺陷（例如配置 `/api/login` 时 `/admin/api/login/delete` 不再被放行）
 - 🐛 修复：二次认证检查改用 `AuthenticateResult.Succeeded` 判断，原 `result.Principal == null` 语义不严谨
-- 🔒 收紧：`PermissionRequirement.AllowAnonymousPaths` 改为只读 `IReadOnlyCollection<string>`，构造函数对 null 做防御性校验，避免运行期被外部修改
+- 🔒 收紧：`PermissionRequirement.AllowAnonymousPaths` 保持 `string[]` 公开 API 兼容，内部做防御性拷贝和路径规范化，避免运行期被外部修改
 - ✅ 补充：安全相关回归测试（子串误匹配、路径段边界、大小写、认证分支等）
 
 ### 1.1.0

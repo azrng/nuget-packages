@@ -53,7 +53,7 @@ internal class PermissionAuthorizationHandler : AuthorizationHandler<PermissionR
         // 使用 StartsWithSegments 按路径段前缀匹配，避免 Contains 子串匹配导致越权放行
         // 例如配置 "/api/login" 时，"/api/login" 与 "/api/login/callback" 命中，
         // 但 "/admin/api/login/delete"、"/api/login-export" 这类仅含子串的路径不会被放行
-        if (IsAllowAnonymousPath(requestPath, requirement.AllowAnonymousPaths))
+        if (IsAllowAnonymousPath(requestPath, requirement.NormalizedAllowAnonymousPaths))
         {
             _logger.LogDebug("路径 {Path} 允许匿名访问", requestPath.Value);
             context.Succeed(requirement);

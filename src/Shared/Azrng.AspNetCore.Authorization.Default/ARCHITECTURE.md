@@ -155,12 +155,12 @@ protected override async Task HandleRequirementAsync(
     // 1. 获取 HTTP 上下文
     var httpContext = _accessor.HttpContext;
 
-    // 2. 获取请求路径（转换为小写）
-    var queryUrl = httpContext.Request.Path.Value?.ToLowerInvariant();
+    // 2. 获取请求路径
+    var requestPath = httpContext.Request.Path;
 
     // 3. 检查是否为匿名路径
     if (requirement.AllowAnonymousPaths.Any(t =>
-        queryUrl.Contains(t.ToLowerInvariant())))
+        requestPath.StartsWithSegments(new PathString(t), StringComparison.OrdinalIgnoreCase)))
     {
         context.Succeed(requirement); // 授权成功
         return;
@@ -176,6 +176,7 @@ protected override async Task HandleRequirementAsync(
     // 5. 验证用户权限
     var permissionVerifyService = httpContext.RequestServices
         .GetRequiredService<IPermissionVerifyService>();
+    var queryUrl = requestPath.Value?.ToLowerInvariant();
     var hasPermission = await permissionVerifyService.HasPermission(queryUrl);
 
     if (!hasPermission)
@@ -233,8 +234,9 @@ public class MyPermissionService : IPermissionVerifyService
             .GetUserPermissionsAsync(userId);
 
         // 检查权限
+        var requestPath = new PathString(path);
         return permissions.Any(p =>
-            path.Contains(p.Path.ToLowerInvariant()));
+            requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
@@ -383,7 +385,7 @@ public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
          ↓                            ↓
 ┌──────────────────────┐    ┌──────────────────────────────┐
 │ 8. 匿名路径检查        │    │ 9. 认证检查                   │
-│ queryUrl.Contains()  │    │ User.Identity.IsAuthenticated │
+│ StartsWithSegments() │    │ User.Identity.IsAuthenticated │
 │                      │    │                              │
 │ [是] ────────────────┼────┼──> [是]                      │
 │   │                  │    │   │                         │
@@ -507,14 +509,14 @@ internal class PermissionAuthorizationHandler
 
 ### 4. 路径匹配逻辑
 
-路径匹配使用 `Contains` 且不区分大小写：
+路径匹配使用 `PathString.StartsWithSegments` 按路径段前缀匹配，且不区分大小写：
 
 ```csharp
-var queryUrl = httpContext.Request.Path.Value?.ToLowerInvariant();
+var requestPath = httpContext.Request.Path;
 
 // 检查是否在允许匿名访问的路径列表中
 if (requirement.AllowAnonymousPaths.Any(t =>
-    queryUrl.Contains(t.ToLowerInvariant())))
+    requestPath.StartsWithSegments(new PathString(t), StringComparison.OrdinalIgnoreCase)))
 {
     context.Succeed(requirement);
     return;
@@ -524,9 +526,11 @@ if (requirement.AllowAnonymousPaths.Any(t =>
 **匹配示例**：
 - 配置：`AllowAnonymousPaths = ["/api/login", "/api/public"]`
 - `/api/login` → ✓ 匹配
-- `/api/login/callback` → ✓ 匹配（包含 `/api/login`）
-- `/api/public/data` → ✓ 匹配（包含 `/api/public`）
+- `/api/login/callback` → ✓ 匹配（路径段前缀）
+- `/api/public/data` → ✓ 匹配（路径段前缀）
 - `/api/private` → ✗ 不匹配
+- `/api/login-export` → ✗ 不匹配（不是路径段边界）
+- `/admin/api/login/delete` → ✗ 不匹配（不是前缀）
 - `/API/LOGIN` → ✓ 匹配（不区分大小写）
 
 ---
@@ -556,8 +560,9 @@ public class DatabasePermissionService : IPermissionVerifyService
         var permissions = await _repository
             .GetUserPermissionsAsync(userId);
 
+        var requestPath = new PathString(path);
         return permissions.Any(p =>
-            path.Contains(p.Path.ToLowerInvariant()));
+            requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
@@ -716,7 +721,9 @@ public async Task<bool> HasPermission(string path)
 {
     // 从数据库异步获取权限
     var permissions = await _repository.GetUserPermissionsAsync(userId);
-    return permissions.Any(p => path.Contains(p.Path));
+    var requestPath = new PathString(path);
+    return permissions.Any(p =>
+        requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
 }
 ```
 
@@ -742,7 +749,9 @@ public async Task<bool> HasPermission(string path)
     try
     {
         var permissions = await _repository.GetUserPermissionsAsync(userId);
-        return permissions.Any(p => path.Contains(p.Path));
+        var requestPath = new PathString(path);
+        return permissions.Any(p =>
+            requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     }
     catch (Exception ex)
     {
@@ -800,15 +809,15 @@ Authorization: Bearer <valid_token>
 
 **问题**：Windows 不区分大小写，Linux 区分大小写
 
-**解决方案**：统一转换为小写
+**解决方案**：使用带 `StringComparison.OrdinalIgnoreCase` 的路径段前缀匹配
 
 ```csharp
-var queryUrl = httpContext.Request.Path.Value?.ToLowerInvariant();
+var requestPath = httpContext.Request.Path;
 
 if (requirement.AllowAnonymousPaths.Any(t =>
-    queryUrl.Contains(t.ToLowerInvariant())))
+    requestPath.StartsWithSegments(new PathString(t), StringComparison.OrdinalIgnoreCase)))
 {
-    // 使用 ToLowerInvariant() 确保一致性
+    // 使用 OrdinalIgnoreCase 确保大小写行为一致
 }
 ```
 
@@ -823,7 +832,7 @@ GET /api/users/123
 
 // 检查
 queryUrl = "/api/users/123"
-AllowAnonymousPaths = ["/api/users"]  // ✓ 匹配成功（Contains）
+AllowAnonymousPaths = ["/api/users"]  // ✓ 匹配成功（路径段前缀）
 ```
 
 **建议**：
@@ -878,7 +887,9 @@ public class CachedPermissionService : IPermissionVerifyService
             return _inner.GetAllPermissions(userId);
         });
 
-        return permissions.Any(p => path.Contains(p.Path));
+        var requestPath = new PathString(path);
+        return permissions.Any(p =>
+            requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
@@ -893,22 +904,24 @@ public class CachedPermissionService : IPermissionVerifyService
 ```csharp
 public class OptimizedPermissionService : IPermissionVerifyService
 {
-    private readonly List<string> _compiledPatterns;
+    private readonly List<PathString> _compiledPatterns;
 
     public OptimizedPermissionService()
     {
         // 预编译路径模式（使用正则表达式或其他方法）
-        _compiledPatterns = new List<string>
+        _compiledPatterns = new List<PathString>
         {
-            "/api/users".ToLowerInvariant(),
-            "/api/products".ToLowerInvariant()
+            new("/api/users"),
+            new("/api/products")
         };
     }
 
     public Task<bool> HasPermission(string path)
     {
         // 使用预编译的模式进行匹配
-        return Task.FromResult(_compiledPatterns.Any(p => path.Contains(p)));
+        var requestPath = new PathString(path);
+        return Task.FromResult(_compiledPatterns.Any(p =>
+            requestPath.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)));
     }
 }
 ```
@@ -923,7 +936,9 @@ public async Task<bool> HasPermission(string path)
 {
     var permissions = await _repository
         .GetUserPermissionsAsync(userId);
-    return permissions.Any(p => path.Contains(p.Path));
+    var requestPath = new PathString(path);
+    return permissions.Any(p =>
+        requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase));
 }
 ```
 
@@ -934,7 +949,9 @@ public async Task<bool> HasPermission(string path)
 public Task<bool> HasPermission(string path)
 {
     var permissions = _repository.GetUserPermissions(userId);
-    return Task.FromResult(permissions.Any(p => path.Contains(p.Path)));
+    var requestPath = new PathString(path);
+    return Task.FromResult(permissions.Any(p =>
+        requestPath.StartsWithSegments(new PathString(p.Path), StringComparison.OrdinalIgnoreCase)));
 }
 ```
 
@@ -957,7 +974,9 @@ public class BatchPermissionService : IPermissionVerifyService
             _userPermissions[userId] = permissions.Select(p => p.Path).ToList();
         }
 
-        return _userPermissions[userId].Any(p => path.Contains(p.ToLowerInvariant()));
+        var requestPath = new PathString(path);
+        return _userPermissions[userId].Any(p =>
+            requestPath.StartsWithSegments(new PathString(p), StringComparison.OrdinalIgnoreCase));
     }
 }
 ```
