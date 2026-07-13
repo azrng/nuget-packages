@@ -127,18 +127,18 @@ public class JwtBearerAuthService : IBearerAuthService
     // 静态 Token 处理器（线程安全，全局共享）
     private static readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-    private readonly JwtTokenConfig _config;
+    // 注入 IOptionsMonitor 支持配置热更新；服务注册为 Singleton（无状态）
+    private readonly IOptionsMonitor<JwtTokenConfig> _optionsMonitor;
 
-    // Lazy 延迟初始化 + 缓存，仅在首次访问时创建
-    private readonly Lazy<SymmetricSecurityKey> _securityKey;
-    private readonly Lazy<SigningCredentials> _signingCredentials;
+    // 基于当前配置按需创建签名凭证（密钥可能随配置变化）
+    private SigningCredentials CreateSigningCredentials() { /* ... */ }
 }
 ```
 
-**性能优化策略**:
-- 使用 `Lazy<T>` 延迟初始化 `SymmetricSecurityKey` 和 `SigningCredentials`
-- 这些对象创建成本较高，通过缓存避免每次生成 Token 时重新创建
-- 使用 `static readonly` 的 `JwtSecurityTokenHandler`，因为它是线程安全的
+**设计策略**:
+- 服务无状态，注册为 Singleton；依赖 `IOptionsMonitor<JwtTokenConfig>`，配置变更可即时生效
+- `JwtSecurityTokenHandler` 使用 `static readonly`，因为它是线程安全的，全局共享
+- 签名凭证基于当前配置按需构建（配置可能热更新，故不缓存为构造期字段）
 
 #### 3.2.3 JwtTokenConfig (配置)
 
@@ -148,7 +148,7 @@ public class JwtBearerAuthService : IBearerAuthService
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `JwtSecretKey` | `string` | `"SecretKeyOfDoomThatMustBeAMinimumNumberOfBytes"` | 签名密钥（≥32字符） |
+| `JwtSecretKey` | `string` | （空，必填） | 签名密钥（≥32 字符，至少 8 种不同字符，强制校验） |
 | `JwtIssuer` | `string` | `"issuer"` | Token 颁发者 |
 | `JwtAudience` | `string` | `"audience"` | Token 受众 |
 | `ValidTime` | `TimeSpan` | `24小时` | Token 有效期 |
@@ -333,28 +333,32 @@ sequenceDiagram
 ### 5.1 依赖注入 (Dependency Injection)
 
 ```csharp
-// 接口与实现分离
-builder.Services.AddScoped<IBearerAuthService, JwtBearerAuthService>();
+// 接口与实现分离；服务无状态，注册为 Singleton
+builder.Services.TryAddSingleton<IBearerAuthService, JwtBearerAuthService>();
 
-// 使用 IOptions<T> 模式接收配置
-public JwtBearerAuthService(IOptions<JwtTokenConfig> options)
+// 使用 IOptionsMonitor<T> 模式接收配置，支持热更新
+public JwtBearerAuthService(IOptionsMonitor<JwtTokenConfig> optionsMonitor)
 {
-    _config = options?.Value ?? new JwtTokenConfig();
+    _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
 }
 ```
 
-### 5.2 延迟初始化 (Lazy Initialization)
+### 5.2 配置校验与热更新 (Options Validation & Hot Reload)
+
+配置校验通过 `IValidateOptions<JwtTokenConfig>` 收口，配合 `ValidateOnStart`：
 
 ```csharp
-// 仅在首次访问时创建，之后缓存复用
-private readonly Lazy<SymmetricSecurityKey> _securityKey =
-    new(() => new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config.JwtSecretKey)));
+// 无论通过哪条注册路径，首次解析 IOptions<JwtTokenConfig> 或应用启动时都会强制校验
+builder.Services.AddSingleton<IValidateOptions<JwtTokenConfig>, JwtTokenConfigValidator>();
+builder.Services.AddOptions<JwtTokenConfig>()
+                .Validate(/* 长度 ≥ 32、至少 8 种不同字符 */)
+                .ValidateOnStart();
 ```
 
 **好处**:
-- 减少启动时的初始化开销
-- 避免不必要的内存占用
-- 提升运行时性能
+- 配置错误在启动时即暴露，而非运行时才报错
+- 默认密钥被清空，避免误用公开密钥
+- 服务依赖 `IOptionsMonitor`，配置变更可即时生效
 
 ### 5.3 策略模式 (Strategy Pattern)
 
@@ -491,29 +495,23 @@ builder.AddJwtBearer(options =>
 
 ## 8. 性能优化
 
-### 8.1 对象缓存
+### 8.1 静态 Token 处理器
 
 ```csharp
-// 静态实例，线程安全
+// 静态实例，线程安全，全局共享
 private static readonly JwtSecurityTokenHandler _tokenHandler = new();
-
-// Lazy 延迟缓存
-private readonly Lazy<SymmetricSecurityKey> _securityKey;
-private readonly Lazy<SigningCredentials> _signingCredentials;
 ```
 
-**性能对比**:
+`JwtSecurityTokenHandler` 线程安全，使用 `static readonly` 避免每次请求重建。
 
-| 场景 | 未缓存 | 使用 Lazy |
-|------|--------|-----------|
-| 首次创建 | ~5ms | ~5ms |
-| 后续创建 | ~5ms | ~0.1ms |
-| 1000 次 Token 生成 | ~5000ms | ~100ms |
+### 8.2 单例服务
 
-### 8.2 编码优化
+服务无状态，注册为 Singleton，避免每请求创建实例的开销。
+
+### 8.3 编码约定
 
 - 使用 `Encoding.UTF8` 而非 `Encoding.Default`
-- 避免多次 `GetBytes()` 调用
+- 签名凭证按需构建，配置热更新时自动适配
 
 ## 9. 依赖关系
 

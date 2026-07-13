@@ -33,7 +33,7 @@ services.AddAuthentication(options =>
 {
     options.JwtAudience = "your-audience";
     options.JwtIssuer = "your-issuer";
-    options.JwtSecretKey = "your-secret-key-at-least-16-characters-long";
+    options.JwtSecretKey = "your-secret-key-at-least-32-characters-long";
 });
 
 // 启用认证授权
@@ -162,7 +162,7 @@ services.AddAuthentication()
 services.AddAuthentication()
     .AddJwtBearerAuthentication(options =>
     {
-        // JWT 签名密钥（最少16位）
+        // JWT 签名密钥（最少 32 位，至少 8 种不同字符）
         options.JwtSecretKey = "your-very-long-secret-key";
 
         // JWT 颁发者
@@ -193,7 +193,7 @@ services.AddAuthentication()
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `JwtSecretKey` | `string` | 默认密钥 | JWT 签名密钥（≥16位） |
+| `JwtSecretKey` | `string` | （无默认值，必填） | JWT 签名密钥（≥32 位，至少 8 种不同字符） |
 | `JwtIssuer` | `string` | `"issuer"` | JWT 颁发者标识 |
 | `JwtAudience` | `string` | `"audience"` | JWT 受众标识 |
 | `ValidTime` | `TimeSpan` | `24小时` | Token 有效期 |
@@ -211,11 +211,29 @@ services.AddAuthentication()
      "code": "401"
    }
    ```
+   如需回退到 ASP.NET Core 默认 401 行为（保留标准 `WWW-Authenticate` 响应头），可在 `AddJwtBearerAuthentication` 中传入 `useDefaultChallengeResponse: false`：
+   ```csharp
+   services.AddAuthentication()
+       .AddJwtBearerAuthentication(
+           jwtConfig => { /* ... */ },
+           useDefaultChallengeResponse: false);
+   ```
 3. **Token 验证**：完整验证签名、过期时间、颁发者和受众
+4. **密钥强制校验**：配置在首次解析或应用启动时强制校验（非空、长度 ≥ 32、至少 8 种不同字符），无默认密钥
 
 ## 版本历史
 
-### 1.4.0 (最新)
+### 1.5.0 (最新)
+- 🔒 **安全**：移除硬编码默认密钥，改为必填并强制校验（长度 ≥ 32、至少 8 种不同字符），通过 `IValidateOptions` 收口，任何注册路径都会校验
+- 🔒 **安全**：`CreateToken` 移除掩盖真实异常的 try-catch；`ValidateToken`/`GetJwt*` 对空 token 显式抛 `ArgumentException`，仅吞 `SecurityTokenException`
+- 🐛 修复：`GetJwtInfo` 在 claim 值为 null 时不再抛 NRE
+- 🏗️ 重构：`IBearerAuthService` 改为 Singleton（无状态），依赖 `IOptionsMonitor` 支持配置热更新
+- 🏗️ 重构：抽取共享 `TokenValidationParameters`，中间件与 `ValidateToken` 使用一致规则（统一 `ClockSkew = Zero`）
+- 🆕 新增：`AddJwtBearerAuthentication` 新增 `useDefaultChallengeResponse` 开关，可关闭内置自定义 401 响应体
+- 🔧 `OnAuthenticationFailed` 改用 `is` 匹配派生类，`Headers.Append` 避免重复添加头抛异常
+- ✅ 测试：从 7 项扩展到 27 项（覆盖过期 token、空 token、NRE、Singleton、events 叠加、开关等场景），目标框架扩展到 net8/9/10
+
+### 1.4.0
 - 🆕 新增：支持自定义 `JwtBearerEvents`，可在默认配置基础上扩展
 - ⚡ 优化：性能优化，缓存 `SecurityKey` 和 `SigningCredentials`
 - ✅ 优化：增强 `ValidateToken` 方法，完整验证签名、过期时间、颁发者、受众

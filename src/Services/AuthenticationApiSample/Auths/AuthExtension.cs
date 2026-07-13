@@ -17,22 +17,24 @@ public static class AuthExtension
                     x.AddScheme<CustomerAuthenticationHandler>(CustomerAuthenticationHandler.CustomerSchemeName,
                         CustomerAuthenticationHandler.CustomerSchemeName);
                 })
-                .AddJwtBearerAuthentication(jwtBearerEventsAction: (option) =>
-                {
-                    option.OnMessageReceived = context =>
+                .AddJwtBearerAuthentication(
+                    jwtConfigAction: option => configuration.GetSection("JwtTokenConfig").Bind(option),
+                    jwtBearerEventsAction: (option) =>
                     {
-                        var accessToken = context.Request.Query["access_token"];
-                        var path = context.HttpContext.Request.Path;
-
-                        // 如果是 SignalR 请求且包含 access_token，则从查询参数读取
-                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+                        option.OnMessageReceived = context =>
                         {
-                            context.Token = accessToken;
-                        }
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
 
-                        return Task.CompletedTask;
-                    };
-                })
+                            // 如果是 SignalR 请求且包含 access_token，则从查询参数读取
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+                            {
+                                context.Token = accessToken;
+                            }
+
+                            return Task.CompletedTask;
+                        };
+                    })
                 .AddBasicAuthentication(options =>
                 {
                     options.UserName = "admin";

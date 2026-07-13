@@ -1,8 +1,8 @@
-﻿using Azrng.AspNetCore.Authentication.JwtBearer;
+using Azrng.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -11,7 +11,7 @@ namespace Microsoft.Extensions.DependencyInjection
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        private const string UnauthorizedResponseMessage = "{\"isSuccess\":false,\"message\":\"您无权访问该接口，请确保已经登录\",\"code\":\"401\"}";
+        internal const string UnauthorizedResponseMessage = "{\"isSuccess\":false,\"message\":\"您无权访问该接口，请确保已经登录\",\"code\":\"401\"}";
 
         /// <summary>
         /// 添加 JWT Bearer 认证
@@ -19,92 +19,49 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="builder">认证构建器</param>
         /// <param name="jwtConfigAction">JWT Token 配置</param>
         /// <param name="jwtBearerEventsAction">JwtBearerEvents 自定义配置（可选，用于扩展默认配置，不会覆盖默认事件）</param>
+        /// <param name="useDefaultChallengeResponse">是否使用库内置的自定义 401 响应体（默认 true，保持向后兼容）；设为 false 则回退到 ASP.NET Core 默认 401 行为（保留 WWW-Authenticate 头）</param>
         public static AuthenticationBuilder AddJwtBearerAuthentication(
             this AuthenticationBuilder builder,
             Action<JwtTokenConfig>? jwtConfigAction = null,
-            Action<JwtBearerEvents>? jwtBearerEventsAction = null)
+            Action<JwtBearerEvents>? jwtBearerEventsAction = null,
+            bool useDefaultChallengeResponse = true)
         {
             if (builder == null)
                 throw new ArgumentNullException(nameof(builder));
 
-            var config = new JwtTokenConfig();
-            jwtConfigAction?.Invoke(config);
-
-            // 验证密钥长度和复杂度
-            if (string.IsNullOrWhiteSpace(config.JwtSecretKey))
-                throw new ArgumentException("JWT 密钥不能为空");
-
-            if (config.JwtSecretKey.Length < 32)
-                throw new ArgumentException("JWT 密钥长度必须至少为 32 位字符，以确保安全性");
-
-            // 检查密钥复杂度（避免全为相同字符或简单模式）
-            if (config.JwtSecretKey.Distinct().Count() < 8)
-                throw new ArgumentException("JWT 密钥复杂度不足，请使用包含多种字符的密钥");
-
-            builder.Services.AddScoped<IBearerAuthService, JwtBearerAuthService>();
+            // 注册配置：既允许通过 Action 显式提供，也支持后续从 IConfiguration 绑定
             if (jwtConfigAction is not null)
                 builder.Services.Configure(jwtConfigAction);
 
-            #region 添加验证/认证服务
+            // 统一注册配置校验器：无论通过哪条注册路径，首次解析 IOptions<JwtTokenConfig> 时都会强制校验
+            // ValidateOnStart 确保应用启动时即暴露配置问题，而非运行时才报错
+            builder.Services.AddSingleton<IValidateOptions<JwtTokenConfig>, JwtTokenConfigValidator>();
+            builder.Services.AddOptions<JwtTokenConfig>()
+                            .Validate(o => !string.IsNullOrWhiteSpace(o.JwtSecretKey)
+                                           && o.JwtSecretKey.Length >= 32
+                                           && o.JwtSecretKey.Distinct().Count() >= 8,
+                                "JWT 密钥不满足安全要求：非空、长度至少 32 位、至少 8 种不同字符")
+                            .ValidateOnStart();
 
-            builder.AddJwtBearer(o => // 认证
-            {
-                o.Challenge = JwtBearerDefaults.AuthenticationScheme;
-                o.RequireHttpsMetadata = false;
-                o.TokenValidationParameters = new TokenValidationParameters
-                                              {
-                                                  // 是否开启签名认证
-                                                  ValidateIssuerSigningKey = true,
-                                                  // 使用 UTF-8 编码以支持更广泛的字符集
-                                                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.JwtSecretKey)),
+            // 服务无状态，使用 Singleton；依赖 IOptionsMonitor 支持配置热更新
+            // TryAddSingleton 避免重复注册
+            builder.Services.TryAddSingleton<IBearerAuthService, JwtBearerAuthService>();
 
-                                                  // 发行人验证，这里要和 token 类中 Claim 类型的发行人保持一致
-                                                  ValidateIssuer = true,
-                                                  ValidIssuer = config.JwtIssuer, // 发行人
+            // 注册 JwtBearerOptions 配置器：在运行时从已校验的 JwtTokenConfig 填充
+            // 中间件与 IBearerAuthService 共享同一份校验规则
+            builder.Services.AddSingleton<IConfigureOptions<JwtBearerOptions>>(sp =>
+                new JwtBearerOptionsSetup(
+                    sp.GetRequiredService<IOptions<JwtTokenConfig>>(),
+                    jwtBearerEventsAction,
+                    useDefaultChallengeResponse));
+            builder.Services.AddSingleton<IConfigureNamedOptions<JwtBearerOptions>>(sp =>
+                new JwtBearerOptionsSetup(
+                    sp.GetRequiredService<IOptions<JwtTokenConfig>>(),
+                    jwtBearerEventsAction,
+                    useDefaultChallengeResponse));
 
-                                                  // 接收人验证
-                                                  ValidateAudience = true,
-                                                  ValidAudience = config.JwtAudience, // 订阅人
-
-                                                  RequireExpirationTime = true,
-                                                  ValidateLifetime = true,
-                                              };
-
-                // 保存默认的 Events，如果用户自定义了 Events，可以基于默认的进行扩展
-                var defaultEvents = new JwtBearerEvents
-                                    {
-                                        // 如果 jwt 过期，那么就先走这个失败的方法，再走 OnChallenge
-                                        OnAuthenticationFailed = content => // 过期时候的场景，会给返回头增加标识
-                                        {
-                                            if (content.Exception.GetType() == typeof(SecurityTokenExpiredException))
-                                            {
-                                                content.Response.Headers.Add("Token-Expired", "true");
-                                            }
-
-                                            return Task.CompletedTask;
-                                        },
-
-                                        // 验证失败自定义返回类
-                                        OnChallenge = async context =>
-                                        {
-                                            // 跳过默认的处理逻辑，返回下面的模型数据
-                                            context.HandleResponse();
-
-                                            context.Response.ContentType = "application/json;charset=utf-8";
-                                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-
-                                            await context.Response.WriteAsync(UnauthorizedResponseMessage);
-                                        }
-                                    };
-
-                // 先设置默认 Events
-                o.Events = defaultEvents;
-
-                // 允许用户自定义配置（在默认配置基础上进行扩展）
-                jwtBearerEventsAction?.Invoke(o.Events);
-            });
-
-            #endregion 添加验证/认证服务
+            // 注册 JwtBearer 认证中间件（不在此处配置 TVP/Events，由上面的 ConfigureOptions 负责）
+            builder.AddJwtBearer();
 
             return builder;
         }

@@ -6,10 +6,14 @@
     public class JwtTokenConfig
     {
         /// <summary>
-        /// JWT 签名密钥(包含默认秘钥)
+        /// JWT 签名密钥
         /// </summary>
-        /// <remarks>密钥长度最低 16 位，建议使用更长的随机字符串</remarks>
-        public string JwtSecretKey { get; set; } = "SecretKeyOfDoomThatMustBeAMinimumNumberOfBytes";
+        /// <remarks>
+        /// 无默认值，必须显式提供。生产环境应从安全配置中心或 Secret Manager 读取，
+        /// 禁止硬编码到源码或 appsettings 中。密钥长度最低 32 位字符，建议使用
+        /// 更长的随机字符串（至少包含 8 种不同字符）。
+        /// </remarks>
+        public string JwtSecretKey { get; set; } = string.Empty;
 
         /// <summary>
         /// JWT 颁发者标识
