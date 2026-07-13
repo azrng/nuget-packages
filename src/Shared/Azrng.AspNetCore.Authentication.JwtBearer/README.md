@@ -133,6 +133,12 @@ services.AddAuthentication()
 
 ### 使用预置 Token 过期和 401 响应
 
+库默认不再自动接管 `OnAuthenticationFailed` / `OnChallenge`，也不会自动写入 `Token-Expired` 响应头或自定义 401 JSON。
+
+如果需要旧版本的响应效果，可以在 `jwtBearerEventsAction` 中显式调用扩展方法。
+
+#### 一行启用完整预置响应
+
 ```csharp
 services.AddAuthentication()
     .AddJwtBearerAuthentication(
@@ -140,18 +146,113 @@ services.AddAuthentication()
         events => events.UseAzrngJwtBearerDefaultResponses());
 ```
 
-以上等价于同时启用：
+`UseAzrngJwtBearerDefaultResponses()` 等价于同时启用：
 
 - `UseTokenExpiredHeader()`：Token 过期时添加 `Token-Expired: true` 响应头
 - `UseUnauthorizedJsonResponse()`：认证挑战时返回 Azrng 预置 JSON 401 响应体
 
-也可以只启用其中一项：
+#### 只启用 Token 过期响应头
 
 ```csharp
 services.AddAuthentication()
     .AddJwtBearerAuthentication(
         jwtConfig => { /* ... */ },
         events => events.UseTokenExpiredHeader());
+```
+
+默认响应头为：
+
+```http
+Token-Expired: true
+```
+
+可以自定义响应头名称和值：
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events => events.UseTokenExpiredHeader(
+            headerName: "X-Token-Expired",
+            headerValue: "1"));
+```
+
+#### 只启用 401 JSON 响应
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events => events.UseUnauthorizedJsonResponse());
+```
+
+默认响应体为：
+
+```json
+{
+  "isSuccess": false,
+  "message": "您无权访问该接口，请确保已经登录",
+  "code": "401"
+}
+```
+
+可以自定义响应体、内容类型和状态码：
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events => events.UseUnauthorizedJsonResponse(
+            responseJson: "{\"success\":false,\"message\":\"unauthorized\",\"code\":401}",
+            contentType: "application/json;charset=utf-8",
+            statusCode: StatusCodes.Status401Unauthorized));
+```
+
+#### 与 SignalR 或其他事件组合
+
+扩展方法会保留调用前已经配置的事件委托，并在原事件执行后追加预置处理。
+
+例如同时支持 SignalR query token、Token 过期响应头和 401 JSON：
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events =>
+        {
+            events.OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            };
+
+            events.UseAzrngJwtBearerDefaultResponses();
+        });
+```
+
+如果你已经自定义了 `OnAuthenticationFailed` 或 `OnChallenge`，建议先赋值自定义事件，再调用扩展方法，这样扩展方法会包装并保留已有处理：
+
+```csharp
+services.AddAuthentication()
+    .AddJwtBearerAuthentication(
+        jwtConfig => { /* ... */ },
+        events =>
+        {
+            events.OnChallenge = context =>
+            {
+                // 记录日志或补充响应头
+                return Task.CompletedTask;
+            };
+
+            events.UseUnauthorizedJsonResponse();
+        });
 ```
 
 ### 自定义 Token 验证失败响应
