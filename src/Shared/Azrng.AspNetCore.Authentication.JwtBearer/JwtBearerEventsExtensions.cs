@@ -75,7 +75,7 @@ namespace Azrng.AspNetCore.Authentication.JwtBearer
         /// <summary>
         /// 添加 Azrng 预置的 JWT Bearer 响应处理：Token 过期响应头和 401 JSON 响应体。
         /// </summary>
-        public static JwtBearerEvents UseAzrngJwtBearerDefaultResponses(this JwtBearerEvents events)
+        public static JwtBearerEvents UseJwtBearerDefaultResponses(this JwtBearerEvents events)
         {
             ArgumentNullException.ThrowIfNull(events);
 

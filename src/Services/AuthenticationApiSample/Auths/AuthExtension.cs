@@ -1,4 +1,7 @@
-﻿namespace AuthenticationApiSample.Auths;
+﻿using Azrng.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+namespace AuthenticationApiSample.Auths;
 
 public static class AuthExtension
 {
@@ -17,8 +20,7 @@ public static class AuthExtension
                     x.AddScheme<CustomerAuthenticationHandler>(CustomerAuthenticationHandler.CustomerSchemeName,
                         CustomerAuthenticationHandler.CustomerSchemeName);
                 })
-                .AddJwtBearerAuthentication(
-                    jwtConfigAction: option => configuration.GetSection("JwtTokenConfig").Bind(option),
+                .AddJwtBearerAuthentication(jwtConfigAction: option => configuration.GetSection("JwtTokenConfig").Bind(option),
                     jwtBearerEventsAction: (option) =>
                     {
                         option.OnMessageReceived = context =>
@@ -34,6 +36,7 @@ public static class AuthExtension
 
                             return Task.CompletedTask;
                         };
+                        option.UseJwtBearerDefaultResponses();
                     })
                 .AddBasicAuthentication(options =>
                 {
@@ -41,6 +44,31 @@ public static class AuthExtension
                     options.Password = "123456";
                 });
 
+        return services;
+    }
+
+    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services,
+                                                          IConfiguration configuration)
+    {
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearerAuthentication(jwtConfigAction: option => configuration.GetSection("JwtTokenConfig").Bind(option),
+                    jwtBearerEventsAction: (option) =>
+                    {
+                        option.OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+
+                            // 如果是 SignalR 请求且包含 access_token，则从查询参数读取
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
+                            {
+                                context.Token = accessToken;
+                            }
+
+                            return Task.CompletedTask;
+                        };
+                        option.UseJwtBearerDefaultResponses();
+                    });
         return services;
     }
 }

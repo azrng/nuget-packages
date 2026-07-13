@@ -389,7 +389,7 @@ if (jwtBearerEventsAction is not null)
 如需启用 Azrng 预置响应行为，可通过显式扩展方法配置：
 
 ```csharp
-events.UseAzrngJwtBearerDefaultResponses();
+events.UseJwtBearerDefaultResponses();
 // 或只启用某一项
 events.UseTokenExpiredHeader();
 events.UseUnauthorizedJsonResponse();

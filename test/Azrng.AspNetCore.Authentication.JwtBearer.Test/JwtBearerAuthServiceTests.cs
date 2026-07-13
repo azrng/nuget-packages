@@ -365,7 +365,7 @@ public class JwtBearerAuthServiceTests
     }
 
     [Fact]
-    public async Task UseAzrngJwtBearerDefaultResponses_ShouldAddExpiredHeaderAndUnauthorizedJson()
+    public async Task UseJwtBearerDefaultResponses_ShouldAddExpiredHeaderAndUnauthorizedJson()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -373,7 +373,7 @@ public class JwtBearerAuthServiceTests
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearerAuthentication(
                     options => options.JwtSecretKey = ValidSecret,
-                    events => events.UseAzrngJwtBearerDefaultResponses());
+                    events => events.UseJwtBearerDefaultResponses());
 
         using var provider = services.BuildServiceProvider(validateScopes: true);
         var tokenOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
@@ -421,7 +421,7 @@ public class JwtBearerAuthServiceTests
             return Task.CompletedTask;
         };
 
-        events.UseAzrngJwtBearerDefaultResponses();
+        events.UseJwtBearerDefaultResponses();
 
         var failedContext = new AuthenticationFailedContext(
             new DefaultHttpContext(),

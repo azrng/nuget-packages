@@ -143,13 +143,13 @@ services.AddAuthentication()
 services.AddAuthentication()
     .AddJwtBearerAuthentication(
         jwtConfig => { /* ... */ },
-        events => events.UseAzrngJwtBearerDefaultResponses());
+        events => events.UseJwtBearerDefaultResponses());
 ```
 
-`UseAzrngJwtBearerDefaultResponses()` 等价于同时启用：
+`UseJwtBearerDefaultResponses()` 等价于同时启用：
 
 - `UseTokenExpiredHeader()`：Token 过期时添加 `Token-Expired: true` 响应头
-- `UseUnauthorizedJsonResponse()`：认证挑战时返回 Azrng 预置 JSON 401 响应体
+- `UseUnauthorizedJsonResponse()`：认证挑战时返回预置 JSON 401 响应体
 
 #### 只启用 Token 过期响应头
 
@@ -233,7 +233,7 @@ services.AddAuthentication()
                 return Task.CompletedTask;
             };
 
-            events.UseAzrngJwtBearerDefaultResponses();
+            events.UseJwtBearerDefaultResponses();
         });
 ```
 
@@ -336,7 +336,7 @@ services.AddAuthentication()
 - 🔒 **安全**：升级 `Microsoft.AspNetCore.Authentication.JwtBearer` 到各目标框架最新 patch 版本，避免已知 IdentityModel JWT 传递依赖漏洞
 - 🏗️ 调整：移除配置热更新语义，`IBearerAuthService` 构造期读取 `IOptions<JwtTokenConfig>`，避免服务签发与中间件校验配置分叉
 - 🧹 调整：移除库内置默认 `JwtBearerEvents`，不再自动写入 `Token-Expired` 响应头或自定义 401 JSON，默认回到 ASP.NET Core 标准行为
-- 🆕 新增：提供 `UseTokenExpiredHeader`、`UseUnauthorizedJsonResponse`、`UseAzrngJwtBearerDefaultResponses` 扩展方法，显式启用旧响应行为时更简洁
+- 🆕 新增：提供 `UseTokenExpiredHeader`、`UseUnauthorizedJsonResponse`、`UseJwtBearerDefaultResponses` 扩展方法，显式启用旧响应行为时更简洁
 
 ### 1.5.0
 - 🔒 **安全**：移除硬编码默认密钥，改为必填并强制校验（长度 ≥ 32、至少 8 种不同字符），通过 `IValidateOptions` 收口，任何注册路径都会校验
