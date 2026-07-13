@@ -450,7 +450,7 @@ services.AddAuthorization(options =>
     // 创建策略并添加需求
     options.AddPolicy("DefaultPermissionPolicy", policy =>
     {
-        policy.AddRequirements.Add(requirement);
+        policy.Requirements.Add(requirement);
     });
 });
 ```

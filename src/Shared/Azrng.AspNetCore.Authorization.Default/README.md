@@ -84,10 +84,7 @@ public class MyPermissionService : IPermissionVerifyService
 ### 3. 注册授权服务
 
 ```csharp
-// 注册权限验证服务
-services.AddScoped<IPermissionVerifyService, MyPermissionService>();
-
-// 注册基于路径的授权服务
+// 注册基于路径的授权服务（内部已注册 IPermissionVerifyService，无需重复注册）
 services.AddPathBasedAuthorization<MyPermissionService>(
     "/api/login",        // 允许匿名访问的路径
     "/api/register",
@@ -256,7 +253,13 @@ public class CachedPermissionService : IPermissionVerifyService
 
 ## 版本历史
 
-### 1.1.0 (最新)
+### 1.2.0 (最新)
+- 🔒 **安全修复**：匿名路径匹配从 `string.Contains` 子串匹配改为 `PathString.StartsWithSegments` 路径段前缀匹配，修复子串命中导致越权放行的缺陷（例如配置 `/api/login` 时 `/admin/api/login/delete` 不再被放行）
+- 🐛 修复：二次认证检查改用 `AuthenticateResult.Succeeded` 判断，原 `result.Principal == null` 语义不严谨
+- 🔒 收紧：`PermissionRequirement.AllowAnonymousPaths` 改为只读 `IReadOnlyCollection<string>`，构造函数对 null 做防御性校验，避免运行期被外部修改
+- ✅ 补充：安全相关回归测试（子串误匹配、路径段边界、大小写、认证分支等）
+
+### 1.1.0
 - 🐛 修复：`PermissionAuthorizationHandler` 错误实现 `IAuthorizationRequirement`
 - 🐛 修复：字符串处理不一致，统一使用 `ToLowerInvariant()`
 - ✅ 优化：添加结构化日志支持
@@ -266,7 +269,7 @@ public class CachedPermissionService : IPermissionVerifyService
 - 🆕 新增：向后兼容的旧方法（标记为 Obsolete）
 
 ### 1.0.0
-- 支持 .NET 10
+- 多框架支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ### 1.0.0-beta1
 - 更新依赖包
