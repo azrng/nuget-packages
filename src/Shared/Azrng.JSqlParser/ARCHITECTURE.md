@@ -12,10 +12,44 @@
 | MySQLGroupConcat/UserVariable/VariableAssignment/AllValue/JsonExpression/XMLSerializeExpr | **等价合并**：已合入 Function.cs/SetStatement/AnyType.All 等 |
 | CURRVAL / JSON_TRANSFORM | **上游不支持**：核查确认上游 main/ 无此特性 |
 | Index/NamedConstraint 等枚举伴生类拆分 | **风格差异**：Azrng 用扁平 Constraint 类，功能等价 |
+| Descendants/Walk 扩展方法 + ExtractTableNames | **C# 风格封装**：visitor 体系（Azrng 自有）之上的 LINQ 式外壳，上游无对应物；上游同步只对照 visitor 接口签名与 AST 节点结构，扩展方法无需对照 |
 
 ---
 
 ## Visitor 模式
+
+> **定位**：visitor 接口与 Adapter 是底层遍历机制（保留用于复杂自定义遍历与上游对照）；下文
+> 「C# 风格遍历（推荐）」中的 `Descendants`/`Walk`/`ExtractTableNames` 是日常推荐使用的 LINQ 式封装。
+> 日常收集/遍历需求请优先用扩展方法，避免「new visitor + Accept + 掏字段」的副作用式写法。
+
+### C# 风格遍历（推荐）
+
+扩展方法是 visitor 体系之上的 LINQ 式外壳，底层复用 Adapter 已验证的递归逻辑：
+
+| 扩展方法 | 替代的旧写法 | 用途 |
+|----------|------------|------|
+| `expr.Descendants<T>()` | 自定义 visitor + Accept + 掏字段 | 拉取式收集表达式中某类节点，直接接 LINQ |
+| `expr.Walk<T>(action)` | 自定义 visitor + Accept | 推送委托，就地处理某类节点 |
+| `stmt.ExtractTableNames()` | `new TablesNamesFinder().GetTables(stmt)` | 提取表名，返回只读集合 |
+| `stmt.Descendants<T>()` / `stmt.Walk<T>(action)` | 自定义 StatementVisitor | 语句层收集/遍历（含嵌套子语句） |
+
+```csharp
+using Azrng.JSqlParser;
+
+// 旧写法：定义 ColumnCollector 类 + new + Accept + 掏 Columns（无返回值、副作用式）
+// 新写法：一行，有返回值
+var columns = whereClause.Descendants<Column>().Select(c => c.ColumnName).ToList();
+var paramNames = expr.Descendants<JdbcNamedParameter>().Select(p => p.Name).ToList();
+
+// 提取表名
+var tables = stmt.ExtractTableNames();
+```
+
+> **上游同步说明**：`Descendants`/`Walk`/`ExtractTableNames` 是 Azrng 自有封装，JSqlParser 上游无对应物。
+> 与上游同步时，**只需对照 visitor 接口签名与 AST 节点结构**；扩展方法无需对照，新增节点类型时
+> 内部 walker 若漏覆盖某节点（参见 `ExpressionDescendantsWalker` 末尾注释），其子节点仍会被递归收集。
+
+### 底层 Visitor 接口（复杂自定义遍历 / 上游对照）
 
 Azrng.JSqlParser 提供三种 Visitor 接口，均采用双泛型签名 `T Visit<S>(X node, S context)`：
 
@@ -218,10 +252,11 @@ CCJSqlParserUtil.Parse(sql)
         v
   Statement / Expression  (强类型 C# 对象)
         |
-        +-- Accept(StatementVisitor)   — 遍历语句
-        +-- Accept(ExpressionVisitor)  — 遍历表达式
+        +-- Accept(StatementVisitor)   — 遍历语句（底层机制）
+        +-- Accept(ExpressionVisitor)  — 遍历表达式（底层机制）
+        +-- Descendants/Walk/ExtractTableNames — LINQ 式遍历扩展（C# 风格，推荐）
         +-- ToString()                 — 反序列化为 SQL
-        +-- TablesNamesFinder          — 提取表名
+        +-- TablesNamesFinder          — 提取表名（内部，对外用 ExtractTableNames）
         +-- CNFConverter               — WHERE 子句规范化
         +-- Validation                 — 校验允许的 SQL 特性
 ```
@@ -230,6 +265,7 @@ CCJSqlParserUtil.Parse(sql)
 
 | 命名空间 | 用途 |
 |----------|------|
+| `Azrng.JSqlParser` | C# 风格遍历扩展方法（`ExpressionExtension`/`StatementExtension`：Descendants/Walk/ExtractTableNames） |
 | `Azrng.JSqlParser.Parser` | `CCJSqlParserUtil` 入口、AST 节点基类 |
 | `Azrng.JSqlParser.Expression` | 所有表达式类型（字面量、运算符、函数、参数） |
 | `Azrng.JSqlParser.Expression.Operators.*` | 算术、条件、关系运算符 |

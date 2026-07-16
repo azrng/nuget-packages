@@ -7,6 +7,7 @@
 ## 快速开始
 
 ```csharp
+using Azrng.JSqlParser;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
@@ -20,8 +21,8 @@ if (stmt is PlainSelect select)
 }
 
 // 提取表名
-var tables = new TablesNamesFinder().GetTables(stmt);
-// => HashSet<string> { "users" }
+var tables = stmt.ExtractTableNames();
+// => IReadOnlyCollection<string> { "users" }
 
 // 反序列化为 SQL 文本
 Console.WriteLine(stmt.ToString());
@@ -34,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta5" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta6" />
 ```
 
 **依赖项：**
@@ -107,13 +108,37 @@ if (stmt == null)
 ### 提取表名
 
 ```csharp
-using Azrng.JSqlParser.Util;
+using Azrng.JSqlParser;
 
-var finder = new TablesNamesFinder();
-HashSet<string> tables = finder.GetTables(
-    CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!);
+var stmt = CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
+IReadOnlyCollection<string> tables = stmt.ExtractTableNames();
 // => { "users", "orders" }
 ```
+
+> 旧的 `new TablesNamesFinder().GetTables(stmt)` 已标记 `[Obsolete]`，请改用 `stmt.ExtractTableNames()`。
+
+### 遍历与收集 AST（C# 风格）
+
+收集表达式中某类节点，无需再「定义一个 visitor 类 + new + Accept + 从字段掏结果」，直接用扩展方法：
+
+```csharp
+using Azrng.JSqlParser;
+
+var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM t WHERE name = 'x' AND age > 18 AND status IN (:p1, :p2)")!;
+
+// 收集 WHERE 中的所有列引用
+var columns = stmt.Where!.Descendants<Column>().Select(c => c.ColumnName).ToList();
+// => [ "name", "age", "status" ]
+
+// 收集命名参数（替代自定义 ParameterCollector）
+var paramNames = stmt.Where!.Descendants<JdbcNamedParameter>().Select(p => p.Name).ToList();
+// => [ "p1", "p2" ]
+
+// 就地遍历（推送委托）
+stmt.Where!.Walk<Column>(c => Console.WriteLine(c.ColumnName));
+```
+
+底层遍历复用已验证的 visitor 递归逻辑；复杂自定义遍历仍可直接实现 visitor 接口（见 ARCHITECTURE.md）。
 
 ### SQL 校验
 
@@ -174,6 +199,16 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta6
+
+C# 风格遍历扩展方法，消除 visitor 副作用返回写法。
+
+- **新增扩展方法**：`ExpressionExtension`（`Descendants<T>()` / `Walk<T>()`）与 `StatementExtension`（`ExtractTableNames()` / `Descendants<T>()` / `Walk<T>()`），底层复用已验证的 visitor 递归逻辑，AST 结构与 visitor 接口零改动。
+- **消除 Java 味写法**：收集 AST 中某类节点无需再「定义 visitor 类 + new + Accept + 从字段掏结果」，直接 `expr.Descendants<Column>().ToList()`，有返回值、可接 LINQ。
+- **Obsolete 标记**：`TablesNamesFinder.GetTables()` 标记 `[Obsolete]`，改用 `stmt.ExtractTableNames()`。
+- **架构同步**：`ARCHITECTURE.md` 新增「C# 风格遍历（推荐）」对照表，明确扩展方法是 Azrng 自有封装、上游同步无需对照。
+- **测试**：新增 42 项扩展方法测试（含与旧 ColumnCollector/ParameterCollector/GetTables 的等价验证），全量 1399 项通过。
 
 ### 1.0.0-beta5
 
