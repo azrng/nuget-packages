@@ -79,6 +79,24 @@ public class ExpressionBasicTest
         Assert.Equal("name", expr.Name);
     }
 
+    [Fact]
+    public void JdbcNamedParameter_WithAtName_ShouldHoldNameAndPrefix()
+    {
+        var expr = (JdbcNamedParameter)CCJSqlParserUtil.ParseExpression("@name")!;
+        Assert.Equal("name", expr.Name);
+        Assert.Equal("@", expr.Prefix);
+        Assert.Equal("@name", expr.ToString());
+    }
+
+    [Fact]
+    public void JdbcNamedParameter_WithAtNameInComparison_ShouldHoldName()
+    {
+        var expr = (EqualsTo)CCJSqlParserUtil.ParseCondExpression("u.name = @name")!;
+        var parameter = Assert.IsType<JdbcNamedParameter>(expr.RightExpression);
+        Assert.Equal("name", parameter.Name);
+        Assert.Equal("@", parameter.Prefix);
+    }
+
     #endregion
 
     #region NotExpression / Parenthesis / SignedExpression

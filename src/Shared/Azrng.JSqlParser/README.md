@@ -34,7 +34,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta4" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta5" />
 ```
 
 **依赖项：**
@@ -157,7 +157,7 @@ Console.WriteLine(stmt.ToString());
 - 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
 - 高级：`CASE WHEN`、`CAST`、`EXTRACT`、`INTERVAL`、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
 - 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数
-- 参数：`?`（位置参数）、`$1`（编号参数）、`:name`（命名参数）、`@var`（会话参数）
+- 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 均返回不含前缀的名称）
 
 ### 语句
 
@@ -174,6 +174,14 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta5
+
+服务申请 SQL 参数场景修复版。
+
+- **命名参数修复**：`@name` 现在解析为 `JdbcNamedParameter`，`Name` 返回 `name`，不再退化为普通 `JdbcParameter(?)` 导致变量名丢失。
+- **参数前缀保真**：`JdbcNamedParameter` 新增 `Prefix` 字段，默认 `":"`；解析 `@name` 时为 `"@"`，`ToString()` 可保留原始前缀。
+- **回归测试**：补充 `@name` 独立表达式与 `u.name = @name` 条件表达式测试。
 
 ### 1.0.0-beta4
 

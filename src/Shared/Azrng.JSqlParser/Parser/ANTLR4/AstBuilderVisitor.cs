@@ -4248,6 +4248,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new JdbcNamedParameter { Name = context.S_JDBC_NAMED_PARAM().GetText()[1..] };
         }
 
+        if (context.SINGLE_AT_IDENTIFIER() != null)
+        {
+            return new JdbcNamedParameter { Name = context.SINGLE_AT_IDENTIFIER().GetText()[1..], Prefix = "@" };
+        }
+
         // :1、:2 数值绑定（Oracle/MySQL），与命名参数共用 JdbcNamedParameter，Name 存数字串
         // grammar 用 COLON LONG_VALUE 组合避免与数组范围 [1:3] 的冒号冲突
         if (context.LONG_VALUE() != null && context.COLON() != null)
