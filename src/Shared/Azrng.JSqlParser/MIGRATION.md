@@ -406,18 +406,18 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 按"低风险高性价比"排序，每完成一批在对应表格行勾记：
 
-| 批次 | 内容 | 风险 | 对照锚点 |
-|------|------|------|----------|
-| **批 1** | 删 visitor 接口 default method（下沉到 Adapter）；删无 context 重载 | 低 | `[形]` |
-| **批 2** | `GetXxx()/SetXxx()` → property；删 `ForUpdateClause` builder；内联 `GetStringList` | 低 | `[形]` |
-| **批 3** | 值语义类加 `sealed` + `Equals/GetHashCode`；`KeywordArgument` 改 record | 低 | `[形]` |
-| **批 4** | `GetStringExpression()` → `OperatorSymbol` 属性；13 运算符子类同步 | 中 | `[形]` |
-| **批 5** | `[NonSerialized]` 删除；`JjtGet*Token` → `Get*Token` | 中 | `[锚]` 需跑 round-trip 测试 |
-| **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` |
-| **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 |
-| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 |
-| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 |
-| **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 |
+| 批次 | 内容 | 风险 | 对照锚点 | 状态 |
+|------|------|------|----------|------|
+| **批 1** | 删 visitor 接口 default method（下沉到 Adapter）；删无 context 重载 | 低 | `[形]` | ✅ 已完成（动作 B 下沉；动作 A 删无 context 重载因测试依赖挪 2.0） |
+| **批 2** | `GetXxx()/SetXxx()` → property；删 `ForUpdateClause` builder；内联 `GetStringList` | 低 | `[形]` | ✅ 已完成（含批 2b FromItem Alias 属性） |
+| **批 3** | 值语义类加 `sealed` + `Equals/GetHashCode`；`KeywordArgument` 改 record | 低 | `[形]` | ✅ 已完成（6 字面量 sealed + Alias 值相等；运算符薄壳与 Column/Table Equals 未做） |
+| **批 4** | `GetStringExpression()` → `OperatorSymbol` 属性；13 运算符子类同步 | 中 | `[形]` | ✅ 已完成（28 个子类） |
+| **批 5** | `[NonSerialized]` 删除；`JjtGet*Token` → `Get*Token` | 中 | `[锚]` 需跑 round-trip 测试 | ✅ 已完成 |
+| **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
+| **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
+| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 留 2.0 |
+| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
+| **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 
 ---
 
