@@ -16,7 +16,7 @@ public class SchemaTest
     [Fact]
     public void Table_SimpleName_ShouldHaveName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.Name);
     }
@@ -24,7 +24,7 @@ public class SchemaTest
     [Fact]
     public void Table_WithAlias_ShouldHaveAlias()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users u")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users u")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.Name);
         Assert.NotNull(table.Alias);
@@ -34,7 +34,7 @@ public class SchemaTest
     [Fact]
     public void Table_WithSchema_ShouldHaveSchemaName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM mydb.users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM mydb.users")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.Name);
         Assert.Equal("mydb", table.SchemaName);
@@ -43,7 +43,7 @@ public class SchemaTest
     [Fact]
     public void Table_WithSchemaAndAlias_ShouldHaveBoth()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM mydb.users u")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM mydb.users u")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.Name);
         Assert.Equal("mydb", table.SchemaName);
@@ -54,7 +54,7 @@ public class SchemaTest
     [Fact]
     public void Table_WithDatabaseAndSchema_ShouldHaveDatabase()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM mydb.public.users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM mydb.public.users")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.Name);
     }
@@ -62,7 +62,7 @@ public class SchemaTest
     [Fact]
     public void Table_FullyQualifiedName_ShouldReturnFullName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM mydb.users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM mydb.users")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("mydb.users", table.GetFullyQualifiedName());
     }
@@ -70,7 +70,7 @@ public class SchemaTest
     [Fact]
     public void Table_SimpleFullyQualifiedName_ShouldReturnName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("users", table.GetFullyQualifiedName());
     }
@@ -82,7 +82,7 @@ public class SchemaTest
     [Fact]
     public void Column_SimpleName_ShouldHaveColumnName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
         var item = select.SelectItems![0];
         var column = (Column)item.Expression;
         Assert.Equal("id", column.ColumnName);
@@ -91,7 +91,7 @@ public class SchemaTest
     [Fact]
     public void Column_WithTableAlias_ShouldHaveTable()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT u.id FROM users u")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT u.id FROM users u")!;
         var item = select.SelectItems![0];
         var column = (Column)item.Expression;
         Assert.Equal("id", column.ColumnName);
@@ -102,7 +102,7 @@ public class SchemaTest
     [Fact]
     public void Column_WithSchema_ShouldHaveSchemaTable()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT mydb.users.id FROM mydb.users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT mydb.users.id FROM mydb.users")!;
         var item = select.SelectItems![0];
         var column = (Column)item.Expression;
         // Multi-part column name may be parsed as full string
@@ -112,7 +112,7 @@ public class SchemaTest
     [Fact]
     public void Column_FullyQualifiedName_WithTable_ShouldReturnFullName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT u.id FROM users u")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT u.id FROM users u")!;
         var item = select.SelectItems![0];
         var column = (Column)item.Expression;
         Assert.Equal("u.id", column.GetFullyQualifiedName());
@@ -121,7 +121,7 @@ public class SchemaTest
     [Fact]
     public void Column_FullyQualifiedName_WithoutTable_ShouldReturnName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
         var item = select.SelectItems![0];
         var column = (Column)item.Expression;
         Assert.Equal("id", column.GetFullyQualifiedName());
@@ -134,7 +134,7 @@ public class SchemaTest
     [Fact]
     public void Column_InWhereClause_ShouldHaveColumnName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users WHERE name = 'test'")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users WHERE name = 'test'")!;
         var where = (EqualsTo)select.Where!;
         var column = (Column)where.LeftExpression;
         Assert.Equal("name", column.ColumnName);
@@ -143,7 +143,7 @@ public class SchemaTest
     [Fact]
     public void Column_InWhereWithTableAlias_ShouldHaveTable()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT u.id FROM users u WHERE u.name = 'test'")!;
         var where = (EqualsTo)select.Where!;
         var column = (Column)where.LeftExpression;
@@ -159,7 +159,7 @@ public class SchemaTest
     [Fact]
     public void Column_InJoinOn_ShouldHaveTableName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT a.id FROM users a INNER JOIN orders b ON a.id = b.user_id")!;
         var join = select.Joins![0];
         var on = (EqualsTo)join.OnExpression!;
@@ -182,7 +182,7 @@ public class SchemaTest
     [Fact]
     public void MultipleTables_InFrom_ShouldParseCorrectly()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT a.id, b.name FROM users a, orders b")!;
         // 多表逗号分隔会被解析为 JOIN
         Assert.NotNull(select.IFromItem);
@@ -195,7 +195,7 @@ public class SchemaTest
     [Fact]
     public void Database_InTable_ShouldHaveSchemaInfo()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM mydb.public.users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM mydb.public.users")!;
         var table = (Table)select.IFromItem!;
         // 3-part name: schema info is captured in SchemaName or Database
         Assert.Equal("users", table.Name);
@@ -209,7 +209,7 @@ public class SchemaTest
     public void Sequence_NextVal_ShouldParseAsFunction()
     {
         // NEXTVAL 在 ANTLR4 中被解析为 Function
-        var expr = CCJSqlParserUtil.ParseExpression("NEXTVAL('my_sequence')");
+        var expr = SqlParser.ParseExpression("NEXTVAL('my_sequence')");
         Assert.NotNull(expr);
         Assert.IsType<Function>(expr);
     }
@@ -221,7 +221,7 @@ public class SchemaTest
     [Fact]
     public void Table_WithUnderscore_ShouldParseCorrectly()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM user_data")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM user_data")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("user_data", table.Name);
     }
@@ -229,7 +229,7 @@ public class SchemaTest
     [Fact]
     public void Table_QuotedName_ShouldIncludeQuotes()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM \"user\"")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM \"user\"")!;
         var table = (Table)select.IFromItem!;
         Assert.Equal("\"user\"", table.Name);
     }

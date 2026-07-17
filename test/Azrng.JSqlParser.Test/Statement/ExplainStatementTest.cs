@@ -12,7 +12,7 @@ public class ExplainStatementTest
     [Fact]
     public void Explain_Select_ShouldWrapInnerStatement()
     {
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse("EXPLAIN SELECT * FROM users")!;
+        var stmt = (ExplainStatement)SqlParser.Parse("EXPLAIN SELECT * FROM users")!;
         Assert.NotNull(stmt.Statement);
     }
 
@@ -20,7 +20,7 @@ public class ExplainStatementTest
     public void Explain_Insert_ShouldWrapDml()
     {
         // EXPLAIN 后接 INSERT：上游 commit b19d556e 关注点
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse(
+        var stmt = (ExplainStatement)SqlParser.Parse(
             "EXPLAIN INSERT INTO users (id) VALUES (1)")!;
         Assert.NotNull(stmt.Statement);
     }
@@ -28,7 +28,7 @@ public class ExplainStatementTest
     [Fact]
     public void Explain_Update_ShouldParse()
     {
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse(
+        var stmt = (ExplainStatement)SqlParser.Parse(
             "EXPLAIN UPDATE users SET name = 'x' WHERE id = 1")!;
         Assert.NotNull(stmt.Statement);
     }
@@ -36,7 +36,7 @@ public class ExplainStatementTest
     [Fact]
     public void Explain_Delete_ShouldParse()
     {
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse(
+        var stmt = (ExplainStatement)SqlParser.Parse(
             "EXPLAIN DELETE FROM users WHERE id = 1")!;
         Assert.NotNull(stmt.Statement);
     }
@@ -44,7 +44,7 @@ public class ExplainStatementTest
     [Fact]
     public void Analyze_Select_ShouldParse()
     {
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse("ANALYZE SELECT * FROM users")!;
+        var stmt = (ExplainStatement)SqlParser.Parse("ANALYZE SELECT * FROM users")!;
         Assert.NotNull(stmt.Statement);
     }
 }

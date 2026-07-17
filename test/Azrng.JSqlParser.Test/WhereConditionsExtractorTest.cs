@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Test;
 /// </summary>
 public class WhereConditionsExtractorTest
 {
-    private static JExpression ParseWhere(string sql) => ((PlainSelect)CCJSqlParserUtil.Parse(sql)!).Where!;
+    private static JExpression ParseWhere(string sql) => ((PlainSelect)SqlParser.Parse(sql)!).Where!;
 
     [Fact]
     public void GetWhereConditions_SingleComparison_ShouldHaveEmptyLinkType()

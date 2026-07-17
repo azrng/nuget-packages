@@ -85,7 +85,7 @@ public class CnfConverterTest
     [Fact]
     public void Cnf_ParsedExpression_ShouldConvert()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE (status = 'active' AND role = 'admin') OR age > 18")!;
         var where = stmt.Where;
         Assert.NotNull(where);

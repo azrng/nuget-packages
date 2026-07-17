@@ -19,13 +19,13 @@ public class NestedBlockCommentTest
     private static void AssertParses(string sql)
     {
         // 对齐上游 assertDoesNotThrow：仅保证解析不抛错
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
     }
 
     private static void AssertThrows(string sql)
     {
-        Assert.ThrowsAny<JSqlParserException>(() => CCJSqlParserUtil.Parse(sql));
+        Assert.ThrowsAny<JSqlParserException>(() => SqlParser.Parse(sql));
     }
 
     #region 基础嵌套（对齐上游 testFlatBlockComment / testNestedBlockComment / testDeeplyNestedBlockComment）
@@ -126,7 +126,7 @@ public class NestedBlockCommentTest
     public void OracleHint_ShouldBePreserved()
     {
         // /*+ ... */ 是 Oracle Hint，由 ORACLE_HINT_ML 规则保留，不参与嵌套计数
-        var stmt = CCJSqlParserUtil.Parse("SELECT /*+ FULL(t) */ * FROM t");
+        var stmt = SqlParser.Parse("SELECT /*+ FULL(t) */ * FROM t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT /*+ FULL(t) */ * FROM t", stmt!.ToString());
@@ -158,7 +158,7 @@ public class NestedBlockCommentTest
     public void NestedComment_RoundTrip_ShouldDropComment()
     {
         // round-trip 时注释被丢弃（上游 toString 也不保留注释）
-        var stmt = CCJSqlParserUtil.Parse("SELECT /* outer /* inner */ outer */ 1");
+        var stmt = SqlParser.Parse("SELECT /* outer /* inner */ outer */ 1");
 
         Assert.Equal("SELECT 1", stmt!.ToString());
     }

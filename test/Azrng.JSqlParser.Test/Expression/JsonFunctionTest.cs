@@ -14,7 +14,7 @@ public class JsonFunctionTest
     public void JsonObject_ColonSeparator_ShouldParse()
     {
         // 'foo' : bar 带空格，: 是独立 COLON（避免 :bar 被识别为命名参数）
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT JSON_OBJECT( 'foo' : bar) FROM dual")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT JSON_OBJECT( 'foo' : bar) FROM dual")!;
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.FunctionType.OBJECT, func.Type);
         Assert.Single(func.KeyValuePairs);
@@ -31,7 +31,7 @@ public class JsonFunctionTest
     [InlineData("SELECT JSON_OBJECT('foo':'bar') FROM dual")]
     public void JsonObject_NoSpaceColon_ShouldParse(string sql)
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonKeyValuePair.SeparatorKind.COLON, func.KeyValuePairs[0].Separator);
     }
@@ -40,7 +40,7 @@ public class JsonFunctionTest
     public void JsonObject_KeyValueKeyword_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECT( KEY 'foo' VALUE bar ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.True(func.KeyValuePairs[0].UsingKeyKeyword);
@@ -52,7 +52,7 @@ public class JsonFunctionTest
     public void JsonObject_MultiplePairs_FormatJson_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECT( KEY 'foo' VALUE bar, KEY 'foo' VALUE bar FORMAT JSON ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(2, func.KeyValuePairs.Count);
@@ -64,7 +64,7 @@ public class JsonFunctionTest
     public void JsonObject_NullOnNullStrictUniqueKeys_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECT( KEY 'foo' VALUE bar, KEY 'fob' VALUE baz NULL ON NULL STRICT WITH UNIQUE KEYS ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.OnNullType.NULL, func.OnNull);
@@ -77,7 +77,7 @@ public class JsonFunctionTest
     public void JsonObject_AbsentOnNullWithoutUniqueKeys_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECT( KEY 'foo' VALUE bar ABSENT ON NULL WITHOUT UNIQUE KEYS ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.OnNullType.ABSENT, func.OnNull);
@@ -89,7 +89,7 @@ public class JsonFunctionTest
     public void JsonObject_ReturningClause_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECT( KEY 'x' VALUE 1 RETURNING VARCHAR FORMAT JSON ENCODING UTF32 ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal("VARCHAR", func.ReturningType);
@@ -103,7 +103,7 @@ public class JsonFunctionTest
     {
         // ARRAY 输出 "JSON_ARRAY( " + 元素 + ")"（末尾无空格）
         var sql = "SELECT JSON_ARRAY( 1, 2, 3) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.FunctionType.ARRAY, func.Type);
@@ -115,7 +115,7 @@ public class JsonFunctionTest
     public void JsonArray_NullOnNull_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_ARRAY( 1 NULL ON NULL) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.OnNullType.NULL, func.OnNull);
@@ -126,7 +126,7 @@ public class JsonFunctionTest
     public void JsonArray_Empty_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_ARRAY() FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Empty(func.Expressions);
@@ -137,7 +137,7 @@ public class JsonFunctionTest
     public void JsonArray_ReturningClause_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_ARRAY( 1, 2 RETURNING VARBINARY FORMAT JSON ENCODING UTF16) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal("VARBINARY", func.ReturningType);
@@ -150,7 +150,7 @@ public class JsonFunctionTest
     public void JsonValue_Simple_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_VALUE(payload, '$.customer.id') FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.FunctionType.VALUE, func.Type);
@@ -162,7 +162,7 @@ public class JsonFunctionTest
     public void JsonValue_ReturningAndOnError_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_VALUE(payload, '$.x' RETURNING VARCHAR NULL ON ERROR) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.NotNull(func.OnErrorBehavior);
@@ -175,7 +175,7 @@ public class JsonFunctionTest
     public void JsonExists_Simple_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_EXISTS(payload, '$.children[2]') FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.FunctionType.EXISTS, func.Type);
@@ -186,7 +186,7 @@ public class JsonFunctionTest
     public void JsonExists_OnErrorUnknown_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_EXISTS(payload, '$.children[2]' UNKNOWN ON ERROR) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.OnResponseBehaviorType.UNKNOWN, func.OnErrorBehavior!.Type);
@@ -197,7 +197,7 @@ public class JsonFunctionTest
     public void JsonQuery_Simple_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_QUERY(payload, '$.items') FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.FunctionType.QUERY, func.Type);
@@ -212,7 +212,7 @@ public class JsonFunctionTest
     public void JsonQuery_LegacyMultiplePaths_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_QUERY(payload, '$.a', '$.b', '$.c') FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(2, func.AdditionalQueryPathArguments.Count);
@@ -224,7 +224,7 @@ public class JsonFunctionTest
     public void JsonQuery_WithWrapperAndQuotes_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_QUERY(payload, '$.items' WITH ARRAY WRAPPER KEEP QUOTES) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.WrapperType.WITH, func.Wrapper);
@@ -237,7 +237,7 @@ public class JsonFunctionTest
     public void JsonQuery_OnErrorEmptyArray_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_QUERY(payload, '$.items' EMPTY ARRAY ON EMPTY) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonFunction>(select.SelectItems![0].Expression);
         Assert.NotNull(func.OnEmptyBehavior);
@@ -249,7 +249,7 @@ public class JsonFunctionTest
     public void JsonObjectAgg_ColonSpaced_ShouldParse()
     {
         // foo : bar 带空格，避免 :bar 被识别为命名参数
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT JSON_OBJECTAGG( foo : bar) FROM dual")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT JSON_OBJECTAGG( foo : bar) FROM dual")!;
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonAggregateFunction.AggregateType.OBJECT, func.AggregateFunctionType);
         Assert.False(func.UsingValueSeparator);
@@ -260,7 +260,7 @@ public class JsonFunctionTest
     {
         // OBJECTAGG 输出 " )"（末尾带空格，与上游 OBJECT 对齐）
         var sql = "SELECT JSON_OBJECTAGG( KEY foo VALUE bar ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.True(func.UsingKeyKeyword);
@@ -272,7 +272,7 @@ public class JsonFunctionTest
     public void JsonObjectAgg_NullOnNullWithUniqueKeys_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_OBJECTAGG( KEY foo VALUE bar NULL ON NULL WITH UNIQUE KEYS ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonFunction.OnNullType.NULL, func.OnNull);
@@ -289,7 +289,7 @@ public class JsonFunctionTest
     {
         // 注意：OBJECTAGG 输出 " foo, bar "（与冒号/VALUE 分支一致的括号内空格风格）
         var sql = "SELECT JSON_OBJECTAGG( foo, bar ) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.True(func.UseCommaSeparator);
         Assert.False(func.UsingValueSeparator);
@@ -301,7 +301,7 @@ public class JsonFunctionTest
     {
         // ARRAYAGG 输出 "JSON_ARRAYAGG( a)"（a 后无空格）
         var sql = "SELECT JSON_ARRAYAGG( a) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.Equal(JsonAggregateFunction.AggregateType.ARRAY, func.AggregateFunctionType);
@@ -312,7 +312,7 @@ public class JsonFunctionTest
     public void JsonArrayAgg_OrderByAndOnNull_ShouldRoundTrip()
     {
         var sql = "SELECT JSON_ARRAYAGG( a ORDER BY a NULL ON NULL) FROM dual";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<JsonAggregateFunction>(select.SelectItems![0].Expression);
         Assert.NotNull(func.OrderByElements);

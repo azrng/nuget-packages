@@ -12,7 +12,7 @@ public class ParenthesedInsertTest
     [Fact]
     public void Cte_WithInsert_ShouldParseAsParenthesedInsert()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "WITH t AS (INSERT INTO users (id) VALUES (1)) SELECT * FROM t")!;
         Assert.NotNull(stmt);
     }
@@ -21,7 +21,7 @@ public class ParenthesedInsertTest
     public void ParenthesedInsert_ShouldBeAssignableToInsert()
     {
         // 重构后 ParenthesedInsert 继承 Insert，可作为 Insert 使用
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "WITH t AS (INSERT INTO users (id) VALUES (1)) SELECT * FROM t")!;
         // stmt 实际是 PlainSelect（继承 Select），WithItemsList 在 Select 基类上
         var select = (Select)stmt;
@@ -37,7 +37,7 @@ public class ParenthesedInsertTest
     [Fact]
     public void ParenthesedInsert_ToString_ShouldRenderWithParens()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "WITH t AS (INSERT INTO users (id) VALUES (1)) SELECT * FROM t")!;
         var output = stmt.ToString()!;
         Assert.Contains("(INSERT INTO users (id) VALUES (1))", output);
@@ -47,7 +47,7 @@ public class ParenthesedInsertTest
     public void Cte_WithInsertReturning_ShouldRoundTrip()
     {
         var sql = "WITH t AS (INSERT INTO users (id) VALUES (1) RETURNING id) SELECT * FROM t";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.NotNull(stmt);
         Assert.Contains("RETURNING", stmt.ToString()!);
     }

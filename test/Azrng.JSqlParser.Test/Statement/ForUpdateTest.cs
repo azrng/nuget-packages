@@ -16,7 +16,7 @@ public class ForUpdateTest
     /// </summary>
     private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         var reparsed = stmt.ToString()!.Trim();
         Assert.Equal(Normalize(sql), Normalize(reparsed), StringComparer.OrdinalIgnoreCase);
@@ -101,7 +101,7 @@ public class ForUpdateTest
     [Fact]
     public void ForUpdateDetection_ShouldReturnForUpdateClause()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR UPDATE")!;
+        var stmt = SqlParser.Parse("SELECT * FROM users FOR UPDATE")!;
         var plainSelect = (PlainSelect)stmt;
 
         Assert.Equal(ForMode.Update, plainSelect.ForMode);
@@ -116,7 +116,7 @@ public class ForUpdateTest
     [Fact]
     public void ForShare_ShouldSetShareMode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR SHARE")!;
+        var stmt = SqlParser.Parse("SELECT * FROM users FOR SHARE")!;
         var plainSelect = (PlainSelect)stmt;
 
         Assert.Equal(ForMode.Share, plainSelect.ForMode);
@@ -164,7 +164,7 @@ public class ForUpdateTest
     [Fact]
     public void ForNoKeyUpdate_ShouldParsePostgresMode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR NO KEY UPDATE")!;
+        var stmt = SqlParser.Parse("SELECT * FROM users FOR NO KEY UPDATE")!;
         var plainSelect = (PlainSelect)stmt;
         Assert.Equal(ForMode.NoKeyUpdate, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM users FOR NO KEY UPDATE", stmt.ToString());
@@ -173,7 +173,7 @@ public class ForUpdateTest
     [Fact]
     public void ForKeyShare_ShouldParsePostgresMode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR KEY SHARE")!;
+        var stmt = SqlParser.Parse("SELECT * FROM users FOR KEY SHARE")!;
         var plainSelect = (PlainSelect)stmt;
         Assert.Equal(ForMode.KeyShare, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM users FOR KEY SHARE", stmt.ToString());
@@ -182,7 +182,7 @@ public class ForUpdateTest
     [Fact]
     public void ForReadOnly_ShouldParseDb2Mode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR READ ONLY")!;
+        var stmt = SqlParser.Parse("SELECT * FROM mytable FOR READ ONLY")!;
         var plainSelect = (PlainSelect)stmt;
         Assert.Equal(ForMode.ReadOnly, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM mytable FOR READ ONLY", stmt.ToString());
@@ -191,7 +191,7 @@ public class ForUpdateTest
     [Fact]
     public void ForFetchOnly_ShouldParseDb2Mode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR FETCH ONLY")!;
+        var stmt = SqlParser.Parse("SELECT * FROM mytable FOR FETCH ONLY")!;
         var plainSelect = (PlainSelect)stmt;
         Assert.Equal(ForMode.FetchOnly, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM mytable FOR FETCH ONLY", stmt.ToString());
@@ -201,7 +201,7 @@ public class ForUpdateTest
     public void ForReadOnly_AfterFetchClause_ShouldParseAndDeparse()
     {
         // DB2: FETCH FIRST n ROWS ONLY 后跟 FOR READ ONLY
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY")!;
+        var stmt = SqlParser.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY")!;
         var plainSelect = (PlainSelect)stmt;
         Assert.Equal(ForMode.ReadOnly, plainSelect.ForMode);
         Assert.NotNull(plainSelect.Fetch);

@@ -17,7 +17,7 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_SimpleSelect_ShouldEqualLegacyGetTables()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var stmt = SqlParser.Parse("SELECT id FROM users")!;
         var viaExtension = stmt.GetTableNames();
 
 #pragma warning disable CS0618 // 等价对照
@@ -31,7 +31,7 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_SelectWithJoin_ShouldReturnBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
@@ -41,7 +41,7 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_WithSubquery_ShouldReturnInnerAndOuterTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM (SELECT uid FROM orders) sub WHERE id IN (SELECT id FROM logs)")!;
         var tables = stmt.GetTableNames();
         Assert.Contains("orders", tables);
@@ -51,7 +51,7 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_TableStatement_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("TABLE users")!;
+        var stmt = SqlParser.Parse("TABLE users")!;
         var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
     }
@@ -59,7 +59,7 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_ShouldReturnReadOnlyCollection()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var stmt = SqlParser.Parse("SELECT id FROM users")!;
         var tables = stmt.GetTableNames();
         Assert.IsAssignableFrom<IReadOnlyCollection<string>>(tables);
     }
@@ -69,14 +69,14 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_Insert_ShouldReturnTargetTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (name) VALUES ('Alice')")!;
+        var stmt = SqlParser.Parse("INSERT INTO users (name) VALUES ('Alice')")!;
         Assert.Contains("users", stmt.GetTableNames());
     }
 
     [Fact]
     public void GetTableNames_InsertFromSelect_ShouldReturnBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO target SELECT id FROM source")!;
+        var stmt = SqlParser.Parse("INSERT INTO target SELECT id FROM source")!;
         var tables = stmt.GetTableNames();
         Assert.Contains("target", tables);
         Assert.Contains("source", tables);
@@ -85,21 +85,21 @@ public class StatementExtensionTest
     [Fact]
     public void GetTableNames_Update_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("UPDATE users SET name = 'Bob' WHERE id = 1")!;
+        var stmt = SqlParser.Parse("UPDATE users SET name = 'Bob' WHERE id = 1")!;
         Assert.Contains("users", stmt.GetTableNames());
     }
 
     [Fact]
     public void GetTableNames_Delete_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("DELETE FROM logs WHERE expired = 1")!;
+        var stmt = SqlParser.Parse("DELETE FROM logs WHERE expired = 1")!;
         Assert.Contains("logs", stmt.GetTableNames());
     }
 
     [Fact]
     public void GetTableNames_Merge_ShouldReturnTargetAndSource()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "MERGE INTO target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name")!;
         var tables = stmt.GetTableNames();
         Assert.Contains("target", tables);
@@ -110,7 +110,7 @@ public class StatementExtensionTest
     public void GetTableNames_ShouldDeduplicateRepeatedTables()
     {
         // 同一表出现多次（自连接不同别名）—— 表名去重
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT a.id FROM users a JOIN users b ON a.id = b.parent_id")!;
         var tables = stmt.GetTableNames();
         var count = tables.Count(t => t == "users");
@@ -122,7 +122,7 @@ public class StatementExtensionTest
     [Fact]
     public void Descendants_OfSelect_WithUnion_ShouldCollectAllBranches()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM a UNION SELECT id FROM b UNION SELECT id FROM c")!;
         // 根是 SetOperationList，内部含 3 个 PlainSelect
         var plainSelects = stmt.Descendants<PlainSelect>().ToList();
@@ -133,7 +133,7 @@ public class StatementExtensionTest
     [Fact]
     public void Descendants_OfStatements_ShouldCollectNestedStatements()
     {
-        var stmt = CCJSqlParserUtil.ParseStatements(
+        var stmt = SqlParser.ParseStatements(
             "SELECT id FROM a; SELECT id FROM b; INSERT INTO c VALUES (1)")!;
         var selects = stmt.Descendants<Select>().ToList();
         Assert.Equal(2, selects.Count);
@@ -144,7 +144,7 @@ public class StatementExtensionTest
     [Fact]
     public void Descendants_OfInsert_ShouldCollectSelf()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users VALUES (1)")!;
+        var stmt = SqlParser.Parse("INSERT INTO users VALUES (1)")!;
         var inserts = stmt.Descendants<Azrng.JSqlParser.Statement.Insert.Insert>().ToList();
         Assert.Single(inserts);
     }
@@ -153,14 +153,14 @@ public class StatementExtensionTest
     public void Descendants_OfNonExistentType_ShouldReturnEmpty()
     {
         // 单条 SELECT 语句中没有 UPDATE 节点
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM a")!;
+        var stmt = SqlParser.Parse("SELECT id FROM a")!;
         Assert.Empty(stmt.Descendants<Azrng.JSqlParser.Statement.Update.Update>());
     }
 
     [Fact]
     public void Descendants_ShouldCollectFromMultipleStatementsContainer()
     {
-        var stmt = CCJSqlParserUtil.ParseStatements(
+        var stmt = SqlParser.ParseStatements(
             "UPDATE a SET x = 1; DELETE FROM b; UPDATE c SET y = 2")!;
         var updates = stmt.Descendants<Azrng.JSqlParser.Statement.Update.Update>().ToList();
         Assert.Equal(2, updates.Count);

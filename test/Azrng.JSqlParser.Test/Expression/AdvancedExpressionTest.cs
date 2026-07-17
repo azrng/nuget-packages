@@ -14,7 +14,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Case_Simple_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN status = 1 THEN 'active' ELSE 'inactive' END FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -22,7 +22,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Case_MultipleWhen_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN score >= 90 THEN 'A' WHEN score >= 80 THEN 'B' ELSE 'C' END FROM students")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -30,7 +30,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Case_WithElse_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN id > 0 THEN id ELSE 0 END FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -42,14 +42,14 @@ public class AdvancedExpressionTest
     [Fact]
     public void Cast_ToInt_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT CAST(id AS INT) FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT CAST(id AS INT) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
 
     [Fact]
     public void Cast_ToVarchar_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CAST(id AS VARCHAR(50)) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -57,7 +57,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Cast_ToDate_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CAST(created_at AS DATE) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -69,7 +69,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void RowNumber_Over_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROW_NUMBER() OVER (ORDER BY id) AS rn FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -77,7 +77,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Rank_Over_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT RANK() OVER (PARTITION BY dept ORDER BY salary DESC) AS rnk FROM employees")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -85,7 +85,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Sum_Over_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(amount) OVER (PARTITION BY user_id ORDER BY created_at) AS running_total FROM orders")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -93,7 +93,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Count_Over_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(*) OVER (PARTITION BY dept) AS dept_count FROM employees")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -104,7 +104,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void WindowFrame_RowsBetween_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(analytic.WindowFrame);
@@ -120,7 +120,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void WindowFrame_RowsBetweenNumericOffset_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) FROM t")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(analytic.WindowFrame);
@@ -134,7 +134,7 @@ public class AdvancedExpressionTest
     public void WindowFrame_RangeSingleBound_ShouldRoundTrip()
     {
         // 单边界形式：RANGE UNBOUNDED PRECEDING
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(x) OVER (ORDER BY id RANGE UNBOUNDED PRECEDING) FROM t")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(analytic.WindowFrame);
@@ -146,7 +146,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void WindowFrame_GroupsBetween_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(x) OVER (ORDER BY id GROUPS BETWEEN 2 PRECEDING AND 2 FOLLOWING) FROM t")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.Equal(FrameType.Groups, analytic.WindowFrame!.Type);
@@ -155,7 +155,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void WindowFrame_WithExclude_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW EXCLUDE TIES) FROM t")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.Equal(ExcludeType.Ties, analytic.WindowFrame!.Exclude);
@@ -169,7 +169,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Extract_Year_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT EXTRACT(YEAR FROM created_at) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -177,7 +177,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Extract_Month_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT EXTRACT(MONTH FROM created_at) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -189,7 +189,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Interval_Day_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT created_at + INTERVAL '7' DAY FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -201,7 +201,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Exists_Subquery_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)")!;
         Assert.NotNull(select.Where);
     }
@@ -209,7 +209,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void NotExists_Subquery_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE NOT EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)")!;
         Assert.NotNull(select.Where);
     }
@@ -221,7 +221,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void In_Subquery_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)")!;
         Assert.NotNull(select.Where);
     }
@@ -233,7 +233,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Between_IntRange_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE id BETWEEN 1 AND 100")!;
         Assert.NotNull(select.Where);
     }
@@ -241,7 +241,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Between_DateRange_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31'")!;
         Assert.NotNull(select.Where);
     }
@@ -253,7 +253,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Like_StartsWith_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE name LIKE 'John%'")!;
         Assert.NotNull(select.Where);
     }
@@ -261,7 +261,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Like_Contains_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE name LIKE '%test%'")!;
         Assert.NotNull(select.Where);
     }
@@ -269,7 +269,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void NotLike_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE name NOT LIKE '%test%'")!;
         Assert.NotNull(select.Where);
     }
@@ -281,7 +281,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void IsNull_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE email IS NULL")!;
         Assert.NotNull(select.Where);
     }
@@ -289,7 +289,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void IsNotNull_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE email IS NOT NULL")!;
         Assert.NotNull(select.Where);
     }
@@ -301,7 +301,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Coalesce_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COALESCE(name, 'unknown') FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -309,7 +309,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void NullIf_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT NULLIF(name, '') FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -321,14 +321,14 @@ public class AdvancedExpressionTest
     [Fact]
     public void Count_Star_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT COUNT(*) FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT COUNT(*) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
 
     [Fact]
     public void Count_Distinct_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(DISTINCT name) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -336,7 +336,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Sum_Avg_Min_Max_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(amount), AVG(amount), MIN(amount), MAX(amount) FROM orders")!;
         Assert.Equal(4, select.SelectItems!.Count);
     }
@@ -348,7 +348,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Concat_Function_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CONCAT(first_name, ' ', last_name) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -356,7 +356,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Substring_Function_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUBSTRING(name, 1, 3) FROM users")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -364,7 +364,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Upper_Lower_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT UPPER(name), LOWER(email) FROM users")!;
         Assert.Equal(2, select.SelectItems!.Count);
     }
@@ -376,7 +376,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Round_Function_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROUND(amount, 2) FROM orders")!;
         Assert.NotNull(select.SelectItems);
     }
@@ -384,7 +384,7 @@ public class AdvancedExpressionTest
     [Fact]
     public void Abs_Function_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ABS(balance) FROM accounts")!;
         Assert.NotNull(select.SelectItems);
     }

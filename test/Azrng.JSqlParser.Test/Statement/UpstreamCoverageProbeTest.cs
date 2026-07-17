@@ -157,7 +157,7 @@ public class UpstreamCoverageProbeTest
     public void UpstreamSql_CanParse(string sql)
     {
         // 仅验证解析无异常 + ToString 无异常（不要求 round-trip 完全一致）
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         var result = stmt.ToString();
         Assert.False(string.IsNullOrEmpty(result));

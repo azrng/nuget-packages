@@ -24,7 +24,7 @@ public class EdgeCaseFixTest
     [Fact]
     public void M3_JsonFunction_WithPath_DoesNotThrow()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT JSON_VALUE(t.col, '$.path') FROM t");
+        var stmt = SqlParser.Parse("SELECT JSON_VALUE(t.col, '$.path') FROM t");
         Assert.NotNull(stmt);
         Assert.Contains("JSON_VALUE", stmt!.ToString());
     }
@@ -35,7 +35,7 @@ public class EdgeCaseFixTest
     [Fact]
     public void L8_ParenthesedSelect_SetOperationList_ThrowsJSqlParserException()
     {
-        var plainSelect = (PlainSelect)CCJSqlParserUtil.Parse(
+        var plainSelect = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM (SELECT 1 UNION SELECT 2) t")!;
         var subquery = (ParenthesedSelect)plainSelect.IFromItem!;
 
@@ -47,7 +47,7 @@ public class EdgeCaseFixTest
     [Fact]
     public void L8_ParenthesedSelect_PlainSelect_ReturnsNormally()
     {
-        var plainSelect = (PlainSelect)CCJSqlParserUtil.Parse(
+        var plainSelect = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM (SELECT 1) t")!;
         var subquery = (ParenthesedSelect)plainSelect.IFromItem!;
 

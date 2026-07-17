@@ -32,7 +32,7 @@ public class ExpressionVisitorTest
     [Fact]
     public void ExpressionVisitorAdapter_WhereColumns_ShouldCollect()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE name = 'test' AND age > 18")!;
         var visitor = new ColumnCollector();
         select.Where!.Accept(visitor);
@@ -42,7 +42,7 @@ public class ExpressionVisitorTest
     [Fact]
     public void Expression_Accept_ShouldNotThrow()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE id = 1 AND name LIKE '%test%'")!;
         var visitor = new ColumnCollector();
         select.Where!.Accept(visitor);
@@ -52,7 +52,7 @@ public class ExpressionVisitorTest
     [Fact]
     public void ExpressionVisitorAdapter_NotExpression_ShouldVisitInnerColumn()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE NOT name = 'test'")!;
         var visitor = new ColumnCollector();
 
@@ -64,7 +64,7 @@ public class ExpressionVisitorTest
     [Fact]
     public void ExpressionVisitorAdapter_FunctionParameters_ShouldVisitColumns()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("COALESCE(name, fallback_name)")!;
+        var expr = SqlParser.ParseExpression("COALESCE(name, fallback_name)")!;
         var visitor = new ColumnCollector();
 
         expr.Accept(visitor, (object?)null);
@@ -76,8 +76,8 @@ public class ExpressionVisitorTest
     public void ExpressionVisitorAdapter_MultiAndExpression_ShouldVisitChildren()
     {
         var expr = new MultiAndExpression(
-            CCJSqlParserUtil.ParseExpression("a = 1")!,
-            CCJSqlParserUtil.ParseExpression("b = 2")!);
+            SqlParser.ParseExpression("a = 1")!,
+            SqlParser.ParseExpression("b = 2")!);
         var visitor = new ColumnCollector();
 
         expr.Accept(visitor, (object?)null);
@@ -89,9 +89,9 @@ public class ExpressionVisitorTest
     public void ExpressionVisitorAdapter_MultiAndExpression_ThreeChildren_ShouldVisitAll()
     {
         var expr = new MultiAndExpression(
-            CCJSqlParserUtil.ParseExpression("a = 1")!,
-            CCJSqlParserUtil.ParseExpression("b = 2")!,
-            CCJSqlParserUtil.ParseExpression("c = 3")!);
+            SqlParser.ParseExpression("a = 1")!,
+            SqlParser.ParseExpression("b = 2")!,
+            SqlParser.ParseExpression("c = 3")!);
         var visitor = new ColumnCollector();
 
         expr.Accept(visitor, (object?)null);
@@ -118,9 +118,9 @@ public class ExpressionVisitorTest
         {
             Expressions =
             [
-                CCJSqlParserUtil.ParseExpression("a")!,
-                CCJSqlParserUtil.ParseExpression("b")!,
-                CCJSqlParserUtil.ParseExpression("c")!
+                SqlParser.ParseExpression("a")!,
+                SqlParser.ParseExpression("b")!,
+                SqlParser.ParseExpression("c")!
             ]
         };
         var visitor = new ColumnCollector();
@@ -145,7 +145,7 @@ public class ExpressionVisitorTest
     [Fact]
     public void ExpressionVisitorAdapter_ExpressionList_ViaInClause_ShouldVisitColumns()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE status IN (1, 2, 3)")!;
         var visitor = new ColumnCollector();
 

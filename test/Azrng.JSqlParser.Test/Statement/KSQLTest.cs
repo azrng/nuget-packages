@@ -12,7 +12,7 @@ public class KSQLTest
     public void Ksql_HoppingWindow_ShouldParseStructuredFields()
     {
         var sql = "SELECT * FROM orders WINDOW HOPPING (SIZE 30 SECONDS, ADVANCE BY 10 MINUTES) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.KsqlWindow);
         Assert.True(select.KsqlWindow!.Hopping);
         Assert.Equal(30, select.KsqlWindow.SizeDuration);
@@ -25,7 +25,7 @@ public class KSQLTest
     public void Ksql_TumblingWindow_ShouldParse()
     {
         var sql = "SELECT * FROM orders WINDOW TUMBLING (SIZE 30 SECONDS) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.KsqlWindow);
         Assert.True(select.KsqlWindow!.Tumbling);
         Assert.Equal(30, select.KsqlWindow.SizeDuration);
@@ -36,7 +36,7 @@ public class KSQLTest
     public void Ksql_SessionWindow_ShouldParse()
     {
         var sql = "SELECT * FROM orders WINDOW SESSION (5 MINUTES) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.KsqlWindow);
         Assert.True(select.KsqlWindow!.Session);
         Assert.Equal(5, select.KsqlWindow.SizeDuration);
@@ -47,7 +47,7 @@ public class KSQLTest
     public void Ksql_HoppingWindow_RoundTrip_ShouldPreserve()
     {
         var sql = "SELECT * FROM orders WINDOW HOPPING (SIZE 30 SECONDS, ADVANCE BY 10 MINUTES) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Contains("WINDOW HOPPING (SIZE 30 SECONDS, ADVANCE BY 10 MINUTES)", select.ToString());
     }
 
@@ -55,7 +55,7 @@ public class KSQLTest
     public void Ksql_TumblingWindow_RoundTrip_ShouldPreserve()
     {
         var sql = "SELECT * FROM orders WINDOW TUMBLING (SIZE 30 SECONDS) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Contains("WINDOW TUMBLING (SIZE 30 SECONDS)", select.ToString());
     }
 
@@ -63,7 +63,7 @@ public class KSQLTest
     public void Ksql_SessionWindow_RoundTrip_ShouldPreserve()
     {
         var sql = "SELECT * FROM orders WINDOW SESSION (5 MINUTES) GROUP BY region.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Contains("WINDOW SESSION (5 MINUTES)", select.ToString());
     }
 
@@ -71,7 +71,7 @@ public class KSQLTest
     public void Ksql_EmitChanges_ShouldParse()
     {
         var sql = "SELECT * FROM orders GROUP BY region.id EMIT CHANGES";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.True(select.EmitChanges);
     }
 
@@ -79,7 +79,7 @@ public class KSQLTest
     public void Ksql_EmitChangesWithLimit_ShouldParse()
     {
         var sql = "SELECT * FROM orders GROUP BY region.id EMIT CHANGES LIMIT 2";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.True(select.EmitChanges);
         Assert.NotNull(select.Limit);
     }
@@ -88,7 +88,7 @@ public class KSQLTest
     public void Ksql_EmitChanges_RoundTrip_ShouldPreserve()
     {
         var sql = "SELECT * FROM orders GROUP BY region.id EMIT CHANGES";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Contains("EMIT CHANGES", select.ToString()!.Trim());
     }
 
@@ -96,7 +96,7 @@ public class KSQLTest
     public void Ksql_WindowedJoin_SingleWindow_ShouldParse()
     {
         var sql = "SELECT * FROM table1 t1 INNER JOIN table2 t2 WITHIN (5 HOURS) ON t1.id = t2.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Single(select.Joins!);
         var join = select.Joins![0];
         Assert.NotNull(join.JoinWindow);
@@ -109,7 +109,7 @@ public class KSQLTest
     public void Ksql_WindowedJoin_BeforeAfterWindow_ShouldParse()
     {
         var sql = "SELECT * FROM table1 t1 INNER JOIN table2 t2 WITHIN (1 MINUTE, 5 MINUTES) ON t1.id = t2.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var join = select.Joins![0];
         Assert.NotNull(join.JoinWindow);
         Assert.True(join.JoinWindow!.BeforeAfter);
@@ -123,7 +123,7 @@ public class KSQLTest
     public void Ksql_WindowedJoin_RoundTrip_ShouldPreserve()
     {
         var sql = "SELECT * FROM table1 t1 INNER JOIN table2 t2 WITHIN (5 HOURS) ON t1.id = t2.id";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Contains("WITHIN (5 HOURS)", select.ToString());
     }
 }

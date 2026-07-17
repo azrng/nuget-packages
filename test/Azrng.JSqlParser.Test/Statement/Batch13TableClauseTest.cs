@@ -14,7 +14,7 @@ public class Batch13TableClauseTest
     [Fact]
     public void TableSample_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t TABLESAMPLE (100)");
+        var stmt = SqlParser.Parse("SELECT * FROM t TABLESAMPLE (100)");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t TABLESAMPLE (100)", stmt!.ToString());
@@ -23,7 +23,7 @@ public class Batch13TableClauseTest
     [Fact]
     public void TableSample_WithMethod_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t TABLESAMPLE BERNOULLI (50) PERCENT");
+        var stmt = SqlParser.Parse("SELECT * FROM t TABLESAMPLE BERNOULLI (50) PERCENT");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t TABLESAMPLE BERNOULLI (50) PERCENT", stmt!.ToString());
@@ -32,7 +32,7 @@ public class Batch13TableClauseTest
     [Fact]
     public void TableSample_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t TABLESAMPLE SYSTEM (1000)");
+        var stmt = SqlParser.Parse("SELECT * FROM t TABLESAMPLE SYSTEM (1000)");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var table = Assert.IsType<Table>(plainSelect.IFromItem);
 

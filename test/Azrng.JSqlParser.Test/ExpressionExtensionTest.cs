@@ -19,7 +19,7 @@ public class ExpressionExtensionTest
     /// <summary>解析 WHERE 表达式。用 SELECT 包裹再取 Where，避免顶层表达式解析的歧义。</summary>
     private static JExpression ParseWhere(string sql)
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (PlainSelect)SqlParser.Parse(sql)!;
         return stmt.Where!;
     }
 

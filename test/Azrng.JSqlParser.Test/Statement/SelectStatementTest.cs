@@ -16,28 +16,28 @@ public class SelectStatementTest
     [Fact]
     public void Select_SingleTable_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
         Assert.NotNull(select.IFromItem);
     }
 
     [Fact]
     public void Select_MultipleColumns_ShouldHaveItems()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id, name, email FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id, name, email FROM users")!;
         Assert.Equal(3, select.SelectItems!.Count);
     }
 
     [Fact]
     public void Select_Star_ShouldHaveOneItem()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT * FROM users")!;
         Assert.Single(select.SelectItems!);
     }
 
     [Fact]
     public void Select_Alias_ShouldHaveAlias()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id AS user_id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id AS user_id FROM users")!;
         var item = select.SelectItems![0];
         Assert.NotNull(item.Alias);
         Assert.True(item.Alias.UseAs);
@@ -47,7 +47,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_TableAlias_ShouldHaveAlias()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT u.id FROM users u")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT u.id FROM users u")!;
         var from = (Table)select.IFromItem!;
         Assert.NotNull(from.Alias);
     }
@@ -59,7 +59,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_WhereEquals_ShouldHaveWhere()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users WHERE id = 1")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users WHERE id = 1")!;
         Assert.NotNull(select.Where);
         Assert.IsType<EqualsTo>(select.Where);
     }
@@ -67,7 +67,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_WhereAnd_ShouldHaveAndExpression()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE id = 1 AND name = 'test'")!;
         Assert.NotNull(select.Where);
         Assert.IsType<AndExpression>(select.Where);
@@ -76,7 +76,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_WhereComplex_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE (id > 10 OR name LIKE '%test%') AND status = 'active'")!;
         Assert.NotNull(select.Where);
     }
@@ -88,7 +88,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_OrderByAsc_ShouldHaveOrderBy()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY id ASC")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users ORDER BY id ASC")!;
         Assert.NotNull(select.OrderByElements);
         Assert.Single(select.OrderByElements!);
     }
@@ -96,14 +96,14 @@ public class SelectStatementTest
     [Fact]
     public void Select_OrderByDesc_ShouldHaveOrderBy()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users ORDER BY id DESC")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users ORDER BY id DESC")!;
         Assert.NotNull(select.OrderByElements);
     }
 
     [Fact]
     public void Select_OrderByMultiple_ShouldHaveMultipleElements()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users ORDER BY name ASC, id DESC")!;
         Assert.Equal(2, select.OrderByElements!.Count);
     }
@@ -116,7 +116,7 @@ public class SelectStatementTest
     public void Select_OrderByCollate_ShouldRoundTrip()
     {
         var sql = "SELECT id FROM users ORDER BY name COLLATE 'und-x-icu'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Equal("'und-x-icu'", select.OrderByElements![0].CollateName);
         Assert.Equal(sql, select.ToString());
     }
@@ -126,7 +126,7 @@ public class SelectStatementTest
     {
         // 用 S_CHAR_LITERAL 规避 postfixExpr 的 COLLATE 既有缺陷
         var sql = "SELECT id FROM users ORDER BY name COLLATE 'C' DESC";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.Equal("'C'", select.OrderByElements![0].CollateName);
         Assert.False(select.OrderByElements[0].Asc);
         Assert.Equal(sql, select.ToString());
@@ -139,7 +139,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_DistinctRow_ShouldHaveDistinct()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT DISTINCTROW id FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT DISTINCTROW id FROM users")!;
         Assert.NotNull(select.Distinct);
     }
 
@@ -151,7 +151,7 @@ public class SelectStatementTest
     public void SetOperation_Corresponding_ShouldRoundTrip()
     {
         var sql = "SELECT a FROM t1 UNION CORRESPONDING SELECT a FROM t2";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -159,7 +159,7 @@ public class SelectStatementTest
     public void SetOperation_DistinctCorresponding_ShouldRoundTrip()
     {
         var sql = "SELECT a FROM t1 INTERSECT DISTINCT CORRESPONDING SELECT a FROM t2";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -170,7 +170,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_GroupBy_ShouldHaveGroupBy()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT name, COUNT(*) FROM users GROUP BY name")!;
         Assert.NotNull(select.GroupBy);
     }
@@ -178,7 +178,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_GroupByMultiple_ShouldHaveGroupBy()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT name, status, COUNT(*) FROM users GROUP BY name, status")!;
         Assert.NotNull(select.GroupBy);
     }
@@ -186,7 +186,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_Having_ShouldHaveHaving()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT name, COUNT(*) c FROM users GROUP BY name HAVING c > 1")!;
         Assert.NotNull(select.Having);
     }
@@ -198,14 +198,14 @@ public class SelectStatementTest
     [Fact]
     public void Select_Limit_ShouldHaveLimit()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users LIMIT 10")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users LIMIT 10")!;
         Assert.NotNull(select.Limit);
     }
 
     [Fact]
     public void Select_LimitOffset_ShouldHaveBoth()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users LIMIT 10 OFFSET 20")!;
         Assert.NotNull(select.Limit);
         Assert.NotNull(select.Offset);
@@ -218,7 +218,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_Distinct_ShouldHaveDistinct()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT DISTINCT name FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT DISTINCT name FROM users")!;
         Assert.NotNull(select.Distinct);
     }
 
@@ -229,7 +229,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_InnerJoin_ShouldHaveJoin()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         Assert.NotNull(select.Joins);
         Assert.Single(select.Joins);
@@ -238,7 +238,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_LeftJoin_ShouldHaveJoin()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT u.id, o.total FROM users u LEFT JOIN orders o ON u.id = o.user_id")!;
         Assert.NotNull(select.Joins);
     }
@@ -246,7 +246,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_RightJoin_ShouldHaveJoin()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT u.id, o.total FROM users u RIGHT JOIN orders o ON u.id = o.user_id")!;
         Assert.NotNull(select.Joins);
     }
@@ -254,7 +254,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_MultipleJoins_ShouldHaveMultipleJoins()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT u.id, o.total, p.name FROM users u " +
             "INNER JOIN orders o ON u.id = o.user_id " +
             "INNER JOIN products p ON o.product_id = p.id")!;
@@ -265,7 +265,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_CommaSeparatedTables_ShouldKeepAllFromItems()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users, orders, products")!;
 
         Assert.NotNull(select.Joins);
@@ -298,7 +298,7 @@ public class SelectStatementTest
     public void Select_InnerJoinUsing_ShouldParseAndDeparse()
     {
         var sql = "SELECT a.id FROM x a INNER JOIN y b USING (z)";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.NotNull(select.Joins);
         Assert.Single(select.Joins);
@@ -312,7 +312,7 @@ public class SelectStatementTest
     public void Select_JoinUsing_MultipleColumns_ShouldParseAndDeparse()
     {
         var sql = "SELECT * FROM a LEFT JOIN b USING (c1, c2, c3)";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.Equal(3, select.Joins![0].UsingColumns.Count);
         Assert.Equal(sql, select.ToString());
@@ -326,7 +326,7 @@ public class SelectStatementTest
     public void Select_JoinFetch_ShouldSetFetchAndRoundTrip()
     {
         var sql = "SELECT c FROM Customer c LEFT JOIN FETCH c.orders o";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.NotNull(select.Joins);
         Assert.True(select.Joins![0].Fetch);
@@ -337,7 +337,7 @@ public class SelectStatementTest
     public void Select_InnerJoinFetch_ShouldRoundTrip()
     {
         var sql = "SELECT a FROM t1 a INNER JOIN FETCH a.b";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.True(select.Joins![0].Fetch);
         Assert.Equal(sql, select.ToString());
     }
@@ -350,7 +350,7 @@ public class SelectStatementTest
     public void BacktickIdentifier_ShouldRoundTrip()
     {
         var sql = "SELECT `id`, `name` FROM `users` WHERE `id` = 1";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -366,7 +366,7 @@ public class SelectStatementTest
     public void Select_IntoOutfileTrailing_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.MySqlIntoOutfile);
         Assert.Equal(MySqlIntoOutfile.OutfileType.OUTFILE, select.MySqlIntoOutfile!.Type);
         Assert.False(select.MySqlIntoOutfile.BeforeFrom);
@@ -377,7 +377,7 @@ public class SelectStatementTest
     public void Select_IntoOutfileBeforeFrom_ShouldRoundTrip()
     {
         var sql = "SELECT a, b INTO OUTFILE '/tmp/result.txt' FROM test_table";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.MySqlIntoOutfile);
         Assert.True(select.MySqlIntoOutfile!.BeforeFrom);
         Assert.Equal(sql, select.ToString());
@@ -387,7 +387,7 @@ public class SelectStatementTest
     public void Select_IntoDumpfile_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO DUMPFILE '/tmp/users.bin'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         Assert.NotNull(select.MySqlIntoOutfile);
         Assert.Equal(MySqlIntoOutfile.OutfileType.DUMPFILE, select.MySqlIntoOutfile!.Type);
         Assert.Equal(sql, select.ToString());
@@ -397,7 +397,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_FieldsAndLinesClauses_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '\\\\' LINES STARTING BY '>' TERMINATED BY '\\n'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.Equal(MySqlIntoOutfile.FieldsKeyword.FIELDS, outfile.FieldsKeywordValue);
@@ -416,7 +416,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_CharacterSet_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' CHARACTER SET utf8mb4";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.Equal("utf8mb4", outfile.CharacterSet);
@@ -429,7 +429,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_CharacterSetAndFields_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' CHARACTER SET utf8mb4 FIELDS TERMINATED BY '|'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.Equal("utf8mb4", outfile.CharacterSet);
@@ -441,7 +441,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_ColumnsKeyword_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' COLUMNS TERMINATED BY ','";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.Equal(MySqlIntoOutfile.FieldsKeyword.COLUMNS, outfile.FieldsKeywordValue);
@@ -452,7 +452,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_OnlyLines_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM users INTO OUTFILE '/tmp/users.csv' LINES TERMINATED BY '\\r\\n'";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.False(outfile.HasFieldsClause);
@@ -466,7 +466,7 @@ public class SelectStatementTest
     public void Select_IntoOutfile_BeforeFrom_WithFields_ShouldRoundTrip()
     {
         var sql = "SELECT a, b INTO OUTFILE '/tmp/r.txt' FIELDS TERMINATED BY ',' FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var outfile = select.MySqlIntoOutfile!;
         Assert.True(outfile.BeforeFrom);
@@ -481,7 +481,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_SubqueryInFrom_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM (SELECT id, name FROM users) AS sub")!;
         Assert.NotNull(select.IFromItem);
     }
@@ -489,7 +489,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_SubqueryInWhere_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)")!;
         Assert.NotNull(select.Where);
     }
@@ -501,21 +501,21 @@ public class SelectStatementTest
     [Fact]
     public void Select_Union_ShouldBeSetOperationList()
     {
-        var select = (Select)CCJSqlParserUtil.Parse("SELECT id FROM users UNION SELECT id FROM admins")!;
+        var select = (Select)SqlParser.Parse("SELECT id FROM users UNION SELECT id FROM admins")!;
         Assert.IsType<SetOperationList>(select);
     }
 
     [Fact]
     public void Select_UnionAll_ShouldBeSetOperationList()
     {
-        var select = (SetOperationList)CCJSqlParserUtil.Parse("SELECT id FROM users UNION ALL SELECT id FROM admins")!;
+        var select = (SetOperationList)SqlParser.Parse("SELECT id FROM users UNION ALL SELECT id FROM admins")!;
         Assert.Equal(2, select.Selects.Count);
     }
 
     [Fact]
     public void Select_Intersect_ShouldBeSetOperationList()
     {
-        var select = (Select)CCJSqlParserUtil.Parse(
+        var select = (Select)SqlParser.Parse(
             "SELECT id FROM users INTERSECT SELECT id FROM admins")!;
         Assert.IsType<SetOperationList>(select);
     }
@@ -523,7 +523,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_Except_ShouldBeSetOperationList()
     {
-        var select = (Select)CCJSqlParserUtil.Parse(
+        var select = (Select)SqlParser.Parse(
             "SELECT id FROM users EXCEPT SELECT id FROM admins")!;
         Assert.IsType<SetOperationList>(select);
     }
@@ -561,14 +561,14 @@ public class SelectStatementTest
     [InlineData("SELECT a FROM t1 INTERSECT DISTINCT SELECT a FROM t2")]
     public void SetOperation_AllDistinct_ShouldRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
     [Fact]
     public void SetOperation_ExceptDistinct_ShouldSetDistinctFlag()
     {
-        var setOpList = (SetOperationList)CCJSqlParserUtil.Parse(
+        var setOpList = (SetOperationList)SqlParser.Parse(
             "SELECT a FROM t1 EXCEPT DISTINCT SELECT a FROM t2")!;
         var op = setOpList.Operations[0];
         Assert.Equal(SetOperation.OperationType.EXCEPT, op.Type);
@@ -579,7 +579,7 @@ public class SelectStatementTest
     [Fact]
     public void SetOperation_MinusAll_ShouldSetMinusTypeAndAllFlag()
     {
-        var setOpList = (SetOperationList)CCJSqlParserUtil.Parse(
+        var setOpList = (SetOperationList)SqlParser.Parse(
             "SELECT a FROM t1 MINUS ALL SELECT a FROM t2")!;
         var op = setOpList.Operations[0];
         Assert.Equal(SetOperation.OperationType.MINUS, op.Type);
@@ -593,7 +593,7 @@ public class SelectStatementTest
     [Fact]
     public void SetOperation_MixedModifiers_ShouldNotLeak()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT a FROM t1 UNION ALL SELECT b FROM t2 EXCEPT DISTINCT SELECT c FROM t3")!;
         var deparsed = stmt.ToString()!;
         Assert.Contains("UNION ALL", deparsed);
@@ -612,7 +612,7 @@ public class SelectStatementTest
     [Fact]
     public void OracleOuterJoin_PlusSuffix_ShouldMarkColumn()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT * FROM dual d, dual d2 WHERE d.dummy = d2.dummy(+)")!;
         var deparsed = stmt.ToString()!;
         Assert.Contains("d2.dummy(+)", deparsed);
@@ -625,7 +625,7 @@ public class SelectStatementTest
     public void OracleOuterJoin_WithinNvlArgument_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM dual d, dual d2 WHERE d.dummy = nvl(d2.dummy(+), 'y')";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -636,7 +636,7 @@ public class SelectStatementTest
     public void OracleOuterJoin_WithinCoalesceArgument_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM dual d, dual d2 WHERE d.dummy = coalesce(d2.dummy(+), 'y')";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -646,7 +646,7 @@ public class SelectStatementTest
     [Fact]
     public void OracleOuterJoin_AbsentSuffix_ShouldLeaveDefault()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT a FROM t WHERE a = b")!;
+        var stmt = SqlParser.Parse("SELECT a FROM t WHERE a = b")!;
         Assert.DoesNotContain("(+)", stmt.ToString()!);
     }
 
@@ -657,7 +657,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_WithCte_ShouldHaveWithItemsList()
     {
-        var select = (Select)CCJSqlParserUtil.Parse(
+        var select = (Select)SqlParser.Parse(
             "WITH active_users AS (SELECT id, name FROM users WHERE status = 'active') SELECT * FROM active_users")!;
         Assert.NotNull(select.WithItemsList);
         Assert.Single(select.WithItemsList!);
@@ -666,7 +666,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_MultipleCtes_ShouldHaveMultipleWithItems()
     {
-        var select = (Select)CCJSqlParserUtil.Parse(
+        var select = (Select)SqlParser.Parse(
             "WITH cte1 AS (SELECT id FROM users), cte2 AS (SELECT id FROM orders) SELECT * FROM cte1")!;
         Assert.NotNull(select.WithItemsList);
         Assert.Equal(2, select.WithItemsList!.Count);
@@ -678,7 +678,7 @@ public class SelectStatementTest
         var sql = "WITH RECURSIVE r(n) AS " +
                   "(SELECT 1 AS n UNION ALL SELECT n+1 FROM r WHERE n < 10) " +
                   "SEARCH DEPTH FIRST BY n SET seq SELECT * FROM r";
-        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var select = (Select)SqlParser.Parse(sql)!;
         Assert.NotNull(select.WithItemsList);
         var item = select.WithItemsList![0];
         Assert.NotNull(item.SearchClause);
@@ -694,7 +694,7 @@ public class SelectStatementTest
         var sql = "WITH RECURSIVE t(a, b) AS " +
                   "(SELECT 1, 2 UNION ALL SELECT a+1, b+1 FROM t WHERE a < 5) " +
                   "SEARCH BREADTH FIRST BY a, b SET order_col SELECT * FROM t";
-        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var select = (Select)SqlParser.Parse(sql)!;
         var item = select.WithItemsList![0];
         Assert.NotNull(item.SearchClause);
         Assert.Equal(SearchOrder.BREADTH, item.SearchClause!.SearchOrder);
@@ -710,7 +710,7 @@ public class SelectStatementTest
         var sql = "WITH RECURSIVE r AS " +
                   "(SELECT 1 AS n UNION ALL SELECT n+1 FROM r WHERE n < 10) " +
                   "SEARCH DEPTH FIRST BY n SET seq SELECT * FROM r";
-        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var select = (Select)SqlParser.Parse(sql)!;
         var output = select.ToString();
         Assert.Contains("SEARCH DEPTH FIRST BY n SET seq", output);
     }
@@ -719,7 +719,7 @@ public class SelectStatementTest
     public void Select_WithSearchClause_NoClause_ShouldBeNull()
     {
         var sql = "WITH r AS (SELECT 1 AS n) SELECT * FROM r";
-        var select = (Select)CCJSqlParserUtil.Parse(sql)!;
+        var select = (Select)SqlParser.Parse(sql)!;
         var item = select.WithItemsList![0];
         Assert.Null(item.SearchClause);
     }
@@ -731,7 +731,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_AllTableColumns_ShouldHaveAllTableColumns()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT t.* FROM users t")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT t.* FROM users t")!;
         var item = select.SelectItems![0];
         Assert.IsType<AllTableColumns>(item.Expression);
         var allTableCols = (AllTableColumns)item.Expression!;
@@ -742,7 +742,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_AnalyticFunction_ShouldBeAnalyticExpression()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROW_NUMBER() OVER(ORDER BY id) FROM users")!;
         Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
     }
@@ -750,7 +750,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_FunctionWithinGroup_ShouldKeepOrderBy()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM users")!;
         // WITHIN GROUP 构造为 AnalyticExpression（WithinGroup 类型），对齐上游
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
@@ -762,7 +762,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_FunctionFilter_ShouldKeepWhereExpression()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(*) FILTER (WHERE active = TRUE) FROM users")!;
         // FILTER ONLY（无 OVER）构造为 AnalyticExpression（FilterOnly 类型），对齐上游
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
@@ -775,7 +775,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_AnalyticFunctionFilter_ShouldKeepWhereExpression()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(*) FILTER (WHERE active = TRUE) OVER(PARTITION BY dept_id) FROM users")!;
         var analytic = Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(analytic.FilterExpression);
@@ -793,7 +793,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_FetchFirstNRows_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY")!;
+        var stmt = SqlParser.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Fetch);
         Assert.True(select.Fetch!.FetchFirst);
@@ -804,7 +804,7 @@ public class SelectStatementTest
     [Fact]
     public void Select_FetchNextRowsWithTies_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH NEXT 10 ROWS WITH TIES")!;
+        var stmt = SqlParser.Parse("SELECT * FROM mytable FETCH NEXT 10 ROWS WITH TIES")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Fetch);
         Assert.False(select.Fetch!.FetchFirst);
@@ -819,7 +819,7 @@ public class SelectStatementTest
     [Fact]
     public void SqlServerHints_NoLock_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users WITH (NOLOCK)")!;
+        var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users WITH (NOLOCK)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.SqlServerHints);
         Assert.True(table.SqlServerHints!.NoLock);
@@ -829,7 +829,7 @@ public class SelectStatementTest
     [Fact]
     public void SqlServerHints_Index_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users WITH (INDEX(idx_users))")!;
+        var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users WITH (INDEX(idx_users))")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.SqlServerHints);
         Assert.Equal("idx_users", table.SqlServerHints!.IndexName);
@@ -840,7 +840,7 @@ public class SelectStatementTest
     [Fact]
     public void SqlServerHints_IndexAndNoLock_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users WITH (INDEX(idx_users), NOLOCK)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.SqlServerHints);
@@ -851,7 +851,7 @@ public class SelectStatementTest
     [Fact]
     public void SqlServerHints_WithAlias_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users u WITH (NOLOCK)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.Alias);
@@ -863,7 +863,7 @@ public class SelectStatementTest
     [Fact]
     public void SqlServerHints_None_ShouldBeNull()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
+        var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users")!;
         var table = (Table)stmt.IFromItem!;
         Assert.Null(table.SqlServerHints);
     }
@@ -875,7 +875,7 @@ public class SelectStatementTest
     [Fact]
     public void MySqlIndexHint_UseIndex_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users USE INDEX (idx_name, idx_age)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.MySqlIndexHint);
@@ -888,7 +888,7 @@ public class SelectStatementTest
     [Fact]
     public void MySqlIndexHint_IgnoreKey_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users IGNORE KEY (idx_name)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.Equal("IGNORE", table.MySqlIndexHint!.Action);
@@ -898,7 +898,7 @@ public class SelectStatementTest
     [Fact]
     public void MySqlIndexHint_ForceIndex_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users FORCE INDEX (pk)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.Equal("FORCE", table.MySqlIndexHint!.Action);
@@ -908,7 +908,7 @@ public class SelectStatementTest
     [Fact]
     public void MySqlIndexHint_WithAlias_ShouldRoundTrip()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse(
+        var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users u USE INDEX (idx)")!;
         var table = (Table)stmt.IFromItem!;
         Assert.NotNull(table.Alias);
@@ -919,7 +919,7 @@ public class SelectStatementTest
     [Fact]
     public void MySqlIndexHint_None_ShouldBeNull()
     {
-        var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT * FROM users")!;
+        var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users")!;
         var table = (Table)stmt.IFromItem!;
         Assert.Null(table.MySqlIndexHint);
     }

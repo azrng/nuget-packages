@@ -15,7 +15,7 @@ public class IntegrationTest
     [Fact]
     public void SqlParserCore_SimpleSelect_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id, name FROM users WHERE status = 'active'")!;
+        var stmt = SqlParser.Parse("SELECT id, name FROM users WHERE status = 'active'")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.IFromItem);
         Assert.NotNull(select.Where);
@@ -25,7 +25,7 @@ public class IntegrationTest
     [Fact]
     public void SqlParserCore_SelectWithJoin_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Joins);
@@ -35,7 +35,7 @@ public class IntegrationTest
     [Fact]
     public void SqlParserCore_UnionQuery_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users UNION SELECT id FROM admins")!;
+        var stmt = SqlParser.Parse("SELECT id FROM users UNION SELECT id FROM admins")!;
         Assert.IsType<SetOperationList>(stmt);
         var setOpList = (SetOperationList)stmt;
         Assert.Equal(2, setOpList.Selects.Count);
@@ -44,7 +44,7 @@ public class IntegrationTest
     [Fact]
     public void SqlParserCore_CteQuery_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "WITH active_users AS (SELECT id, name FROM users WHERE status = 'active') SELECT * FROM active_users")!;
         var select = (Select)stmt;
         Assert.NotNull(select.WithItemsList);
@@ -54,7 +54,7 @@ public class IntegrationTest
     [Fact]
     public void SqlParserCore_SubqueryInWhere_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders WHERE amount > 100)")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -67,7 +67,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_AndOr_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE status = 'active' AND age > 18 OR role = 'admin'")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -76,7 +76,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_In_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE status IN ('active', 'pending', 'inactive')")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -85,7 +85,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_Like_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE name LIKE '%test%'")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -94,7 +94,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_Between_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31'")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -103,7 +103,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_IsNull_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE email IS NULL")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -112,7 +112,7 @@ public class IntegrationTest
     [Fact]
     public void Expression_Exists_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.Where);
@@ -125,21 +125,21 @@ public class IntegrationTest
     [Fact]
     public void Dml_Insert_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (id, name) VALUES (1, 'test')");
+        var stmt = SqlParser.Parse("INSERT INTO users (id, name) VALUES (1, 'test')");
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Dml_Update_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("UPDATE users SET name = 'test' WHERE id = 1");
+        var stmt = SqlParser.Parse("UPDATE users SET name = 'test' WHERE id = 1");
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Dml_Delete_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1");
+        var stmt = SqlParser.Parse("DELETE FROM users WHERE id = 1");
         Assert.NotNull(stmt);
     }
 
@@ -150,7 +150,7 @@ public class IntegrationTest
     [Fact]
     public void Ddl_CreateTable_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(200))");
         Assert.NotNull(stmt);
     }
@@ -158,7 +158,7 @@ public class IntegrationTest
     [Fact]
     public void Ddl_CreateView_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE VIEW active_users AS SELECT id, name FROM users WHERE status = 'active'");
         Assert.NotNull(stmt);
     }
@@ -166,14 +166,14 @@ public class IntegrationTest
     [Fact]
     public void Ddl_AlterTable_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER TABLE users ADD COLUMN age INT");
+        var stmt = SqlParser.Parse("ALTER TABLE users ADD COLUMN age INT");
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Ddl_DropTable_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("DROP TABLE users");
+        var stmt = SqlParser.Parse("DROP TABLE users");
         Assert.NotNull(stmt);
     }
 
@@ -184,7 +184,7 @@ public class IntegrationTest
     [Fact]
     public void Complex_MultipleJoins_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT u.id, o.total, p.name FROM users u " +
             "INNER JOIN orders o ON u.id = o.user_id " +
             "INNER JOIN products p ON o.product_id = p.id " +
@@ -202,7 +202,7 @@ public class IntegrationTest
     [Fact]
     public void Complex_GroupByHaving_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT user_id, COUNT(*) as order_count, SUM(amount) as total " +
             "FROM orders " +
             "WHERE status = 'completed' " +
@@ -218,7 +218,7 @@ public class IntegrationTest
     [Fact]
     public void Complex_SubqueryInFrom_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT sub.id, sub.name FROM (SELECT id, name FROM users WHERE status = 'active') AS sub")!;
         var select = (PlainSelect)stmt;
         Assert.NotNull(select.IFromItem);
@@ -227,7 +227,7 @@ public class IntegrationTest
     [Fact]
     public void Complex_MultipleCtes_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "WITH " +
             "active_users AS (SELECT id, name FROM users WHERE status = 'active'), " +
             "recent_orders AS (SELECT user_id, amount FROM orders WHERE created_at > '2024-01-01') " +
@@ -246,7 +246,7 @@ public class IntegrationTest
     [Fact]
     public void TableNames_SimpleSelect_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var stmt = SqlParser.Parse("SELECT id FROM users")!;
         var finder = new TablesNamesFinder();
         var tables = finder.GetTables(stmt);
         Assert.Contains("users", tables);
@@ -255,7 +255,7 @@ public class IntegrationTest
     [Fact]
     public void TableNames_Join_ShouldReturnBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         var finder = new TablesNamesFinder();
         var tables = finder.GetTables(stmt);
@@ -266,7 +266,7 @@ public class IntegrationTest
     [Fact]
     public void TableNames_Subquery_ShouldReturnAllTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)")!;
         var finder = new TablesNamesFinder();
         var tables = finder.GetTables(stmt);
@@ -281,7 +281,7 @@ public class IntegrationTest
     [Fact]
     public void Deparse_Select_ShouldReturnSql()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id, name FROM users WHERE status = 'active'")!;
+        var stmt = SqlParser.Parse("SELECT id, name FROM users WHERE status = 'active'")!;
         var sql = stmt.ToString();
         Assert.Contains("SELECT", sql);
         Assert.Contains("users", sql);
@@ -291,7 +291,7 @@ public class IntegrationTest
     [Fact]
     public void Deparse_Insert_ShouldReturnSql()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
+        var stmt = SqlParser.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
         var sql = stmt.ToString();
         Assert.Contains("INSERT", sql);
         Assert.Contains("users", sql);

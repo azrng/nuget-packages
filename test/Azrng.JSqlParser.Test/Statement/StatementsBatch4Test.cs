@@ -16,7 +16,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Analyze_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("ANALYZE users");
+        var stmt = SqlParser.Parse("ANALYZE users");
 
         Assert.NotNull(stmt);
         Assert.Equal("ANALYZE users", stmt!.ToString());
@@ -25,7 +25,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Analyze_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("ANALYZE users");
+        var stmt = SqlParser.Parse("ANALYZE users");
         var analyze = Assert.IsType<Analyze>(stmt);
 
         Assert.Equal("users", analyze.Table.Name);
@@ -38,7 +38,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Comment_Table_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("COMMENT ON TABLE users IS 'user table'");
+        var stmt = SqlParser.Parse("COMMENT ON TABLE users IS 'user table'");
 
         Assert.NotNull(stmt);
         Assert.Equal("COMMENT ON TABLE users IS 'user table'", stmt!.ToString());
@@ -47,7 +47,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Comment_Column_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("COMMENT ON COLUMN name IS 'user name'");
+        var stmt = SqlParser.Parse("COMMENT ON COLUMN name IS 'user name'");
 
         Assert.NotNull(stmt);
         Assert.Equal("COMMENT ON COLUMN name IS 'user name'", stmt!.ToString());
@@ -60,7 +60,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Execute_CallNoArgs_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("CALL my_proc()");
+        var stmt = SqlParser.Parse("CALL my_proc()");
 
         Assert.NotNull(stmt);
         Assert.Equal("CALL my_proc", stmt!.ToString());
@@ -69,7 +69,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Execute_CallWithArgs_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("CALL my_proc(1, 'hello')");
+        var stmt = SqlParser.Parse("CALL my_proc(1, 'hello')");
 
         Assert.NotNull(stmt);
         Assert.Equal("CALL my_proc(1, 'hello')", stmt!.ToString());
@@ -78,7 +78,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Execute_ExecType_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("EXECUTE my_proc(1)");
+        var stmt = SqlParser.Parse("EXECUTE my_proc(1)");
 
         Assert.NotNull(stmt);
         Assert.Equal("EXECUTE my_proc(1)", stmt!.ToString());
@@ -91,7 +91,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Purge_Table_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("PURGE TABLE recycle_bin_table");
+        var stmt = SqlParser.Parse("PURGE TABLE recycle_bin_table");
 
         Assert.NotNull(stmt);
         Assert.Equal("PURGE TABLE recycle_bin_table", stmt!.ToString());
@@ -100,7 +100,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Purge_Recyclebin_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("PURGE RECYCLEBIN");
+        var stmt = SqlParser.Parse("PURGE RECYCLEBIN");
 
         Assert.NotNull(stmt);
         Assert.Equal("PURGE RECYCLEBIN", stmt!.ToString());
@@ -109,7 +109,7 @@ public class StatementsBatch4Test
     [Fact]
     public void Purge_DbaRecyclebin_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("PURGE DBA_RECYCLEBIN");
+        var stmt = SqlParser.Parse("PURGE DBA_RECYCLEBIN");
 
         Assert.NotNull(stmt);
         Assert.Equal("PURGE DBA_RECYCLEBIN", stmt!.ToString());
@@ -122,7 +122,7 @@ public class StatementsBatch4Test
     [Fact]
     public void AlterView_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER VIEW my_view AS SELECT * FROM users");
+        var stmt = SqlParser.Parse("ALTER VIEW my_view AS SELECT * FROM users");
 
         Assert.NotNull(stmt);
         Assert.Equal("ALTER VIEW my_view AS SELECT * FROM users", stmt!.ToString());
@@ -131,7 +131,7 @@ public class StatementsBatch4Test
     [Fact]
     public void AlterView_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER VIEW my_view AS SELECT * FROM users");
+        var stmt = SqlParser.Parse("ALTER VIEW my_view AS SELECT * FROM users");
         var alterView = Assert.IsType<AlterView>(stmt);
 
         Assert.False(alterView.UseReplace);
@@ -141,7 +141,7 @@ public class StatementsBatch4Test
     [Fact]
     public void AlterView_Replace_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("REPLACE VIEW my_view AS SELECT * FROM users");
+        var stmt = SqlParser.Parse("REPLACE VIEW my_view AS SELECT * FROM users");
 
         Assert.NotNull(stmt);
         var alterView = Assert.IsType<AlterView>(stmt);

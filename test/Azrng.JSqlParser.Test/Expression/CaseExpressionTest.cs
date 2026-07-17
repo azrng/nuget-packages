@@ -19,7 +19,7 @@ public class CaseExpressionTest
     /// </summary>
     private static CaseExpression ParseFirstCase(string sql)
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
         return (CaseExpression)item.Expression!;
     }
@@ -62,7 +62,7 @@ public class CaseExpressionTest
 
         Assert.Equal(
             "SELECT CASE WHEN a > 1 THEN 'big' WHEN a > 0 THEN 'mid' ELSE 'small' END AS r FROM t",
-            CCJSqlParserUtil.Parse(sql)!.ToString());
+            SqlParser.Parse(sql)!.ToString());
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class CaseExpressionTest
         Assert.Null(caseExpr.ElseExpression);
         Assert.Equal(
             "SELECT CASE WHEN a > 1 THEN 'big' END AS r FROM t",
-            CCJSqlParserUtil.Parse(sql)!.ToString());
+            SqlParser.Parse(sql)!.ToString());
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class CaseExpressionTest
         const string sql =
             "SELECT CASE WHEN status = 1 THEN 'active' ELSE 'inactive' END FROM users WHERE id > 0";
 
-        var parsed = CCJSqlParserUtil.Parse(sql)!;
+        var parsed = SqlParser.Parse(sql)!;
 
         Assert.Equal(
             "SELECT CASE WHEN status = 1 THEN 'active' ELSE 'inactive' END FROM users WHERE id > 0",
@@ -130,7 +130,7 @@ public class CaseExpressionTest
         Assert.Equal(2, caseExpr.WhenClauses.Count);
         Assert.Equal(
             "SELECT CASE a WHEN 1 THEN 'one' WHEN 2 THEN 'two' ELSE 'other' END AS r FROM t",
-            CCJSqlParserUtil.Parse(sql)!.ToString());
+            SqlParser.Parse(sql)!.ToString());
     }
 
     #endregion
@@ -153,7 +153,7 @@ public class CaseExpressionTest
 
         Assert.Equal(
             "SELECT CASE WHEN a > 1 THEN CASE WHEN b = 2 THEN 'x' ELSE 'y' END ELSE 'z' END AS r FROM t",
-            CCJSqlParserUtil.Parse(sql)!.ToString());
+            SqlParser.Parse(sql)!.ToString());
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class CaseExpressionTest
         const string sql =
             "SELECT a FROM t WHERE CASE WHEN a > 1 THEN 1 ELSE 0 END = 1";
 
-        var parsed = CCJSqlParserUtil.Parse(sql)!;
+        var parsed = SqlParser.Parse(sql)!;
         var where = ((PlainSelect)parsed).Where!;
         Assert.Contains("CASE WHEN a > 1 THEN 1 ELSE 0 END", parsed.ToString()!);
     }
@@ -175,7 +175,7 @@ public class CaseExpressionTest
     [Fact]
     public void ParseExpression_SearchedCase_ShouldWork()
     {
-        var expr = (CaseExpression)CCJSqlParserUtil.ParseExpression(
+        var expr = (CaseExpression)SqlParser.ParseExpression(
             "CASE WHEN x THEN 1 ELSE 2 END")!;
 
         Assert.Null(expr.SwitchExpression);
@@ -187,7 +187,7 @@ public class CaseExpressionTest
     [Fact]
     public void ParseExpression_SwitchCase_ShouldWork()
     {
-        var expr = (CaseExpression)CCJSqlParserUtil.ParseExpression(
+        var expr = (CaseExpression)SqlParser.ParseExpression(
             "CASE x WHEN 1 THEN 'a' ELSE 'b' END")!;
 
         Assert.NotNull(expr.SwitchExpression);

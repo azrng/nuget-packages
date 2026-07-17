@@ -11,7 +11,7 @@ public class SelectClauseRoundTripTest
 {
     private static void AssertRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -28,7 +28,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void WindowClause_ShouldPopulateWindowDefinitions()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT RANK() OVER w FROM t WINDOW w AS (PARTITION BY dept)")!;
+        var stmt = (Select)SqlParser.Parse("SELECT RANK() OVER w FROM t WINDOW w AS (PARTITION BY dept)")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.WindowDefinitions);
         Assert.Single(plain.WindowDefinitions);
@@ -43,7 +43,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void QualifyClause_ShouldPopulateQualify()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT * FROM t QUALIFY ROW_NUMBER() OVER (PARTITION BY a ORDER BY b) > 1")!;
+        var stmt = (Select)SqlParser.Parse("SELECT * FROM t QUALIFY ROW_NUMBER() OVER (PARTITION BY a ORDER BY b) > 1")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.Qualify);
     }
@@ -70,7 +70,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void GroupBy_Rollup_ShouldParseAsFunction()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT a, b FROM t GROUP BY ROLLUP(a, b)")!;
+        var stmt = (Select)SqlParser.Parse("SELECT a, b FROM t GROUP BY ROLLUP(a, b)")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.GroupBy);
         Assert.Single(plain.GroupBy!.GroupByExpressions);  // ROLLUP(a,b) 作为单个函数表达式
@@ -79,7 +79,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void GroupBy_GroupingSets_ShouldPopulateGroupingSets()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT a, b FROM t GROUP BY GROUPING SETS ((a, b), (a))")!;
+        var stmt = (Select)SqlParser.Parse("SELECT a, b FROM t GROUP BY GROUPING SETS ((a, b), (a))")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.GroupBy?.GroupingSets);
         Assert.Equal(2, plain.GroupBy!.GroupingSets!.Count);
@@ -124,7 +124,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void Substring_ShouldPopulateNamedParameters()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT SUBSTRING(x FROM 1 FOR 3) FROM t")!;
+        var stmt = SqlParser.Parse("SELECT SUBSTRING(x FROM 1 FOR 3) FROM t")!;
         Assert.NotNull(stmt.ToString());
         Assert.Contains("SUBSTRING(x FROM 1 FOR 3)", stmt.ToString()!);
     }
@@ -168,7 +168,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void ConnectBy_ShouldPopulateOracleHierarchical()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT * FROM t START WITH id = 1 CONNECT BY PRIOR id = parent_id")!;
+        var stmt = (Select)SqlParser.Parse("SELECT * FROM t START WITH id = 1 CONNECT BY PRIOR id = parent_id")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotNull(plain.OracleHierarchical);
         Assert.False(plain.OracleHierarchical!.ConnectFirst);  // START WITH 在前
@@ -211,7 +211,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void WithinGroup_ShouldPopulateAnalyticType()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM t")!;
+        var stmt = (Select)SqlParser.Parse("SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) FROM t")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         var analytic = Assert.IsType<AnalyticExpression>(plain.SelectItems![0].Expression!);
         Assert.Equal(AnalyticType.WithinGroup, analytic.Type);
@@ -220,7 +220,7 @@ public class SelectClauseRoundTripTest
     [Fact]
     public void FilterOnly_ShouldPopulateAnalyticType()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("SELECT COUNT(*) FILTER (WHERE x = 1) FROM t")!;
+        var stmt = (Select)SqlParser.Parse("SELECT COUNT(*) FILTER (WHERE x = 1) FROM t")!;
         var plain = Assert.IsType<PlainSelect>(stmt);
         var analytic = Assert.IsType<AnalyticExpression>(plain.SelectItems![0].Expression!);
         Assert.Equal(AnalyticType.FilterOnly, analytic.Type);

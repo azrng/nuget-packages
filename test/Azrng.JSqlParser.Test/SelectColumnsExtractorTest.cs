@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Test;
 /// </summary>
 public class SelectColumnsExtractorTest
 {
-    private static SelectStatement ParseSelect(string sql) => (SelectStatement)CCJSqlParserUtil.Parse(sql)!;
+    private static SelectStatement ParseSelect(string sql) => (SelectStatement)SqlParser.Parse(sql)!;
 
     [Fact]
     public void GetSelectColumns_AllColumns_ShouldReturnAllKind()

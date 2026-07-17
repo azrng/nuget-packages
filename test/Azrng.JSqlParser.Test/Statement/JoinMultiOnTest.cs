@@ -13,7 +13,7 @@ public class JoinMultiOnTest
     public void Join_SingleOn_RoundTrip()
     {
         // 单 ON 向后兼容
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 JOIN t2 ON t1.id = t2.id");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN t2 ON t1.id = t2.id");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t1 JOIN t2 ON t1.id = t2.id", stmt!.ToString());
@@ -23,7 +23,7 @@ public class JoinMultiOnTest
     public void Join_SingleOn_OnExpressionCompat_ShouldWork()
     {
         // OnExpression 兼容属性仍可访问首项
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 JOIN t2 ON a = b");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN t2 ON a = b");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var join = Assert.Single(plainSelect.Joins!);
 
@@ -35,11 +35,11 @@ public class JoinMultiOnTest
     public void Join_OnExpressions_ProgrammaticMultipleOn_ShouldSerialize()
     {
         // grammar 仅支持单 ON，但 OnExpressions 列表 API 支持程序化构造多 ON
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 JOIN t2 ON a = b");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN t2 ON a = b");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var join = plainSelect.Joins![0];
         // 程序化追加第二个 ON
-        join.OnExpressions.Add(CCJSqlParserUtil.ParseExpression("c = d")!);
+        join.OnExpressions.Add(SqlParser.ParseExpression("c = d")!);
 
         Assert.Equal(2, join.OnExpressions.Count);
         Assert.Contains("ON a = b ON c = d", stmt.ToString());
@@ -53,7 +53,7 @@ public class JoinMultiOnTest
     public void ParenthesedFromItem_WithAlias_ShouldPreserveAlias()
     {
         // 括号包裹单表 + alias（subSelect 分支不走，此处验证括号分支 alias 保留）
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (users) AS u");
+        var stmt = SqlParser.Parse("SELECT * FROM (users) AS u");
         // alias "u" 应保留在 round-trip 输出中（此前兜底路径会丢失）
         Assert.Contains("u", stmt!.ToString()!);
     }

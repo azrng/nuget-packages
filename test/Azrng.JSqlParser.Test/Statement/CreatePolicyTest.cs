@@ -13,7 +13,7 @@ public class CreatePolicyTest
     public void CreatePolicy_Simple_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY policy_name ON table_name";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Equal("policy_name", policy.PolicyName);
         Assert.Equal("table_name", policy.Table!.Name);
@@ -26,7 +26,7 @@ public class CreatePolicyTest
     public void CreatePolicy_QualifiedTable_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY single_tenant_access_policy ON customer_custom_data.phone_opt_out";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Equal("customer_custom_data", policy.Table!.SchemaName);
         Assert.Equal("phone_opt_out", policy.Table.Name);
@@ -42,7 +42,7 @@ public class CreatePolicyTest
     public void CreatePolicy_ForCommand_ShouldRoundTrip(string command)
     {
         var sql = $"CREATE POLICY policy1 ON table1 FOR {command}";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Equal(command, policy.Command);
         Assert.Equal(sql, stmt!.ToString());
@@ -52,7 +52,7 @@ public class CreatePolicyTest
     public void CreatePolicy_ToSingleRole_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY policy1 ON table1 TO role1";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Single(policy.Roles);
         Assert.Equal("role1", policy.Roles[0]);
@@ -63,7 +63,7 @@ public class CreatePolicyTest
     public void CreatePolicy_ToMultipleRoles_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY policy1 ON table1 TO role1, role2, role3";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Equal(3, policy.Roles.Count);
         Assert.Equal(sql, stmt!.ToString());
@@ -73,7 +73,7 @@ public class CreatePolicyTest
     public void CreatePolicy_UsingExpression_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY policy1 ON table1 USING (user_id = current_user_id())";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.NotNull(policy.UsingExpression);
         Assert.Equal(sql, stmt!.ToString());
@@ -83,7 +83,7 @@ public class CreatePolicyTest
     public void CreatePolicy_WithCheckExpression_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY policy1 ON table1 WITH CHECK (status = 'active')";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.NotNull(policy.WithCheckExpression);
         Assert.Equal(sql, stmt!.ToString());
@@ -93,7 +93,7 @@ public class CreatePolicyTest
     public void CreatePolicy_FullSyntax_ShouldRoundTrip()
     {
         var sql = "CREATE POLICY admin_policy ON documents FOR SELECT TO admin USING (is_admin = TRUE) WITH CHECK (is_admin = TRUE)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var policy = Assert.IsType<CreatePolicy>(stmt);
         Assert.Equal("SELECT", policy.Command);
         Assert.Single(policy.Roles);

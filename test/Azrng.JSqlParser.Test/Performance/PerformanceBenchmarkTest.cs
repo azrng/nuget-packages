@@ -147,7 +147,7 @@ public class PerformanceBenchmarkTest
         // Warmup
         for (var i = 0; i < WarmupIterations; i++)
         {
-            var stmt = CCJSqlParserUtil.Parse(sql)!;
+            var stmt = SqlParser.Parse(sql)!;
             var finder = new TablesNamesFinder();
             finder.GetTables(stmt);
         }
@@ -155,7 +155,7 @@ public class PerformanceBenchmarkTest
         var sw = Stopwatch.StartNew();
         for (var i = 0; i < MeasureIterations; i++)
         {
-            var stmt = CCJSqlParserUtil.Parse(sql)!;
+            var stmt = SqlParser.Parse(sql)!;
             var finder = new TablesNamesFinder();
             finder.GetTables(stmt);
         }
@@ -172,7 +172,7 @@ public class PerformanceBenchmarkTest
         var sql = "SELECT u.id, u.name, o.total FROM users u " +
                   "INNER JOIN orders o ON u.id = o.user_id WHERE u.status = 'active'";
 
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
 
         // Warmup
         for (var i = 0; i < WarmupIterations; i++)
@@ -194,12 +194,12 @@ public class PerformanceBenchmarkTest
         // Warmup
         for (var i = 0; i < WarmupIterations; i++)
             foreach (var sql in SqlStatements)
-                CCJSqlParserUtil.Parse(sql);
+                SqlParser.Parse(sql);
 
         var sw = Stopwatch.StartNew();
         for (var i = 0; i < MeasureIterations; i++)
             foreach (var sql in SqlStatements)
-                CCJSqlParserUtil.Parse(sql);
+                SqlParser.Parse(sql);
         sw.Stop();
 
         var totalOps = MeasureIterations * SqlStatements.Length;
@@ -212,7 +212,7 @@ public class PerformanceBenchmarkTest
     {
         // Warmup
         for (var i = 0; i < WarmupIterations; i++)
-            CCJSqlParserUtil.Parse(sql);
+            SqlParser.Parse(sql);
 
         var timings = new double[MeasureIterations];
         var sw = new Stopwatch();
@@ -220,7 +220,7 @@ public class PerformanceBenchmarkTest
         for (var i = 0; i < MeasureIterations; i++)
         {
             sw.Restart();
-            CCJSqlParserUtil.Parse(sql);
+            SqlParser.Parse(sql);
             sw.Stop();
             timings[i] = sw.Elapsed.TotalMilliseconds;
         }

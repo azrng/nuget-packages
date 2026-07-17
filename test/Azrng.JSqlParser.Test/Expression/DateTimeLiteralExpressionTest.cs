@@ -19,7 +19,7 @@ public class DateTimeLiteralExpressionTest
     [InlineData("SELECT TIMESTAMPTZ '2024-01-01 10:00:00+08' FROM dual", "SELECT TIMESTAMPTZ '2024-01-01 10:00:00+08' FROM dual")]
     public void DateTimeLiteral_RoundTrip_ShouldPreserveType(string input, string expected)
     {
-        var stmt = CCJSqlParserUtil.Parse(input);
+        var stmt = SqlParser.Parse(input);
 
         Assert.NotNull(stmt);
         Assert.Equal(expected, stmt!.ToString());
@@ -28,7 +28,7 @@ public class DateTimeLiteralExpressionTest
     [Fact]
     public void DateTimeLiteral_InWhere_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t WHERE created > DATE '2024-01-01'");
+        var stmt = SqlParser.Parse("SELECT * FROM t WHERE created > DATE '2024-01-01'");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t WHERE created > DATE '2024-01-01'", stmt!.ToString());
@@ -37,7 +37,7 @@ public class DateTimeLiteralExpressionTest
     [Fact]
     public void DateTimeLiteral_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT DATE '2024-01-01' FROM dual");
+        var stmt = SqlParser.Parse("SELECT DATE '2024-01-01' FROM dual");
 
         Assert.NotNull(stmt);
         Assert.Contains("DATE '2024-01-01'", stmt!.ToString());

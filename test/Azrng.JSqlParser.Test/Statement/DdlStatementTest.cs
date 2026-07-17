@@ -12,7 +12,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_Simple_ShouldHaveTable()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE users (id INT, name VARCHAR(100))")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
@@ -21,7 +21,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithColumns_ShouldHaveColumnDefinitions()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE users (id INT, name VARCHAR(100), email VARCHAR(200))")!;
         Assert.NotNull(stmt.ColumnDefinitions);
         Assert.Equal(3, stmt.ColumnDefinitions!.Count);
@@ -30,7 +30,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithPrimaryKey_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100))")!;
         Assert.NotNull(stmt);
     }
@@ -38,7 +38,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithNotNull_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE users (id INT NOT NULL, name VARCHAR(100) NOT NULL)")!;
         Assert.NotNull(stmt);
     }
@@ -46,7 +46,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithDefaultValue_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE users (id INT, status VARCHAR(20) DEFAULT 'active')")!;
         Assert.NotNull(stmt);
     }
@@ -54,7 +54,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithForeignKey_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE orders (id INT, user_id INT, FOREIGN KEY (user_id) REFERENCES users(id))")!;
         Assert.NotNull(stmt);
     }
@@ -62,7 +62,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_WithSchema_ShouldHaveSchemaTable()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE mydb.users (id INT, name VARCHAR(100))")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("mydb", stmt.Table!.SchemaName);
@@ -71,7 +71,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_IfNotExists_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateTable.CreateTable)SqlParser.Parse(
             "CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(100))")!;
         Assert.NotNull(stmt);
     }
@@ -83,7 +83,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_SpatialKey_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE TABLE places (id INT NOT NULL, location GEOMETRY NOT NULL, SPATIAL KEY sp_idx_location (location))");
         Assert.NotNull(stmt);
     }
@@ -91,7 +91,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_FulltextKey_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE TABLE t (id INT, name TEXT, FULLTEXT KEY idx_name (name))");
         Assert.NotNull(stmt);
     }
@@ -99,7 +99,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_UniqueKey_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE TABLE t (id INT, code VARCHAR(100), UNIQUE KEY idx_code (code))");
         Assert.NotNull(stmt);
     }
@@ -107,7 +107,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_PlainKey_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "CREATE TABLE t (id INT, name VARCHAR(100), KEY idx_name (name))");
         Assert.NotNull(stmt);
     }
@@ -119,7 +119,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_Simple_ShouldHaveViewName()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE VIEW active_users AS SELECT * FROM users WHERE status = 'active'")!;
         Assert.NotNull(stmt.View);
         Assert.Equal("active_users", stmt.View!.Name);
@@ -128,7 +128,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_WithSelect_ShouldHaveSelect()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE VIEW user_summary AS SELECT id, name FROM users")!;
         Assert.NotNull(stmt.Select);
     }
@@ -136,7 +136,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_Force_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE FORCE VIEW v AS SELECT * FROM users")!;
         Assert.True(stmt.Force == true);
         Assert.Contains("CREATE FORCE VIEW", stmt.ToString()!);
@@ -145,7 +145,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_NoForce_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE NO FORCE VIEW v AS SELECT * FROM users")!;
         Assert.True(stmt.Force == false);
         Assert.Contains("CREATE NO FORCE VIEW", stmt.ToString()!);
@@ -154,7 +154,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_Secure_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE SECURE VIEW v AS SELECT * FROM users")!;
         Assert.True(stmt.Secure);
         Assert.Contains("SECURE VIEW", stmt.ToString()!);
@@ -163,7 +163,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateView_WithReadOnly_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(
             "CREATE VIEW v AS SELECT * FROM users WITH READ ONLY")!;
         Assert.True(stmt.WithReadOnly);
         Assert.Contains("WITH READ ONLY", stmt.ToString()!);
@@ -173,7 +173,7 @@ public class DdlStatementTest
     public void CreateView_ForceOrReplace_WithCheckOption_ReadOnly_ShouldRoundTrip()
     {
         var sql = "CREATE OR REPLACE FORCE VIEW v AS SELECT * FROM users WITH CHECK OPTION WITH READ ONLY";
-        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (Azrng.JSqlParser.Statement.CreateView.CreateView)SqlParser.Parse(sql)!;
         Assert.True(stmt.OrReplace);
         Assert.True(stmt.Force == true);
         Assert.True(stmt.WithReadOnly);
@@ -186,7 +186,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateIndex_Simple_ShouldHaveIndexName()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateIndex.CreateIndex)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateIndex.CreateIndex)SqlParser.Parse(
             "CREATE INDEX idx_users_name ON users(name)")!;
         Assert.NotNull(stmt.Index);
         Assert.NotNull(stmt.Table);
@@ -195,7 +195,7 @@ public class DdlStatementTest
     [Fact]
     public void CreateIndex_Unique_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.CreateIndex.CreateIndex)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.CreateIndex.CreateIndex)SqlParser.Parse(
             "CREATE UNIQUE INDEX idx_users_email ON users(email)")!;
         Assert.NotNull(stmt);
     }
@@ -207,7 +207,7 @@ public class DdlStatementTest
     [Fact]
     public void AlterTable_AddColumn_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)SqlParser.Parse(
             "ALTER TABLE users ADD COLUMN email VARCHAR(200)")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
@@ -216,7 +216,7 @@ public class DdlStatementTest
     [Fact]
     public void AlterTable_DropColumn_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)SqlParser.Parse(
             "ALTER TABLE users DROP COLUMN email")!;
         Assert.NotNull(stmt);
     }
@@ -224,7 +224,7 @@ public class DdlStatementTest
     [Fact]
     public void AlterTable_ModifyColumn_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)SqlParser.Parse(
             "ALTER TABLE users MODIFY COLUMN name VARCHAR(200)")!;
         Assert.NotNull(stmt);
     }
@@ -232,7 +232,7 @@ public class DdlStatementTest
     [Fact]
     public void AlterTable_AddConstraint_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)CCJSqlParserUtil.Parse(
+        var stmt = (Azrng.JSqlParser.Statement.Alter.Alter)SqlParser.Parse(
             "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id)")!;
         Assert.NotNull(stmt);
     }
@@ -245,7 +245,7 @@ public class DdlStatementTest
     public void AlterTable_AddConstraintPrimaryKey_UsingIndexName_ShouldRoundTrip()
     {
         var sql = "ALTER TABLE TNWAV ADD CONSTRAINT PK_TNWAV PRIMARY KEY (NWNAME, ZEILE, BESTGRU) USING INDEX PK_TNWAV";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -256,7 +256,7 @@ public class DdlStatementTest
     public void AlterTable_AddConstraintPrimaryKey_UsingIndexAnonymous_ShouldRoundTrip()
     {
         var sql = "ALTER TABLE t ADD CONSTRAINT pk PRIMARY KEY (id) USING INDEX";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -267,7 +267,7 @@ public class DdlStatementTest
     public void CreateTable_UniqueConstraint_UsingIndex_ShouldRoundTrip()
     {
         var sql = "CREATE TABLE t (id INT, CONSTRAINT uk_t UNIQUE (id) USING INDEX idx_uk)";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -279,7 +279,7 @@ public class DdlStatementTest
     public void AlterTable_AddUniqueIndex_AscendingColumn_ShouldRoundTrip()
     {
         var sql = "ALTER TABLE t ADD UNIQUE INDEX idx (col ASC)";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -290,7 +290,7 @@ public class DdlStatementTest
     public void AlterTable_AddIndex_DescendingColumn_ShouldRoundTrip()
     {
         var sql = "ALTER TABLE t ADD INDEX idx (col DESC)";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -301,7 +301,7 @@ public class DdlStatementTest
     public void AlterTable_AddIndex_MixedSortDirections_ShouldRoundTrip()
     {
         var sql = "ALTER TABLE t ADD INDEX idx (a ASC, b DESC, c)";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -312,7 +312,7 @@ public class DdlStatementTest
     [Fact]
     public void DropTable_Simple_ShouldHaveTableName()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)CCJSqlParserUtil.Parse("DROP TABLE users")!;
+        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)SqlParser.Parse("DROP TABLE users")!;
         Assert.NotNull(stmt.Name);
         Assert.Equal("users", stmt.Name!.Name);
     }
@@ -320,14 +320,14 @@ public class DdlStatementTest
     [Fact]
     public void DropTable_IfExists_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)CCJSqlParserUtil.Parse("DROP TABLE IF EXISTS users")!;
+        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)SqlParser.Parse("DROP TABLE IF EXISTS users")!;
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void DropTable_Multiple_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("DROP TABLE users, orders, products");
+        var stmt = SqlParser.Parse("DROP TABLE users, orders, products");
         Assert.NotNull(stmt);
     }
 
@@ -338,14 +338,14 @@ public class DdlStatementTest
     [Fact]
     public void DropView_Simple_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)CCJSqlParserUtil.Parse("DROP VIEW active_users")!;
+        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)SqlParser.Parse("DROP VIEW active_users")!;
         Assert.NotNull(stmt.Name);
     }
 
     [Fact]
     public void DropIndex_Simple_ShouldParse()
     {
-        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)CCJSqlParserUtil.Parse("DROP INDEX idx_users_name ON users")!;
+        var stmt = (Azrng.JSqlParser.Statement.Drop.Drop)SqlParser.Parse("DROP INDEX idx_users_name ON users")!;
         Assert.NotNull(stmt);
     }
 
@@ -356,7 +356,7 @@ public class DdlStatementTest
     [Fact]
     public void DropIndex_OnQualifiedTable_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("DROP INDEX idx ON qual.tbl");
+        var stmt = SqlParser.Parse("DROP INDEX idx ON qual.tbl");
         Assert.NotNull(stmt);
     }
 
@@ -368,7 +368,7 @@ public class DdlStatementTest
     [Fact]
     public void AlterTable_DropColumnData_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER TABLE mytable DROP COLUMN data");
+        var stmt = SqlParser.Parse("ALTER TABLE mytable DROP COLUMN data");
         Assert.NotNull(stmt);
     }
 
@@ -379,14 +379,14 @@ public class DdlStatementTest
     [Fact]
     public void CreateIndex_FunctionalKey_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE INDEX idx_lower ON employees ((LOWER(name)))");
+        var stmt = SqlParser.Parse("CREATE INDEX idx_lower ON employees ((LOWER(name)))");
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void CreateIndex_FunctionalKeyMultiple_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE INDEX idx_func ON t ((LOWER(a)), (b + 1))");
+        var stmt = SqlParser.Parse("CREATE INDEX idx_func ON t ((LOWER(a)), (b + 1))");
         Assert.NotNull(stmt);
     }
 
@@ -401,7 +401,7 @@ public class DdlStatementTest
     [InlineData("ALTER TABLE mytable NO FORCE ROW LEVEL SECURITY")]
     public void AlterTable_RowLevelSecurity_ShouldParse(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
     }
 
@@ -417,14 +417,14 @@ public class DdlStatementTest
     [Fact]
     public void CreateTable_GeneratedAlwaysAsIdentity_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("create table if not exists book_type ( id bigint not null generated always as identity )");
+        var stmt = SqlParser.Parse("create table if not exists book_type ( id bigint not null generated always as identity )");
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void CreateTable_GeneratedByDefaultAsIdentity_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("create table if not exists book_type ( id bigint not null generated by default as identity )");
+        var stmt = SqlParser.Parse("create table if not exists book_type ( id bigint not null generated by default as identity )");
         Assert.NotNull(stmt);
     }
 

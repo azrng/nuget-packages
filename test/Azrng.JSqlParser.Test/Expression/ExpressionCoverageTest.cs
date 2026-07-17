@@ -16,7 +16,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void BooleanValue_True_ShouldBeTrue()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("TRUE");
+        var expr = SqlParser.ParseExpression("TRUE");
         Assert.IsType<BooleanValue>(expr);
         Assert.True(((BooleanValue)expr!).Value);
     }
@@ -24,7 +24,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void BooleanValue_False_ShouldBeFalse()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("FALSE");
+        var expr = SqlParser.ParseExpression("FALSE");
         Assert.IsType<BooleanValue>(expr);
         Assert.False(((BooleanValue)expr!).Value);
     }
@@ -32,7 +32,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void BooleanValue_InWhereClause_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users WHERE active = TRUE")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users WHERE active = TRUE")!;
         Assert.IsType<EqualsTo>(select.Where);
         var equals = (EqualsTo)select.Where!;
         Assert.IsType<BooleanValue>(equals.RightExpression);
@@ -46,7 +46,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void HexValue_ShouldBeHexValue()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("0xFF");
+        var expr = SqlParser.ParseExpression("0xFF");
         Assert.IsType<HexValue>(expr);
         Assert.Equal("0xFF", ((HexValue)expr!).Value);
     }
@@ -58,7 +58,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsBooleanExpression_IsTrue_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("active IS TRUE");
+        var expr = SqlParser.ParseCondExpression("active IS TRUE");
         Assert.IsType<IsBooleanExpression>(expr);
         var isBool = (IsBooleanExpression)expr!;
         Assert.False(isBool.Not);
@@ -68,7 +68,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsBooleanExpression_IsNotFalse_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("active IS NOT FALSE");
+        var expr = SqlParser.ParseCondExpression("active IS NOT FALSE");
         Assert.IsType<IsBooleanExpression>(expr);
         var isBool = (IsBooleanExpression)expr!;
         Assert.True(isBool.Not);
@@ -82,7 +82,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsUnknownExpression_IsUnknown_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("flag IS UNKNOWN");
+        var expr = SqlParser.ParseCondExpression("flag IS UNKNOWN");
         Assert.IsType<IsUnknownExpression>(expr);
         var isUnk = (IsUnknownExpression)expr!;
         Assert.False(isUnk.Not);
@@ -91,7 +91,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsUnknownExpression_IsNotUnknown_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("flag IS NOT UNKNOWN");
+        var expr = SqlParser.ParseCondExpression("flag IS NOT UNKNOWN");
         Assert.IsType<IsUnknownExpression>(expr);
         var isUnk = (IsUnknownExpression)expr!;
         Assert.True(isUnk.Not);
@@ -104,7 +104,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsDistinctExpression_IsDistinctFrom_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a IS DISTINCT FROM b");
+        var expr = SqlParser.ParseCondExpression("a IS DISTINCT FROM b");
         Assert.IsType<IsDistinctExpression>(expr);
         var isDist = (IsDistinctExpression)expr!;
         Assert.False(isDist.Not);
@@ -115,7 +115,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IsDistinctExpression_IsNotDistinctFrom_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a IS NOT DISTINCT FROM b");
+        var expr = SqlParser.ParseCondExpression("a IS NOT DISTINCT FROM b");
         Assert.IsType<IsDistinctExpression>(expr);
         Assert.True(((IsDistinctExpression)expr!).Not);
     }
@@ -127,7 +127,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CaseExpression_Simple_ShouldHaveWhenClauses()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN id = 1 THEN 'a' ELSE 'b' END FROM users")!;
         var item = select.SelectItems![0];
         Assert.IsType<CaseExpression>(item.Expression);
@@ -139,7 +139,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CaseExpression_SearchedCase_ShouldHaveMultipleWhenClauses()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN id = 1 THEN 'a' WHEN id = 2 THEN 'b' ELSE 'c' END FROM users")!;
         var caseExpr = (CaseExpression)select.SelectItems![0].Expression!;
         Assert.Equal(2, caseExpr.WhenClauses.Count);
@@ -148,7 +148,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void WhenClause_ShouldHaveWhenAndThenExpressions()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT CASE WHEN id > 0 THEN name END FROM users")!;
         var caseExpr = (CaseExpression)select.SelectItems![0].Expression!;
         var when = caseExpr.WhenClauses[0];
@@ -163,7 +163,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CastExpression_CastKeyword_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT CAST(id AS INT) FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT CAST(id AS INT) FROM users")!;
         var item = select.SelectItems![0];
         Assert.IsType<CastExpression>(item.Expression);
         var cast = (CastExpression)item.Expression!;
@@ -173,7 +173,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CastExpression_DoubleColon_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id::varchar FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT id::varchar FROM users")!;
         var item = select.SelectItems![0];
         Assert.IsType<CastExpression>(item.Expression);
     }
@@ -185,7 +185,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ExtractExpression_Year_ShouldHaveName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT EXTRACT(YEAR FROM created_at) FROM users")!;
         var item = select.SelectItems![0];
         Assert.IsType<ExtractExpression>(item.Expression);
@@ -195,7 +195,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ExtractExpression_Month_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT EXTRACT(MONTH FROM created_at) FROM users")!;
         Assert.IsType<ExtractExpression>(select.SelectItems![0].Expression);
     }
@@ -207,7 +207,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void AnalyticExpression_RowNumber_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROW_NUMBER() OVER(ORDER BY id) FROM users")!;
         Assert.IsType<AnalyticExpression>(select.SelectItems![0].Expression);
         var analytic = (AnalyticExpression)select.SelectItems![0].Expression!;
@@ -218,7 +218,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void AnalyticExpression_WithPartitionBy_ShouldHavePartition()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(*) OVER(PARTITION BY dept_id ORDER BY salary) FROM employees")!;
         var analytic = (AnalyticExpression)select.SelectItems![0].Expression!;
         Assert.NotNull(analytic.PartitionExpressionList);
@@ -233,7 +233,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_CountStar_ShouldHaveName()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT COUNT(*) FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT COUNT(*) FROM users")!;
         Assert.IsType<Function>(select.SelectItems![0].Expression);
         var function = (Function)select.SelectItems![0].Expression!;
         Assert.Equal("COUNT", function.Name);
@@ -243,7 +243,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_WithParameters_ShouldHaveParameters()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT COALESCE(name, 'default') FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT COALESCE(name, 'default') FROM users")!;
         var func = (Function)select.SelectItems![0].Expression!;
         Assert.Equal("COALESCE", func.Name);
         Assert.NotNull(func.Parameters);
@@ -252,14 +252,14 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_Sum_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT SUM(amount) FROM orders")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT SUM(amount) FROM orders")!;
         Assert.IsType<Function>(select.SelectItems![0].Expression);
     }
 
     [Fact]
     public void Function_GroupConcat_WithSeparator_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT GROUP_CONCAT(name SEPARATOR ', ') FROM users")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.Equal("GROUP_CONCAT", func.Name);
@@ -272,7 +272,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_GroupConcat_Distinct_ShouldHaveDistinctFlag()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT GROUP_CONCAT(DISTINCT name SEPARATOR ',') FROM users")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.True(func.Distinct);
@@ -282,7 +282,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_GroupConcat_WithOrderBy_ShouldHaveOrderByElements()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT GROUP_CONCAT(name ORDER BY id DESC SEPARATOR '|') FROM users")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.OrderByElements);
@@ -296,7 +296,7 @@ public class ExpressionCoverageTest
     public void Function_GroupConcat_NoClauses_ShouldParse()
     {
         // 不带 SEPARATOR/ORDER BY/DISTINCT 的最简 GROUP_CONCAT
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT GROUP_CONCAT(name) FROM users")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.Equal("GROUP_CONCAT", func.Name);
@@ -307,7 +307,7 @@ public class ExpressionCoverageTest
     public void Function_GroupConcat_MultipleExpressions_ShouldParse()
     {
         // GROUP_CONCAT 支持多表达式
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT GROUP_CONCAT(id, name SEPARATOR '|') FROM users")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.Parameters);
@@ -321,7 +321,7 @@ public class ExpressionCoverageTest
     public void Function_KeywordArgument_ShouldRoundTrip()
     {
         // 在普通函数的 ) 之后附加关键字参数
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT my_func(arg) SEPARATOR ',' FROM t")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.KeywordArguments);
@@ -334,7 +334,7 @@ public class ExpressionCoverageTest
     public void Function_MultipleKeywordArguments_ShouldRoundTrip()
     {
         // 多个连续关键字参数
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT my_func(arg) SEPARATOR ',' FROM t")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.KeywordArguments);
@@ -344,7 +344,7 @@ public class ExpressionCoverageTest
     public void Function_KeywordArgument_WithIgnore_ShouldRoundTrip()
     {
         // IGNORE 作为 nonReservedKeyword 的关键字参数
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT my_func(arg) IGNORE 1 FROM t")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.KeywordArguments);
@@ -357,7 +357,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_Keep_First_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT MAX(salary) KEEP (DENSE_RANK FIRST ORDER BY hire_date DESC) FROM employees")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.Keep);
@@ -371,7 +371,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_Keep_Last_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT MIN(salary) KEEP (DENSE_RANK LAST ORDER BY hire_date) FROM employees")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.NotNull(func.Keep);
@@ -382,7 +382,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Function_NoKeep_ShouldHaveNullKeep()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT MAX(salary) FROM employees")!;
         var func = Assert.IsType<Function>(select.SelectItems![0].Expression);
         Assert.Null(func.Keep);
@@ -395,7 +395,7 @@ public class ExpressionCoverageTest
     public void Trim_Simple_ShouldRoundTrip()
     {
         // TRIM(str) 简单形式
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT TRIM('  hello  ') FROM t")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT TRIM('  hello  ') FROM t")!;
         var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
         Assert.Null(trim.TrimSpecification);
         Assert.NotNull(trim.FromExpression);
@@ -405,7 +405,7 @@ public class ExpressionCoverageTest
     public void Trim_LeadingFrom_ShouldRoundTrip()
     {
         // TRIM(LEADING ' ' FROM str) 标准形式
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT TRIM(LEADING ' ' FROM '  hello') FROM t")!;
         var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
         Assert.Equal(TrimSpecification.Leading, trim.TrimSpecification);
@@ -419,7 +419,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Trim_TrailingFrom_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT TRIM(TRAILING ',' FROM 'hello,') FROM t")!;
         var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
         Assert.Equal(TrimSpecification.Trailing, trim.TrimSpecification);
@@ -428,7 +428,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void Trim_BothFrom_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT TRIM(BOTH ',' FROM ',,hello,,') FROM t")!;
         var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
         Assert.Equal(TrimSpecification.Both, trim.TrimSpecification);
@@ -438,7 +438,7 @@ public class ExpressionCoverageTest
     public void Trim_PostgresCommaForm_ShouldRoundTrip()
     {
         // PostgreSQL 风格：TRIM(chars, str)（用逗号而非 FROM）
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT TRIM(' ', '  hello') FROM t")!;
         var trim = Assert.IsType<TrimFunction>(select.SelectItems![0].Expression);
         Assert.NotNull(trim.Expression);
@@ -453,7 +453,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CollateExpression_StringLiteral_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT name COLLATE 'en_US.utf8' FROM t")!;
         var collate = Assert.IsType<CollateExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(collate.LeftExpression);
@@ -464,7 +464,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void CollateExpression_Identifier_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT name COLLATE utf8_unicode_ci FROM t")!;
         var collate = Assert.IsType<CollateExpression>(select.SelectItems![0].Expression);
         Assert.Equal("utf8_unicode_ci", collate.Collate);
@@ -476,7 +476,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void TimezoneExpression_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ts AT TIME ZONE 'UTC' FROM t")!;
         var tz = Assert.IsType<TimezoneExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(tz.LeftExpression);
@@ -488,7 +488,7 @@ public class ExpressionCoverageTest
     public void TimezoneExpression_Chain_ShouldRoundTrip()
     {
         // 链式 AT TIME ZONE
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ts AT TIME ZONE 'UTC' AT TIME ZONE 'PST' FROM t")!;
         Assert.NotNull(select.SelectItems);
         var output = select.ToString()!;
@@ -502,7 +502,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void NextValExpression_NextvalFor_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT NEXTVAL FOR seq_user FROM t")!;
         var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
         Assert.False(nextVal.UsingNextValueFor);
@@ -513,7 +513,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void NextValExpression_NextValueFor_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT NEXT VALUE FOR seq_user FROM t")!;
         var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
         Assert.True(nextVal.UsingNextValueFor);
@@ -524,7 +524,7 @@ public class ExpressionCoverageTest
     public void NextValExpression_QualifiedName_ShouldRoundTrip()
     {
         // schema.seq 多段限定名
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT NEXTVAL FOR my_schema.seq_user FROM t")!;
         var nextVal = Assert.IsType<NextValExpression>(select.SelectItems![0].Expression);
         Assert.Equal("my_schema.seq_user", nextVal.Name);
@@ -537,7 +537,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void AnyComparison_EqualAny_ShouldRoundTrip()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression(
+        var expr = SqlParser.ParseCondExpression(
             "x = ANY (SELECT id FROM t)");
         Assert.NotNull(expr);
         var output = expr!.ToString()!;
@@ -548,7 +548,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void AnyComparison_GreaterAll_ShouldRoundTrip()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression(
+        var expr = SqlParser.ParseCondExpression(
             "x > ALL (SELECT val FROM t)");
         Assert.NotNull(expr);
         Assert.Contains("ALL", expr!.ToString()!);
@@ -557,7 +557,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void AnyComparison_EqualSome_ShouldRoundTrip()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression(
+        var expr = SqlParser.ParseCondExpression(
             "x = SOME (SELECT id FROM t)");
         Assert.NotNull(expr);
         Assert.Contains("SOME", expr!.ToString()!);
@@ -569,7 +569,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ArrayConstructor_WithKeyword_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ARRAY[1, 2, 3] FROM t")!;
         var arr = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
         Assert.True(arr.ArrayKeyword);
@@ -581,7 +581,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ArrayExpression_Index_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT arr[1] FROM t")!;
         var idx = Assert.IsType<ArrayExpression>(select.SelectItems![0].Expression);
         Assert.NotNull(idx.ObjExpression);
@@ -594,7 +594,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ArrayExpression_Range_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT arr[1:3] FROM t")!;
         var idx = Assert.IsType<ArrayExpression>(select.SelectItems![0].Expression);
         Assert.Null(idx.IndexExpression);
@@ -606,7 +606,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ArrayConstructor_Empty_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ARRAY[] FROM t")!;
         var arr = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
         Assert.True(arr.ArrayKeyword);
@@ -618,7 +618,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void RowConstructor_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROW(1, 2, 3) FROM t")!;
         var row = Assert.IsType<RowConstructor>(select.SelectItems![0].Expression);
         Assert.Equal("ROW", row.Name);
@@ -630,7 +630,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void RowConstructor_SingleValue_ShouldRoundTrip()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT ROW(1) FROM t")!;
         var row = Assert.IsType<RowConstructor>(select.SelectItems![0].Expression);
         Assert.Single(row.Expressions!.Expressions);
@@ -640,7 +640,7 @@ public class ExpressionCoverageTest
     public void RowConstructor_InWhere_ShouldRoundTrip()
     {
         // WHERE (a, b) IN (SELECT x, y FROM t) 形式
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM t WHERE ROW(a, b) IN (SELECT x, y FROM t2)")!;
         Assert.NotNull(select.Where);
         Assert.Contains("ROW(a, b)", select.ToString()!);
@@ -653,7 +653,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ExcludesExpression_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a EXCLUDES (1, 2)");
+        var expr = SqlParser.ParseCondExpression("a EXCLUDES (1, 2)");
         Assert.IsType<ExcludesExpression>(expr);
         var excludes = (ExcludesExpression)expr!;
         Assert.NotNull(excludes.LeftExpression);
@@ -663,7 +663,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IncludesExpression_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a INCLUDES (1, 2)");
+        var expr = SqlParser.ParseCondExpression("a INCLUDES (1, 2)");
         Assert.IsType<IncludesExpression>(expr);
         var includes = (IncludesExpression)expr!;
         Assert.NotNull(includes.LeftExpression);
@@ -677,7 +677,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void RegExpMatchOperator_Regexp_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("name REGEXP '^test'");
+        var expr = SqlParser.ParseCondExpression("name REGEXP '^test'");
         Assert.IsType<RegExpMatchOperator>(expr);
         var regexp = (RegExpMatchOperator)expr!;
         Assert.Equal("REGEXP", regexp.Operator);
@@ -688,7 +688,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void RegExpMatchOperator_Rlike_ShouldParse()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("name RLIKE '^test'");
+        var expr = SqlParser.ParseCondExpression("name RLIKE '^test'");
         Assert.IsType<RegExpMatchOperator>(expr);
         Assert.Equal("RLIKE", ((RegExpMatchOperator)expr!).Operator);
     }
@@ -696,7 +696,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void RegExpMatchOperator_NotRegexp_ShouldSetNot()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("name NOT REGEXP '^test'");
+        var expr = SqlParser.ParseCondExpression("name NOT REGEXP '^test'");
         Assert.IsType<RegExpMatchOperator>(expr);
         var regexp = (RegExpMatchOperator)expr!;
         Assert.True(regexp.Not);
@@ -710,7 +710,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IntervalExpression_WithDay_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT INTERVAL '7' DAY FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT INTERVAL '7' DAY FROM users")!;
         var item = select.SelectItems![0];
         Assert.IsType<IntervalExpression>(item.Expression);
         var interval = (IntervalExpression)item.Expression!;
@@ -722,7 +722,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void IntervalExpression_WithYear_ShouldParse()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT INTERVAL '1' YEAR FROM users")!;
+        var select = (PlainSelect)SqlParser.Parse("SELECT INTERVAL '1' YEAR FROM users")!;
         var interval = (IntervalExpression)select.SelectItems![0].Expression!;
         Assert.Equal("YEAR", interval.IntervalType);
     }
@@ -739,7 +739,7 @@ public class ExpressionCoverageTest
     public void NestedCompositeFieldAccess_AfterCast_ShouldRoundTrip()
     {
         var sql = "SELECT (product_data::product_info_similarity).info.category AS category FROM products";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -748,7 +748,7 @@ public class ExpressionCoverageTest
     public void NestedCompositeFieldAccess_GroupBy_ShouldRoundTrip()
     {
         var sql = "SELECT COUNT(*) FROM products GROUP BY (product_data::product_info_similarity).info.category";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -757,7 +757,7 @@ public class ExpressionCoverageTest
     public void SimpleFieldAccess_OnParenthesis_ShouldRoundTrip()
     {
         var sql = "SELECT (a).b FROM t";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -773,7 +773,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void KeyExpression_AsFunctionParameter_ShouldRoundTrip()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("aes_decrypt(from_base64(entity), KEY chain.entity)");
+        var expr = SqlParser.ParseExpression("aes_decrypt(from_base64(entity), KEY chain.entity)");
         Assert.NotNull(expr);
         Assert.Equal("aes_decrypt(from_base64(entity), KEY chain.entity)", expr!.ToString());
     }
@@ -781,7 +781,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void KeyExpression_Simple_ShouldBeKeyExpressionType()
     {
-        var expr = CCJSqlParserUtil.ParseExpression("KEY chain.entity");
+        var expr = SqlParser.ParseExpression("KEY chain.entity");
         var keyExpr = Assert.IsType<KeyExpression>(expr);
         Assert.Equal("chain.entity", keyExpr.Expression!.ToString());
         Assert.Equal("KEY chain.entity", expr!.ToString());
@@ -791,7 +791,7 @@ public class ExpressionCoverageTest
     public void KeyExpression_InSelect_ShouldRoundTrip()
     {
         var sql = "SELECT aes_decrypt(entity, KEY chain.entity) FROM t";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -808,7 +808,7 @@ public class ExpressionCoverageTest
     public void FullTextSearch_AgainstConcatExpression_ShouldRoundTrip()
     {
         var sql = "SELECT MATCH (name) AGAINST (concat('', ?, '') IN BOOLEAN MODE) AS full_text FROM commodity";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -817,7 +817,7 @@ public class ExpressionCoverageTest
     public void FullTextSearch_AgainstStringLiteral_ShouldRoundTrip()
     {
         var sql = "SELECT MATCH (title, body) AGAINST ('database') FROM articles";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -826,7 +826,7 @@ public class ExpressionCoverageTest
     public void FullTextSearch_InBooleanMode_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM articles WHERE MATCH (title) AGAINST ('+MySQL -YourSQL' IN BOOLEAN MODE)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -835,7 +835,7 @@ public class ExpressionCoverageTest
     public void FullTextSearch_InNaturalLanguageMode_ShouldRoundTrip()
     {
         var sql = "SELECT * FROM articles WHERE MATCH (title) AGAINST ('database' IN NATURAL LANGUAGE MODE)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -854,7 +854,7 @@ public class ExpressionCoverageTest
     public void InExpression_WithOrSuffix_ShouldParseOrAtTopLevel()
     {
         var sql = "SELECT * FROM T_DEMO WHERE a IN (1, 3, 2) OR b = 2";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         // WHERE 顶层应为 OrExpression，左操作数为 InExpression，右操作数为比较表达式
         var orExpr = Assert.IsType<OrExpression>(select.Where);
@@ -869,7 +869,7 @@ public class ExpressionCoverageTest
     public void InExpression_WithAndSuffix_ShouldParseAndAtTopLevel()
     {
         var sql = "SELECT * FROM T_DEMO WHERE a IN (1, 3, 2) AND b = 2";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var andExpr = Assert.IsType<AndExpression>(select.Where);
         Assert.IsType<InExpression>(andExpr.LeftExpression);
@@ -887,7 +887,7 @@ public class ExpressionCoverageTest
     public void ConnectByRoot_SimpleColumn_ShouldRoundTrip()
     {
         var sql = "SELECT CONNECT_BY_ROOT emp_name FROM employees";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -899,7 +899,7 @@ public class ExpressionCoverageTest
     public void ConnectByRoot_ComplexExpression_ShouldRoundTrip()
     {
         var sql = "SELECT CONNECT_BY_ROOT (emp_name || '_') FROM employees";
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -911,7 +911,7 @@ public class ExpressionCoverageTest
     [Fact]
     public void ConnectByPrior_ExpressionOperand_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT PRIOR a FROM t");
+        var stmt = SqlParser.Parse("SELECT PRIOR a FROM t");
         Assert.NotNull(stmt);
     }
 

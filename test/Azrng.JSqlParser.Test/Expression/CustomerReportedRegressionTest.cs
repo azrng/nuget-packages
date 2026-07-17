@@ -35,7 +35,7 @@ public class CustomerReportedRegressionTest
         // 客户反馈 #4：备注只支持 /* */ 不支持 --。
         // 现状：-- 行注释可正常解析（不抛错），与 /* */ 一致地被 lexer（-> skip）丢弃，
         // 与上游 JSqlParser 行为一致；本测试固化该现状，不作为 Bug 处理。
-        var stmt = CCJSqlParserUtil.Parse(input);
+        var stmt = SqlParser.Parse(input);
 
         Assert.NotNull(stmt);
         Assert.Equal(expected, stmt!.ToString());
@@ -47,7 +47,7 @@ public class CustomerReportedRegressionTest
         // 中文注释也不应导致解析失败
         var sql = "SELECT a FROM t -- 中文注释\nWHERE a = 1";
 
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT a FROM t WHERE a = 1", stmt!.ToString());
@@ -59,7 +59,7 @@ public class CustomerReportedRegressionTest
         // /* */ 块注释同样被丢弃，行为与 -- 一致
         var sql = "SELECT a FROM t /* block comment */ WHERE a = 1";
 
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT a FROM t WHERE a = 1", stmt!.ToString());
@@ -70,7 +70,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT /* hint */ a FROM t";
 
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT a FROM t", stmt!.ToString());
@@ -86,7 +86,7 @@ public class CustomerReportedRegressionTest
         // 客户反馈 #5：不能写 NULL AS 字段名。实测正常。
         var sql = "SELECT NULL AS x FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
 
         Assert.IsType<NullValue>(item.Expression);
@@ -100,7 +100,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT NULL AS x, NULL AS y, id FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.Equal(3, select.SelectItems!.Count);
         Assert.Equal("SELECT NULL AS x, NULL AS y, id FROM t", select.ToString());
@@ -116,7 +116,7 @@ public class CustomerReportedRegressionTest
         // 客户反馈 #6：不支持 '0' || 某字段。实测正常，解析为 Concat 节点。
         var sql = "SELECT '0' || a AS x FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
 
         var concat = Assert.IsType<Concat>(item.Expression);
@@ -131,7 +131,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT a || 'suffix' FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.Equal("SELECT a || 'suffix' FROM t", select.ToString());
     }
@@ -141,7 +141,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT a || b || c FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
 
         Assert.IsType<Concat>(item.Expression);
@@ -158,7 +158,7 @@ public class CustomerReportedRegressionTest
         // 客户反馈 #7：不支持 UNION ALL。实测正常，解析为 SetOperationList。
         var sql = "SELECT a FROM t1 UNION ALL SELECT a FROM t2";
 
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(2, setOpList.Selects.Count);
@@ -173,7 +173,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT a FROM t1 UNION SELECT a FROM t2";
 
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(SetOperation.OperationType.UNION, setOpList.Operations[0].Type);
@@ -186,7 +186,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT a FROM t1 UNION ALL SELECT a FROM t2 UNION ALL SELECT a FROM t3";
 
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(3, setOpList.Selects.Count);
@@ -204,7 +204,7 @@ public class CustomerReportedRegressionTest
         // 客户反馈 #8：不支持 a.qty::varchar(20) as yl。实测正常，解析为 CastExpression（UseCastKeyword=false）。
         var sql = "SELECT a.qty::varchar(20) AS yl FROM t a";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
 
         var cast = Assert.IsType<CastExpression>(item.Expression);
@@ -221,7 +221,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT id::bigint FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.Equal("SELECT id::bigint FROM t", select.ToString());
     }
@@ -231,7 +231,7 @@ public class CustomerReportedRegressionTest
     {
         var sql = "SELECT name::text FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         Assert.Equal("SELECT name::text FROM t", select.ToString());
     }
@@ -242,7 +242,7 @@ public class CustomerReportedRegressionTest
         // 对照：CAST(...) 关键字形式应输出 CAST(x AS type)
         var sql = "SELECT CAST(id AS bigint) FROM t";
 
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
         var item = select.SelectItems![0];
 
         var cast = Assert.IsType<CastExpression>(item.Expression);
@@ -266,7 +266,7 @@ public class CustomerReportedRegressionTest
             "NULL AS remark " +
             "FROM orders a WHERE a.status != 1";
 
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         Assert.NotNull(stmt);
         // round-trip 应保持结构完整（注意 != 会被规范化为 <>）

@@ -17,7 +17,7 @@ public class ValuesTest
     public void Values_Standalone_RoundTrip()
     {
         var sql = "VALUES (1, 'a'), (2, 'b')";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.Equal(2, values.Rows.Count);
@@ -30,7 +30,7 @@ public class ValuesTest
     public void Values_SingleRow_RoundTrip()
     {
         var sql = "VALUES (1, 2, 3)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.Single(values.Rows);
@@ -43,7 +43,7 @@ public class ValuesTest
     public void Values_Union_Values_RoundTrip()
     {
         var sql = "VALUES (1) UNION VALUES (2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(2, setOpList.Selects.Count);
@@ -56,7 +56,7 @@ public class ValuesTest
     public void Values_UnionAll_Values_RoundTrip()
     {
         var sql = "VALUES (1, 'x') UNION ALL VALUES (2, 'y')";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(2, setOpList.Selects.Count);
@@ -68,7 +68,7 @@ public class ValuesTest
     [Fact]
     public void Values_AsFromItem_WithAlias_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (VALUES (1, 2)) AS t");
+        var stmt = SqlParser.Parse("SELECT * FROM (VALUES (1, 2)) AS t");
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
@@ -82,7 +82,7 @@ public class ValuesTest
     public void Values_AsFromItem_MultiRow_RoundTrip()
     {
         var sql = "SELECT * FROM (VALUES (1), (2)) t";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
@@ -96,7 +96,7 @@ public class ValuesTest
     public void Values_WithOrderByAndLimit_RoundTrip()
     {
         var sql = "VALUES (1), (2) ORDER BY 1 LIMIT 1";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.NotNull(values.OrderByElements);
@@ -109,7 +109,7 @@ public class ValuesTest
     public void Values_WithExpressions_RoundTrip()
     {
         var sql = "VALUES (1 + 1, UPPER('a')), (ABS(-3), 'b')";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.Equal(2, values.Rows.Count);
@@ -121,7 +121,7 @@ public class ValuesTest
     public void Values_WithNull_RoundTrip()
     {
         var sql = "VALUES (1, NULL), (NULL, 2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.Equal(2, values.Rows.Count);
@@ -135,7 +135,7 @@ public class ValuesTest
     public void Values_Intersect_RoundTrip()
     {
         var sql = "VALUES (1) INTERSECT VALUES (2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(2, setOpList.Selects.Count);
@@ -148,7 +148,7 @@ public class ValuesTest
     public void Values_Except_RoundTrip()
     {
         var sql = "VALUES (1) EXCEPT VALUES (2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(SetOperation.OperationType.EXCEPT, setOpList.Operations[0].Type);
@@ -160,7 +160,7 @@ public class ValuesTest
     public void Values_Minus_RoundTrip()
     {
         var sql = "VALUES (1) MINUS VALUES (2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(SetOperation.OperationType.MINUS, setOpList.Operations[0].Type);
@@ -172,7 +172,7 @@ public class ValuesTest
     public void Values_UnionCorresponding_RoundTrip()
     {
         var sql = "VALUES (1) UNION CORRESPONDING VALUES (2)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.True(setOpList.Operations[0].Corresponding);
@@ -184,7 +184,7 @@ public class ValuesTest
     public void Values_ThreeWay_Union_RoundTrip()
     {
         var sql = "VALUES (1) UNION VALUES (2) UNION VALUES (3)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var setOpList = Assert.IsType<SetOperationList>(stmt);
         Assert.Equal(3, setOpList.Selects.Count);
@@ -200,7 +200,7 @@ public class ValuesTest
     [Fact]
     public void Values_WithOffset_ParsedAndAttached()
     {
-        var stmt = CCJSqlParserUtil.Parse("VALUES (1), (2) OFFSET 1 ROWS");
+        var stmt = SqlParser.Parse("VALUES (1), (2) OFFSET 1 ROWS");
 
         var values = Assert.IsType<Values>(stmt);
         Assert.NotNull(values.Offset);
@@ -214,7 +214,7 @@ public class ValuesTest
     public void Values_AsFromItem_NoAlias_RoundTrip()
     {
         var sql = "SELECT * FROM (VALUES (1, 2))";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
@@ -228,7 +228,7 @@ public class ValuesTest
     public void Values_WithColumnReference_RoundTrip()
     {
         var sql = "VALUES (users.id, orders.code)";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
 
         var values = Assert.IsType<Values>(stmt);
         Assert.Single(values.Rows);

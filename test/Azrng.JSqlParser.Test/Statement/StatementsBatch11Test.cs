@@ -18,7 +18,7 @@ public class StatementsBatch11Test
     {
         // body 作为 token 流保留到第一个分号（对齐上游 captureFunctionBody 容器式行为）
         // 注意：含嵌套分号的复杂 body（BEGIN...END）需 lexer 状态机，当前不支持
-        var stmt = CCJSqlParserUtil.Parse("CREATE FUNCTION my_func RETURNS INTEGER LANGUAGE SQL");
+        var stmt = SqlParser.Parse("CREATE FUNCTION my_func RETURNS INTEGER LANGUAGE SQL");
 
         Assert.NotNull(stmt);
         Assert.IsType<CreateFunction>(stmt);
@@ -30,7 +30,7 @@ public class StatementsBatch11Test
     [Fact]
     public void CreateProcedure_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE PROCEDURE my_proc LANGUAGE SQL");
+        var stmt = SqlParser.Parse("CREATE PROCEDURE my_proc LANGUAGE SQL");
 
         Assert.NotNull(stmt);
         Assert.IsType<CreateProcedure>(stmt);
@@ -42,7 +42,7 @@ public class StatementsBatch11Test
     [Fact]
     public void CreateFunction_OrReplace_ShouldSetFlag()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE OR REPLACE FUNCTION my_func RETURNS INTEGER LANGUAGE SQL");
+        var stmt = SqlParser.Parse("CREATE OR REPLACE FUNCTION my_func RETURNS INTEGER LANGUAGE SQL");
 
         Assert.NotNull(stmt);
         var fn = Assert.IsType<CreateFunction>(stmt);
@@ -56,7 +56,7 @@ public class StatementsBatch11Test
     [Fact]
     public void Block_SimpleSelect_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("BEGIN SELECT 1; END");
+        var stmt = SqlParser.Parse("BEGIN SELECT 1; END");
 
         Assert.NotNull(stmt);
         Assert.IsType<Azrng.JSqlParser.Statement.Block>(stmt);
@@ -65,7 +65,7 @@ public class StatementsBatch11Test
     [Fact]
     public void Block_MultipleStatements_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("BEGIN SELECT 1; SELECT 2; END");
+        var stmt = SqlParser.Parse("BEGIN SELECT 1; SELECT 2; END");
 
         Assert.NotNull(stmt);
         var block = Assert.IsType<Azrng.JSqlParser.Statement.Block>(stmt);
@@ -79,7 +79,7 @@ public class StatementsBatch11Test
     [Fact]
     public void Declare_SimpleVariable_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("DECLARE @x INT = 1");
+        var stmt = SqlParser.Parse("DECLARE @x INT = 1");
 
         Assert.NotNull(stmt);
         Assert.IsType<Azrng.JSqlParser.Statement.DeclareStatement>(stmt);
@@ -88,7 +88,7 @@ public class StatementsBatch11Test
     [Fact]
     public void Declare_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("DECLARE @x INT");
+        var stmt = SqlParser.Parse("DECLARE @x INT");
         var declare = Assert.IsType<Azrng.JSqlParser.Statement.DeclareStatement>(stmt);
 
         Assert.Single(declare.TypeDefExprList);
@@ -102,7 +102,7 @@ public class StatementsBatch11Test
     [Fact]
     public void IfElse_WithElse_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("IF 1 = 1 SELECT 1 ELSE SELECT 2");
+        var stmt = SqlParser.Parse("IF 1 = 1 SELECT 1 ELSE SELECT 2");
 
         Assert.NotNull(stmt);
         Assert.IsType<Azrng.JSqlParser.Statement.IfElseStatement>(stmt);
@@ -111,7 +111,7 @@ public class StatementsBatch11Test
     [Fact]
     public void IfElse_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("IF 1 = 1 SELECT 1 ELSE SELECT 2");
+        var stmt = SqlParser.Parse("IF 1 = 1 SELECT 1 ELSE SELECT 2");
         var ifElse = Assert.IsType<Azrng.JSqlParser.Statement.IfElseStatement>(stmt);
 
         Assert.NotNull(ifElse.Condition);
@@ -122,7 +122,7 @@ public class StatementsBatch11Test
     [Fact]
     public void IfElse_WithoutElse_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("IF 1 = 1 SELECT 1");
+        var stmt = SqlParser.Parse("IF 1 = 1 SELECT 1");
 
         Assert.NotNull(stmt);
         Assert.IsType<Azrng.JSqlParser.Statement.IfElseStatement>(stmt);

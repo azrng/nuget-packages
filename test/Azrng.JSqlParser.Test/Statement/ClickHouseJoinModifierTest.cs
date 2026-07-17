@@ -25,14 +25,14 @@ public class ClickHouseJoinModifierTest
     [MemberData(nameof(RoundTripCases))]
     public void ShouldRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
     [Fact]
     public void GlobalJoin_SetsGlobalFlag()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM a GLOBAL JOIN b ON a.id = b.id")!;
+        var stmt = SqlParser.Parse("SELECT * FROM a GLOBAL JOIN b ON a.id = b.id")!;
         var join = ExtractFirstJoin(stmt);
         Assert.True(join.Global);
         Assert.False(join.Any);
@@ -42,7 +42,7 @@ public class ClickHouseJoinModifierTest
     [Fact]
     public void AnyJoin_SetsAnyFlag()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM a ANY JOIN b ON a.id = b.id")!;
+        var stmt = SqlParser.Parse("SELECT * FROM a ANY JOIN b ON a.id = b.id")!;
         var join = ExtractFirstJoin(stmt);
         Assert.True(join.Any);
     }
@@ -50,7 +50,7 @@ public class ClickHouseJoinModifierTest
     [Fact]
     public void AllJoin_SetsAllFlag()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM a ALL JOIN b ON a.id = b.id")!;
+        var stmt = SqlParser.Parse("SELECT * FROM a ALL JOIN b ON a.id = b.id")!;
         var join = ExtractFirstJoin(stmt);
         Assert.True(join.All);
     }
@@ -58,7 +58,7 @@ public class ClickHouseJoinModifierTest
     [Fact]
     public void GlobalAnyLeftJoin_SetsAllFlags()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM a GLOBAL ANY LEFT JOIN b ON a.id = b.id")!;
+        var stmt = SqlParser.Parse("SELECT * FROM a GLOBAL ANY LEFT JOIN b ON a.id = b.id")!;
         var join = ExtractFirstJoin(stmt);
         Assert.True(join.Global);
         Assert.True(join.Any);

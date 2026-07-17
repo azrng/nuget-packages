@@ -13,7 +13,7 @@ public class Batch13MediumTest
     [Fact]
     public void SimilarTo_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t WHERE name SIMILAR TO 'A%'");
+        var stmt = SqlParser.Parse("SELECT * FROM t WHERE name SIMILAR TO 'A%'");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t WHERE name SIMILAR TO 'A%'", stmt!.ToString());
@@ -22,7 +22,7 @@ public class Batch13MediumTest
     [Fact]
     public void SimilarTo_Not_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t WHERE name NOT SIMILAR TO 'A%'");
+        var stmt = SqlParser.Parse("SELECT * FROM t WHERE name NOT SIMILAR TO 'A%'");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t WHERE name NOT SIMILAR TO 'A%'", stmt!.ToString());
@@ -31,7 +31,7 @@ public class Batch13MediumTest
     [Fact]
     public void SimilarTo_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t WHERE name SIMILAR TO 'A%'");
+        var stmt = SqlParser.Parse("SELECT * FROM t WHERE name SIMILAR TO 'A%'");
         Assert.NotNull(stmt);
         // 验证 round-trip 含 SIMILAR TO
         Assert.Contains("SIMILAR TO", stmt!.ToString());
@@ -44,7 +44,7 @@ public class Batch13MediumTest
     [Fact]
     public void StraightJoin_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id", stmt!.ToString());
@@ -53,7 +53,7 @@ public class Batch13MediumTest
     [Fact]
     public void StraightJoin_ShouldSetStraightFlag()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var join = Assert.Single(plainSelect.Joins!);
 
@@ -65,7 +65,7 @@ public class Batch13MediumTest
     [Fact]
     public void StraightJoin_MultipleTables_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id STRAIGHT_JOIN t3 ON t2.id = t3.id");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 STRAIGHT_JOIN t2 ON t1.id = t2.id STRAIGHT_JOIN t3 ON t2.id = t3.id");
 
         Assert.NotNull(stmt);
         var plainSelect = Assert.IsType<PlainSelect>(stmt);

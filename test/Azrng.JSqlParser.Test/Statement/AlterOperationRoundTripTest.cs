@@ -58,14 +58,14 @@ public class AlterOperationRoundTripTest
     [MemberData(nameof(RoundTripCases))]
     public void ShouldRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
     [Fact]
     public void DropUnique_ParsesConstraintSymbol()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP UNIQUE uk1")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t DROP UNIQUE uk1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.DropUnique, expr.Operation);
         Assert.Equal("uk1", expr.ConstraintSymbol);
@@ -74,7 +74,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void DropForeignKey_ParsesConstraintSymbol()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP FOREIGN KEY fk1")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t DROP FOREIGN KEY fk1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.DropForeignKey, expr.Operation);
         Assert.Equal("fk1", expr.ConstraintSymbol);
@@ -83,7 +83,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void RenameIndex_ParsesOldAndNew()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t RENAME INDEX i1 TO i2")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t RENAME INDEX i1 TO i2")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.RenameIndex, expr.Operation);
         Assert.Equal("i1", expr.ColumnOldName);
@@ -93,7 +93,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void EngineEquals_RecordsUseEquals()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ENGINE = InnoDB")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t ENGINE = InnoDB")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.Engine, expr.Operation);
         Assert.True(expr.UseEqualsForEngine);
@@ -103,7 +103,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void CommentEquals_UsesEqualSignOperation()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t COMMENT = 'hi'")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t COMMENT = 'hi'")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.CommentWithEqualSign, expr.Operation);
     }
@@ -111,7 +111,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void AddPartition_ParsesPartitionDefinition()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ADD PARTITION (PARTITION p0 VALUES LESS THAN (10))")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t ADD PARTITION (PARTITION p0 VALUES LESS THAN (10))")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.AddPartition, expr.Operation);
         var def = Assert.Single(expr.PartitionDefinitions!);
@@ -122,7 +122,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void DropPartitions_ParsesPartitionNames()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP PARTITION p0, p1")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t DROP PARTITION p0, p1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.DropPartition, expr.Operation);
         Assert.Equal(new[] { "p0", "p1" }, expr.PartitionNames!);
@@ -131,7 +131,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void CoalescePartition_ParsesCount()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t COALESCE PARTITION 3")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t COALESCE PARTITION 3")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.CoalescePartition, expr.Operation);
         Assert.Equal(3, expr.CoalescePartitionNumber);
@@ -140,7 +140,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void ExchangePartition_ParsesTargetTable()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE other")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE other")!;
         var expr = Assert.Single(stmt.AlterExpressions);
         Assert.Equal(AlterOperation.ExchangePartition, expr.Operation);
         Assert.Equal("other", expr.ExchangePartitionTable);
@@ -149,7 +149,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void AlterSequence_ParsesStructuredParameters()
     {
-        var stmt = (AlterSequence)CCJSqlParserUtil.Parse(
+        var stmt = (AlterSequence)SqlParser.Parse(
             "ALTER SEQUENCE seq RESTART WITH 100 INCREMENT BY 1 MINVALUE 1 MAXVALUE 999 CACHE 20 CYCLE")!;
         Assert.NotNull(stmt.Sequence);
         Assert.Equal("seq", stmt.Sequence!.Name);
@@ -162,7 +162,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void AlterColumn_SetDefault_ShouldPopulateAction()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ALTER COLUMN b SET DEFAULT 100")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t ALTER COLUMN b SET DEFAULT 100")!;
         var expr = Assert.Single(stmt.AlterExpressions!);
         Assert.Equal(AlterColumnAction.SetDefault, expr.ColumnAlterAction);
         Assert.Equal("100", expr.AlterColumnDefaultExpression);
@@ -171,7 +171,7 @@ public class AlterOperationRoundTripTest
     [Fact]
     public void AlterColumn_Type_ShouldPopulateAction()
     {
-        var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ALTER COLUMN b TYPE INT")!;
+        var stmt = (Alter)SqlParser.Parse("ALTER TABLE t ALTER COLUMN b TYPE INT")!;
         var expr = Assert.Single(stmt.AlterExpressions!);
         Assert.Equal(AlterColumnAction.Type, expr.ColumnAlterAction);
         Assert.Equal("INT", expr.AlterColumnType);

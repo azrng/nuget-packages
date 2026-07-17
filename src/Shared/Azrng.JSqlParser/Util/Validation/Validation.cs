@@ -38,7 +38,7 @@ public class Validation
 
         try
         {
-            _parsedStatements = CCJSqlParserUtil.ParseStatements(_sql);
+            _parsedStatements = SqlParser.ParseStatements(_sql);
             if (_parsedStatements != null)
             {
                 ValidateStatements(_parsedStatements);

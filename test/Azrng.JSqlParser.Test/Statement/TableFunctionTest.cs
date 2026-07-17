@@ -12,7 +12,7 @@ public class TableFunctionTest
     [Fact]
     public void TableFunction_NoArgs_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM generate_series()");
+        var stmt = SqlParser.Parse("SELECT * FROM generate_series()");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM generate_series()", stmt!.ToString());
@@ -21,7 +21,7 @@ public class TableFunctionTest
     [Fact]
     public void TableFunction_WithArgs_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM generate_series(1, 10) AS s");
+        var stmt = SqlParser.Parse("SELECT * FROM generate_series(1, 10) AS s");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM generate_series(1, 10) AS s", stmt!.ToString());
@@ -30,7 +30,7 @@ public class TableFunctionTest
     [Fact]
     public void TableFunction_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM unnest(arr) AS u");
+        var stmt = SqlParser.Parse("SELECT * FROM unnest(arr) AS u");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var tableFn = Assert.IsType<TableFunction>(plainSelect.IFromItem);
 
@@ -42,7 +42,7 @@ public class TableFunctionTest
     [Fact]
     public void TableFunction_InJoin_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 JOIN generate_series(1, 5) AS g ON 1 = 1");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN generate_series(1, 5) AS g ON 1 = 1");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t1 JOIN generate_series(1, 5) AS g ON 1 = 1", stmt!.ToString());
@@ -51,7 +51,7 @@ public class TableFunctionTest
     [Fact]
     public void TableFunction_StarArg_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM my_func(*)");
+        var stmt = SqlParser.Parse("SELECT * FROM my_func(*)");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM my_func(*)", stmt!.ToString());

@@ -22,14 +22,14 @@ public class TimeTravelTest
     [MemberData(nameof(RoundTripCases))]
     public void ShouldRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
     [Fact]
     public void AtTimestamp_ParsesTimeTravelClause()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t AT (TIMESTAMP => '2024-01-01')")!;
+        var stmt = SqlParser.Parse("SELECT * FROM t AT (TIMESTAMP => '2024-01-01')")!;
         var table = ExtractFromItem(stmt);
         Assert.NotNull(table.TimeTravel);
         Assert.False(table.TimeTravel!.IsBefore);
@@ -39,7 +39,7 @@ public class TimeTravelTest
     [Fact]
     public void BeforeStatement_ParsesIsBefore()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t BEFORE (STATEMENT => 'stmt-id')")!;
+        var stmt = SqlParser.Parse("SELECT * FROM t BEFORE (STATEMENT => 'stmt-id')")!;
         var table = ExtractFromItem(stmt);
         Assert.NotNull(table.TimeTravel);
         Assert.True(table.TimeTravel!.IsBefore);
@@ -49,7 +49,7 @@ public class TimeTravelTest
     [Fact]
     public void AtOffset_ParsesOffsetType()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t AT (OFFSET => '-1h')")!;
+        var stmt = SqlParser.Parse("SELECT * FROM t AT (OFFSET => '-1h')")!;
         var table = ExtractFromItem(stmt);
         Assert.NotNull(table.TimeTravel);
         Assert.Equal("OFFSET", table.TimeTravel!.TravelType);

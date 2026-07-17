@@ -17,7 +17,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_SimpleSelect_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
+        var stmt = SqlParser.Parse("SELECT id FROM users")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
     }
@@ -25,7 +25,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_SelectWithJoin_ShouldReturnBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -35,7 +35,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Insert_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
+        var stmt = SqlParser.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
     }
@@ -48,7 +48,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Insert_ShouldVisitTableOnlyOnce()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'test')")!;
         var tables = GetTables(stmt);
         Assert.Single(tables);
@@ -58,7 +58,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Update_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
+        var stmt = SqlParser.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
     }
@@ -66,7 +66,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Delete_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
+        var stmt = SqlParser.Parse("DELETE FROM users WHERE id = 1")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
     }
@@ -74,7 +74,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_DeleteUsing_ShouldReturnAllTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "DELETE FROM users USING orders WHERE users.id = orders.uid")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -84,7 +84,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Subquery_ShouldReturnAllTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -94,7 +94,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_Union_ShouldReturnAllTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users UNION SELECT id FROM admins")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -104,7 +104,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_MultipleTables_ShouldReturnAll()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT * FROM users, orders, products")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -115,7 +115,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_NotExistsSubquery_ShouldReturnAllTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE NOT EXISTS (SELECT 1 FROM orders)")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -125,7 +125,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_FromSubquery_ShouldReturnInnerTable()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT * FROM (SELECT id FROM users) u")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -134,7 +134,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_WithSchema_ShouldReturnTableName()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM mydb.users")!;
+        var stmt = SqlParser.Parse("SELECT id FROM mydb.users")!;
         var tables = GetTables(stmt);
         Assert.True(tables.Count > 0);
     }
@@ -142,7 +142,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_CreateTable_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE TABLE users (id INT, name VARCHAR(100))")!;
+        var stmt = SqlParser.Parse("CREATE TABLE users (id INT, name VARCHAR(100))")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
     }
@@ -150,7 +150,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_InExpressionList_ShouldReturnTable()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE status IN (1, 2, 3)")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);
@@ -159,7 +159,7 @@ public class TablesNamesFinderTest
     [Fact]
     public void FindTables_InSubquery_ShouldReturnBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE status IN (SELECT status FROM orders WHERE amount > 100)")!;
         var tables = GetTables(stmt);
         Assert.Contains("users", tables);

@@ -46,7 +46,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M2_Function_FilterClause_Traversed()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT COUNT(*) FILTER (WHERE filter_col > 0) FROM t")!;
         // FILTER 包装为 AnalyticExpression，遍历它应覆盖 FilterExpression
         var analytic = select.SelectItems![0].Expression;
@@ -61,7 +61,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M2_AnalyticExpression_PartitionAndOrderBy_Traversed()
     {
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(
+        var select = (PlainSelect)SqlParser.Parse(
             "SELECT SUM(measure) OVER (PARTITION BY part_col ORDER BY ord_col) FROM t")!;
         var analytic = (AnalyticExpression)select.SelectItems![0].Expression;
         var visitor = new ColumnRecorder();
@@ -77,7 +77,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_BinaryExpression_BothOperands_Traversed()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("left_col = right_col")!;
+        var expr = SqlParser.ParseCondExpression("left_col = right_col")!;
         var visitor = new ColumnRecorder();
 
         expr.Accept(visitor, (object?)null);
@@ -90,7 +90,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_Parenthesis_InnerExpression_Traversed()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("(inner_col > 0)")!;
+        var expr = SqlParser.ParseCondExpression("(inner_col > 0)")!;
         var visitor = new ColumnRecorder();
 
         expr.Accept(visitor, (object?)null);
@@ -102,7 +102,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_NotExpression_InnerExpression_Traversed()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("NOT neg_col = 1")!;
+        var expr = SqlParser.ParseCondExpression("NOT neg_col = 1")!;
         var visitor = new ColumnRecorder();
 
         expr.Accept(visitor, (object?)null);
@@ -114,7 +114,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_DeepNested_AndOr_Traversed()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a = 1 AND (b = 2 OR c = 3) AND d = 4")!;
+        var expr = SqlParser.ParseCondExpression("a = 1 AND (b = 2 OR c = 3) AND d = 4")!;
         var visitor = new ColumnRecorder();
 
         expr.Accept(visitor, (object?)null);
@@ -127,7 +127,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M2_CaseExpression_AllBranches_Traversed()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression(
+        var expr = SqlParser.ParseCondExpression(
             "CASE WHEN cond_col > 0 THEN then_col ELSE else_col END")!;
         var visitor = new ColumnRecorder();
 
@@ -144,7 +144,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_Context_PreservedThroughSubtree()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("a = 1 AND b = 2")!;
+        var expr = SqlParser.ParseCondExpression("a = 1 AND b = 2")!;
         var visitor = new ContextRecorder();
 
         expr.Accept(visitor, "MY_CTX");
@@ -158,7 +158,7 @@ public class ExpressionVisitorAdapterFixTest
     [Fact]
     public void M1_Context_PreservedInDeepNesting()
     {
-        var expr = CCJSqlParserUtil.ParseCondExpression("(a = 1 AND (b = 2 OR c = 3))")!;
+        var expr = SqlParser.ParseCondExpression("(a = 1 AND (b = 2 OR c = 3))")!;
         var visitor = new ContextRecorder();
 
         expr.Accept(visitor, "DEEP_CTX");

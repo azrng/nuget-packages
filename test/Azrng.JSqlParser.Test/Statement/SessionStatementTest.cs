@@ -16,7 +16,7 @@ public class SessionStatementTest
     [InlineData("SESSION DROP")]
     public void SessionStatement_BasicActions_ShouldParse(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.IsType<SessionStatement>(stmt);
     }
 
@@ -27,7 +27,7 @@ public class SessionStatementTest
     public void SessionStatement_WithOptions_ShouldParse()
     {
         var sql = "SESSION START mysession WITH persist=false,cleanup=on";
-        var stmt = (SessionStatement)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (SessionStatement)SqlParser.Parse(sql)!;
         Assert.True(stmt.HasOption("persist"));
         Assert.True(stmt.HasOption("cleanup"));
         Assert.Equal("false", stmt.GetOption("persist"));
@@ -42,7 +42,7 @@ public class SessionStatementTest
     public void SessionStatement_WithKeepOption_ShouldParse()
     {
         var sql = "SESSION APPLY mysession WITH persist=false,keep=true";
-        var stmt = (SessionStatement)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (SessionStatement)SqlParser.Parse(sql)!;
         Assert.True(stmt.HasOption("keep"));
         Assert.Equal("true", stmt.GetOption("keep"));
     }

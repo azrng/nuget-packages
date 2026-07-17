@@ -20,7 +20,7 @@ public class SelectTopTest
     [InlineData("SELECT TOP 1 id, name FROM users", "SELECT TOP 1 id, name FROM users")]
     public void Top_LongValue_RoundTrip(string input, string expected)
     {
-        var stmt = CCJSqlParserUtil.Parse(input);
+        var stmt = SqlParser.Parse(input);
 
         Assert.NotNull(stmt);
         Assert.Equal(expected, stmt!.ToString());
@@ -29,7 +29,7 @@ public class SelectTopTest
     [Fact]
     public void Top_ParenthesizedExpression_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP (10) * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP (10) * FROM t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT TOP (10) * FROM t", stmt!.ToString());
@@ -38,7 +38,7 @@ public class SelectTopTest
     [Fact]
     public void Top_Percent_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP 10 PERCENT * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP 10 PERCENT * FROM t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT TOP 10 PERCENT * FROM t", stmt!.ToString());
@@ -47,7 +47,7 @@ public class SelectTopTest
     [Fact]
     public void Top_WithTies_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP 10 WITH TIES * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP 10 WITH TIES * FROM t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT TOP 10 WITH TIES * FROM t", stmt!.ToString());
@@ -56,7 +56,7 @@ public class SelectTopTest
     [Fact]
     public void Top_PercentWithTies_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP (10) PERCENT WITH TIES * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP (10) PERCENT WITH TIES * FROM t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT TOP (10) PERCENT WITH TIES * FROM t", stmt!.ToString());
@@ -69,7 +69,7 @@ public class SelectTopTest
     [Fact]
     public void Top_LongValue_ShouldBuildTopNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP 5 * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP 5 * FROM t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
         Assert.NotNull(plainSelect.Top);
@@ -83,7 +83,7 @@ public class SelectTopTest
     [Fact]
     public void Top_ParenthesizedPercentWithTies_ShouldSetAllFlags()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT TOP (10) PERCENT WITH TIES * FROM t");
+        var stmt = SqlParser.Parse("SELECT TOP (10) PERCENT WITH TIES * FROM t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
         Assert.NotNull(plainSelect.Top);
@@ -96,7 +96,7 @@ public class SelectTopTest
     public void Top_Absent_ShouldLeaveTopNull()
     {
         // 无 TOP 时 Top 字段应为 null，不影响原有 SELECT 行为
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t");
+        var stmt = SqlParser.Parse("SELECT * FROM t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
         Assert.Null(plainSelect.Top);

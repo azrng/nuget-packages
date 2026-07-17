@@ -14,7 +14,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_Simple_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME old_table TO new_table");
+        var stmt = SqlParser.Parse("RENAME old_table TO new_table");
 
         Assert.NotNull(stmt);
         Assert.Equal("RENAME old_table TO new_table", stmt!.ToString());
@@ -23,7 +23,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_TableKeyword_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME TABLE old_table TO new_table");
+        var stmt = SqlParser.Parse("RENAME TABLE old_table TO new_table");
 
         Assert.NotNull(stmt);
         Assert.Equal("RENAME TABLE old_table TO new_table", stmt!.ToString());
@@ -32,7 +32,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_MultipleTables_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME TABLE t1 TO t2, t3 TO t4");
+        var stmt = SqlParser.Parse("RENAME TABLE t1 TO t2, t3 TO t4");
 
         Assert.NotNull(stmt);
         Assert.Equal("RENAME TABLE t1 TO t2, t3 TO t4", stmt!.ToString());
@@ -41,7 +41,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME TABLE old_t TO new_t");
+        var stmt = SqlParser.Parse("RENAME TABLE old_t TO new_t");
         var rename = Assert.IsType<RenameTableStatement>(stmt);
 
         Assert.True(rename.UsingTableKeyword);
@@ -53,7 +53,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_MultipleTables_ShouldHaveAllPairs()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME t1 TO t2, t3 TO t4, t5 TO t6");
+        var stmt = SqlParser.Parse("RENAME t1 TO t2, t3 TO t4, t5 TO t6");
         var rename = Assert.IsType<RenameTableStatement>(stmt);
 
         Assert.Equal(3, rename.TableNames.Count);
@@ -62,7 +62,7 @@ public class RenameTableStatementTest
     [Fact]
     public void Rename_TableNamesFinder_ShouldExtractBothTables()
     {
-        var stmt = CCJSqlParserUtil.Parse("RENAME TABLE old_t TO new_t");
+        var stmt = SqlParser.Parse("RENAME TABLE old_t TO new_t");
         var finder = new TablesNamesFinder();
         var tables = finder.GetTables(stmt!);
 

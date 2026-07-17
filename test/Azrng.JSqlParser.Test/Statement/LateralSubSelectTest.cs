@@ -16,7 +16,7 @@ public class LateralSubSelectTest
     public void Lateral_RoundTrip_ShouldPreservePrefix()
     {
         // 修复前：LATERAL 前缀被丢弃，输出 "FROM (SELECT 1) t"
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1) t");
+        var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1) t");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM LATERAL (SELECT 1) t", stmt!.ToString());
@@ -26,7 +26,7 @@ public class LateralSubSelectTest
     public void Lateral_ShouldBuildLateralSubSelectNode()
     {
         // AST 类型断言：IFromItem 应为 LateralSubSelect 而非 ParenthesedSelect
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1) t");
+        var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
         Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
@@ -35,7 +35,7 @@ public class LateralSubSelectTest
     [Fact]
     public void Lateral_NoAlias_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1)");
+        var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1)");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM LATERAL (SELECT 1)", stmt!.ToString());
@@ -45,7 +45,7 @@ public class LateralSubSelectTest
     public void Lateral_WithJoin_ShouldPreservePrefix()
     {
         // LATERAL 作为 JOIN 目标
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t1 JOIN LATERAL (SELECT 1) t2 ON 1 = 1");
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN LATERAL (SELECT 1) t2 ON 1 = 1");
 
         Assert.NotNull(stmt);
         Assert.Equal("SELECT * FROM t1 JOIN LATERAL (SELECT 1) t2 ON 1 = 1", stmt!.ToString());
@@ -54,7 +54,7 @@ public class LateralSubSelectTest
     [Fact]
     public void Lateral_PrefixDefaultsToLateral()
     {
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1) t");
+        var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var lateral = Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
 
@@ -65,7 +65,7 @@ public class LateralSubSelectTest
     public void NonLateralSubSelect_ShouldRemainParenthesedSelect()
     {
         // 普通 FROM (subquery) 不应被误判为 LATERAL
-        var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (SELECT 1) t");
+        var stmt = SqlParser.Parse("SELECT * FROM (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
         Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);

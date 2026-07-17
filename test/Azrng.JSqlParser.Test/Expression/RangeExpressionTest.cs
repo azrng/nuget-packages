@@ -13,7 +13,7 @@ public class RangeExpressionTest
     public void RangeExpression_InArrayConstructor_ShouldRoundTrip()
     {
         var sql = "SELECT ARRAY[1:10] FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var array = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
         var range = Assert.IsType<RangeExpression>(array.Expressions!.Expressions[0]);
@@ -27,7 +27,7 @@ public class RangeExpressionTest
     public void RangeExpression_MixedWithScalarInArray_ShouldRoundTrip()
     {
         var sql = "SELECT ARRAY[1:10, 20] FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var array = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
         Assert.Equal(2, array.Expressions!.Expressions.Count);
@@ -41,7 +41,7 @@ public class RangeExpressionTest
     public void RangeExpression_NestedArray_ShouldRoundTrip()
     {
         var sql = "SELECT ARRAY[1:10, ARRAY[2, 3]] FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var array = Assert.IsType<ArrayConstructor>(select.SelectItems![0].Expression);
         Assert.Equal(2, array.Expressions!.Expressions.Count);

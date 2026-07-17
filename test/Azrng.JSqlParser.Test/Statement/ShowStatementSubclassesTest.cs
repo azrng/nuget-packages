@@ -14,7 +14,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowColumns_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW COLUMNS FROM users");
+        var stmt = SqlParser.Parse("SHOW COLUMNS FROM users");
 
         Assert.NotNull(stmt);
         Assert.Equal("SHOW COLUMNS FROM users", stmt!.ToString());
@@ -23,7 +23,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowColumns_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW COLUMNS FROM users");
+        var stmt = SqlParser.Parse("SHOW COLUMNS FROM users");
         var show = Assert.IsType<ShowColumnsStatement>(stmt);
 
         Assert.False(show.Full);
@@ -33,7 +33,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowColumns_Full_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW FULL COLUMNS FROM users");
+        var stmt = SqlParser.Parse("SHOW FULL COLUMNS FROM users");
 
         Assert.NotNull(stmt);
         Assert.IsType<ShowColumnsStatement>(stmt);
@@ -43,7 +43,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowIndex_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW INDEX FROM users");
+        var stmt = SqlParser.Parse("SHOW INDEX FROM users");
 
         Assert.NotNull(stmt);
         Assert.Equal("SHOW INDEX FROM users", stmt!.ToString());
@@ -52,7 +52,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowIndex_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW INDEX FROM users");
+        var stmt = SqlParser.Parse("SHOW INDEX FROM users");
         var show = Assert.IsType<ShowIndexStatement>(stmt);
 
         Assert.Equal("users", show.Table?.Name);
@@ -61,7 +61,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowTables_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW TABLES");
+        var stmt = SqlParser.Parse("SHOW TABLES");
 
         Assert.NotNull(stmt);
         Assert.Equal("SHOW TABLES", stmt!.ToString());
@@ -70,7 +70,7 @@ public class ShowStatementSubclassesTest
     [Fact]
     public void ShowTables_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("SHOW TABLES");
+        var stmt = SqlParser.Parse("SHOW TABLES");
         Assert.IsType<ShowTablesStatement>(stmt);
     }
 
@@ -78,7 +78,7 @@ public class ShowStatementSubclassesTest
     public void Show_Generic_ShouldRemainShowStatement()
     {
         // 通用 SHOW identifier 保持原有 ShowStatement 类型
-        var stmt = CCJSqlParserUtil.Parse("SHOW WARNINGS");
+        var stmt = SqlParser.Parse("SHOW WARNINGS");
 
         Assert.NotNull(stmt);
         var generic = Assert.IsType<Azrng.JSqlParser.Statement.ShowStatement>(stmt);

@@ -15,7 +15,7 @@ public class CreateSequenceTest
     public void CreateSequence_Simple_ShouldRoundTrip()
     {
         var sql = "CREATE SEQUENCE my_seq";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var cs = Assert.IsType<CreateSequence>(stmt);
         Assert.Equal("my_seq", cs.Sequence!.Name);
         Assert.Null(cs.Sequence.Parameters);
@@ -26,7 +26,7 @@ public class CreateSequenceTest
     public void CreateSequence_QualifiedName_ShouldRoundTrip()
     {
         var sql = "CREATE SEQUENCE db.schema.my_seq";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var cs = Assert.IsType<CreateSequence>(stmt);
         Assert.Equal("db", cs.Sequence!.Database);
         Assert.Equal("schema", cs.Sequence.SchemaName);
@@ -38,7 +38,7 @@ public class CreateSequenceTest
     public void CreateSequence_IncrementBy_ShouldRoundTrip()
     {
         var sql = "CREATE SEQUENCE db.schema.my_seq INCREMENT BY 1";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.Equal(sql, stmt!.ToString());
     }
 
@@ -58,7 +58,7 @@ public class CreateSequenceTest
     [InlineData("CREATE SEQUENCE my_seq NOKEEP")]
     public void CreateSequence_Parameters_ShouldRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -68,7 +68,7 @@ public class CreateSequenceTest
     {
         // PostgreSQL 简写：START n（不带 WITH）
         var sql = "CREATE SEQUENCE my_seq START 10";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -78,7 +78,7 @@ public class CreateSequenceTest
     {
         // PostgreSQL 简写：INCREMENT n（不带 BY）
         var sql = "CREATE SEQUENCE my_seq INCREMENT 5";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -87,7 +87,7 @@ public class CreateSequenceTest
     public void CreateSequence_MultipleParameters_ShouldRoundTrip()
     {
         var sql = "CREATE SEQUENCE my_seq INCREMENT BY 1 START WITH 100 CACHE 20 CYCLE";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         var cs = Assert.IsType<CreateSequence>(stmt);
         Assert.Equal(4, cs.Sequence!.Parameters!.Count);
         Assert.Equal(sql, stmt!.ToString());

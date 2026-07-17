@@ -19,7 +19,7 @@ public class ReturningClauseTest
     /// <summary>断言 SQL 可被解析，且再次序列化后与原 SQL（忽略大小写、空白、运算符空格）一致。</summary>
     private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         var reparsed = stmt!.ToString()!.Trim();
         Assert.Equal(Normalize(sql), Normalize(reparsed), StringComparer.OrdinalIgnoreCase);
@@ -35,7 +35,7 @@ public class ReturningClauseTest
     [Fact]
     public void Update_BasicReturning_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("UPDATE products SET price = 10 RETURNING price, name")!;
+        var stmt = SqlParser.Parse("UPDATE products SET price = 10 RETURNING price, name")!;
         var update = (Update)stmt;
         Assert.NotNull(update.Returning);
         Assert.Equal(2, update.Returning!.SelectItems.Count);
@@ -45,7 +45,7 @@ public class ReturningClauseTest
     [Fact]
     public void Delete_BasicReturning_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1 RETURNING *")!;
+        var stmt = SqlParser.Parse("DELETE FROM users WHERE id = 1 RETURNING *")!;
         var delete = (Delete)stmt;
         Assert.NotNull(delete.Returning);
         Assert.Single(delete.Returning!.SelectItems);
@@ -54,7 +54,7 @@ public class ReturningClauseTest
     [Fact]
     public void Insert_BasicReturning_ShouldRoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO emp (empno) VALUES (1) RETURNING empno")!;
+        var stmt = SqlParser.Parse("INSERT INTO emp (empno) VALUES (1) RETURNING empno")!;
         var insert = (Insert)stmt;
         Assert.NotNull(insert.Returning);
         Assert.Single(insert.Returning!.SelectItems);
@@ -67,7 +67,7 @@ public class ReturningClauseTest
     public void Returning_IntoSingleTarget_ShouldRoundTrip()
     {
         var sql = "INSERT INTO emp (empno) VALUES (1) RETURNING empno INTO x";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -76,7 +76,7 @@ public class ReturningClauseTest
     public void Returning_IntoMultipleTargets_ShouldRoundTrip()
     {
         var sql = "INSERT INTO emp (empno, ename) VALUES (1, 'a') RETURNING empno, ename INTO x, y";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }
@@ -85,7 +85,7 @@ public class ReturningClauseTest
     public void Returning_IntoQualifiedTarget_ShouldRoundTrip()
     {
         var sql = "DELETE FROM users WHERE id = 1 RETURNING name INTO pkg.var";
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
     }

@@ -13,7 +13,7 @@ public class LockTest
     /// <summary>断言 SQL 可被解析，且再次序列化后与原 SQL 一致。</summary>
     private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql);
+        var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         Assert.Equal(sql, stmt!.ToString());
         return stmt;
@@ -38,7 +38,7 @@ public class LockTest
     [Fact]
     public void LockExclusiveMode_ShouldSetExclusiveMode()
     {
-        var statement = CCJSqlParserUtil.Parse("LOCK TABLE a IN EXCLUSIVE MODE")!;
+        var statement = SqlParser.Parse("LOCK TABLE a IN EXCLUSIVE MODE")!;
         var ls = Assert.IsType<LockStatement>(statement);
         Assert.Equal(LockMode.Exclusive, ls.LockMode);
         Assert.False(ls.NoWait);
@@ -47,7 +47,7 @@ public class LockTest
     [Fact]
     public void LockShareModeNowait_ShouldSetShareAndNoWait()
     {
-        var statement = CCJSqlParserUtil.Parse("LOCK TABLE a IN SHARE MODE NOWAIT")!;
+        var statement = SqlParser.Parse("LOCK TABLE a IN SHARE MODE NOWAIT")!;
         var ls = Assert.IsType<LockStatement>(statement);
         Assert.Equal(LockMode.Share, ls.LockMode);
         Assert.True(ls.NoWait);
@@ -56,7 +56,7 @@ public class LockTest
     [Fact]
     public void LockShareModeWait_ShouldSetWaitSeconds()
     {
-        var statement = CCJSqlParserUtil.Parse("LOCK TABLE a IN SHARE MODE WAIT 300")!;
+        var statement = SqlParser.Parse("LOCK TABLE a IN SHARE MODE WAIT 300")!;
         var ls = Assert.IsType<LockStatement>(statement);
         Assert.Equal(LockMode.Share, ls.LockMode);
         Assert.NotNull(ls.WaitSeconds);

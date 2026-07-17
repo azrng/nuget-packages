@@ -15,21 +15,21 @@ public class OtherStatementTest
     [Fact]
     public void Commit_Simple_ShouldParse()
     {
-        var stmt = (CommitStatement)CCJSqlParserUtil.Parse("COMMIT")!;
+        var stmt = (CommitStatement)SqlParser.Parse("COMMIT")!;
         Assert.Equal("COMMIT", stmt.ToString());
     }
 
     [Fact]
     public void Rollback_Simple_ShouldParse()
     {
-        var stmt = (RollbackStatement)CCJSqlParserUtil.Parse("ROLLBACK")!;
+        var stmt = (RollbackStatement)SqlParser.Parse("ROLLBACK")!;
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Savepoint_Simple_ShouldParse()
     {
-        var stmt = (SavepointStatement)CCJSqlParserUtil.Parse("SAVEPOINT sp1")!;
+        var stmt = (SavepointStatement)SqlParser.Parse("SAVEPOINT sp1")!;
         Assert.NotNull(stmt);
         Assert.Equal("sp1", stmt.Name);
     }
@@ -41,7 +41,7 @@ public class OtherStatementTest
     [Fact]
     public void Use_Simple_ShouldParse()
     {
-        var stmt = (UseStatement)CCJSqlParserUtil.Parse("USE mydb")!;
+        var stmt = (UseStatement)SqlParser.Parse("USE mydb")!;
         Assert.NotNull(stmt);
         Assert.Equal("mydb", stmt.Name);
     }
@@ -53,7 +53,7 @@ public class OtherStatementTest
     [Fact]
     public void Set_Simple_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("SET @var = 1");
+        var stmt = SqlParser.Parse("SET @var = 1");
         Assert.NotNull(stmt);
     }
 
@@ -64,7 +64,7 @@ public class OtherStatementTest
     [Fact]
     public void Truncate_Simple_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse("TRUNCATE TABLE users");
+        var stmt = SqlParser.Parse("TRUNCATE TABLE users");
         Assert.NotNull(stmt);
     }
 
@@ -75,7 +75,7 @@ public class OtherStatementTest
     [Fact]
     public void Merge_Simple_ShouldParse()
     {
-        var stmt = CCJSqlParserUtil.Parse(
+        var stmt = SqlParser.Parse(
             "MERGE INTO users u USING new_users n ON u.id = n.id " +
             "WHEN MATCHED THEN UPDATE SET u.name = n.name " +
             "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (n.id, n.name)");
@@ -89,7 +89,7 @@ public class OtherStatementTest
     [Fact]
     public void Merge_WithMatchedUpdate_ShouldHaveUpdateOperation()
     {
-        var merge = (Merge)CCJSqlParserUtil.Parse(
+        var merge = (Merge)SqlParser.Parse(
             "MERGE INTO users u USING new_users n ON u.id = n.id " +
             "WHEN MATCHED THEN UPDATE SET u.name = n.name")!;
         Assert.NotNull(merge.Table);
@@ -105,7 +105,7 @@ public class OtherStatementTest
     [Fact]
     public void Merge_WithNotMatchedInsert_ShouldHaveInsertOperation()
     {
-        var merge = (Merge)CCJSqlParserUtil.Parse(
+        var merge = (Merge)SqlParser.Parse(
             "MERGE INTO users u USING new_users n ON u.id = n.id " +
             "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (n.id, n.name)")!;
         Assert.Single(merge.Operations);
@@ -119,7 +119,7 @@ public class OtherStatementTest
     [Fact]
     public void Merge_WithMatchedDelete_ShouldHaveDeleteOperation()
     {
-        var merge = (Merge)CCJSqlParserUtil.Parse(
+        var merge = (Merge)SqlParser.Parse(
             "MERGE INTO users u USING old_users n ON u.id = n.id " +
             "WHEN MATCHED THEN DELETE")!;
         Assert.Single(merge.Operations);
@@ -130,7 +130,7 @@ public class OtherStatementTest
     [Fact]
     public void Merge_WithMultipleOperations_ShouldHaveAllOperations()
     {
-        var merge = (Merge)CCJSqlParserUtil.Parse(
+        var merge = (Merge)SqlParser.Parse(
             "MERGE INTO users u USING new_users n ON u.id = n.id " +
             "WHEN MATCHED THEN UPDATE SET u.name = n.name " +
             "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (n.id, n.name)")!;
@@ -146,7 +146,7 @@ public class OtherStatementTest
     [Fact]
     public void Describe_Simple_ShouldParse()
     {
-        var stmt = (DescribeStatement)CCJSqlParserUtil.Parse("DESCRIBE users")!;
+        var stmt = (DescribeStatement)SqlParser.Parse("DESCRIBE users")!;
         Assert.NotNull(stmt);
         Assert.Equal("users", stmt.Name);
     }
@@ -154,14 +154,14 @@ public class OtherStatementTest
     [Fact]
     public void Describe_Desc_ShouldParse()
     {
-        var stmt = (DescribeStatement)CCJSqlParserUtil.Parse("DESC users")!;
+        var stmt = (DescribeStatement)SqlParser.Parse("DESC users")!;
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Describe_SchemaQualifiedTable_ShouldUseTableName()
     {
-        var stmt = (DescribeStatement)CCJSqlParserUtil.Parse("DESCRIBE mydb.users")!;
+        var stmt = (DescribeStatement)SqlParser.Parse("DESCRIBE mydb.users")!;
         Assert.Equal("users", stmt.Name);
     }
 
@@ -173,7 +173,7 @@ public class OtherStatementTest
     public void Show_Tables_ShouldParse()
     {
         // SHOW TABLES 现在返回 ShowTablesStatement（BL-12 分批 3 新增）
-        var stmt = CCJSqlParserUtil.Parse("SHOW TABLES")!;
+        var stmt = SqlParser.Parse("SHOW TABLES")!;
         Assert.NotNull(stmt);
         Assert.IsType<Azrng.JSqlParser.Statement.Show.ShowTablesStatement>(stmt);
     }
@@ -181,14 +181,14 @@ public class OtherStatementTest
     [Fact]
     public void Show_Identifier_ShouldParse()
     {
-        var stmt = (ShowStatement)CCJSqlParserUtil.Parse("SHOW DATABASES")!;
+        var stmt = (ShowStatement)SqlParser.Parse("SHOW DATABASES")!;
         Assert.Equal("DATABASES", stmt.Name);
     }
 
     [Fact]
     public void Show_TwoIdentifiers_ShouldParse()
     {
-        var stmt = (ShowStatement)CCJSqlParserUtil.Parse("SHOW FULL TABLES")!;
+        var stmt = (ShowStatement)SqlParser.Parse("SHOW FULL TABLES")!;
         Assert.Equal("FULL TABLES", stmt.Name);
     }
 
@@ -199,7 +199,7 @@ public class OtherStatementTest
     [Fact]
     public void Explain_Select_ShouldParse()
     {
-        var stmt = (ExplainStatement)CCJSqlParserUtil.Parse("EXPLAIN SELECT * FROM users")!;
+        var stmt = (ExplainStatement)SqlParser.Parse("EXPLAIN SELECT * FROM users")!;
         Assert.NotNull(stmt);
         Assert.NotNull(stmt.Statement);
         Assert.IsType<PlainSelect>(stmt.Statement);
@@ -212,7 +212,7 @@ public class OtherStatementTest
     [Fact]
     public void Session_Start_ShouldParse()
     {
-        var stmt = (SessionStatement)CCJSqlParserUtil.Parse("SESSION START sid")!;
+        var stmt = (SessionStatement)SqlParser.Parse("SESSION START sid")!;
         Assert.NotNull(stmt);
         Assert.Equal(SessionStatement.Action.START, stmt.SessionAction);
         Assert.Equal("sid", stmt.Id);
@@ -225,7 +225,7 @@ public class OtherStatementTest
     [Fact]
     public void Grant_Select_ShouldParse()
     {
-        var stmt = (GrantStatement)CCJSqlParserUtil.Parse("GRANT SELECT ON users TO public")!;
+        var stmt = (GrantStatement)SqlParser.Parse("GRANT SELECT ON users TO public")!;
         Assert.Single(stmt.Privileges);
         Assert.Equal("SELECT", stmt.Privileges[0]);
         Assert.Equal("users", stmt.Table!.Name);
@@ -235,21 +235,21 @@ public class OtherStatementTest
     [Fact]
     public void Grant_MultiplePrivileges_ShouldParse()
     {
-        var stmt = (GrantStatement)CCJSqlParserUtil.Parse("GRANT SELECT, INSERT, UPDATE ON users TO public")!;
+        var stmt = (GrantStatement)SqlParser.Parse("GRANT SELECT, INSERT, UPDATE ON users TO public")!;
         Assert.Equal(new[] { "SELECT", "INSERT", "UPDATE" }, stmt.Privileges);
     }
 
     [Fact]
     public void Grant_AllPrivileges_ShouldParse()
     {
-        var stmt = (GrantStatement)CCJSqlParserUtil.Parse("GRANT ALL PRIVILEGES ON users TO public")!;
+        var stmt = (GrantStatement)SqlParser.Parse("GRANT ALL PRIVILEGES ON users TO public")!;
         Assert.Equal("ALL PRIVILEGES", stmt.Privileges[0]);
     }
 
     [Fact]
     public void Grant_ExecuteWithGrantOption_ShouldParse()
     {
-        var stmt = (GrantStatement)CCJSqlParserUtil.Parse("GRANT EXECUTE ON procedures TO admin WITH GRANT OPTION")!;
+        var stmt = (GrantStatement)SqlParser.Parse("GRANT EXECUTE ON procedures TO admin WITH GRANT OPTION")!;
         Assert.Equal("EXECUTE", stmt.Privileges[0]);
         Assert.True(stmt.WithGrantOption);
     }

@@ -12,7 +12,7 @@ public class ValuesTablesNamesFinderTest
     private static HashSet<string> GetTables(string sql)
     {
         var finder = new TablesNamesFinder();
-        return finder.GetTables(CCJSqlParserUtil.Parse(sql)!);
+        return finder.GetTables(SqlParser.Parse(sql)!);
     }
 
     /// <summary>独立 VALUES 语句含列引用，应提取出表名。</summary>

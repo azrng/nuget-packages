@@ -16,7 +16,7 @@ public class ResetStatementTest
     [InlineData("RESET TimeZone1", "RESET TimeZone1")]
     public void Reset_SingleIdentifier_RoundTrip(string input, string expected)
     {
-        var stmt = CCJSqlParserUtil.Parse(input);
+        var stmt = SqlParser.Parse(input);
 
         Assert.NotNull(stmt);
         Assert.Equal(expected, stmt!.ToString());
@@ -25,7 +25,7 @@ public class ResetStatementTest
     [Fact]
     public void Reset_All_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("RESET ALL");
+        var stmt = SqlParser.Parse("RESET ALL");
 
         Assert.NotNull(stmt);
         Assert.Equal("RESET ALL", stmt!.ToString());
@@ -34,7 +34,7 @@ public class ResetStatementTest
     [Fact]
     public void Reset_ShouldBuildResetStatementNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("RESET TimeZone");
+        var stmt = SqlParser.Parse("RESET TimeZone");
         var reset = Assert.IsType<ResetStatement>(stmt);
 
         Assert.Equal("TimeZone", reset.Name);

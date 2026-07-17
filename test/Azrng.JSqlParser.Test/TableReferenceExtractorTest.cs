@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Test;
 /// </summary>
 public class TableReferenceExtractorTest
 {
-    private static SelectStatement ParseSelect(string sql) => (SelectStatement)CCJSqlParserUtil.Parse(sql)!;
+    private static SelectStatement ParseSelect(string sql) => (SelectStatement)SqlParser.Parse(sql)!;
 
     [Fact]
     public void GetTableReferences_SingleTable_ShouldReturnNameAndAlias()
@@ -100,7 +100,7 @@ public class TableReferenceExtractorTest
     [Fact]
     public void GetTableReferences_NonSelect_ShouldReturnEmpty()
     {
-        var stmt = CCJSqlParserUtil.Parse("INSERT INTO users VALUES (1)")!;
+        var stmt = SqlParser.Parse("INSERT INTO users VALUES (1)")!;
         Assert.Empty(stmt.GetTableReferences());
     }
 

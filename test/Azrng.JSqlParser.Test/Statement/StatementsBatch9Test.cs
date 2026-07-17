@@ -14,7 +14,7 @@ public class StatementsBatch9Test
     [Fact]
     public void AlterSession_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER SESSION SET NLS_DATE_FORMAT");
+        var stmt = SqlParser.Parse("ALTER SESSION SET NLS_DATE_FORMAT");
 
         Assert.NotNull(stmt);
         Assert.IsType<AlterSession>(stmt);
@@ -23,7 +23,7 @@ public class StatementsBatch9Test
     [Fact]
     public void AlterSession_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER SESSION SET NLS_DATE_FORMAT");
+        var stmt = SqlParser.Parse("ALTER SESSION SET NLS_DATE_FORMAT");
         var alterSession = Assert.IsType<AlterSession>(stmt);
 
         Assert.Equal("SET", alterSession.Operation);
@@ -36,7 +36,7 @@ public class StatementsBatch9Test
     [Fact]
     public void AlterSystem_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER SYSTEM CHECKPOINT");
+        var stmt = SqlParser.Parse("ALTER SYSTEM CHECKPOINT");
 
         Assert.NotNull(stmt);
         Assert.IsType<AlterSystemStatement>(stmt);
@@ -45,7 +45,7 @@ public class StatementsBatch9Test
     [Fact]
     public void AlterSystem_ShouldBuildCorrectNode()
     {
-        var stmt = CCJSqlParserUtil.Parse("ALTER SYSTEM CHECKPOINT");
+        var stmt = SqlParser.Parse("ALTER SYSTEM CHECKPOINT");
         var alterSystem = Assert.IsType<AlterSystemStatement>(stmt);
 
         Assert.Equal("CHECKPOINT", alterSystem.Operation);
@@ -58,7 +58,7 @@ public class StatementsBatch9Test
     [Fact]
     public void CreateSynonym_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE SYNONYM emp FOR employees");
+        var stmt = SqlParser.Parse("CREATE SYNONYM emp FOR employees");
 
         Assert.NotNull(stmt);
         Assert.IsType<CreateSynonym>(stmt);
@@ -67,7 +67,7 @@ public class StatementsBatch9Test
     [Fact]
     public void CreateSynonym_OrReplacePublic_ShouldSetFlags()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE OR REPLACE PUBLIC SYNONYM emp FOR hr.employees");
+        var stmt = SqlParser.Parse("CREATE OR REPLACE PUBLIC SYNONYM emp FOR hr.employees");
         var synonym = Assert.IsType<CreateSynonym>(stmt);
 
         Assert.True(synonym.OrReplace);
@@ -79,7 +79,7 @@ public class StatementsBatch9Test
     [Fact]
     public void CreateSynonym_SimpleFor_RoundTrip()
     {
-        var stmt = CCJSqlParserUtil.Parse("CREATE SYNONYM emp FOR employees");
+        var stmt = SqlParser.Parse("CREATE SYNONYM emp FOR employees");
         var synonym = Assert.IsType<CreateSynonym>(stmt);
 
         Assert.False(synonym.OrReplace);

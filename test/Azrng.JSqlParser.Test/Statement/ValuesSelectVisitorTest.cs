@@ -58,7 +58,7 @@ public class ValuesSelectVisitorTest
     [Fact]
     public void SelectVisitor_StandaloneValues_DispatchesToVisitValues()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("VALUES (1, 'a'), (2, 'b')")!;
+        var stmt = (Select)SqlParser.Parse("VALUES (1, 'a'), (2, 'b')")!;
         var visitor = new SelectTypeRecorder();
 
         stmt.Accept(visitor, (object?)null);
@@ -70,7 +70,7 @@ public class ValuesSelectVisitorTest
     [Fact]
     public void SelectVisitor_ValuesUnionValues_DispatchesToBothValues()
     {
-        var stmt = (Select)CCJSqlParserUtil.Parse("VALUES (1) UNION VALUES (2)")!;
+        var stmt = (Select)SqlParser.Parse("VALUES (1) UNION VALUES (2)")!;
         var visitor = new SelectTypeRecorder();
 
         stmt.Accept(visitor, (object?)null);
@@ -84,7 +84,7 @@ public class ValuesSelectVisitorTest
     [Fact]
     public void SelectVisitor_ConvenienceOverload_VisitValues_Works()
     {
-        var stmt = (Values)CCJSqlParserUtil.Parse("VALUES (1)")!;
+        var stmt = (Values)SqlParser.Parse("VALUES (1)")!;
         ISelectVisitor<object?> visitor = new SelectTypeRecorder();
 
         // 无参便利重载（default 接口方法）

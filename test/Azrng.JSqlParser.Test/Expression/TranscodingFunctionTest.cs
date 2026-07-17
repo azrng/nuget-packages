@@ -14,7 +14,7 @@ public class TranscodingFunctionTest
     {
         // 上游 TranscodingFunction.appendTo 用 "( ... )" 带空格格式输出
         var sql = "SELECT CONVERT( name USING utf8 ) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<TranscodingFunction>(select.SelectItems![0].Expression);
         Assert.True(func.IsTranscodeStyle);
@@ -27,7 +27,7 @@ public class TranscodingFunctionTest
     public void TranscodingFunction_TypeConversionStyle_ShouldRoundTrip()
     {
         var sql = "SELECT CONVERT( VARCHAR, age ) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<TranscodingFunction>(select.SelectItems![0].Expression);
         Assert.False(func.IsTranscodeStyle);
@@ -39,7 +39,7 @@ public class TranscodingFunctionTest
     public void TranscodingFunction_SqlServerStyle_WithStyleNumber_ShouldRoundTrip()
     {
         var sql = "SELECT CONVERT( VARCHAR, getdate(), 120 ) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<TranscodingFunction>(select.SelectItems![0].Expression);
         Assert.False(func.IsTranscodeStyle);
@@ -52,7 +52,7 @@ public class TranscodingFunctionTest
     public void TranscodingFunction_TryConvert_ShouldRoundTrip()
     {
         var sql = "SELECT TRY_CONVERT( INT, col ) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<TranscodingFunction>(select.SelectItems![0].Expression);
         Assert.Equal("TRY_CONVERT", func.Keyword);
@@ -65,7 +65,7 @@ public class TranscodingFunctionTest
     public void TranscodingFunction_SafeConvert_ShouldRoundTrip()
     {
         var sql = "SELECT SAFE_CONVERT( DECIMAL, amount ) FROM t";
-        var select = (PlainSelect)CCJSqlParserUtil.Parse(sql)!;
+        var select = (PlainSelect)SqlParser.Parse(sql)!;
 
         var func = Assert.IsType<TranscodingFunction>(select.SelectItems![0].Expression);
         Assert.Equal("SAFE_CONVERT", func.Keyword);

@@ -13,7 +13,7 @@ public class CreateTableRoundTripTest
     /// <summary>断言 SQL 解析后 ToString 与原文一致（round-trip）。方言选项用透传字符串策略。</summary>
     private static void AssertRoundTrip(string sql)
     {
-        var stmt = CCJSqlParserUtil.Parse(sql)!;
+        var stmt = SqlParser.Parse(sql)!;
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -126,7 +126,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void TableOptions_ShouldPopulateTableOptionsList()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT) ENGINE = InnoDB CHARSET = utf8")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT) ENGINE = InnoDB CHARSET = utf8")!;
         Assert.NotNull(stmt.TableOptions);
         // 表级选项透传为字符串列表（ANTLR 贪婪匹配可能合并相邻选项，验证拼接内容而非数量）
         var combined = string.Join(" ", stmt.TableOptions!);
@@ -137,7 +137,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void ForeignKey_ShouldPopulateReferencedTableAndActions()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse(
+        var stmt = (CreateTbl)SqlParser.Parse(
             "CREATE TABLE t (id INT, FOREIGN KEY (uid) REFERENCES u(id) ON DELETE CASCADE ON UPDATE SET NULL)")!;
         var fk = Assert.Single(stmt.Constraints!.OfType<ForeignKeyIndex>());
         Assert.NotNull(fk.ReferencedTable);
@@ -152,7 +152,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void CheckConstraint_ShouldPopulateExpression()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, CHECK (id > 0))")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, CHECK (id > 0))")!;
         var check = Assert.Single(stmt.Constraints!.OfType<CheckConstraint>());
         Assert.NotNull(check.Expression);
     }
@@ -160,7 +160,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void ExcludeConstraint_ShouldPopulateExpression()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, EXCLUDE WHERE (id > 0))")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, EXCLUDE WHERE (id > 0))")!;
         var exclude = Assert.Single(stmt.Constraints!.OfType<ExcludeConstraint>());
         Assert.NotNull(exclude.Expression);
     }
@@ -168,7 +168,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void RowMovement_ShouldPopulateMode()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (d DATE) ENABLE ROW MOVEMENT")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (d DATE) ENABLE ROW MOVEMENT")!;
         Assert.NotNull(stmt.RowMovement);
         Assert.Equal(RowMovementMode.Enable, stmt.RowMovement!.Mode);
     }
@@ -176,7 +176,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void ColumnDefinition_ShouldUseColDataType()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT NOT NULL)")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT NOT NULL)")!;
         var col = Assert.Single(stmt.ColumnDefinitions!);
         Assert.Equal("INT", col.ColDataType.DataType);
         Assert.Contains("NOT NULL", col.ColumnSpecs);
@@ -185,14 +185,14 @@ public class CreateTableRoundTripTest
     [Fact]
     public void CreateTable_AsSelect_ShouldPopulateSelect()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE a AS SELECT col1 FROM b")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE a AS SELECT col1 FROM b")!;
         Assert.NotNull(stmt.Select);
     }
 
     [Fact]
     public void CreateTable_LikeTable_ShouldPopulateLikeTable()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE a LIKE b")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE a LIKE b")!;
         Assert.NotNull(stmt.LikeTable);
         Assert.Equal("b", stmt.LikeTable!.Name);
     }
@@ -200,7 +200,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void CreateOptions_ShouldPopulateCreateOptions()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TEMPORARY TABLE t (id INT)")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TEMPORARY TABLE t (id INT)")!;
         Assert.NotNull(stmt.CreateOptions);
         Assert.Contains("TEMPORARY", stmt.CreateOptions!);
     }
@@ -244,7 +244,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void ArrayColumnType_ShouldFlattenIntoDataType()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, tags ARRAY<INT>)")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, tags ARRAY<INT>)")!;
         var col = stmt.ColumnDefinitions![1];
         Assert.Equal("ARRAY<INT>", col.ColDataType.DataType);
         // ARRAY 扁平化存储，不拆 ArgumentsStringList
@@ -254,7 +254,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void ArrayColumnType_Nested_ShouldFlattenEntireType()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, matrix ARRAY<ARRAY<INT>>)")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, matrix ARRAY<ARRAY<INT>>)")!;
         var col = stmt.ColumnDefinitions![1];
         Assert.Equal("ARRAY<ARRAY<INT>>", col.ColDataType.DataType);
     }
@@ -262,7 +262,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void StructColumnType_ShouldPopulateArgumentsStringList()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, addr STRUCT(street VARCHAR(100), city VARCHAR(50)))")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, addr STRUCT(street VARCHAR(100), city VARCHAR(50)))")!;
         var col = stmt.ColumnDefinitions![1];
         Assert.Equal("STRUCT", col.ColDataType.DataType);
         Assert.NotNull(col.ColDataType.ArgumentsStringList);
@@ -274,7 +274,7 @@ public class CreateTableRoundTripTest
     [Fact]
     public void StructColumnType_NestedArray_ShouldKeepFieldTypeInArguments()
     {
-        var stmt = (CreateTbl)CCJSqlParserUtil.Parse("CREATE TABLE t (id INT, data STRUCT(x INT, y ARRAY<INT>))")!;
+        var stmt = (CreateTbl)SqlParser.Parse("CREATE TABLE t (id INT, data STRUCT(x INT, y ARRAY<INT>))")!;
         var col = stmt.ColumnDefinitions![1];
         Assert.Equal("STRUCT", col.ColDataType.DataType);
         Assert.Contains("y ARRAY<INT>", col.ColDataType.ArgumentsStringList!);

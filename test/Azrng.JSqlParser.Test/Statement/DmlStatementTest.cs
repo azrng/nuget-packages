@@ -17,7 +17,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_WithColumns_ShouldHaveColumns()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
         Assert.NotNull(stmt.Columns);
@@ -27,14 +27,14 @@ public class DmlStatementTest
     [Fact]
     public void Insert_WithValues_ShouldParse()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT INTO users (id, name) VALUES (1, 'test')")!;
         Assert.NotNull(stmt);
     }
 
     [Fact]
     public void Insert_MultipleRows_ShouldParse()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'a'), (2, 'b'), (3, 'c')")!;
         Assert.NotNull(stmt);
     }
@@ -42,7 +42,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_WithSelect_ShouldHaveSelect()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO archive (id, name) SELECT id, name FROM users")!;
         Assert.NotNull(stmt.Select);
     }
@@ -50,7 +50,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_WithoutColumns_ShouldParse()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT INTO users VALUES (1, 'test')")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT INTO users VALUES (1, 'test')")!;
         Assert.NotNull(stmt.Table);
     }
 
@@ -62,7 +62,7 @@ public class DmlStatementTest
     public void Insert_OnDuplicateKeyUpdateNothing_ShouldRoundTrip()
     {
         var sql = "INSERT INTO example (num, name) VALUES (1, 'name') ON DUPLICATE KEY UPDATE NOTHING";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.True(insert.DuplicateUpdateNothing);
         Assert.Equal(sql, insert.ToString());
     }
@@ -75,7 +75,7 @@ public class DmlStatementTest
     public void Insert_OnDuplicateKeyUpdate_ShouldRoundTrip()
     {
         var sql = "INSERT INTO users (id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = 'b'";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.NotNull(insert.DuplicateUpdateSets);
         Assert.Single(insert.DuplicateUpdateSets!);
         Assert.Equal(sql, insert.ToString());
@@ -88,7 +88,7 @@ public class DmlStatementTest
     public void Insert_OnDuplicateKeyUpdate_WithWhere_ShouldParse()
     {
         var sql = "INSERT INTO users (id, name) VALUES (1, 'a') ON DUPLICATE KEY UPDATE name = 'b' WHERE id > 0";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.NotNull(insert.DuplicateUpdateSets);
         Assert.NotNull(insert.DuplicateUpdateWhereExpression);
         Assert.Contains("WHERE id > 0", insert.ToString()!);
@@ -102,7 +102,7 @@ public class DmlStatementTest
     public void Insert_Values_ShouldRoundTrip()
     {
         var sql = "INSERT INTO users (id, name) VALUES (1, 'test')";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.NotNull(insert.ValuesItems);
         Assert.Single(insert.ValuesItems!);
         Assert.Equal(2, insert.ValuesItems![0].Expressions.Count);
@@ -113,7 +113,7 @@ public class DmlStatementTest
     public void Insert_MultipleValues_ShouldRoundTrip()
     {
         var sql = "INSERT INTO users (id, name) VALUES (1, 'a'), (2, 'b'), (3, 'c')";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.Equal(3, insert.ValuesItems!.Count);
         Assert.Equal(sql, insert.ToString());
     }
@@ -122,7 +122,7 @@ public class DmlStatementTest
     public void Insert_ValuesNoColumns_ShouldRoundTrip()
     {
         var sql = "INSERT INTO users VALUES (1, 'test')";
-        var insert = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var insert = (Insert)SqlParser.Parse(sql)!;
         Assert.NotNull(insert.ValuesItems);
         Assert.Equal(sql, insert.ToString());
     }
@@ -134,7 +134,7 @@ public class DmlStatementTest
     [Fact]
     public void Update_SingleSet_ShouldHaveUpdateSet()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
+        var stmt = (Update)SqlParser.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
         Assert.NotNull(stmt.UpdateSets);
@@ -144,7 +144,7 @@ public class DmlStatementTest
     [Fact]
     public void Update_MultipleSet_ShouldHaveMultipleUpdateSets()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse(
+        var stmt = (Update)SqlParser.Parse(
             "UPDATE users SET name = 'test', age = 20, email = 'a@b.com' WHERE id = 1")!;
         Assert.Equal(3, stmt.UpdateSets!.Count);
     }
@@ -152,21 +152,21 @@ public class DmlStatementTest
     [Fact]
     public void Update_WithWhere_ShouldHaveWhere()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
+        var stmt = (Update)SqlParser.Parse("UPDATE users SET name = 'test' WHERE id = 1")!;
         Assert.NotNull(stmt.Where);
     }
 
     [Fact]
     public void Update_WithoutWhere_ShouldHaveNullWhere()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse("UPDATE users SET name = 'test'")!;
+        var stmt = (Update)SqlParser.Parse("UPDATE users SET name = 'test'")!;
         Assert.Null(stmt.Where);
     }
 
     [Fact]
     public void Update_WithJoin_ShouldParse()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse(
+        var stmt = (Update)SqlParser.Parse(
             "UPDATE users u INNER JOIN orders o ON u.id = o.user_id SET u.name = 'test'")!;
         Assert.NotNull(stmt);
         Assert.NotNull(stmt.Table);
@@ -175,7 +175,7 @@ public class DmlStatementTest
     [Fact]
     public void Update_SetWithExpression_ShouldParse()
     {
-        var stmt = (Update)CCJSqlParserUtil.Parse("UPDATE users SET age = age + 1 WHERE id = 1")!;
+        var stmt = (Update)SqlParser.Parse("UPDATE users SET age = age + 1 WHERE id = 1")!;
         Assert.NotNull(stmt.UpdateSets);
     }
 
@@ -186,7 +186,7 @@ public class DmlStatementTest
     [Fact]
     public void Delete_Simple_ShouldHaveTable()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE FROM users WHERE id = 1")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("users", stmt.Table!.Name);
     }
@@ -194,21 +194,21 @@ public class DmlStatementTest
     [Fact]
     public void Delete_WithWhere_ShouldHaveWhere()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE FROM users WHERE id = 1")!;
         Assert.NotNull(stmt.Where);
     }
 
     [Fact]
     public void Delete_WithoutWhere_ShouldHaveNullWhere()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE FROM users")!;
         Assert.Null(stmt.Where);
     }
 
     [Fact]
     public void Delete_WithSchema_ShouldHaveSchemaTable()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM mydb.users WHERE id = 1")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE FROM mydb.users WHERE id = 1")!;
         Assert.NotNull(stmt.Table);
         Assert.Equal("mydb", stmt.Table!.SchemaName);
     }
@@ -216,14 +216,14 @@ public class DmlStatementTest
     [Fact]
     public void Delete_WithAlias_ShouldHaveAlias()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE u FROM users u WHERE u.id = 1")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE u FROM users u WHERE u.id = 1")!;
         Assert.NotNull(stmt.Table);
     }
 
     [Fact]
     public void Delete_WithMultipleConditions_ShouldHaveWhere()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse(
+        var stmt = (Delete)SqlParser.Parse(
             "DELETE FROM users WHERE id = 1 AND status = 'inactive'")!;
         Assert.NotNull(stmt.Where);
     }
@@ -231,7 +231,7 @@ public class DmlStatementTest
     [Fact]
     public void Delete_Using_Single_ShouldHaveUsingItems()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse(
+        var stmt = (Delete)SqlParser.Parse(
             "DELETE FROM users USING orders WHERE users.id = orders.uid")!;
         Assert.NotNull(stmt.UsingItems);
         Assert.Single(stmt.UsingItems!);
@@ -242,7 +242,7 @@ public class DmlStatementTest
     [Fact]
     public void Delete_Using_Multiple_ShouldHaveAllItems()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse(
+        var stmt = (Delete)SqlParser.Parse(
             "DELETE FROM users USING orders, items WHERE users.id = orders.uid AND orders.item_id = items.id")!;
         Assert.NotNull(stmt.UsingItems);
         Assert.Equal(2, stmt.UsingItems!.Count);
@@ -256,7 +256,7 @@ public class DmlStatementTest
     public void Delete_Using_RoundTrip_ShouldPreserveSyntax()
     {
         var sql = "DELETE FROM users USING orders WHERE users.id = orders.uid";
-        var stmt = (Delete)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (Delete)SqlParser.Parse(sql)!;
         var output = stmt.ToString()!;
         Assert.Contains("DELETE FROM users", output);
         Assert.Contains("USING orders", output);
@@ -266,7 +266,7 @@ public class DmlStatementTest
     [Fact]
     public void Delete_WithoutUsing_ShouldHaveNullUsingItems()
     {
-        var stmt = (Delete)CCJSqlParserUtil.Parse("DELETE FROM users WHERE id = 1")!;
+        var stmt = (Delete)SqlParser.Parse("DELETE FROM users WHERE id = 1")!;
         Assert.Null(stmt.UsingItems);
     }
 
@@ -277,7 +277,7 @@ public class DmlStatementTest
     public void Insert_PriorityModifier_ShouldRoundTrip(string modifier, InsertModifierPriority expected)
     {
         var sql = $"INSERT {modifier} INTO users (id) VALUES (1)";
-        var stmt = (Insert)CCJSqlParserUtil.Parse(sql)!;
+        var stmt = (Insert)SqlParser.Parse(sql)!;
         Assert.Equal(expected, stmt.ModifierPriority);
         // 往返保留修饰符
         var output = stmt.ToString()!;
@@ -287,7 +287,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_Ignore_ShouldHaveModifierIgnoreFlag()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT IGNORE INTO users (id) VALUES (1)")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT IGNORE INTO users (id) VALUES (1)")!;
         Assert.True(stmt.ModifierIgnore);
         Assert.Contains("IGNORE", stmt.ToString()!);
     }
@@ -295,7 +295,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_PriorityAndIgnore_ShouldRoundTrip()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT LOW_PRIORITY IGNORE INTO users (id) VALUES (1)")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT LOW_PRIORITY IGNORE INTO users (id) VALUES (1)")!;
         Assert.Equal(InsertModifierPriority.LowPriority, stmt.ModifierPriority);
         Assert.True(stmt.ModifierIgnore);
     }
@@ -303,7 +303,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_NoModifier_ShouldHaveDefaults()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse("INSERT INTO users (id) VALUES (1)")!;
+        var stmt = (Insert)SqlParser.Parse("INSERT INTO users (id) VALUES (1)")!;
         Assert.Equal(InsertModifierPriority.None, stmt.ModifierPriority);
         Assert.False(stmt.ModifierIgnore);
     }
@@ -314,7 +314,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictDoNothing_ShouldRoundTrip()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT DO NOTHING")!;
         Assert.NotNull(stmt.ConflictAction);
         Assert.Equal(ConflictActionType.DoNothing, stmt.ConflictAction!.ConflictActionType);
@@ -325,7 +325,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictColumnDoNothing_ShouldHaveConflictTarget()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO NOTHING")!;
         Assert.NotNull(stmt.ConflictTarget);
         Assert.Contains("id", stmt.ConflictTarget!.IndexColumnNames);
@@ -336,7 +336,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictMultiColumn_ShouldHaveAllColumns()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO t (a, b) VALUES (1, 2) ON CONFLICT (a, b) DO NOTHING")!;
         Assert.Equal(2, stmt.ConflictTarget!.IndexColumnNames.Count);
     }
@@ -344,7 +344,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictConstraint_ShouldHaveConstraintName()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO t (a) VALUES (1) ON CONFLICT ON CONSTRAINT uniq_a DO NOTHING")!;
         Assert.Equal("uniq_a", stmt.ConflictTarget!.ConstraintName);
         Assert.Contains("ON CONFLICT ON CONSTRAINT uniq_a DO NOTHING", stmt.ToString()!);
@@ -353,7 +353,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictDoUpdate_ShouldHaveUpdateSets()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = 'b'")!;
         Assert.Equal(ConflictActionType.DoUpdate, stmt.ConflictAction!.ConflictActionType);
         Assert.NotNull(stmt.ConflictAction.UpdateSets);
@@ -364,7 +364,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictDoUpdateWithWhere_ShouldHaveWhere()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO users (id, name) VALUES (1, 'a') ON CONFLICT (id) DO UPDATE SET name = 'b' WHERE users.id > 0")!;
         Assert.NotNull(stmt.ConflictAction!.WhereExpression);
         Assert.Contains("WHERE users.id > 0", stmt.ToString()!);
@@ -373,7 +373,7 @@ public class DmlStatementTest
     [Fact]
     public void Insert_OnConflictTargetWithWhere_ShouldHaveTargetWhere()
     {
-        var stmt = (Insert)CCJSqlParserUtil.Parse(
+        var stmt = (Insert)SqlParser.Parse(
             "INSERT INTO t (a) VALUES (1) ON CONFLICT (a) WHERE a > 0 DO NOTHING")!;
         Assert.NotNull(stmt.ConflictTarget!.WhereExpression);
     }
