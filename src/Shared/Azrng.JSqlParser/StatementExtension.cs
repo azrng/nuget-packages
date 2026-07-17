@@ -119,14 +119,4 @@ public static class StatementExtension
         });
         return matched;
     }
-
-    /// <summary>
-    /// 深度优先遍历语句树，对每个类型为 <typeparamref name="TStatement"/> 的节点调用 <paramref name="action"/>。
-    /// </summary>
-    public static void Walk<TStatement>(this Statement.Statement statement, Action<TStatement> action) where TStatement : Statement.Statement
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        foreach (var node in statement.Descendants<TStatement>())
-            action(node);
-    }
 }

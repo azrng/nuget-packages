@@ -12,7 +12,7 @@
 | MySQLGroupConcat/UserVariable/VariableAssignment/AllValue/JsonExpression/XMLSerializeExpr | **等价合并**：已合入 Function.cs/SetStatement/AnyType.All 等 |
 | CURRVAL / JSON_TRANSFORM | **上游不支持**：核查确认上游 main/ 无此特性 |
 | Index/NamedConstraint 等枚举伴生类拆分 | **风格差异**：Azrng 用扁平 Constraint 类，功能等价 |
-| Descendants/Walk 扩展方法 + GetTableNames | **C# 风格封装**：visitor 体系（Azrng 自有）之上的 LINQ 式外壳，上游无对应物；上游同步只对照 visitor 接口签名与 AST 节点结构，扩展方法无需对照 |
+| Descendants 扩展方法 + GetTableNames | **C# 风格封装**：visitor 体系（Azrng 自有）之上的 LINQ 式外壳，上游无对应物；上游同步只对照 visitor 接口签名与 AST 节点结构，扩展方法无需对照 |
 | 结构化提取（GetTableReferences/GetSelectColumns/GetWhereConditions + 中性 DTO） | **C# 风格封装**：把下游常用的纯 AST 提取下沉为库扩展方法，返回中性 DTO（TableReference/SelectColumn/WhereCondition）；不含产品业务约定与前端契约 DTO，业务方自行映射 |
 
 ---
@@ -20,8 +20,11 @@
 ## Visitor 模式
 
 > **定位**：visitor 接口与 Adapter 是底层遍历机制（保留用于复杂自定义遍历与上游对照）；下文
-> 「C# 风格遍历（推荐）」中的 `Descendants`/`Walk`/`GetTableNames` 是日常推荐使用的 LINQ 式封装。
+> 「C# 风格遍历（推荐）」中的 `Descendants`/`GetTableNames` 是日常推荐使用的 LINQ 式封装。
 > 日常收集/遍历需求请优先用扩展方法，避免「new visitor + Accept + 掏字段」的副作用式写法。
+>
+> **完整的"上游 Java → C#"API 对照**见 [MIGRATION.md](./MIGRATION.md)，涵盖解析入口、遍历收集、
+> 结构化提取、visitor 体系、类名差异。后续从上游同步新功能或改造旧 visitor 代码时，按该文档对照定位。
 
 ### C# 风格遍历（推荐）
 
@@ -30,12 +33,11 @@
 | 扩展方法 | 替代的旧写法 | 用途 |
 |----------|------------|------|
 | `expr.Descendants<T>()` | 自定义 visitor + Accept + 掏字段 | 拉取式收集表达式中某类节点，直接接 LINQ |
-| `expr.Walk<T>(action)` | 自定义 visitor + Accept | 推送委托，就地处理某类节点 |
 | `expr.GetWhereConditions()` | 手写 AND/OR 递归 + 运算符分类 | WHERE 树拍平为条件列表（返回中性 `WhereCondition`） |
 | `stmt.GetTableNames()` | `new TablesNamesFinder().GetTables(stmt)` | 提取全部表名（含 WHERE 子查询），返回只读集合 |
 | `stmt.GetTableReferences()` | 手写 FROM/JOIN 遍历 + 别名映射 | FROM/JOIN/CTE 的表引用（返回中性 `TableReference`，含别名/全名） |
 | `select.GetSelectColumns()` | 手写 SELECT 项 switch 分类 | SELECT 列结构化（返回中性 `SelectColumn`，区分 * / t.* / 列 / 表达式） |
-| `stmt.Descendants<T>()` / `stmt.Walk<T>(action)` | 自定义 StatementVisitor | 语句层收集/遍历（含嵌套子语句） |
+| `stmt.Descendants<T>()` | 自定义 StatementVisitor | 语句层收集（含嵌套子语句） |
 
 ```csharp
 using Azrng.JSqlParser;
@@ -49,7 +51,7 @@ var paramNames = expr.Descendants<JdbcNamedParameter>().Select(p => p.Name).ToLi
 var tables = stmt.GetTableNames();
 ```
 
-> **上游同步说明**：`Descendants`/`Walk`/`GetTableNames` 是 Azrng 自有封装，JSqlParser 上游无对应物。
+> **上游同步说明**：`Descendants`/`GetTableNames` 是 Azrng 自有封装，JSqlParser 上游无对应物。
 > 与上游同步时，**只需对照 visitor 接口签名与 AST 节点结构**；扩展方法无需对照。
 > `ExpressionDescendantsWalker` 直接实现 `ExpressionVisitor<T>` 接口，**编译期保证完整覆盖**所有节点类型——
 > 上游新增节点类型时若 walker 漏实现会编译失败，强制补全，杜绝"某类节点静默不进 Descendants 结果"。
@@ -259,7 +261,7 @@ CCJSqlParserUtil.Parse(sql)
         |
         +-- Accept(StatementVisitor)   — 遍历语句（底层机制）
         +-- Accept(ExpressionVisitor)  — 遍历表达式（底层机制）
-        +-- Descendants/Walk/GetTableNames — LINQ 式遍历扩展（C# 风格，推荐）
+        +-- Descendants/GetTableNames — LINQ 式遍历扩展（C# 风格，推荐）
         +-- ToString()                 — 反序列化为 SQL
         +-- TablesNamesFinder          — 提取表名（内部，对外用 GetTableNames）
         +-- CNFConverter               — WHERE 子句规范化
@@ -270,7 +272,7 @@ CCJSqlParserUtil.Parse(sql)
 
 | 命名空间 | 用途 |
 |----------|------|
-| `Azrng.JSqlParser` | C# 风格遍历扩展方法（`ExpressionExtension`/`StatementExtension`：Descendants/Walk/GetTableNames/GetTableReferences/GetSelectColumns/GetWhereConditions） |
+| `Azrng.JSqlParser` | C# 风格遍历扩展方法（`ExpressionExtension`/`StatementExtension`：Descendants/GetTableNames/GetTableReferences/GetSelectColumns/GetWhereConditions） |
 | `Azrng.JSqlParser.Models` | 结构化提取的中性 DTO（`TableReference`/`SelectColumn`/`WhereCondition` 等） |
 | `Azrng.JSqlParser.Parser` | `CCJSqlParserUtil` 入口、AST 节点基类 |
 | `Azrng.JSqlParser.Expression` | 所有表达式类型（字面量、运算符、函数、参数） |

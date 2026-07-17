@@ -139,20 +139,7 @@ public class StatementExtensionTest
         Assert.Equal(2, selects.Count);
     }
 
-    // ---------- Walk<TStatement> ----------
-
-    [Fact]
-    public void Walk_OfSelect_ShouldInvokeActionForEachSelect()
-    {
-        var stmt = CCJSqlParserUtil.Parse(
-            "SELECT id FROM a UNION SELECT id FROM b")!;
-        var count = 0;
-        stmt.Walk<Select>(_ => count++);
-        // 根 SetOperationList(1) + 2 个 PlainSelect 分支 = 3 个 Select 节点
-        Assert.Equal(3, count);
-    }
-
-    // ---------- 语句层 Descendants/Walk 边界 ----------
+    // ---------- 语句层 Descendants 边界 ----------
 
     [Fact]
     public void Descendants_OfInsert_ShouldCollectSelf()
@@ -171,12 +158,11 @@ public class StatementExtensionTest
     }
 
     [Fact]
-    public void Walk_ShouldCollectFromMultipleStatementsContainer()
+    public void Descendants_ShouldCollectFromMultipleStatementsContainer()
     {
         var stmt = CCJSqlParserUtil.ParseStatements(
             "UPDATE a SET x = 1; DELETE FROM b; UPDATE c SET y = 2")!;
-        var updates = new List<Azrng.JSqlParser.Statement.Update.Update>();
-        stmt.Walk<Azrng.JSqlParser.Statement.Update.Update>(updates.Add);
+        var updates = stmt.Descendants<Azrng.JSqlParser.Statement.Update.Update>().ToList();
         Assert.Equal(2, updates.Count);
     }
 
@@ -185,20 +171,6 @@ public class StatementExtensionTest
     {
         Azrng.JSqlParser.Statement.Statement stmt = null!;
         Assert.Throws<ArgumentNullException>(() => stmt.Descendants<Select>());
-    }
-
-    [Fact]
-    public void Walk_OnNullStatement_ShouldThrow()
-    {
-        Azrng.JSqlParser.Statement.Statement stmt = null!;
-        Assert.Throws<ArgumentNullException>(() => stmt.Walk<Select>(_ => { }));
-    }
-
-    [Fact]
-    public void Walk_OnNullAction_ShouldThrow()
-    {
-        var stmt = CCJSqlParserUtil.Parse("SELECT id FROM a")!;
-        Assert.Throws<ArgumentNullException>(() => stmt.Walk<Select>(null!));
     }
 
     [Fact]

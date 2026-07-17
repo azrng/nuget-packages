@@ -47,17 +47,6 @@ public static class ExpressionExtension
         => expression.Descendants<Expression.Expression>();
 
     /// <summary>
-    /// 深度优先遍历表达式，对每个类型为 <typeparamref name="T"/> 的后代节点调用 <paramref name="action"/>。
-    /// 用于「遍历即可、不想要集合」的就地处理场景。
-    /// </summary>
-    public static void Walk<T>(this Expression.Expression expression, Action<T> action) where T : Expression.Expression
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        foreach (var node in expression.Descendants<T>())
-            action(node);
-    }
-
-    /// <summary>
     /// 把 WHERE 表达式的 AND/OR 树拍平为条件列表。
     /// </summary>
     /// <remarks>

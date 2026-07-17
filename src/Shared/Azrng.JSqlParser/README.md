@@ -4,6 +4,9 @@
 
 将 SQL 解析为强类型 AST，支持 Visitor 模式遍历、表名提取、CNF 转换、SQL 校验以及 AST 反序列化为 SQL 文本。
 
+> 从 JSqlParser（Java 上游）迁移、或改造旧 visitor 写法？见 [MIGRATION.md](./MIGRATION.md)（上游 → C# API 对照）。
+> 架构与 visitor 体系说明见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
+
 ## 快速开始
 
 ```csharp
@@ -136,8 +139,9 @@ var columns = stmt.Where!.Descendants<Column>().Select(c => c.ColumnName).ToList
 var paramNames = stmt.Where!.Descendants<JdbcNamedParameter>().Select(p => p.Name).ToList();
 // => [ "p1", "p2" ]
 
-// 就地遍历（推送委托）
-stmt.Where!.Walk<Column>(c => Console.WriteLine(c.ColumnName));
+// 就地遍历：直接 foreach LINQ 结果即可，无需额外 API
+foreach (var c in stmt.Where!.Descendants<Column>())
+    Console.WriteLine(c.ColumnName);
 ```
 
 底层遍历复用已验证的 visitor 递归逻辑；复杂自定义遍历仍可直接实现 visitor 接口（见 ARCHITECTURE.md）。

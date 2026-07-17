@@ -133,26 +133,7 @@ public class ExpressionExtensionTest
         Assert.Equal(new[] { "a", "b", "c", "d", "e", "f", "g" }, columns);
     }
 
-    // ---------- Walk<T>：推送委托 ----------
-
-    [Fact]
-    public void Walk_OfColumn_ShouldInvokeActionForEachMatchedNode()
-    {
-        var where = ParseWhere("SELECT id FROM t WHERE a > 1 AND b < 2");
-        var collected = new List<string>();
-        where.Walk<Column>(c => collected.Add(c.ColumnName));
-        Assert.Equal(new[] { "a", "b" }, collected.OrderBy(n => n));
-    }
-
-    [Fact]
-    public void Walk_ShouldNotInvokeActionForNonMatchingTypes()
-    {
-        var where = ParseWhere("SELECT id FROM t WHERE a > 1");
-        var columnCalls = 0;
-        // 不存在 Function 节点，回调不应被触发
-        where.Walk<Function>(_ => columnCalls++);
-        Assert.Equal(0, columnCalls);
-    }
+    // ---------- 边界 ----------
 
     [Fact]
     public void Descendants_OnNullExpression_ShouldThrow()
@@ -251,22 +232,6 @@ public class ExpressionExtensionTest
         var secondCount = query.Count();
         Assert.Equal(firstCount, secondCount);
         Assert.Equal(2, firstCount);
-    }
-
-    // ---------- Walk 边界 ----------
-
-    [Fact]
-    public void Walk_OnNullExpression_ShouldThrow()
-    {
-        JExpression expr = null!;
-        Assert.Throws<ArgumentNullException>(() => expr.Walk<Column>(_ => { }));
-    }
-
-    [Fact]
-    public void Walk_OnNullAction_ShouldThrow()
-    {
-        var where = ParseWhere("SELECT id FROM t WHERE a = 1");
-        Assert.Throws<ArgumentNullException>(() => where.Walk<Column>(null!));
     }
 
     // ---------- 此前漏覆盖的节点类型（隐患2 修复回归）----------
