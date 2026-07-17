@@ -2,7 +2,7 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression;
 
-public class BooleanValue : ASTNodeAccessImpl, Expression
+public sealed class BooleanValue : ASTNodeAccessImpl, Expression
 {
     public bool Value { get; set; }
 

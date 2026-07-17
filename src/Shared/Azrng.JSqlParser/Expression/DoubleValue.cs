@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a double/float value in SQL.
 /// </summary>
-public class DoubleValue : ASTNodeAccessImpl, Expression
+public sealed class DoubleValue : ASTNodeAccessImpl, Expression
 {
     public double Value { get; set; }
 

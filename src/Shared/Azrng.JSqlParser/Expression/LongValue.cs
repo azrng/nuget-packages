@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a long integer value in SQL.
 /// </summary>
-public class LongValue : ASTNodeAccessImpl, Expression
+public sealed class LongValue : ASTNodeAccessImpl, Expression
 {
     public long Value { get; set; }
 

@@ -235,4 +235,35 @@ public class SchemaTest
     }
 
     #endregion
+
+    #region Alias 值相等
+
+    [Fact]
+    public void Alias_Equals_ByValue_NameAndUseAs()
+    {
+        var a1 = new Alias("t", useAs: true);
+        var a2 = new Alias("t", useAs: true);
+        var a3 = new Alias("t", useAs: false);
+        var a4 = new Alias("u", useAs: true);
+
+        Assert.Equal(a1, a2);
+        Assert.NotEqual(a1, a3);  // UseAs 不同
+        Assert.NotEqual(a1, a4);  // Name 不同
+        Assert.Equal(a1.GetHashCode(), a2.GetHashCode());
+    }
+
+    [Fact]
+    public void Alias_Distinct_ByValue()
+    {
+        var aliases = new[]
+        {
+            new Alias("t"),
+            new Alias("t"),
+            new Alias("u")
+        };
+        // 值相等后 Distinct 收敛为 2 个
+        Assert.Equal(2, aliases.Distinct().Count());
+    }
+
+    #endregion
 }
