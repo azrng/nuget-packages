@@ -47,7 +47,7 @@ public class DateTimeLiteralExpressionTest
     public void DateTimeLiteral_TimestampValue_TypeShouldBeTimestamp()
     {
         // Value 保留原始 token 文本（含引号），对齐上游 setValue(t.image)
-        var expr = new DateTimeLiteralExpression { Type = DateTimeType.TIMESTAMP, Value = "'2024-01-01 10:00:00'" };
+        var expr = new DateTimeLiteralExpression { Type = DateTimeType.Timestamp, Value = "'2024-01-01 10:00:00'" };
         Assert.Equal("TIMESTAMP '2024-01-01 10:00:00'", expr.ToString());
     }
 

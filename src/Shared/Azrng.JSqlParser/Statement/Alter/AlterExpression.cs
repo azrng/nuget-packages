@@ -93,50 +93,50 @@ public class AlterExpression : ASTNodeAccessImpl
         // 新增/分区等需要特定关键字输出的操作：分支化输出，避免静默丢失语义。
         switch (Operation)
         {
-            case AlterOperation.DROP when !string.IsNullOrEmpty(ConstraintSymbol):
+            case AlterOperation.Drop when !string.IsNullOrEmpty(ConstraintSymbol):
                 return $"DROP CONSTRAINT {ConstraintSymbol}";
-            case AlterOperation.DROP_PRIMARY_KEY:
+            case AlterOperation.DropPrimaryKey:
                 return "DROP PRIMARY KEY";
-            case AlterOperation.DROP_UNIQUE:
+            case AlterOperation.DropUnique:
             {
                 var sb = new System.Text.StringBuilder("DROP UNIQUE");
                 if (!string.IsNullOrEmpty(ConstraintSymbol)) sb.Append(' ').Append(ConstraintSymbol);
                 return sb.ToString();
             }
-            case AlterOperation.DROP_FOREIGN_KEY:
+            case AlterOperation.DropForeignKey:
             {
                 var sb = new System.Text.StringBuilder("DROP FOREIGN KEY");
                 if (!string.IsNullOrEmpty(ConstraintSymbol)) sb.Append(' ').Append(ConstraintSymbol);
                 return sb.ToString();
             }
-            case AlterOperation.RENAME_INDEX:
+            case AlterOperation.RenameIndex:
                 return ColumnOldName != null && ColumnName != null
                     ? $"RENAME INDEX {ColumnOldName} TO {ColumnName}"
                     : "RENAME INDEX";
-            case AlterOperation.RENAME_KEY:
+            case AlterOperation.RenameKey:
                 return ColumnOldName != null && ColumnName != null
                     ? $"RENAME KEY {ColumnOldName} TO {ColumnName}"
                     : "RENAME KEY";
-            case AlterOperation.RENAME_CONSTRAINT:
+            case AlterOperation.RenameConstraint:
                 return ColumnOldName != null && ColumnName != null
                     ? $"RENAME CONSTRAINT {ColumnOldName} TO {ColumnName}"
                     : "RENAME CONSTRAINT";
-            case AlterOperation.ENGINE:
+            case AlterOperation.Engine:
             {
                 var sb = new System.Text.StringBuilder("ENGINE");
                 if (UseEqualsForEngine) sb.Append(" =");
                 if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
                 return sb.ToString();
             }
-            case AlterOperation.COMMENT:
-            case AlterOperation.COMMENT_WITH_EQUAL_SIGN:
+            case AlterOperation.Comment:
+            case AlterOperation.CommentWithEqualSign:
             {
                 var sb = new System.Text.StringBuilder("COMMENT");
-                if (UseEqualsForComment || Operation == AlterOperation.COMMENT_WITH_EQUAL_SIGN) sb.Append(" =");
+                if (UseEqualsForComment || Operation == AlterOperation.CommentWithEqualSign) sb.Append(" =");
                 if (OptionalSpecifier != null) sb.Append(' ').Append(OptionalSpecifier);
                 return sb.ToString();
             }
-            case AlterOperation.CONVERT:
+            case AlterOperation.Convert:
             {
                 var sbConv = new System.Text.StringBuilder("CONVERT TO CHARACTER SET ");
                 if (CharacterSet != null) sbConv.Append(CharacterSet);
@@ -148,7 +148,7 @@ public class AlterExpression : ASTNodeAccessImpl
                 }
                 return sbConv.ToString();
             }
-            case AlterOperation.COLLATE:
+            case AlterOperation.Collate:
             {
                 // DEFAULT CHARACTER SET x / CHARACTER SET x [COLLATE y]
                 var sbCs = new System.Text.StringBuilder();
@@ -163,7 +163,7 @@ public class AlterExpression : ASTNodeAccessImpl
                 }
                 return sbCs.ToString();
             }
-            case AlterOperation.ALTER when ColumnAlterAction != null:
+            case AlterOperation.Alter when ColumnAlterAction != null:
             {
                 // ALTER [COLUMN] x SET DEFAULT expr / DROP DEFAULT / SET NOT NULL / DROP NOT NULL / TYPE dataType / SET DATA TYPE dataType
                 var sbAlter = new System.Text.StringBuilder("ALTER ");
@@ -183,19 +183,19 @@ public class AlterExpression : ASTNodeAccessImpl
                 });
                 return sbAlter.ToString();
             }
-            case AlterOperation.REMOVE_PARTITIONING:
+            case AlterOperation.RemovePartitioning:
                 return "REMOVE PARTITIONING";
-            case AlterOperation.ADD_PARTITION:
-            case AlterOperation.DROP_PARTITION:
-            case AlterOperation.TRUNCATE_PARTITION:
-            case AlterOperation.COALESCE_PARTITION:
-            case AlterOperation.REORGANIZE_PARTITION:
-            case AlterOperation.EXCHANGE_PARTITION:
+            case AlterOperation.AddPartition:
+            case AlterOperation.DropPartition:
+            case AlterOperation.TruncatePartition:
+            case AlterOperation.CoalescePartition:
+            case AlterOperation.ReorganizePartition:
+            case AlterOperation.ExchangePartition:
                 return FormatPartitionOperation();
         }
 
         // 通用分支：ADD/DROP COLUMN/MODIFY/CHANGE/ALTER COLUMN/RENAME COLUMN/RENAME TABLE 等
-        var sb2 = new System.Text.StringBuilder(Operation.ToString().Replace('_', ' '));
+        var sb2 = new System.Text.StringBuilder(Operation.ToString().ToUpperInvariant().Replace('_', ' '));
         if (ColumnName != null) sb2.Append(' ').Append(ColumnName);
         if (DataType != null) sb2.Append(' ').Append(DataType);
         if (OptionalSpecifier != null) sb2.Append(' ').Append(OptionalSpecifier);
@@ -243,7 +243,7 @@ public class AlterExpression : ASTNodeAccessImpl
         var sb = new System.Text.StringBuilder();
         switch (Operation)
         {
-            case AlterOperation.ADD_PARTITION:
+            case AlterOperation.AddPartition:
                 sb.Append("ADD PARTITION");
                 if (PartitionDefinitions != null && PartitionDefinitions.Count > 0)
                 {
@@ -256,19 +256,19 @@ public class AlterExpression : ASTNodeAccessImpl
                     sb.Append(')');
                 }
                 break;
-            case AlterOperation.DROP_PARTITION:
+            case AlterOperation.DropPartition:
                 sb.Append("DROP PARTITION");
                 if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
                 break;
-            case AlterOperation.TRUNCATE_PARTITION:
+            case AlterOperation.TruncatePartition:
                 sb.Append("TRUNCATE PARTITION");
                 if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
                 break;
-            case AlterOperation.COALESCE_PARTITION:
+            case AlterOperation.CoalescePartition:
                 sb.Append("COALESCE PARTITION");
                 if (CoalescePartitionNumber.HasValue) sb.Append(' ').Append(CoalescePartitionNumber.Value);
                 break;
-            case AlterOperation.REORGANIZE_PARTITION:
+            case AlterOperation.ReorganizePartition:
                 sb.Append("REORGANIZE PARTITION");
                 if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
                 if (PartitionDefinitions != null && PartitionDefinitions.Count > 0)
@@ -282,7 +282,7 @@ public class AlterExpression : ASTNodeAccessImpl
                     sb.Append(')');
                 }
                 break;
-            case AlterOperation.EXCHANGE_PARTITION:
+            case AlterOperation.ExchangePartition:
                 sb.Append("EXCHANGE PARTITION");
                 if (PartitionNames != null) sb.Append(' ').Append(string.Join(", ", PartitionNames));
                 if (!string.IsNullOrEmpty(ExchangePartitionTable)) sb.Append(" WITH TABLE ").Append(ExchangePartitionTable);

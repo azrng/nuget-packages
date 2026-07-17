@@ -896,12 +896,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitForMode(JSqlParserGrammar.ForModeContext context)
     {
         // NO KEY UPDATE / KEY SHARE / READ ONLY / FETCH ONLY 优先判断（多 token 组合）
-        if (context.NO() != null) return ForMode.NO_KEY_UPDATE;
-        if (context.KEY() != null) return ForMode.KEY_SHARE;
-        if (context.READ() != null) return ForMode.READ_ONLY;
-        if (context.FETCH() != null) return ForMode.FETCH_ONLY;
-        if (context.UPDATE() != null) return ForMode.UPDATE;
-        return ForMode.SHARE;
+        if (context.NO() != null) return ForMode.NoKeyUpdate;
+        if (context.KEY() != null) return ForMode.KeyShare;
+        if (context.READ() != null) return ForMode.ReadOnly;
+        if (context.FETCH() != null) return ForMode.FetchOnly;
+        if (context.UPDATE() != null) return ForMode.Update;
+        return ForMode.Share;
     }
 
     public override object VisitSelectItem(JSqlParserGrammar.SelectItemContext context)
@@ -2433,7 +2433,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // ADD COLUMN? columnDefinition | ADD tableConstraint
         if (context.ADD() != null)
         {
-            expr.Operation = AlterOperation.ADD;
+            expr.Operation = AlterOperation.Add;
             if (context.tableConstraint() != null)
             {
                 // ADD 约束：约束类型/列/USING INDEX 写入结构化字段
@@ -2472,26 +2472,26 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             if (context.PRIMARY() != null)
             {
-                expr.Operation = AlterOperation.DROP_PRIMARY_KEY;
+                expr.Operation = AlterOperation.DropPrimaryKey;
             }
             else if (context.UNIQUE() != null)
             {
-                expr.Operation = AlterOperation.DROP_UNIQUE;
+                expr.Operation = AlterOperation.DropUnique;
                 if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
             }
             else if (context.FOREIGN() != null)
             {
-                expr.Operation = AlterOperation.DROP_FOREIGN_KEY;
+                expr.Operation = AlterOperation.DropForeignKey;
                 if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
             }
             else if (context.CONSTRAINT() != null)
             {
-                expr.Operation = AlterOperation.DROP;
+                expr.Operation = AlterOperation.Drop;
                 if (identifiers.Length > 0) expr.ConstraintSymbol = identifiers[0].GetText();
             }
             else
             {
-                expr.Operation = AlterOperation.DROP;
+                expr.Operation = AlterOperation.Drop;
                 if (identifiers.Length > 0)
                     expr.ColumnName = identifiers[0].GetText();
             }
@@ -2501,7 +2501,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // MODIFY COLUMN? columnDefinition
         if (context.MODIFY() != null)
         {
-            expr.Operation = AlterOperation.MODIFY;
+            expr.Operation = AlterOperation.Modify;
             if (context.columnDefinition() != null)
             {
                 var colDef = (ColumnDefinition)Visit(context.columnDefinition());
@@ -2516,7 +2516,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // CHANGE COLUMN? identifier columnDefinition
         if (context.CHANGE() != null)
         {
-            expr.Operation = AlterOperation.CHANGE;
+            expr.Operation = AlterOperation.Change;
             if (identifiers.Length > 0)
                 expr.ColumnOldName = identifiers[0].GetText();
             if (context.columnDefinition() != null)
@@ -2533,7 +2533,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // ALTER COLUMN? identifier (SET DEFAULT ... | DROP DEFAULT | SET NOT NULL | DROP NOT NULL | TYPE ...)
         if (context.ALTER() != null)
         {
-            expr.Operation = AlterOperation.ALTER;
+            expr.Operation = AlterOperation.Alter;
             expr.UseColumnKeyword = context.COLUMN() != null;
             if (identifiers.Length > 0)
                 expr.ColumnName = identifiers[0].GetText();
@@ -2584,7 +2584,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             if (context.INDEX() != null)
             {
-                expr.Operation = AlterOperation.RENAME_INDEX;
+                expr.Operation = AlterOperation.RenameIndex;
                 if (identifiers.Length >= 2)
                 {
                     expr.ColumnOldName = identifiers[0].GetText();
@@ -2593,7 +2593,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
             else if (context.KEY() != null)
             {
-                expr.Operation = AlterOperation.RENAME_KEY;
+                expr.Operation = AlterOperation.RenameKey;
                 if (identifiers.Length >= 2)
                 {
                     expr.ColumnOldName = identifiers[0].GetText();
@@ -2602,7 +2602,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
             else if (context.CONSTRAINT() != null)
             {
-                expr.Operation = AlterOperation.RENAME_CONSTRAINT;
+                expr.Operation = AlterOperation.RenameConstraint;
                 if (identifiers.Length >= 2)
                 {
                     expr.ColumnOldName = identifiers[0].GetText();
@@ -2614,14 +2614,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 if (identifiers.Length >= 2)
                 {
                     // RENAME COLUMN? old TO new
-                    expr.Operation = AlterOperation.RENAME;
+                    expr.Operation = AlterOperation.Rename;
                     expr.ColumnOldName = identifiers[0].GetText();
                     expr.ColumnName = identifiers[1].GetText();
                 }
                 else if (identifiers.Length == 1)
                 {
                     // RENAME TO new_table
-                    expr.Operation = AlterOperation.RENAME_TABLE;
+                    expr.Operation = AlterOperation.RenameTable;
                     expr.NewTableName = identifiers[0].GetText();
                 }
             }
@@ -2631,29 +2631,29 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // ROW LEVEL SECURITY 分支
         if (context.ENABLE() != null)
         {
-            expr.Operation = AlterOperation.ENABLE_ROW_LEVEL_SECURITY;
+            expr.Operation = AlterOperation.EnableRowLevelSecurity;
             return expr;
         }
         if (context.DISABLE() != null)
         {
-            expr.Operation = AlterOperation.DISABLE_ROW_LEVEL_SECURITY;
+            expr.Operation = AlterOperation.DisableRowLevelSecurity;
             return expr;
         }
         if (context.FORCE() != null)
         {
-            expr.Operation = AlterOperation.FORCE_ROW_LEVEL_SECURITY;
+            expr.Operation = AlterOperation.ForceRowLevelSecurity;
             return expr;
         }
         if (context.NO() != null)
         {
-            expr.Operation = AlterOperation.NO_FORCE_ROW_LEVEL_SECURITY;
+            expr.Operation = AlterOperation.NoForceRowLevelSecurity;
             return expr;
         }
 
         // ENGINE [=] name
         if (context.ENGINE() != null)
         {
-            expr.Operation = AlterOperation.ENGINE;
+            expr.Operation = AlterOperation.Engine;
             expr.UseEqualsForEngine = context.EQUALS() != null;
             if (identifiers.Length > 0) expr.OptionalSpecifier = identifiers[0].GetText();
             return expr;
@@ -2662,7 +2662,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // COMMENT [=] 'xxx'
         if (context.COMMENT() != null)
         {
-            expr.Operation = context.EQUALS() != null ? AlterOperation.COMMENT_WITH_EQUAL_SIGN : AlterOperation.COMMENT;
+            expr.Operation = context.EQUALS() != null ? AlterOperation.CommentWithEqualSign : AlterOperation.Comment;
             expr.UseEqualsForComment = context.EQUALS() != null;
             if (context.S_CHAR_LITERAL() != null) expr.OptionalSpecifier = context.S_CHAR_LITERAL().GetText();
             return expr;
@@ -2671,7 +2671,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // CONVERT TO CHARACTER SET x [COLLATE [=] y] / DEFAULT CHARACTER SET x / CHARACTER SET x
         if (context.CONVERT() != null || context.CHARACTER() != null)
         {
-            expr.Operation = context.CONVERT() != null ? AlterOperation.CONVERT : AlterOperation.COLLATE;
+            expr.Operation = context.CONVERT() != null ? AlterOperation.Convert : AlterOperation.Collate;
             expr.DefaultCollateSpecified = context.DEFAULT() != null; // 区分 DEFAULT CHARACTER SET
             // CHARACTER SET 后的 identifier 是字符集名（grammar 有 3 个 identifier 分支，取 CHARACTER SET 后的那个）
             var charSetIds = context.identifier();
@@ -2686,11 +2686,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.REMOVE() != null)
         {
-            expr.Operation = AlterOperation.REMOVE_PARTITIONING;
+            expr.Operation = AlterOperation.RemovePartitioning;
             return expr;
         }
 
-        expr.Operation = AlterOperation.UNSPECIFIC;
+        expr.Operation = AlterOperation.Unspecific;
         return expr;
     }
 
@@ -2701,7 +2701,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         if (context.ADD() != null)
         {
-            expr.Operation = AlterOperation.ADD_PARTITION;
+            expr.Operation = AlterOperation.AddPartition;
             var partDefs = context.partitionDef();
             if (partDefs != null && partDefs.Length > 0)
             {
@@ -2712,23 +2712,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
         else if (context.DROP() != null)
         {
-            expr.Operation = AlterOperation.DROP_PARTITION;
+            expr.Operation = AlterOperation.DropPartition;
             expr.PartitionNames = CollectIdentifiers(context.identifierList());
         }
         else if (context.TRUNCATE() != null)
         {
-            expr.Operation = AlterOperation.TRUNCATE_PARTITION;
+            expr.Operation = AlterOperation.TruncatePartition;
             expr.PartitionNames = CollectIdentifiers(context.identifierList());
         }
         else if (context.COALESCE() != null)
         {
-            expr.Operation = AlterOperation.COALESCE_PARTITION;
+            expr.Operation = AlterOperation.CoalescePartition;
             if (context.LONG_VALUE() != null)
                 expr.CoalescePartitionNumber = ParseInt(context.LONG_VALUE().GetText());
         }
         else if (context.REORGANIZE() != null)
         {
-            expr.Operation = AlterOperation.REORGANIZE_PARTITION;
+            expr.Operation = AlterOperation.ReorganizePartition;
             expr.PartitionNames = CollectIdentifiers(context.identifierList());
             var partDefs = context.partitionDef();
             if (partDefs != null && partDefs.Length > 0)
@@ -2740,7 +2740,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
         else if (context.EXCHANGE() != null)
         {
-            expr.Operation = AlterOperation.EXCHANGE_PARTITION;
+            expr.Operation = AlterOperation.ExchangePartition;
             var exchangeIdent = context.identifier();
             if (exchangeIdent != null && exchangeIdent.Length > 0)
                 expr.PartitionNames = new List<string> { exchangeIdent[0].GetText() };
@@ -2752,7 +2752,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
         else
         {
-            expr.Operation = AlterOperation.PARTITION_BY;
+            expr.Operation = AlterOperation.PartitionBy;
         }
     }
 
@@ -3328,8 +3328,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
         else
         {
-            qualifierMap["old"] = ReturningReferenceType.OLD;
-            qualifierMap["new"] = ReturningReferenceType.NEW;
+            qualifierMap["old"] = ReturningReferenceType.Old;
+            qualifierMap["new"] = ReturningReferenceType.New;
         }
 
         foreach (var item in clause.SelectItems)
@@ -4236,7 +4236,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         return new DateTimeLiteralExpression
         {
-            Type = Enum.Parse<DateTimeType>(typeText.ToUpperInvariant(), ignoreCase: false),
+            // SQL 关键字（TIMESTAMP 等）解析为 DateTimeType 枚举，忽略大小写匹配 PascalCase 枚举名
+            Type = Enum.Parse<DateTimeType>(typeText, ignoreCase: true),
             Value = value
         };
     }

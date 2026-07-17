@@ -17,15 +17,15 @@ public class DateTimeLiteralExpression : ASTNodeAccessImpl, Expression
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public override string ToString() => Type.HasValue ? $"{Type} {Value}" : Value;
+    public override string ToString() => Type is { } t ? $"{t.ToString().ToUpperInvariant()} {Value}" : Value;
 }
 
 /// <summary>日期时间字面量类型枚举，对齐上游 DateTimeLiteralExpression.DateTime。</summary>
 public enum DateTimeType
 {
-    DATE,
-    DATETIME,
-    TIME,
-    TIMESTAMP,
-    TIMESTAMPTZ
+    Date,
+    Datetime,
+    Time,
+    Timestamp,
+    Timestamptz
 }

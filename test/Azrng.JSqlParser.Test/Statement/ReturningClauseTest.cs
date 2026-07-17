@@ -108,16 +108,16 @@ public class ReturningClauseTest
 
         var oldPrice = Assert.IsType<Column>(returning.SelectItems[0].Expression);
         Assert.Null(oldPrice.Table);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.OLD, oldPrice.ReturningReferenceType);
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.Old, oldPrice.ReturningReferenceType);
         Assert.Equal("old", oldPrice.ReturningQualifier);
 
         var newPrice = Assert.IsType<Column>(returning.SelectItems[1].Expression);
         Assert.Null(newPrice.Table);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.NEW, newPrice.ReturningReferenceType);
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.New, newPrice.ReturningReferenceType);
         Assert.Equal("new", newPrice.ReturningQualifier);
 
         var allNew = Assert.IsType<AllTableColumns>(returning.SelectItems[2].Expression);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.NEW, allNew.ReturningReferenceType);
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.New, allNew.ReturningReferenceType);
         Assert.Equal("new", allNew.ReturningQualifier);
     }
 
@@ -136,20 +136,20 @@ public class ReturningClauseTest
         var returning = update.Returning;
         Assert.NotNull(returning);
         Assert.Equal(2, returning!.OutputAliases!.Count);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.OLD,
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.Old,
             returning.OutputAliases[0].ReferenceType);
         Assert.Equal("o", returning.OutputAliases[0].Alias);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.NEW,
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.New,
             returning.OutputAliases[1].ReferenceType);
         Assert.Equal("n", returning.OutputAliases[1].Alias);
 
         var oldPrice = Assert.IsType<Column>(returning.SelectItems[0].Expression);
         Assert.Null(oldPrice.Table);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.OLD, oldPrice.ReturningReferenceType);
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.Old, oldPrice.ReturningReferenceType);
         Assert.Equal("o", oldPrice.ReturningQualifier);
 
         var allNew = Assert.IsType<AllTableColumns>(returning.SelectItems[2].Expression);
-        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.NEW, allNew.ReturningReferenceType);
+        Assert.Equal(Azrng.JSqlParser.Statement.ReturningReferenceType.New, allNew.ReturningReferenceType);
         Assert.Equal("n", allNew.ReturningQualifier);
     }
 }

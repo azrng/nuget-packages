@@ -71,7 +71,7 @@ public class ForUpdateTest
         var stmt = AssertParseAndDeparse(sqlStr);
         var plainSelect = (PlainSelect)stmt;
 
-        Assert.Equal(ForMode.UPDATE, plainSelect.ForMode);
+        Assert.Equal(ForMode.Update, plainSelect.ForMode);
         Assert.Equal(3, plainSelect.ForUpdateTables!.Count);
         Assert.True(plainSelect.SkipLocked);
 
@@ -92,7 +92,7 @@ public class ForUpdateTest
         var stmt = AssertParseAndDeparse(sqlStr);
         var plainSelect = (PlainSelect)stmt;
 
-        Assert.Equal(ForMode.UPDATE, plainSelect.ForMode);
+        Assert.Equal(ForMode.Update, plainSelect.ForMode);
         Assert.Single(plainSelect.ForUpdateTables!);
         Assert.Single(plainSelect.OrderByElements!);
         Assert.True(plainSelect.ForUpdateBeforeOrderBy);
@@ -104,7 +104,7 @@ public class ForUpdateTest
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR UPDATE")!;
         var plainSelect = (PlainSelect)stmt;
 
-        Assert.Equal(ForMode.UPDATE, plainSelect.ForMode);
+        Assert.Equal(ForMode.Update, plainSelect.ForMode);
 
         var forUpdate = plainSelect.GetForUpdate();
         Assert.NotNull(forUpdate);
@@ -119,7 +119,7 @@ public class ForUpdateTest
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR SHARE")!;
         var plainSelect = (PlainSelect)stmt;
 
-        Assert.Equal(ForMode.SHARE, plainSelect.ForMode);
+        Assert.Equal(ForMode.Share, plainSelect.ForMode);
 
         var forUpdate = plainSelect.GetForUpdate();
         Assert.NotNull(forUpdate);
@@ -136,7 +136,7 @@ public class ForUpdateTest
         var stmt = AssertParseAndDeparse(sqlStr);
         var plainSelect = (PlainSelect)stmt;
 
-        Assert.Equal(ForMode.UPDATE, plainSelect.ForMode);
+        Assert.Equal(ForMode.Update, plainSelect.ForMode);
         Assert.True(plainSelect.NoWait);
 
         var forUpdate = plainSelect.GetForUpdate();
@@ -166,7 +166,7 @@ public class ForUpdateTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR NO KEY UPDATE")!;
         var plainSelect = (PlainSelect)stmt;
-        Assert.Equal(ForMode.NO_KEY_UPDATE, plainSelect.ForMode);
+        Assert.Equal(ForMode.NoKeyUpdate, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM users FOR NO KEY UPDATE", stmt.ToString());
     }
 
@@ -175,7 +175,7 @@ public class ForUpdateTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users FOR KEY SHARE")!;
         var plainSelect = (PlainSelect)stmt;
-        Assert.Equal(ForMode.KEY_SHARE, plainSelect.ForMode);
+        Assert.Equal(ForMode.KeyShare, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM users FOR KEY SHARE", stmt.ToString());
     }
 
@@ -184,7 +184,7 @@ public class ForUpdateTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR READ ONLY")!;
         var plainSelect = (PlainSelect)stmt;
-        Assert.Equal(ForMode.READ_ONLY, plainSelect.ForMode);
+        Assert.Equal(ForMode.ReadOnly, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM mytable FOR READ ONLY", stmt.ToString());
     }
 
@@ -193,7 +193,7 @@ public class ForUpdateTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FOR FETCH ONLY")!;
         var plainSelect = (PlainSelect)stmt;
-        Assert.Equal(ForMode.FETCH_ONLY, plainSelect.ForMode);
+        Assert.Equal(ForMode.FetchOnly, plainSelect.ForMode);
         Assert.Equal("SELECT * FROM mytable FOR FETCH ONLY", stmt.ToString());
     }
 
@@ -203,7 +203,7 @@ public class ForUpdateTest
         // DB2: FETCH FIRST n ROWS ONLY 后跟 FOR READ ONLY
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY")!;
         var plainSelect = (PlainSelect)stmt;
-        Assert.Equal(ForMode.READ_ONLY, plainSelect.ForMode);
+        Assert.Equal(ForMode.ReadOnly, plainSelect.ForMode);
         Assert.NotNull(plainSelect.Fetch);
         Assert.Equal("SELECT * FROM mytable FETCH FIRST 100 ROWS ONLY FOR READ ONLY", stmt.ToString());
     }

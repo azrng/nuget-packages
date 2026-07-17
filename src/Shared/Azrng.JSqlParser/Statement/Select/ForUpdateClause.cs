@@ -45,10 +45,10 @@ public class ForUpdateClause
     public Table? GetFirstTable() => FirstTable;
 
     /// <summary>当 Mode 为 UPDATE 时返回 true。</summary>
-    public bool IsForUpdate() => Mode == ForMode.UPDATE;
+    public bool IsForUpdate() => Mode == ForMode.Update;
 
     /// <summary>当 Mode 为 SHARE 时返回 true。</summary>
-    public bool IsForShare() => Mode == ForMode.SHARE;
+    public bool IsForShare() => Mode == ForMode.Share;
 
     /// <summary>当 OF 子句至少列出一个表时返回 true。</summary>
     public bool HasTableList() => Tables != null && Tables.Count > 0;

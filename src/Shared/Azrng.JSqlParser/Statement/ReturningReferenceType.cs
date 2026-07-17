@@ -7,10 +7,10 @@ namespace Azrng.JSqlParser.Statement;
 public enum ReturningReferenceType
 {
     /// <summary>OLD — 引用修改前的行数据</summary>
-    OLD,
+    Old,
 
     /// <summary>NEW — 引用修改后的行数据</summary>
-    NEW
+    New
 }
 
 /// <summary>ReturningReferenceType 辅助方法。</summary>
@@ -23,8 +23,8 @@ public static class ReturningReferenceTypeExtensions
     public static ReturningReferenceType? From(string? name)
     {
         if (name == null) return null;
-        if ("OLD".Equals(name, StringComparison.OrdinalIgnoreCase)) return ReturningReferenceType.OLD;
-        if ("NEW".Equals(name, StringComparison.OrdinalIgnoreCase)) return ReturningReferenceType.NEW;
+        if ("OLD".Equals(name, StringComparison.OrdinalIgnoreCase)) return ReturningReferenceType.Old;
+        if ("NEW".Equals(name, StringComparison.OrdinalIgnoreCase)) return ReturningReferenceType.New;
         return null;
     }
 }

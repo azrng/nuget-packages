@@ -67,7 +67,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP UNIQUE uk1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.DROP_UNIQUE, expr.Operation);
+        Assert.Equal(AlterOperation.DropUnique, expr.Operation);
         Assert.Equal("uk1", expr.ConstraintSymbol);
     }
 
@@ -76,7 +76,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP FOREIGN KEY fk1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.DROP_FOREIGN_KEY, expr.Operation);
+        Assert.Equal(AlterOperation.DropForeignKey, expr.Operation);
         Assert.Equal("fk1", expr.ConstraintSymbol);
     }
 
@@ -85,7 +85,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t RENAME INDEX i1 TO i2")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.RENAME_INDEX, expr.Operation);
+        Assert.Equal(AlterOperation.RenameIndex, expr.Operation);
         Assert.Equal("i1", expr.ColumnOldName);
         Assert.Equal("i2", expr.ColumnName);
     }
@@ -95,7 +95,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ENGINE = InnoDB")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.ENGINE, expr.Operation);
+        Assert.Equal(AlterOperation.Engine, expr.Operation);
         Assert.True(expr.UseEqualsForEngine);
         Assert.Equal("InnoDB", expr.OptionalSpecifier);
     }
@@ -105,7 +105,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t COMMENT = 'hi'")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.COMMENT_WITH_EQUAL_SIGN, expr.Operation);
+        Assert.Equal(AlterOperation.CommentWithEqualSign, expr.Operation);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t ADD PARTITION (PARTITION p0 VALUES LESS THAN (10))")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.ADD_PARTITION, expr.Operation);
+        Assert.Equal(AlterOperation.AddPartition, expr.Operation);
         var def = Assert.Single(expr.PartitionDefinitions!);
         Assert.Equal("p0", def.Name);
         Assert.NotNull(def.ValuesLessThan);
@@ -124,7 +124,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t DROP PARTITION p0, p1")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.DROP_PARTITION, expr.Operation);
+        Assert.Equal(AlterOperation.DropPartition, expr.Operation);
         Assert.Equal(new[] { "p0", "p1" }, expr.PartitionNames!);
     }
 
@@ -133,7 +133,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t COALESCE PARTITION 3")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.COALESCE_PARTITION, expr.Operation);
+        Assert.Equal(AlterOperation.CoalescePartition, expr.Operation);
         Assert.Equal(3, expr.CoalescePartitionNumber);
     }
 
@@ -142,7 +142,7 @@ public class AlterOperationRoundTripTest
     {
         var stmt = (Alter)CCJSqlParserUtil.Parse("ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE other")!;
         var expr = Assert.Single(stmt.AlterExpressions);
-        Assert.Equal(AlterOperation.EXCHANGE_PARTITION, expr.Operation);
+        Assert.Equal(AlterOperation.ExchangePartition, expr.Operation);
         Assert.Equal("other", expr.ExchangePartitionTable);
     }
 
