@@ -34,12 +34,11 @@ Console.WriteLine(stmt.ToString());
 
 ## 安装
 
-直接引用项目或通过项目引用：
-
 ```xml
-
 <PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta7" />
 ```
+
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta7`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -83,7 +82,7 @@ try
 catch (JSqlParserException ex)
 {
     Console.WriteLine(ex.Message);
-    // => "Syntax error: Line 1:0 - mismatched input 'SELCT' expecting ..."
+    // => Syntax error: Line 1:6 near '*' - mismatched input '*' expecting {ALL, ANY, CROSS, ...}
 }
 ```
 
@@ -105,8 +104,6 @@ if (stmt == null)
 | 事务 | `COMMIT`、`ROLLBACK`、`SAVEPOINT` |
 | 会话 | `SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE` |
 | 管道查询 | BigQuery 风格 `\|>` 管道操作符（SELECT、WHERE、AGGREGATE、JOIN 等 17 种） |
-
-
 
 ### 提取表名
 
@@ -218,12 +215,12 @@ Console.WriteLine(stmt.ToString());
 - 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
 - 高级：`CASE WHEN`、`CAST`、`EXTRACT`、`INTERVAL`、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
 - 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数
-- 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 均返回不含前缀的名称）
+- 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 返回不含前缀的名称，`Prefix` 字段保留原始前缀 `:`/`@`）
 
 ### 语句
 
 - `SELECT` — DISTINCT/ALL、TOP（PERCENT/WITH TIES）、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH、FOR UPDATE/SHARE（OF 多表、WAIT/NOWAIT/SKIP LOCKED）、`OVERLAPS`、`MEMBER OF`
-- 管道查询 — `FROM table \|> WHERE ... \|> SELECT ...`（BigQuery 风格，17 种操作符）
+- 管道查询 — `FROM table |> WHERE ... |> SELECT ...`（BigQuery 风格，17 种操作符）
 - `INSERT` — 列列表、VALUES、INSERT...SELECT、INSERT OVERWRITE、PARTITION、ON DUPLICATE KEY、RETURNING
 - `UPDATE` — SET、JOIN、FROM、WHERE、RETURNING
 - `DELETE` — FROM、别名（DELETE u FROM ...）、USING、WHERE、RETURNING
