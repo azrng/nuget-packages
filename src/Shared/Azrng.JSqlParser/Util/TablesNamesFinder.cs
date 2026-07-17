@@ -15,7 +15,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
 {
     private readonly HashSet<string> _tables = new();
 
-    [Obsolete("改用 statement.ExtractTableNames() 扩展方法，后续版本将移除")]
+    [Obsolete("改用 statement.GetTableNames() 扩展方法，后续版本将移除")]
     public HashSet<string> GetTables(Statement.Statement statement)
     {
         _tables.Clear();

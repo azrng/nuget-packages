@@ -21,7 +21,7 @@ if (stmt is PlainSelect select)
 }
 
 // 提取表名
-var tables = stmt.ExtractTableNames();
+var tables = stmt.GetTableNames();
 // => IReadOnlyCollection<string> { "users" }
 
 // 反序列化为 SQL 文本
@@ -35,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta7" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta8" />
 ```
 
 **依赖项：**
@@ -111,11 +111,13 @@ if (stmt == null)
 using Azrng.JSqlParser;
 
 var stmt = CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
-IReadOnlyCollection<string> tables = stmt.ExtractTableNames();
+IReadOnlyCollection<string> tables = stmt.GetTableNames();
 // => { "users", "orders" }
 ```
 
-> 旧的 `new TablesNamesFinder().GetTables(stmt)` 已标记 `[Obsolete]`，请改用 `stmt.ExtractTableNames()`。
+> 旧的 `new TablesNamesFinder().GetTables(stmt)` 已标记 `[Obsolete]`，请改用 `stmt.GetTableNames()`。
+> 动词统一为 `Get`，与 `GetTableReferences`/`GetSelectColumns`/`GetWhereConditions` 一致；
+> 旧扩展方法 `ExtractTableNames` 已标记 `[Obsolete]`，转发到 `GetTableNames`。
 
 ### 遍历与收集 AST（C# 风格）
 
@@ -166,7 +168,7 @@ IReadOnlyList<WhereCondition> conds = select.Where!.GetWhereConditions();
 
 > 三组方法返回的中性 DTO（`TableReference`/`SelectColumn`/`WhereCondition`）只描述 AST 事实，
 > 不含产品业务字段（如虚拟列必填别名校验、列归属启发式、前端契约 DTO）——这些由业务方按需处理。
-> `GetTableReferences` 仅遍历 FROM/JOIN/CTE；需要含 WHERE 子查询的全部表名时用 `ExtractTableNames`。
+> `GetTableReferences` 仅遍历 FROM/JOIN/CTE；需要含 WHERE 子查询的全部表名时用 `GetTableNames`。
 
 ### SQL 校验
 
@@ -227,6 +229,14 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta8
+
+API 命名收敛：表名提取动词统一为 `Get`。
+
+- **改名**：`ExtractTableNames` → `GetTableNames`，与 `GetTableReferences`/`GetSelectColumns`/`GetWhereConditions` 动词一致，消除"Extract 与 Get 并存"的分裂困惑。
+- **向后兼容**：旧 `ExtractTableNames` 保留为 `[Obsolete]` 转发，存量代码零破坏。
+- **文档同步**：README/ARCHITECTURE 当前描述统一为 `GetTableNames`；版本历史段落保留对各版本当时状态的真实记录。
 
 ### 1.0.0-beta7
 

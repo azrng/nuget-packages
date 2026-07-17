@@ -6,19 +6,19 @@ using Azrng.JSqlParser.Util;
 namespace Azrng.JSqlParser.Test;
 
 /// <summary>
-/// 语句扩展方法（ExtractTableNames / Descendants / Walk）测试。
-/// ExtractTableNames 验证与旧 TablesNamesFinder.GetTables 结果等价；
+/// 语句扩展方法（GetTableNames / Descendants / Walk）测试。
+/// GetTableNames 验证与旧 TablesNamesFinder.GetTables 结果等价；
 /// Descendants/Walk 验证语句层遍历与嵌套子语句递归。
 /// </summary>
 public class StatementExtensionTest
 {
-    // ---------- ExtractTableNames：与旧 GetTables 等价 ----------
+    // ---------- GetTableNames：与旧 GetTables 等价 ----------
 
     [Fact]
-    public void ExtractTableNames_SimpleSelect_ShouldEqualLegacyGetTables()
+    public void GetTableNames_SimpleSelect_ShouldEqualLegacyGetTables()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
-        var viaExtension = stmt.ExtractTableNames();
+        var viaExtension = stmt.GetTableNames();
 
 #pragma warning disable CS0618 // 等价对照
         var viaLegacy = new TablesNamesFinder().GetTables(stmt);
@@ -29,90 +29,90 @@ public class StatementExtensionTest
     }
 
     [Fact]
-    public void ExtractTableNames_SelectWithJoin_ShouldReturnBothTables()
+    public void GetTableNames_SelectWithJoin_ShouldReturnBothTables()
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
         Assert.Contains("orders", tables);
     }
 
     [Fact]
-    public void ExtractTableNames_WithSubquery_ShouldReturnInnerAndOuterTables()
+    public void GetTableNames_WithSubquery_ShouldReturnInnerAndOuterTables()
     {
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT id FROM (SELECT uid FROM orders) sub WHERE id IN (SELECT id FROM logs)")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.Contains("orders", tables);
         Assert.Contains("logs", tables);
     }
 
     [Fact]
-    public void ExtractTableNames_TableStatement_ShouldReturnTable()
+    public void GetTableNames_TableStatement_ShouldReturnTable()
     {
         var stmt = CCJSqlParserUtil.Parse("TABLE users")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
     }
 
     [Fact]
-    public void ExtractTableNames_ShouldReturnReadOnlyCollection()
+    public void GetTableNames_ShouldReturnReadOnlyCollection()
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.IsAssignableFrom<IReadOnlyCollection<string>>(tables);
     }
 
-    // ---------- ExtractTableNames：DML 语句 ----------
+    // ---------- GetTableNames：DML 语句 ----------
 
     [Fact]
-    public void ExtractTableNames_Insert_ShouldReturnTargetTable()
+    public void GetTableNames_Insert_ShouldReturnTargetTable()
     {
         var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (name) VALUES ('Alice')")!;
-        Assert.Contains("users", stmt.ExtractTableNames());
+        Assert.Contains("users", stmt.GetTableNames());
     }
 
     [Fact]
-    public void ExtractTableNames_InsertFromSelect_ShouldReturnBothTables()
+    public void GetTableNames_InsertFromSelect_ShouldReturnBothTables()
     {
         var stmt = CCJSqlParserUtil.Parse("INSERT INTO target SELECT id FROM source")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.Contains("target", tables);
         Assert.Contains("source", tables);
     }
 
     [Fact]
-    public void ExtractTableNames_Update_ShouldReturnTable()
+    public void GetTableNames_Update_ShouldReturnTable()
     {
         var stmt = CCJSqlParserUtil.Parse("UPDATE users SET name = 'Bob' WHERE id = 1")!;
-        Assert.Contains("users", stmt.ExtractTableNames());
+        Assert.Contains("users", stmt.GetTableNames());
     }
 
     [Fact]
-    public void ExtractTableNames_Delete_ShouldReturnTable()
+    public void GetTableNames_Delete_ShouldReturnTable()
     {
         var stmt = CCJSqlParserUtil.Parse("DELETE FROM logs WHERE expired = 1")!;
-        Assert.Contains("logs", stmt.ExtractTableNames());
+        Assert.Contains("logs", stmt.GetTableNames());
     }
 
     [Fact]
-    public void ExtractTableNames_Merge_ShouldReturnTargetAndSource()
+    public void GetTableNames_Merge_ShouldReturnTargetAndSource()
     {
         var stmt = CCJSqlParserUtil.Parse(
             "MERGE INTO target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.name = s.name")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         Assert.Contains("target", tables);
         Assert.Contains("source", tables);
     }
 
     [Fact]
-    public void ExtractTableNames_ShouldDeduplicateRepeatedTables()
+    public void GetTableNames_ShouldDeduplicateRepeatedTables()
     {
         // 同一表出现多次（自连接不同别名）—— 表名去重
         var stmt = CCJSqlParserUtil.Parse(
             "SELECT a.id FROM users a JOIN users b ON a.id = b.parent_id")!;
-        var tables = stmt.ExtractTableNames();
+        var tables = stmt.GetTableNames();
         var count = tables.Count(t => t == "users");
         Assert.Equal(1, count);
     }
@@ -202,9 +202,9 @@ public class StatementExtensionTest
     }
 
     [Fact]
-    public void ExtractTableNames_OnNullStatement_ShouldThrow()
+    public void GetTableNames_OnNullStatement_ShouldThrow()
     {
         Azrng.JSqlParser.Statement.Statement stmt = null!;
-        Assert.Throws<ArgumentNullException>(() => stmt.ExtractTableNames());
+        Assert.Throws<ArgumentNullException>(() => stmt.GetTableNames());
     }
 }

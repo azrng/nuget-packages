@@ -16,19 +16,24 @@ namespace Azrng.JSqlParser;
 public static class StatementExtension
 {
     /// <summary>
-    /// 提取语句中引用的所有表名。
-    /// 替代旧的 <c>new TablesNamesFinder().GetTables(stmt)</c>。
+    /// 获取语句中引用的所有表名（含 WHERE 子查询内的表，已去重）。
     /// </summary>
+    /// <remarks>
+    /// 动词统一为 <c>Get</c>，与 <see cref="GetTableReferences"/>/GetSelectColumns/GetWhereConditions 一致。
+    /// 替代旧的 <c>new TablesNamesFinder().GetTables(stmt)</c>。
+    /// 与 <see cref="GetTableReferences"/> 的区别：本方法返回扁平表名（含 WHERE 子查询），
+    /// <see cref="GetTableReferences"/> 返回 FROM/JOIN/CTE 的结构化表引用（带别名/全名）。
+    /// </remarks>
     /// <param name="statement">SQL 语句。</param>
     /// <returns>表名只读集合（已去重）。</returns>
     /// <example>
     /// <code>
     /// var stmt = CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
-    /// IReadOnlyCollection&lt;string&gt; tables = stmt.ExtractTableNames();
+    /// IReadOnlyCollection&lt;string&gt; tables = stmt.GetTableNames();
     /// // => { "users", "orders" }
     /// </code>
     /// </example>
-    public static IReadOnlyCollection<string> ExtractTableNames(this Statement.Statement statement)
+    public static IReadOnlyCollection<string> GetTableNames(this Statement.Statement statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
         var finder = new TablesNamesFinder();
@@ -39,12 +44,17 @@ public static class StatementExtension
         return tables;
     }
 
+    /// <summary>已过时，请改用 <see cref="GetTableNames"/>。</summary>
+    [Obsolete("改用 GetTableNames()，后续版本将移除")]
+    public static IReadOnlyCollection<string> ExtractTableNames(this Statement.Statement statement)
+        => statement.GetTableNames();
+
     /// <summary>
     /// 提取 SELECT 语句中引用的全部表（含别名映射、全限定名）。
     /// </summary>
     /// <remarks>
     /// 仅遍历 FROM/JOIN/CTE 内的表引用；WHERE 表达式中的子查询表不在范围
-    /// （需要全部表名含 WHERE 子查询时用 <see cref="ExtractTableNames"/>，它遍历所有表达式）。
+    /// （需要全部表名含 WHERE 子查询时用 <see cref="GetTableNames"/>，它遍历所有表达式）。
     /// </remarks>
     /// <param name="statement">SQL 语句（仅 SELECT 语句有 FROM 子句，其他语句返回空）。</param>
     /// <returns>

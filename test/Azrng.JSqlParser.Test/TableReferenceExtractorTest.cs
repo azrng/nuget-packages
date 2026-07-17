@@ -63,7 +63,7 @@ public class TableReferenceExtractorTest
     public void GetTableReferences_WhereSubqueryNotIncluded_ShouldOnlyReturnFromTables()
     {
         // WHERE 中 IN 子查询的表不属于 FROM 引用，不在 GetTableResults 范围
-        // （需要 WHERE 子查询的表请用 ExtractTableNames，它遍历全部表达式）
+        // （需要 WHERE 子查询的表请用 GetTableNames，它遍历全部表达式）
         var refs = ParseSelect(
             "SELECT id FROM main WHERE id IN (SELECT id FROM logs)").GetTableReferences();
         var table = Assert.Single(refs);
