@@ -27,7 +27,7 @@ public class TrimFunction : ASTNodeAccessImpl, Expression
     /// <summary>true 表示使用 FROM 关键字连接，false 表示使用逗号。</summary>
     public bool UsingFromKeyword { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

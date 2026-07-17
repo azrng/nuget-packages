@@ -34,7 +34,7 @@ public class Batch13TableClauseTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t TABLESAMPLE SYSTEM (1000)");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Table>(plainSelect.IFromItem);
 
         Assert.NotNull(table.TableSample);
         Assert.Equal("SYSTEM", table.TableSample.SamplingMethod);

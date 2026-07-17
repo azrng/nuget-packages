@@ -4,7 +4,7 @@ using Azrng.JSqlParser.Statement.Select;
 namespace Azrng.JSqlParser.Test.Statement;
 
 /// <summary>
-/// BL-13 #3 通用表函数作 FromItem 测试。
+/// BL-13 #3 通用表函数作 IFromItem 测试。
 /// 对齐上游 TableFunction，支持 FROM func(...) AS alias。
 /// </summary>
 public class TableFunctionTest
@@ -32,7 +32,7 @@ public class TableFunctionTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM unnest(arr) AS u");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var tableFn = Assert.IsType<TableFunction>(plainSelect.FromItem);
+        var tableFn = Assert.IsType<TableFunction>(plainSelect.IFromItem);
 
         Assert.Equal("unnest", tableFn.Function.Name);
         Assert.NotNull(tableFn.Alias);

@@ -71,7 +71,7 @@ public class ValuesTest
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (VALUES (1, 2)) AS t");
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.FromItem);
+        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
         Assert.IsType<Values>(parenthesedSelect.Select);
         Assert.NotNull(parenthesedSelect.Alias);
         Assert.Equal("SELECT * FROM (VALUES (1, 2)) t", stmt!.ToString());
@@ -85,7 +85,7 @@ public class ValuesTest
         var stmt = CCJSqlParserUtil.Parse(sql);
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.FromItem);
+        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
         var values = Assert.IsType<Values>(parenthesedSelect.Select);
         Assert.Equal(2, values.Rows.Count);
         Assert.Equal(sql, stmt!.ToString());
@@ -217,7 +217,7 @@ public class ValuesTest
         var stmt = CCJSqlParserUtil.Parse(sql);
 
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.FromItem);
+        var parenthesedSelect = Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
         Assert.IsType<Values>(parenthesedSelect.Select);
         Assert.Null(parenthesedSelect.Alias);
         Assert.Equal(sql, stmt!.ToString());
@@ -262,7 +262,7 @@ public class ValuesTest
         Assert.Equal("VALUES ", values.ToString());
     }
 
-    /// <summary>Values 实现 FromItem 接口的 Alias 属性读写。</summary>
+    /// <summary>Values 实现 IFromItem 接口的 Alias 属性读写。</summary>
     [Fact]
     public void Values_FromItem_AliasGetSet()
     {

@@ -42,11 +42,11 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
     /// <summary>DB2 WITH ISOLATION 隔离级别（UR/RS/RR/CS），未指定时为 null。对齐上游 isolation。</summary>
     public string? Isolation { get; set; }
 
-    public abstract T Accept<T, S>(SelectVisitor<T> selectVisitor, S context);
+    public abstract T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context);
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     /// <summary>返回 OF 子句的第一个表，未指定时为 null。</summary>
     public Table? ForUpdateTable =>

@@ -10,7 +10,7 @@ public class ExtractExpression : ASTNodeAccessImpl, Expression
     public string Name { get; set; } = "";
     public Expression Expression { get; set; } = null!;
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"EXTRACT({Name} FROM {Expression})";
 }

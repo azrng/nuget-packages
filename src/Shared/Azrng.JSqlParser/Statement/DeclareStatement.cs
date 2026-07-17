@@ -16,7 +16,7 @@ public class DeclareStatement : ASTNodeAccessImpl, Statement
     /// <summary>变量定义列表（每项含 UserVariable + 类型 + 默认值）。</summary>
     public List<TypeDefExpr> TypeDefExprList { get; } = new();
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

@@ -18,7 +18,7 @@ public class FullTextSearch : ASTNodeAccessImpl, Expression
     /// <summary>搜索修饰符原文（如 "IN BOOLEAN MODE"），未指定时为 null。</summary>
     public string? SearchModifier { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

@@ -11,7 +11,7 @@ public class InExpression : ASTNodeAccessImpl, Expression
     public Expression RightExpression { get; set; } = null!;
     public bool Not { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() =>
         $"{LeftExpression} {(Not ? "NOT IN" : "IN")} ({RightExpression})";

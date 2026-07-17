@@ -17,7 +17,7 @@ public class KeyExpression : ASTNodeAccessImpl, Expression
         Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"KEY {Expression}";
 }

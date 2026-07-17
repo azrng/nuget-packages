@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// SQL Server 表提示，形式 <c>WITH (INDEX(idx), NOLOCK)</c>，
 /// 出现在 FROM 子句的表之后。与上游 SQLServerHints 对齐。
 /// </summary>
-public class SQLServerHints : ASTNodeAccessImpl, Model
+public class SQLServerHints : ASTNodeAccessImpl, IModel
 {
     /// <summary>NOLOCK 提示标志，未指定时为 null。</summary>
     public bool? NoLock { get; set; }

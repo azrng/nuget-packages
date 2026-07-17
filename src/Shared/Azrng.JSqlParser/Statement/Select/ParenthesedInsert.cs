@@ -17,9 +17,9 @@ public class ParenthesedInsert : Insert.Insert
     /// <summary>括号内包裹的 INSERT 语句。</summary>
     public Insert.Insert? Insert { get; set; }
 
-    // 覆盖 Accept 走 StatementVisitor.Visit(ParenthesedInsert)，
+    // 覆盖 Accept 走 IStatementVisitor.Visit(ParenthesedInsert)，
     // 否则会因继承关系错误命中 Visit(Insert)。
-    public new T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public new T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

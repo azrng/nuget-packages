@@ -11,7 +11,7 @@ public class BeginTransactionStatement : ASTNodeAccessImpl, Statement
     /// <summary>是否使用 TRANSACTION 关键字（true=TRANSACTION，false=WORK）。</summary>
     public bool UseTransactionKeyword { get; set; } = true;
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => UseTransactionKeyword ? "BEGIN TRANSACTION" : "BEGIN WORK";
 }

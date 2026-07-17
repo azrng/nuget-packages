@@ -11,7 +11,7 @@ public abstract class BinaryExpression : ASTNodeAccessImpl, Expression
     public Expression LeftExpression { get; set; } = null!;
     public Expression RightExpression { get; set; } = null!;
 
-    public abstract T Accept<T, S>(ExpressionVisitor<T> visitor, S context);
+    public abstract T Accept<T, S>(IExpressionVisitor<T> visitor, S context);
 
     /// <summary>运算符符号（如 "+"、"AND"），由子类重写。</summary>
     public abstract string OperatorSymbol { get; }

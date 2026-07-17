@@ -46,7 +46,7 @@ public class Column : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
     /// <summary>列后的数组构造/下标（如 ARRAY[...] 或 col[i]），对齐上游 arrayConstructor。未指定时为 null。</summary>
     public ArrayConstructor? ArrayConstructor { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public string GetFullyQualifiedName()
     {

@@ -55,7 +55,7 @@ public class Function : ASTNodeAccessImpl, Expression
     /// </summary>
     public NamedExpressionList? NamedParameters { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {
@@ -109,7 +109,7 @@ public class Function : ASTNodeAccessImpl, Expression
 /// 函数调用的通用关键字参数，如 <code>func(arg1 SEPARATOR ',')</code> 中的 <c>SEPARATOR ','</c>。
 /// 对应上游 commit cd71aada / Function.KeywordArgument。
 /// </summary>
-public class KeywordArgument : ASTNodeAccessImpl, Model
+public class KeywordArgument : ASTNodeAccessImpl, IModel
 {
     /// <summary>关键字名称（如 SEPARATOR、COST、USING）。</summary>
     public string Keyword { get; set; } = "";

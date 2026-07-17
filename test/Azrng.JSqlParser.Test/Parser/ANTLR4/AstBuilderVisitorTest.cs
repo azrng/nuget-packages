@@ -33,7 +33,7 @@ public class AstBuilderVisitorTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM users");
         var select = Assert.IsType<PlainSelect>(stmt);
-        Assert.NotNull(select.FromItem);
+        Assert.NotNull(select.IFromItem);
         Assert.Single(select.SelectItems!);
     }
 
@@ -291,7 +291,7 @@ public class AstBuilderVisitorTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (SELECT id FROM users) t");
         var select = Assert.IsType<PlainSelect>(stmt);
-        Assert.IsType<ParenthesedSelect>(select.FromItem);
+        Assert.IsType<ParenthesedSelect>(select.IFromItem);
     }
 
     [Fact]

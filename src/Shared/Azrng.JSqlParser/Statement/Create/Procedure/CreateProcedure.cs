@@ -13,5 +13,5 @@ public class CreateProcedure : CreateFunctionalStatement
     public CreateProcedure() : base("PROCEDURE") { }
     public CreateProcedure(List<string> parts) : base("PROCEDURE", parts) { }
 
-    public override T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public override T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 }

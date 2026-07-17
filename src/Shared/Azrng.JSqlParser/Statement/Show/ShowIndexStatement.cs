@@ -14,7 +14,7 @@ public class ShowIndexStatement : ASTNodeAccessImpl, Statement
     /// <summary>数据库名（SHOW INDEX FROM db.table 的 db 部分），可选。</summary>
     public string? DbName { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

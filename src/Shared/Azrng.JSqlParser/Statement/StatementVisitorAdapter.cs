@@ -1,10 +1,10 @@
 namespace Azrng.JSqlParser.Statement;
 
 /// <summary>
-/// Default implementation of StatementVisitor with empty visit methods.
+/// Default implementation of IStatementVisitor with empty visit methods.
 /// Override only the methods you need.
 /// </summary>
-public class StatementVisitorAdapter<T> : StatementVisitor<T>
+public class StatementVisitorAdapter<T> : IStatementVisitor<T>
 {
     public virtual T Visit<S>(Statements stmts, S context) => default!;
     public virtual T Visit<S>(Select.Select select, S context) => default!;

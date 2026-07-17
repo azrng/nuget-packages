@@ -52,7 +52,7 @@ public class CreateTable : ASTNodeAccessImpl, Statement
     /// <summary>Spanner INTERLEAVE IN PARENT 子句。</summary>
     public SpannerInterleaveIn? InterleaveIn { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

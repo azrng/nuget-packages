@@ -22,7 +22,7 @@ public class ParserSmokeTest
 
         var select = (PlainSelect)statement;
         Assert.NotNull(select.SelectItems);
-        Assert.NotNull(select.FromItem);
+        Assert.NotNull(select.IFromItem);
         Assert.NotNull(select.Where);
     }
 

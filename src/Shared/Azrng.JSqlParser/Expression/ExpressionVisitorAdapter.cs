@@ -8,12 +8,12 @@ using Azrng.JSqlParser.Statement.Select;
 namespace Azrng.JSqlParser.Expression;
 
 /// <summary>
-/// Base adapter for ExpressionVisitor with virtual implementations that
+/// Base adapter for IExpressionVisitor with virtual implementations that
 /// recursively visit child expressions. Override specific Visit methods
 /// to customize behavior.
 /// 注意：所有子表达式遍历统一透传 context（M1 修复），避免派生 visitor 丢失上下文。
 /// </summary>
-public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
+public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
 {
     public virtual T Visit<S>(NullValue nullValue, S context) => default!;
     public virtual T Visit<S>(LongValue longValue, S context) => default!;

@@ -24,7 +24,7 @@ public class PlainSelect : Select
     /// <summary>DB2 OPTIMIZE FOR n ROWS 子句，未指定时为 null。</summary>
     public long? OptimizeFor { get; set; }
     public List<SelectItem>? SelectItems { get; set; }
-    public FromItem? FromItem { get; set; }
+    public IFromItem? IFromItem { get; set; }
     public List<Join>? Joins { get; set; }
     public Expression.Expression? Where { get; set; }
     public PreferringClause? Preferring { get; set; }
@@ -61,7 +61,7 @@ public class PlainSelect : Select
     /// <summary>Oracle 层次查询（START WITH ... CONNECT BY ...），对齐上游 oracleHierarchical。</summary>
     public OracleHierarchicalExpression? OracleHierarchical { get; set; }
 
-    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
     }
@@ -80,9 +80,9 @@ public class PlainSelect : Select
         // MySQL INTO OUTFILE/DUMPFILE 前置位置（FROM 之前）
         if (MySqlIntoOutfile is { BeforeFrom: true }) builder.Append(' ').Append(MySqlIntoOutfile);
 
-        if (FromItem != null)
+        if (IFromItem != null)
         {
-            builder.Append(" FROM ").Append(FromItem);
+            builder.Append(" FROM ").Append(IFromItem);
         }
 
         if (Joins != null)

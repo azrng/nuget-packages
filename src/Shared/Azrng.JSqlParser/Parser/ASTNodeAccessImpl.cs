@@ -3,9 +3,9 @@ using System.Text;
 namespace Azrng.JSqlParser.Parser;
 
 /// <summary>
-/// Default implementation of ASTNodeAccess.
+/// Default implementation of IASTNodeAccess.
 /// </summary>
-public class ASTNodeAccessImpl : ASTNodeAccess
+public class ASTNodeAccessImpl : IASTNodeAccess
 {
     private SimpleNode? _node;
 

@@ -11,7 +11,7 @@ public class Alter : ASTNodeAccessImpl, Statement
     public Table? Table { get; set; }
     public System.Collections.Generic.List<AlterExpression> AlterExpressions { get; set; } = new();
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

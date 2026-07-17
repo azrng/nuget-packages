@@ -33,7 +33,7 @@ public class PivotTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM sales PIVOT (SUM(amount) FOR product IN ('A', 'B'))");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Table>(plainSelect.IFromItem);
 
         Assert.NotNull(table.Pivot);
         Assert.Equal("SUM", table.Pivot.Function.Name);
@@ -57,7 +57,7 @@ public class PivotTest
 
         Assert.NotNull(stmt);
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Table>(plainSelect.IFromItem);
 
         Assert.NotNull(table.UnPivot);
         Assert.True(table.UnPivot.IncludeNulls);
@@ -68,7 +68,7 @@ public class PivotTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM t UNPIVOT (val FOR col IN (c1, c2))");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Table>(plainSelect.IFromItem);
 
         Assert.NotNull(table.UnPivot);
         Assert.Single(table.UnPivot.UnpivotClause);
@@ -85,7 +85,7 @@ public class PivotTest
         var sql = "SELECT * FROM sales PIVOT XML (SUM(amount) FOR product IN ('A', 'B'))";
         var stmt = CCJSqlParserUtil.Parse(sql);
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Table>(plainSelect.IFromItem);
 
         Assert.NotNull(table.Pivot);
         Assert.True(table.Pivot!.IsXml);

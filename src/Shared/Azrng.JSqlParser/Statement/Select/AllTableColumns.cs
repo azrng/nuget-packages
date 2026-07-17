@@ -17,7 +17,7 @@ public class AllTableColumns : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Ex
     /// <summary>RETURNING 子句中的限定符原文，非 RETURNING 场景为 null。</summary>
     public string? ReturningQualifier { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

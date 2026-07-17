@@ -271,7 +271,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var start = srcCtx.Start;
             var stop = srcCtx.Stop;
             var interval = new Antlr4.Runtime.Misc.Interval(start.StartIndex, stop.StopIndex);
-            import.FromItem = start.InputStream?.GetText(interval) ?? "";
+            import.IFromItem = start.InputStream?.GetText(interval) ?? "";
         }
         return import;
     }
@@ -515,7 +515,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (fromItems.Length > 0)
             {
                 var firstFrom = fromItems[0];
-                select.FromItem = (FromItem)Visit(firstFrom.tableOrSubquery());
+                select.IFromItem = (IFromItem)Visit(firstFrom.tableOrSubquery());
                 select.Joins = new List<Join>();
 
                 if (firstFrom.joinClause().Length > 0)
@@ -531,7 +531,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     var join = new Join
                     {
                         Simple = true,
-                        RightItem = (FromItem)Visit(fromItems[i].tableOrSubquery())
+                        RightItem = (IFromItem)Visit(fromItems[i].tableOrSubquery())
                     };
                     select.Joins.Add(join);
 
@@ -985,7 +985,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             join.Fetch = true;
         }
 
-        join.RightItem = (FromItem)Visit(context.tableOrSubquery());
+        join.RightItem = (IFromItem)Visit(context.tableOrSubquery());
 
         // ksqlDB WITHIN 窗口（RightItem 之后、ON/USING 之前）
         if (context.ksqlJoinWindowClause() != null)
@@ -1095,7 +1095,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.fromItem() != null)
         {
             var inner = Visit(context.fromItem());
-            if (context.alias() != null && inner is FromItem fromItem)
+            if (context.alias() != null && inner is IFromItem fromItem)
             {
                 fromItem.Alias = new Alias(context.alias().identifier().GetText(),
                     context.alias().AS() != null);
@@ -1739,10 +1739,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var usingItems = context.fromItem();
         if (context.USING() != null && usingItems.Length > 0)
         {
-            delete.UsingItems = new List<FromItem>();
+            delete.UsingItems = new List<IFromItem>();
             foreach (var fromCtx in usingItems)
             {
-                delete.UsingItems.Add((FromItem)Visit(fromCtx.tableOrSubquery()));
+                delete.UsingItems.Add((IFromItem)Visit(fromCtx.tableOrSubquery()));
             }
         }
 
@@ -3129,7 +3129,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // USING 源（表/子查询），grammar 保证必现
         if (context.fromItem() != null)
         {
-            merge.SourceTable = (FromItem)Visit(context.fromItem());
+            merge.SourceTable = (IFromItem)Visit(context.fromItem());
         }
 
         merge.OnCondition = (Expression.Expression)Visit(context.expression());
@@ -5256,7 +5256,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var fromQuery = new FromQuery();
         fromQuery.UsingFromKeyword = context.FROM() != null;
-        fromQuery.FromItem = (FromItem)Visit(context.fromItem());
+        fromQuery.IFromItem = (IFromItem)Visit(context.fromItem());
 
         if (context.joinClause() != null)
         {
@@ -5357,7 +5357,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var join = new Join();
         if (context.joinType() != null)
             SetJoinType(join, context.joinType());
-        join.RightItem = (FromItem)Visit(context.tableOrSubquery());
+        join.RightItem = (IFromItem)Visit(context.tableOrSubquery());
         if (context.joinCondition() != null)
         {
             var condCtx = context.joinCondition();

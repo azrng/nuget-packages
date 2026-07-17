@@ -14,7 +14,7 @@ public class TimezoneExpression : ASTNodeAccessImpl, Expression
     /// <summary>时区表达式（字符串字面量或列引用）。</summary>
     public Expression? TimeZoneExpression { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"{LeftExpression} AT TIME ZONE {TimeZoneExpression}";
 }

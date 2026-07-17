@@ -28,7 +28,7 @@ public class DateUnitExpression : ASTNodeAccessImpl, Expression
         Unit = Enum.Parse<DateUnit>(unitStr, ignoreCase: true);
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => Unit.ToString().ToUpperInvariant();
 }

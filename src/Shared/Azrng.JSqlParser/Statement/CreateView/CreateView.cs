@@ -31,7 +31,7 @@ public class CreateView : ASTNodeAccessImpl, Statement
     /// <summary>WITH CHECK OPTION：null=无，"CASCADED"/"LOCAL"=对应修饰，""=无修饰 CHECK OPTION。</summary>
     public string? WithCheckOption { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

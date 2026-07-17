@@ -22,7 +22,7 @@ public class ExportStatement : ASTNodeAccessImpl, Statement
     /// <summary>INTO 目标透传文本（如 LOCAL CSV FILE 'file.csv'），保 round-trip。</summary>
     public string? IntoItem { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

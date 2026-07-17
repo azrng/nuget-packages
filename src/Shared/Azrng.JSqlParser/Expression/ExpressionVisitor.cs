@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Expression;
 /// Visitor interface for traversing SQL expression trees.
 /// Generic version (JSqlParser 5.0+): returns T, accepts context S.
 /// </summary>
-public interface ExpressionVisitor<T>
+public interface IExpressionVisitor<T>
 {
     // Value types
     T Visit<S>(NullValue nullValue, S context);

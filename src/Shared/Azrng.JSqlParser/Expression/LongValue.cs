@@ -22,7 +22,7 @@ public sealed class LongValue : ASTNodeAccessImpl, Expression
         Value = long.Parse(value, CultureInfo.InvariantCulture);
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
 }

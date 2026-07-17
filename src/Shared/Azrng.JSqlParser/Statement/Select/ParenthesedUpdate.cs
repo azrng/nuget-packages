@@ -9,7 +9,7 @@ public class ParenthesedUpdate : ASTNodeAccessImpl, Statement
 {
     public Update.Update Update { get; set; } = null!;
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"({Update})";
 }

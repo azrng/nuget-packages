@@ -5,9 +5,9 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Base interface for all SQL expressions in the AST.
 /// </summary>
-public interface Expression : ASTNodeAccess, Model
+public interface Expression : IASTNodeAccess, IModel
 {
-    T Accept<T, S>(ExpressionVisitor<T> visitor, S context);
+    T Accept<T, S>(IExpressionVisitor<T> visitor, S context);
 
-    void Accept<T>(ExpressionVisitor<T> visitor) => Accept<T, object?>(visitor, default);
+    void Accept<T>(IExpressionVisitor<T> visitor) => Accept<T, object?>(visitor, default);
 }

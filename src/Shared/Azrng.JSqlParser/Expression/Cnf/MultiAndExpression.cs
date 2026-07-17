@@ -17,7 +17,7 @@ public class MultiAndExpression : ASTNodeAccessImpl, Expression
         Expressions.AddRange(expressions);
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => string.Join(" AND ", Expressions.Select(e => $"({e})"));
 }

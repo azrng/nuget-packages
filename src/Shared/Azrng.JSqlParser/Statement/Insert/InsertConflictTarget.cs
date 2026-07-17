@@ -14,7 +14,7 @@ namespace Azrng.JSqlParser.Statement.Insert;
 /// </list>
 /// </para>
 /// </summary>
-public class InsertConflictTarget : ASTNodeAccessImpl, Model
+public class InsertConflictTarget : ASTNodeAccessImpl, IModel
 {
     /// <summary>索引列名列表（与 IndexExpression 互斥）。</summary>
     public List<string> IndexColumnNames { get; set; } = new();

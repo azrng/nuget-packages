@@ -4,7 +4,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// Visitor interface for traversing SELECT statement trees.
 /// Generic version (JSqlParser 5.0+): returns T, accepts context S.
 /// </summary>
-public interface SelectVisitor<T>
+public interface ISelectVisitor<T>
 {
     T Visit<S>(PlainSelect plainSelect, S context);
     T Visit<S>(SetOperationList setOpList, S context);

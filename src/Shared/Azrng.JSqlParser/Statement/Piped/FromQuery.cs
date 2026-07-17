@@ -8,21 +8,21 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class FromQuery : Select.Select
 {
-    public FromItem FromItem { get; set; } = null!;
+    public IFromItem IFromItem { get; set; } = null!;
     public bool UsingFromKeyword { get; set; } = true;
     public List<PipeOperator> PipeOperators { get; set; } = new();
     public List<Join>? Joins { get; set; }
 
     public FromQuery() { }
 
-    public FromQuery(FromItem fromItem)
+    public FromQuery(IFromItem fromItem)
     {
-        FromItem = fromItem;
+        IFromItem = fromItem;
     }
 
-    public FromQuery(FromItem fromItem, bool usingFromKeyword)
+    public FromQuery(IFromItem fromItem, bool usingFromKeyword)
     {
-        FromItem = fromItem;
+        IFromItem = fromItem;
         UsingFromKeyword = usingFromKeyword;
     }
 
@@ -32,7 +32,7 @@ public class FromQuery : Select.Select
         return this;
     }
 
-    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
     }
@@ -47,7 +47,7 @@ public class FromQuery : Select.Select
         if (UsingFromKeyword)
             builder.Append("FROM ");
 
-        builder.Append(FromItem);
+        builder.Append(IFromItem);
 
         if (Joins != null)
         {

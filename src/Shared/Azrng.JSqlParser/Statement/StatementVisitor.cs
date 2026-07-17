@@ -4,7 +4,7 @@ namespace Azrng.JSqlParser.Statement;
 /// Visitor interface for traversing SQL statement trees.
 /// Generic version (JSqlParser 5.0+): returns T, accepts context S.
 /// </summary>
-public interface StatementVisitor<T>
+public interface IStatementVisitor<T>
 {
     T Visit<S>(Statements stmts, S context);
     T Visit<S>(Select.Select select, S context);

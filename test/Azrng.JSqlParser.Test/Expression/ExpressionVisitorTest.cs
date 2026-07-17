@@ -7,7 +7,7 @@ using Azrng.JSqlParser.Statement.Select;
 namespace Azrng.JSqlParser.Test.Expression;
 
 /// <summary>
-/// ExpressionVisitor 模式测试
+/// IExpressionVisitor 模式测试
 /// </summary>
 public class ExpressionVisitorTest
 {

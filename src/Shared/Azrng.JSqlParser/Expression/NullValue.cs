@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public sealed class NullValue : ASTNodeAccessImpl, Expression
 {
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => "NULL";
 }

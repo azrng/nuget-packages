@@ -14,7 +14,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </code>
 /// </para>
 /// </summary>
-public class WindowFrame : ASTNodeAccessImpl, Model
+public class WindowFrame : ASTNodeAccessImpl, IModel
 {
     /// <summary>框架类型：ROWS / RANGE / GROUPS。</summary>
     public FrameType Type { get; set; }
@@ -51,7 +51,7 @@ public class WindowFrame : ASTNodeAccessImpl, Model
 }
 
 /// <summary>窗口框架的单个边界（UNBOUNDED PRECEDING / CURRENT ROW / N PRECEDING / N FOLLOWING）。</summary>
-public class FrameBound : ASTNodeAccessImpl, Model
+public class FrameBound : ASTNodeAccessImpl, IModel
 {
     /// <summary>边界类型。</summary>
     public BoundType Kind { get; set; }

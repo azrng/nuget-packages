@@ -32,7 +32,7 @@ public class CreatePolicy : ASTNodeAccessImpl, Statement
     /// <summary>WITH CHECK ( expression ) 子句，未指定时为 null。</summary>
     public Expression.Expression? WithCheckExpression { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

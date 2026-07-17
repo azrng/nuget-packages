@@ -6,17 +6,17 @@ using FromQuery = Azrng.JSqlParser.Statement.Piped.FromQuery;
 namespace Azrng.JSqlParser.Test.Statement;
 
 /// <summary>
-/// SelectVisitor 调度测试（T097 补充）。
-/// 验证 Values.Accept(SelectVisitor) 正确触发 Visit(Values)，
+/// ISelectVisitor 调度测试（T097 补充）。
+/// 验证 Values.Accept(ISelectVisitor) 正确触发 Visit(Values)，
 /// 以及 SetOperationList 含 Values 时遍历调度正确。
 /// </summary>
 public class ValuesSelectVisitorTest
 {
     /// <summary>
-    /// 记录被访问的 Select 子类型序列的最小 SelectVisitor 实现。
-    /// SelectVisitor&lt;T&gt; 无 Adapter 基类，需实现全部 6 个泛型方法。
+    /// 记录被访问的 Select 子类型序列的最小 ISelectVisitor 实现。
+    /// ISelectVisitor&lt;T&gt; 无 Adapter 基类，需实现全部 6 个泛型方法。
     /// </summary>
-    private class SelectTypeRecorder : SelectVisitor<object?>
+    private class SelectTypeRecorder : ISelectVisitor<object?>
     {
         public List<string> VisitedTypes { get; } = new();
 
@@ -54,7 +54,7 @@ public class ValuesSelectVisitorTest
         }
     }
 
-    /// <summary>独立 Values 语句经 SelectVisitor 调度应触发 Visit(Values)。</summary>
+    /// <summary>独立 Values 语句经 ISelectVisitor 调度应触发 Visit(Values)。</summary>
     [Fact]
     public void SelectVisitor_StandaloneValues_DispatchesToVisitValues()
     {
@@ -79,13 +79,13 @@ public class ValuesSelectVisitorTest
         Assert.Equal(new[] { "SetOperationList", "Values", "Values" }, visitor.VisitedTypes);
     }
 
-    /// <summary>SelectVisitor 的无参便利重载 Visit(Values) 可用且转发到泛型方法。
+    /// <summary>ISelectVisitor 的无参便利重载 Visit(Values) 可用且转发到泛型方法。
     /// 注：default 接口方法需通过接口类型引用调用。</summary>
     [Fact]
     public void SelectVisitor_ConvenienceOverload_VisitValues_Works()
     {
         var stmt = (Values)CCJSqlParserUtil.Parse("VALUES (1)")!;
-        SelectVisitor<object?> visitor = new SelectTypeRecorder();
+        ISelectVisitor<object?> visitor = new SelectTypeRecorder();
 
         // 无参便利重载（default 接口方法）
         visitor.Visit(stmt);

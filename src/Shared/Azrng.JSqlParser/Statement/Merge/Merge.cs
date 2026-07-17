@@ -15,12 +15,12 @@ public class Merge : ASTNodeAccessImpl, Statement
     public Alias? Alias { get; set; }
 
     /// <summary>USING 源（表/子查询），对应 MERGE ... USING fromItem。未指定时为 null。</summary>
-    public FromItem? SourceTable { get; set; }
+    public IFromItem? SourceTable { get; set; }
 
     public Azrng.JSqlParser.Expression.Expression? OnCondition { get; set; }
     public System.Collections.Generic.List<MergeOperation> Operations { get; set; } = new();
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

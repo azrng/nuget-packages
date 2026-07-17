@@ -25,11 +25,11 @@ public class LateralSubSelectTest
     [Fact]
     public void Lateral_ShouldBuildLateralSubSelectNode()
     {
-        // AST 类型断言：FromItem 应为 LateralSubSelect 而非 ParenthesedSelect
+        // AST 类型断言：IFromItem 应为 LateralSubSelect 而非 ParenthesedSelect
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
-        Assert.IsType<LateralSubSelect>(plainSelect.FromItem);
+        Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class LateralSubSelectTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var lateral = Assert.IsType<LateralSubSelect>(plainSelect.FromItem);
+        var lateral = Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
 
         Assert.Equal("LATERAL", lateral.Prefix);
     }
@@ -68,7 +68,7 @@ public class LateralSubSelectTest
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
-        Assert.IsType<ParenthesedSelect>(plainSelect.FromItem);
-        Assert.IsNotType<LateralSubSelect>(plainSelect.FromItem);
+        Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
+        Assert.IsNotType<LateralSubSelect>(plainSelect.IFromItem);
     }
 }

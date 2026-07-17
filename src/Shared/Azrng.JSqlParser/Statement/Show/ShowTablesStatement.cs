@@ -18,7 +18,7 @@ public class ShowTablesStatement : ASTNodeAccessImpl, Statement
     /// <summary>WHERE 条件，可选。</summary>
     public Expression.Expression? WhereCondition { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

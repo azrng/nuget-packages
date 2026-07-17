@@ -12,7 +12,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </para>
 /// 移植自上游 JSqlParser commit c5e2fdcd 的 JsonTableFunction（简化版）。
 /// </summary>
-public class JsonTable : ASTNodeAccessImpl, FromItem
+public class JsonTable : ASTNodeAccessImpl, IFromItem
 {
     /// <summary>JSON 文档表达式（第一个参数）。</summary>
     public Azrng.JSqlParser.Expression.Expression? JsonExpression { get; set; }

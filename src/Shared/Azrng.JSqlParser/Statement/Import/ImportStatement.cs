@@ -17,9 +17,9 @@ public class ImportStatement : ASTNodeAccessImpl, Statement
     public System.Collections.Generic.List<Column>? Columns { get; set; }
 
     /// <summary>FROM 来源透传文本（如 LOCAL CSV FILE 'file.csv'），保 round-trip。</summary>
-    public string? FromItem { get; set; }
+    public string? IFromItem { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {
@@ -30,7 +30,7 @@ public class ImportStatement : ASTNodeAccessImpl, Statement
             if (Columns is { Count: > 0 })
                 sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
-        if (FromItem != null) sb.Append(" FROM ").Append(FromItem);
+        if (IFromItem != null) sb.Append(" FROM ").Append(IFromItem);
         return sb.ToString();
     }
 }

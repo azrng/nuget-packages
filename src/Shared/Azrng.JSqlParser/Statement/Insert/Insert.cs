@@ -66,7 +66,7 @@ public class Insert : ASTNodeAccessImpl, Statement
     /// <summary>MSSQL OUTPUT 子句（OUTPUT inserted.col [INTO ...]），透传原始文本保 round-trip。未指定时为 null。</summary>
     public string? OutputClause { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

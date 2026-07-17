@@ -12,7 +12,7 @@ public class OverlapsCondition : ASTNodeAccessImpl, Expression
     public ExpressionList LeftExpression { get; set; } = null!;
     public ExpressionList RightExpression { get; set; } = null!;
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"{LeftExpression} OVERLAPS {RightExpression}";
 }

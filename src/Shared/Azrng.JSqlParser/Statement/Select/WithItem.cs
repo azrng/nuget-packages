@@ -32,7 +32,7 @@ public class WithItem : Select
     /// <summary>WITH FUNCTION 内联函数声明（SQL 标准新语法）。设置时替代 CTE alias/select 路径。</summary>
     public WithFunctionDeclaration? WithFunctionDeclaration { get; set; }
 
-    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
     }

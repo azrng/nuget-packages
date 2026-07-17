@@ -4,6 +4,6 @@ namespace Azrng.JSqlParser;
 /// Marker interface for JSqlParser model classes.
 /// The SQL syntax tree consists of objects implementing this interface.
 /// </summary>
-public interface Model
+public interface IModel
 {
 }

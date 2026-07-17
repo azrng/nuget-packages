@@ -11,7 +11,7 @@ public class CaseExpression : ASTNodeAccessImpl, Expression
     public System.Collections.Generic.List<WhenClause> WhenClauses { get; set; } = new();
     public Expression? ElseExpression { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

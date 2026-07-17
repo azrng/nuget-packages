@@ -418,7 +418,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 | **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 暂缓（2026-07-18 评估：见第十四章结论，运行时无 bug，激进改造与上游对照模式冲突） |
-| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
+| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 部分完成（6 个低风险接口 IExpressionVisitor/IStatementVisitor/ISelectVisitor/IFromItem/IModel/IASTNodeAccess 已改；Expression/Statement 与命名空间同名留 2.0） |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 
 ---
@@ -437,6 +437,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 2026-07-17 | 批 5 | 删除 `ASTNodeAccessImpl._node` 上的 `[NonSerialized]`（本库无 `[Serializable]` 二进制序列化路径，attribute 无意义）；`SimpleNode.JjtGetFirstToken()/JjtGetLastToken()`（JavaCC JJTree 历史命名）→ `GetFirstToken()/GetLastToken()`，旧名保留 `[Obsolete]` 转发；`ASTNodeAccessImpl.AppendTo` 改用新方法名 | 库内 2 文件；旧方法保留 Obsolete 转发，无破坏性；round-trip 行为不变 | 全量 1433 项通过，0 失败 |
 | 2026-07-17 | 批 6 | `OracleJoinSyntax` 从 `public static class`（3 个 `public const int`：NoOracleJoin=0/OracleJoinRight=1/OracleJoinLeft=2）→ `enum OracleJoinSyntax { None, Right, Left }`（值名缩短，enum 名已含语义）；`Column.OldOracleJoinSyntax` 字段类型 `int` → `OracleJoinSyntax`；`Column.ToString()` 比较与 `AstBuilderVisitor` 赋值同步改新值名 | 库内 2 文件；字段类型与值名变更（[锚]），但库内 + 测试无代码引用旧常量值（测试靠 ToString 行为验证），无破坏 | 全量 1433 项通过，0 失败；Oracle (+) round-trip 完整保留 |
 | 2026-07-18 | 批 7 | 4 个枚举 SCREAMING_SNAKE_CASE → PascalCase（共 60 个值）：`ForMode`（UPDATE→Update 等 6 值）、`AlterOperation`（ADD→Add 等 47 值）、`ReturningReferenceType`（OLD→Old/NEW→New）、`DateTimeType`（DATE→Date/DATETIME→Datetime 等 5 值，DATETIME→Datetime 避免 C# `DateTime` 类型同名冲突）；全部引用点同步（AstBuilderVisitor 赋值、switch case、测试断言、ForModeExtensions switch）；修复 2 处依赖枚举名输出 SQL 的点：`AlterExpression.ToString()` 通用分支加 `ToUpperInvariant()`、`DateTimeLiteralExpression.ToString()` 同；`AstBuilderVisitor.VisitDateTimeLiteral` 的 `Enum.Parse` 改用 `ignoreCase: true`（不再 ToUpperInvariant 原文） | 公开 API 破坏性（[锚][风险]），9 文件；外部代码引用 `ForMode.UPDATE` 等需改为 `ForMode.Update` | 全量 1433 项通过，0 失败 |
+| 2026-07-18 | 批 9 | 6 个接口加 `I` 前缀（C# 接口命名规范）：`ExpressionVisitor`→`IExpressionVisitor`、`StatementVisitor`→`IStatementVisitor`、`SelectVisitor`→`ISelectVisitor`、`FromItem`→`IFromItem`、`Model`→`IModel`、`ASTNodeAccess`→`IASTNodeAccess`（文件 Model.cs/ASTNodeAccess.cs 同步重命名为 IModel.cs/IASTNodeAccess.cs）；全部实现类、字段类型、泛型参数、测试同步（206 文件）。**`Expression`/`Statement` 接口暂不改**：与命名空间同名（`Azrng.JSqlParser.Expression.Expression`），引用上千（Expression 1018 处/Statement 623 处），改名易误伤 `ExpressionList`/`LambdaExpression` 等含 Expression 的类型名，留 2.0 配合 `using` 别名专项处理 | 公开 API 破坏性（[锚][风险]），206 文件；外部 visitor 实现需改接口名 | 全量 1433 项通过，0 失败 |
 
 ---
 

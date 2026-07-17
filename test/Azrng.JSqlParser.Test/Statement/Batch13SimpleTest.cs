@@ -25,7 +25,7 @@ public class Batch13SimpleTest
     {
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM s1.db1.sc1.t1");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Azrng.JSqlParser.Schema.Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Azrng.JSqlParser.Schema.Table>(plainSelect.IFromItem);
 
         Assert.Equal("s1", table.ServerName);
         Assert.Equal("db1", table.Database);
@@ -39,7 +39,7 @@ public class Batch13SimpleTest
         // 3 段不设 ServerName
         var stmt = CCJSqlParserUtil.Parse("SELECT * FROM db1.sc1.t1");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Azrng.JSqlParser.Schema.Table>(plainSelect.FromItem);
+        var table = Assert.IsType<Azrng.JSqlParser.Schema.Table>(plainSelect.IFromItem);
 
         Assert.Null(table.ServerName);
         Assert.Equal("db1", table.Database);

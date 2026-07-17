@@ -10,7 +10,7 @@ public class Truncate : ASTNodeAccessImpl, Statement
 {
     public Table? Table { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"TRUNCATE TABLE {Table}";
 }

@@ -14,7 +14,7 @@ public class TableStatement : Select
     /// <summary>目标表。</summary>
     public Table? Table { get; set; }
 
-    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
     }

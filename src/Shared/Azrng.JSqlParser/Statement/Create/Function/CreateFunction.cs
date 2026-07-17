@@ -13,5 +13,5 @@ public class CreateFunction : CreateFunctionalStatement
     public CreateFunction() : base("FUNCTION") { }
     public CreateFunction(List<string> parts) : base("FUNCTION", parts) { }
 
-    public override T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public override T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 }

@@ -12,7 +12,7 @@ public class Drop : ASTNodeAccessImpl, Statement
     public Table? Name { get; set; }
     public bool IfExists { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

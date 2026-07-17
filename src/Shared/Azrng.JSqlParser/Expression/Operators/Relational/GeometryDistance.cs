@@ -11,5 +11,5 @@ public class GeometryDistance : ComparisonOperator
 
     public GeometryDistance(string op) : base(op) { }
 
-    public override T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public override T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 }

@@ -10,9 +10,9 @@ namespace Azrng.JSqlParser.Util;
 
 /// <summary>
 /// Finds all table names referenced in a SQL statement.
-/// Implements both ExpressionVisitor and StatementVisitor to traverse the AST.
+/// Implements both IExpressionVisitor and IStatementVisitor to traverse the AST.
 /// </summary>
-public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.StatementVisitor<object?>
+public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStatementVisitor<object?>
 {
     private readonly HashSet<string> _tables = new();
 
@@ -34,7 +34,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         }
     }
 
-    // ExpressionVisitor<object?> implementation
+    // IExpressionVisitor<object?> implementation
     public object? Visit<S>(NullValue nullValue, S context) => null;
     public object? Visit<S>(LongValue longValue, S context) => null;
     public object? Visit<S>(DoubleValue doubleValue, S context) => null;
@@ -294,14 +294,14 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(IsUnknownExpression isUnknownExpression, S context) { isUnknownExpression.LeftExpression?.Accept(this); return null; }
     public object? Visit<S>(Statement.Select.FunctionAllColumns functionAllColumns, S context) => null;
 
-    object? ExpressionVisitor<object?>.Visit<S>(Azrng.JSqlParser.Statement.Select.Select select, S context)
+    object? IExpressionVisitor<object?>.Visit<S>(Azrng.JSqlParser.Statement.Select.Select select, S context)
     {
-        // Delegate to StatementVisitor logic to traverse subquery contents
-        ((Statement.StatementVisitor<object?>)this).Visit(select, context);
+        // Delegate to IStatementVisitor logic to traverse subquery contents
+        ((Statement.IStatementVisitor<object?>)this).Visit(select, context);
         return null;
     }
 
-    // 批 1：以下节点原先由 ExpressionVisitor 接口 default method 提供递归，
+    // 批 1：以下节点原先由 IExpressionVisitor 接口 default method 提供递归，
     // 接口下沉为纯契约后，直接实现接口的 TablesNamesFinder 必须显式补全。
     // 含子表达式的节点递归（防漏子查询/列引用），纯叶子返回 null。
     public object? Visit<S>(MultiAndExpression multiAndExpression, S context)
@@ -395,7 +395,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         return null;
     }
 
-    // StatementVisitor<object?> implementation
+    // IStatementVisitor<object?> implementation
     public object? Visit<S>(Statement.Statements stmts, S context)
     {
         foreach (var stmt in stmts.StatementList)
@@ -437,12 +437,12 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     private void VisitWithItem(WithItem withItem)
     {
         if (withItem.Select != null)
-            ((Statement.StatementVisitor<object?>)this).Visit(withItem.Select, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(withItem.Select, (object?)null);
     }
 
     private void VisitPlainSelect(PlainSelect plainSelect)
     {
-        VisitFromItem(plainSelect.FromItem);
+        VisitFromItem(plainSelect.IFromItem);
 
         if (plainSelect.Joins != null)
         {
@@ -477,12 +477,12 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     private void VisitSetOperationList(SetOperationList setOpList)
     {
         foreach (var s in setOpList.Selects)
-            ((Statement.StatementVisitor<object?>)this).Visit(s, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(s, (object?)null);
     }
 
     private void VisitFromQuery(Statement.Piped.FromQuery fromQuery)
     {
-        VisitFromItem(fromQuery.FromItem);
+        VisitFromItem(fromQuery.IFromItem);
 
         if (fromQuery.Joins != null)
         {
@@ -509,7 +509,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         }
     }
 
-    private void VisitFromItem(FromItem? fromItem)
+    private void VisitFromItem(IFromItem? fromItem)
     {
         if (fromItem is Table table)
         {
@@ -518,7 +518,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
         else if (fromItem is ParenthesedSelect parenthesedSelect)
         {
             // LateralSubSelect 继承 ParenthesedSelect，一并覆盖
-            ((Statement.StatementVisitor<object?>)this).Visit(parenthesedSelect.Select, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(parenthesedSelect.Select, (object?)null);
         }
         else if (fromItem is Values values)
         {
@@ -539,7 +539,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     {
         AddTable(insert.Table);
         if (insert.Select != null)
-            ((Statement.StatementVisitor<object?>)this).Visit(insert.Select, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(insert.Select, (object?)null);
 
         // INSERT INTO t VALUES ((SELECT ... FROM t2), ...) — VALUES 项可能含子查询
         if (insert.ValuesItems != null)
@@ -572,11 +572,11 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
             {
                 AddTable(clause.Table);
                 if (clause.Select != null)
-                    ((Statement.StatementVisitor<object?>)this).Visit(clause.Select, (object?)null);
+                    ((Statement.IStatementVisitor<object?>)this).Visit(clause.Select, (object?)null);
             }
         }
         if (multiInsert.Select != null)
-            ((Statement.StatementVisitor<object?>)this).Visit(multiInsert.Select, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(multiInsert.Select, (object?)null);
         return null;
     }
 
@@ -662,7 +662,7 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     {
         AddTable(createView.View);
         if (createView.Select != null)
-            ((Statement.StatementVisitor<object?>)this).Visit(createView.Select, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(createView.Select, (object?)null);
         return null;
     }
 
@@ -738,11 +738,11 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     public object? Visit<S>(Statement.Select.ParenthesedInsert parenthesedInsert, S context)
     {
         if (parenthesedInsert.Insert != null)
-            ((Statement.StatementVisitor<object?>)this).Visit(parenthesedInsert.Insert, (object?)null);
+            ((Statement.IStatementVisitor<object?>)this).Visit(parenthesedInsert.Insert, (object?)null);
         return null;
     }
-    public object? Visit<S>(Statement.Select.ParenthesedUpdate parenthesedUpdate, S context) { ((Statement.StatementVisitor<object?>)this).Visit(parenthesedUpdate.Update, (object?)null); return null; }
-    public object? Visit<S>(Statement.Select.ParenthesedDelete parenthesedDelete, S context) { ((Statement.StatementVisitor<object?>)this).Visit(parenthesedDelete.Delete, (object?)null); return null; }
+    public object? Visit<S>(Statement.Select.ParenthesedUpdate parenthesedUpdate, S context) { ((Statement.IStatementVisitor<object?>)this).Visit(parenthesedUpdate.Update, (object?)null); return null; }
+    public object? Visit<S>(Statement.Select.ParenthesedDelete parenthesedDelete, S context) { ((Statement.IStatementVisitor<object?>)this).Visit(parenthesedDelete.Delete, (object?)null); return null; }
 
     // JSqlParser 5.4
     public object? Visit<S>(Statement.SessionStatement sessionStatement, S context) => null;

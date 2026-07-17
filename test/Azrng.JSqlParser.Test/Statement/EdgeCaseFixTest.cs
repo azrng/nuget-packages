@@ -37,7 +37,7 @@ public class EdgeCaseFixTest
     {
         var plainSelect = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT * FROM (SELECT 1 UNION SELECT 2) t")!;
-        var subquery = (ParenthesedSelect)plainSelect.FromItem!;
+        var subquery = (ParenthesedSelect)plainSelect.IFromItem!;
 
         var ex = Assert.Throws<JSqlParserException>(() => subquery.GetPlainSelect());
         Assert.Contains("PlainSelect", ex.Message);
@@ -49,7 +49,7 @@ public class EdgeCaseFixTest
     {
         var plainSelect = (PlainSelect)CCJSqlParserUtil.Parse(
             "SELECT * FROM (SELECT 1) t")!;
-        var subquery = (ParenthesedSelect)plainSelect.FromItem!;
+        var subquery = (ParenthesedSelect)plainSelect.IFromItem!;
 
         var inner = subquery.GetPlainSelect();
         Assert.NotNull(inner);

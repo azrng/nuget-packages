@@ -8,7 +8,7 @@ using Delete = Azrng.JSqlParser.Statement.Delete.Delete;
 namespace Azrng.JSqlParser.Test.Statement;
 
 /// <summary>
-/// StatementVisitor 模式测试
+/// IStatementVisitor 模式测试
 /// </summary>
 public class StatementVisitorTest
 {

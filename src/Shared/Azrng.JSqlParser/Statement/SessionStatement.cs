@@ -38,7 +38,7 @@ public class SessionStatement : ASTNodeAccessImpl, Statement
     public bool HasOption(string key) => Options.ContainsKey(key);
     public string? GetOption(string key) => Options.GetValueOrDefault(key);
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

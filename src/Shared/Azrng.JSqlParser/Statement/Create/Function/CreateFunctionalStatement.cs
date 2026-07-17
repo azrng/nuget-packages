@@ -25,7 +25,7 @@ public abstract class CreateFunctionalStatement : ASTNodeAccessImpl, Statement
     protected CreateFunctionalStatement(string kind, List<string> parts) : this(kind) =>
         FunctionDeclarationParts.AddRange(parts);
 
-    public abstract T Accept<T, S>(StatementVisitor<T> visitor, S context);
+    public abstract T Accept<T, S>(IStatementVisitor<T> visitor, S context);
 
     public override string ToString()
     {

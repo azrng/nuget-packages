@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <c>SELECT * FROM t FORCE KEY (pk)</c>。
 /// </para>
 /// </summary>
-public class MySQLIndexHint : ASTNodeAccessImpl, Model
+public class MySQLIndexHint : ASTNodeAccessImpl, IModel
 {
     /// <summary>动作：USE / IGNORE / FORCE。</summary>
     public string Action { get; set; } = "";

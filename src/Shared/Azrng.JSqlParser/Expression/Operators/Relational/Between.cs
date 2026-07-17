@@ -18,7 +18,7 @@ public class Between : ASTNodeAccessImpl, Expression
     /// <summary>SQL:2016 BETWEEN ASYMMETRIC。</summary>
     public bool UsingAsymmetric { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

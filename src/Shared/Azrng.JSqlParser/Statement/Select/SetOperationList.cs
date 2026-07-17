@@ -10,7 +10,7 @@ public class SetOperationList : Select
     public List<Select> Selects { get; set; } = new();
     public List<SetOperation> Operations { get; set; } = new();
 
-    public override T Accept<T, S>(SelectVisitor<T> selectVisitor, S context)
+    public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
     }

@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Insert;
 /// PostgreSQL ON CONFLICT 的冲突动作：DO NOTHING 或 DO UPDATE SET ... [WHERE ...]。
 /// 参考 https://www.postgresql.org/docs/current/sql-insert.html
 /// </summary>
-public class InsertConflictAction : ASTNodeAccessImpl, Model
+public class InsertConflictAction : ASTNodeAccessImpl, IModel
 {
     public ConflictActionType ConflictActionType { get; set; }
 

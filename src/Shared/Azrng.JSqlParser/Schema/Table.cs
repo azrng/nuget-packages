@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Schema;
 /// <summary>
 /// Represents a table reference in SQL.
 /// </summary>
-public class Table : ASTNodeAccessImpl, FromItem
+public class Table : ASTNodeAccessImpl, IFromItem
 {
     /// <summary>服务器/实例名（4 段命名 server.db.schema.name 的首段），对齐上游 Server。未指定时为 null。</summary>
     public string? ServerName { get; set; }

@@ -50,7 +50,7 @@ internal static class TableReferencesExtractor
         switch (select)
         {
             case PlainSelect plainSelect:
-                CollectFromItem(plainSelect.FromItem, result);
+                CollectFromItem(plainSelect.IFromItem, result);
                 if (plainSelect.Joins != null)
                 {
                     foreach (var join in plainSelect.Joins)
@@ -64,7 +64,7 @@ internal static class TableReferencesExtractor
                 break;
 
             case FromQuery fromQuery:
-                CollectFromItem(fromQuery.FromItem, result);
+                CollectFromItem(fromQuery.IFromItem, result);
                 if (fromQuery.Joins != null)
                 {
                     foreach (var join in fromQuery.Joins)
@@ -83,7 +83,7 @@ internal static class TableReferencesExtractor
     }
 
     /// <summary>遍历单个 FROM 项（表/子查询/VALUES/表函数），对齐 TablesNamesFinder.VisitFromItem。</summary>
-    private static void CollectFromItem(FromItem? fromItem, List<TableReference> result)
+    private static void CollectFromItem(IFromItem? fromItem, List<TableReference> result)
     {
         switch (fromItem)
         {

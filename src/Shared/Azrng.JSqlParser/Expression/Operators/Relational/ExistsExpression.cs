@@ -10,7 +10,7 @@ public class ExistsExpression : ASTNodeAccessImpl, Expression
     public Expression RightExpression { get; set; } = null!;
     public bool Not { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString() => $"{(Not ? "NOT EXISTS" : "EXISTS")} ({RightExpression})";
 }

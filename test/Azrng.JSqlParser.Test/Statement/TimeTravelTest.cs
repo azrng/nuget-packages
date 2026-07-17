@@ -58,6 +58,6 @@ public class TimeTravelTest
     private static Table ExtractFromItem(Azrng.JSqlParser.Statement.Statement stmt)
     {
         var plain = Assert.IsType<Azrng.JSqlParser.Statement.Select.PlainSelect>(stmt);
-        return Assert.IsType<Table>(plain.FromItem);
+        return Assert.IsType<Table>(plain.IFromItem);
     }
 }

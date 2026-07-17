@@ -7,12 +7,12 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// <summary>
 /// Represents a parenthesized SELECT (subquery).
 /// </summary>
-public class ParenthesedSelect : ASTNodeAccessImpl, Expression.Expression, FromItem
+public class ParenthesedSelect : ASTNodeAccessImpl, Expression.Expression, IFromItem
 {
     public Select Select { get; set; } = null!;
     public Alias? Alias { get; set; }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => Select.Accept(visitor, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => Select.Accept(visitor, context);
     [Obsolete("改用 " + nameof(Alias) + " 属性")]
     public Alias? GetAlias() => Alias;
     [Obsolete("改用 " + nameof(Alias) + " 属性")]

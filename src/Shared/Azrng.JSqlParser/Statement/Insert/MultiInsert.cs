@@ -43,7 +43,7 @@ public class MultiInsert : ASTNodeAccessImpl, Statement
     /// </summary>
     public Select.Select? Select { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {
@@ -63,7 +63,7 @@ public class MultiInsert : ASTNodeAccessImpl, Statement
 /// 一个分支可包含多个 INTO 目标子句（<see cref="Clauses"/>）。
 /// 与上游 OracleMultiInsertBranch 对齐。
 /// </summary>
-public class MultiInsertBranch : ASTNodeAccessImpl, Model
+public class MultiInsertBranch : ASTNodeAccessImpl, IModel
 {
     /// <summary>
     /// WHEN 后的条件表达式；为 null 时表示 ELSE 分支。
@@ -120,7 +120,7 @@ public class MultiInsertBranch : ASTNodeAccessImpl, Model
 /// <c>INTO table (cols) VALUES (...) </c> 或 <c>INTO table (cols) SELECT ...</c>。
 /// 与上游 OracleMultiInsertClause 对齐。
 /// </summary>
-public class MultiInsertClause : ASTNodeAccessImpl, Model
+public class MultiInsertClause : ASTNodeAccessImpl, IModel
 {
     /// <summary>分支目标表。</summary>
     public Table? Table { get; set; }

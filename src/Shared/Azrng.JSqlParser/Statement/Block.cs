@@ -16,7 +16,7 @@ public class Block : ASTNodeAccessImpl, Statement
     /// <summary>END 后是否带分号（对齐上游 hasSemicolonAfterEnd）。</summary>
     public bool HasSemicolonAfterEnd { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

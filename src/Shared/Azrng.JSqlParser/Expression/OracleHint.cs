@@ -50,7 +50,7 @@ public class OracleHint : ASTNodeAccessImpl, Expression
     public static bool IsHintMatch(string comment)
         => SingleLinePattern.IsMatch(comment) || MultiLinePattern.IsMatch(comment);
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
         => SingleLine ? $"--+ {Value}\n" : $"/*+ {Value} */";

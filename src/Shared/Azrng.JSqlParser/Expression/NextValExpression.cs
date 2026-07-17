@@ -31,7 +31,7 @@ public class NextValExpression : ASTNodeAccessImpl, Expression
     /// <summary>序列全名（如 schema.seq）。</summary>
     public string Name => string.Join(".", NameList);
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
         => $"{(UsingNextValueFor ? "NEXT VALUE FOR " : "NEXTVAL FOR ")}{Name}";

@@ -9,6 +9,6 @@ public class JdbcNamedParameter : ASTNodeAccessImpl, Expression
 {
     public string Name { get; set; } = "";
     public string Prefix { get; set; } = ":";
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
     public override string ToString() => $"{Prefix}{Name}";
 }

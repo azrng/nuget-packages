@@ -22,7 +22,7 @@ public class CreateSchema : ASTNodeAccessImpl, Statement
     /// <summary>AUTHORIZATION 所有者名，可空。</summary>
     public string? Authorization { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

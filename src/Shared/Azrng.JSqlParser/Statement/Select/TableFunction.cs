@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// 表函数（FROM 子句中的 func(...) AS alias），对齐上游 TableFunction。
 /// 形式：<c>SELECT * FROM generate_series(1, 10) AS s</c>。
 /// </summary>
-public class TableFunction : ASTNodeAccessImpl, FromItem
+public class TableFunction : ASTNodeAccessImpl, IFromItem
 {
     /// <summary>函数表达式（Function 节点）。</summary>
     public Function Function { get; set; } = null!;

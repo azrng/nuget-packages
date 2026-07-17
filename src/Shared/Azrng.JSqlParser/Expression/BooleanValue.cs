@@ -9,6 +9,6 @@ public sealed class BooleanValue : ASTNodeAccessImpl, Expression
     public BooleanValue() { }
     public BooleanValue(bool value) => Value = value;
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
     public override string ToString() => Value ? "TRUE" : "FALSE";
 }

@@ -22,7 +22,7 @@ public class ArrayConstructor : ASTNodeAccessImpl, Expression
         ArrayKeyword = arrayKeyword;
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {
@@ -66,7 +66,7 @@ public class ArrayExpression : ASTNodeAccessImpl, Expression
         StopIndexExpression = stopIndexExpression;
     }
 
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

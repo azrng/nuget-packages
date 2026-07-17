@@ -16,7 +16,7 @@ public class RefreshMaterializedViewStatement : ASTNodeAccessImpl, Statement
     /// <summary>是否 CONCURRENTLY 刷新。</summary>
     public bool Concurrently { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

@@ -8,6 +8,6 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class AllColumns : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
 {
-    public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
     public override string ToString() => "*";
 }

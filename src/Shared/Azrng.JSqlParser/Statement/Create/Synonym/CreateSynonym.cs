@@ -21,7 +21,7 @@ public class CreateSynonym : ASTNodeAccessImpl, Statement
     /// <summary>FOR 目标列表（可多个）。</summary>
     public List<string> ForList { get; } = new();
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

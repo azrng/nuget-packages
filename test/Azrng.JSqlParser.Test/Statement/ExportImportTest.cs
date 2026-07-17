@@ -62,7 +62,7 @@ public class ExportImportTest
         Assert.NotNull(stmt.Table);
         Assert.NotNull(stmt.Columns);
         Assert.Single(stmt.Columns!);
-        Assert.Contains("LOCAL CSV FILE", stmt.FromItem);
+        Assert.Contains("LOCAL CSV FILE", stmt.IFromItem);
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -72,7 +72,7 @@ public class ExportImportTest
         var sql = "IMPORT FROM LOCAL CSV FILE 'file.csv'";
         var stmt = (ImportStatement)CCJSqlParserUtil.Parse(sql)!;
         Assert.Null(stmt.Table);
-        Assert.Contains("LOCAL CSV FILE", stmt.FromItem);
+        Assert.Contains("LOCAL CSV FILE", stmt.IFromItem);
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -82,7 +82,7 @@ public class ExportImportTest
         var sql = "IMPORT INTO tableName FROM JDBC DRIVER = 'driverName' AT connectionName STATEMENT 'select 1'";
         var stmt = (ImportStatement)CCJSqlParserUtil.Parse(sql)!;
         Assert.NotNull(stmt.Table);
-        Assert.Contains("JDBC DRIVER", stmt.FromItem);
+        Assert.Contains("JDBC DRIVER", stmt.IFromItem);
         Assert.Equal(sql, stmt.ToString());
     }
 }

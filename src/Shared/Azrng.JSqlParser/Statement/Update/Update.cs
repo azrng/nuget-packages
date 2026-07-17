@@ -23,7 +23,7 @@ public class Update : ASTNodeAccessImpl, Statement
     /// <summary>RETURNING / RETURN 子句，未指定时为 null。</summary>
     public ReturningClause? Returning { get; set; }
 
-    public T Accept<T, S>(StatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
+    public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {

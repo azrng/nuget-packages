@@ -14,7 +14,7 @@ namespace Azrng.JSqlParser.Util;
 /// 内部遍历引擎：把 visitor 的 push 模型桥接为 <see cref="ExpressionExtension.Descendants{T}"/> 所需的拉取式收集。
 /// </summary>
 /// <remarks>
-/// <b>设计要点</b>：本类 <b>直接实现 <see cref="ExpressionVisitor{T}"/> 接口</b>，而非继承
+/// <b>设计要点</b>：本类 <b>直接实现 <see cref="IExpressionVisitor{T}"/> 接口</b>，而非继承
 /// <see cref="ExpressionVisitorAdapter{T}"/>。这样所有节点类型的 Visit 方法都由本类显式实现，
 /// <b>编译器保证完整覆盖</b>——接口将来新增节点类型时，本类若漏实现会编译失败，强制补全，
 /// 杜绝"某类节点静默不进 Descendants 结果"的契约违背。
@@ -24,7 +24,7 @@ namespace Azrng.JSqlParser.Util;
 /// </para>
 /// 不对外公开。对外 C# 风格入口见 <c>Azrng.JSqlParser.ExpressionExtension</c>。
 /// </remarks>
-internal sealed class ExpressionDescendantsWalker : ExpressionVisitor<object?>
+internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
 {
     private readonly Action<JExpression> _onVisit;
 
