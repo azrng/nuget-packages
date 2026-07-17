@@ -262,16 +262,15 @@ public class ValuesTest
         Assert.Equal("VALUES ", values.ToString());
     }
 
-    /// <summary>Values 实现 FromItem 接口的 Alias 读写。</summary>
+    /// <summary>Values 实现 FromItem 接口的 Alias 属性读写。</summary>
     [Fact]
     public void Values_FromItem_AliasGetSet()
     {
         var values = new Values();
-        Assert.Null(values.GetAlias());
+        Assert.Null(values.Alias);
 
         var alias = new Alias("t");
-        values.SetAlias(alias);
-        Assert.Same(alias, values.GetAlias());
+        values.Alias = alias;
         Assert.Same(alias, values.Alias);
     }
 }

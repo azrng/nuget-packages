@@ -13,7 +13,9 @@ public class ParenthesedSelect : ASTNodeAccessImpl, Expression.Expression, FromI
     public Alias? Alias { get; set; }
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => Select.Accept(visitor, context);
+    [Obsolete("改用 " + nameof(Alias) + " 属性")]
     public Alias? GetAlias() => Alias;
+    [Obsolete("改用 " + nameof(Alias) + " 属性")]
     public void SetAlias(Alias alias) { Alias = alias; }
 
     public PlainSelect GetPlainSelect()

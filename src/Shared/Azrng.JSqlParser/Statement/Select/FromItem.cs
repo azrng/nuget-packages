@@ -8,6 +8,6 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public interface FromItem
 {
-    Alias? GetAlias();
-    void SetAlias(Alias alias);
+    /// <summary>FROM 项的别名（AS alias_name），未指定时为 null。</summary>
+    Alias? Alias { get; set; }
 }

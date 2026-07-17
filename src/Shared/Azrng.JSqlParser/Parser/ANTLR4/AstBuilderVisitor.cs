@@ -1097,8 +1097,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var inner = Visit(context.fromItem());
             if (context.alias() != null && inner is FromItem fromItem)
             {
-                fromItem.SetAlias(new Alias(context.alias().identifier().GetText(),
-                    context.alias().AS() != null));
+                fromItem.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
             }
             return inner;
         }
