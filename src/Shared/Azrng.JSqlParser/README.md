@@ -169,6 +169,8 @@ IReadOnlyList<WhereCondition> conds = select.Where!.GetWhereConditions();
 > 三组方法返回的中性 DTO（`TableReference`/`SelectColumn`/`WhereCondition`）只描述 AST 事实，
 > 不含产品业务字段（如虚拟列必填别名校验、列归属启发式、前端契约 DTO）——这些由业务方按需处理。
 > `GetTableReferences` 仅遍历 FROM/JOIN/CTE；需要含 WHERE 子查询的全部表名时用 `GetTableNames`。
+> `GetSelectColumns` 对 UNION/INTERSECT/EXCEPT 集合运算**仅取首个分支的列**（集合运算的输出列由第一个分支决定）；
+> 若需各分支的列，请对 `SetOperationList.Selects` 逐个 `PlainSelect.GetSelectColumns()`。
 
 ### SQL 校验
 
