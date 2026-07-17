@@ -1,4 +1,6 @@
+using Azrng.JSqlParser.Models;
 using Azrng.JSqlParser.Util;
+using Azrng.JSqlParser.Statement.Select;
 
 namespace Azrng.JSqlParser;
 
@@ -8,6 +10,8 @@ namespace Azrng.JSqlParser;
 /// <remarks>
 /// 这些扩展方法是 visitor 体系之上的 C# 风格外壳，用于消除
 /// 「new 一个 visitor、调 Accept 传进去、再从字段掏结果」的 Java 式写法。
+/// 结构化提取（GetTableReferences/GetSelectColumns）返回中性 DTO，
+/// 业务方负责套用自己的产品规则与 DTO 装配。
 /// </remarks>
 public static class StatementExtension
 {
@@ -34,6 +38,58 @@ public static class StatementExtension
         // 返回只读视图，避免调用方误改 finder 内部状态
         return tables;
     }
+
+    /// <summary>
+    /// 提取 SELECT 语句中引用的全部表（含别名映射、全限定名）。
+    /// </summary>
+    /// <remarks>
+    /// 仅遍历 FROM/JOIN/CTE 内的表引用；WHERE 表达式中的子查询表不在范围
+    /// （需要全部表名含 WHERE 子查询时用 <see cref="ExtractTableNames"/>，它遍历所有表达式）。
+    /// </remarks>
+    /// <param name="statement">SQL 语句（仅 SELECT 语句有 FROM 子句，其他语句返回空）。</param>
+    /// <returns>
+    /// 所有出现的表引用（含自连接的多次出现、CTE 内子查询、JOIN 表）。
+    /// 不去重、不做别名优先策略——调用方按 <see cref="TableReference.Key"/> 自行 <c>DistinctBy</c> 或聚合。
+    /// </returns>
+    /// <example>
+    /// <code>
+    /// var refs = stmt.GetTableReferences();
+    /// // SELECT u.id FROM users u JOIN orders o ON ... => [ {Name:users,Alias:u}, {Name:orders,Alias:o} ]
+    /// </code>
+    /// </example>
+    public static IReadOnlyList<TableReference> GetTableReferences(this Statement.Statement statement)
+    {
+        ArgumentNullException.ThrowIfNull(statement);
+        return TableReferencesExtractor.Extract(statement);
+    }
+
+    /// <summary>
+    /// 提取 SELECT 语句的结构化列（区分 * / t.* / 列 / 表达式）。
+    /// </summary>
+    /// <remarks>
+    /// 对 UNION/INTERSECT/EXCEPT 的 <see cref="SetOperationList"/>，仅取首个分支的列
+    /// （对齐"集合运算的输出列由第一个分支决定"语义）。
+    /// 不含虚拟列必填别名校验、来源列推断等产品规则——调用方按 <see cref="SelectColumn.Kind"/> 自行处理。
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var cols = select.GetSelectColumns();
+    /// // SELECT u.id, COUNT(*) AS cnt FROM ... =>
+    /// //   [ {Kind:Column,ColumnName:id}, {Kind:Expression,Alias:cnt} ]
+    /// </code>
+    /// </example>
+    public static IReadOnlyList<SelectColumn> GetSelectColumns(this Select select)
+    {
+        ArgumentNullException.ThrowIfNull(select);
+        var plainSelect = select switch
+        {
+            PlainSelect p => p,
+            SetOperationList setOp => setOp.Selects.Count > 0 ? setOp.Selects[0] as PlainSelect : null,
+            _ => null
+        };
+        return SelectColumnsExtractor.Extract(plainSelect);
+    }
+
 
     /// <summary>
     /// 按深度优先顺序收集语句树中所有类型为 <typeparamref name="TStatement"/> 的语句节点

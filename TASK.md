@@ -8,6 +8,7 @@
 |----|----------|----------|----------|-----------|------|--------|--------------|
 | T107 | Azrng.JSqlParser 支持 @ 命名参数 | 修复 @name 被解析成普通 JDBC 参数导致变量名丢失的问题，补测试并产出新版包 | 阶段 2 | Codex | BLOCKED | P1 | 2026-07-16 |
 | T108 | Azrng.JSqlParser 加 Descendants/Walk 扩展方法消除 visitor 副作用返回 + ARCHITECTURE 同步对照（beta6） | 新增 ExpressionExtension/StatementExtension（Descendants/Walk/ExtractTableNames），内部 walker 引擎不改 AST 与 visitor 接口；ARCHITECTURE 加对照表；补 42 项测试，全量 1399 项通过；版本 beta5→beta6 | 阶段 1 | ZCode | DONE | P1 | 2026-07-16 |
+| T109 | Azrng.JSqlParser 下沉结构化提取（GetTableReferences/GetSelectColumns/GetWhereConditions + 通用 DTO，beta7） | 下沉 LocalSqlParser 纯 AST 提取为库扩展方法 + 中性 DTO（TableReference/SelectColumn/WhereCondition），业务约定与 DTO 装配留业务方；WHERE 递归穿透 Parenthesis（比原逻辑更完整）；补 32 项测试，全量 1431 项通过；版本 beta6→beta7 | 阶段 1 | ZCode | DONE | P1 | 2026-07-17 |
 
 ## 最近完成
 

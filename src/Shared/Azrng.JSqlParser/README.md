@@ -35,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta6" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta7" />
 ```
 
 **依赖项：**
@@ -140,6 +140,34 @@ stmt.Where!.Walk<Column>(c => Console.WriteLine(c.ColumnName));
 
 底层遍历复用已验证的 visitor 递归逻辑；复杂自定义遍历仍可直接实现 visitor 接口（见 ARCHITECTURE.md）。
 
+### 结构化提取（C# 风格）
+
+把常用 AST 提取直接封装成扩展方法，返回中性 DTO，业务方负责套用自己的产品规则与 DTO 装配：
+
+```csharp
+using Azrng.JSqlParser;
+using Azrng.JSqlParser.Models;
+
+var select = (PlainSelect)CCJSqlParserUtil.Parse(
+    "SELECT u.id, COUNT(*) AS cnt FROM users u JOIN orders o ON u.id = o.uid WHERE u.age > 18 AND o.status IN (1, 2)")!;
+
+// 1. 表引用（含别名、全名）——仅 FROM/JOIN/CTE，不含 WHERE 子查询
+IReadOnlyList<TableReference> tables = select.GetTableReferences();
+// => [ {Name:users,Alias:u,Key:u}, {Name:orders,Alias:o,Key:o} ]
+
+// 2. SELECT 列结构化（区分 * / t.* / 列 / 表达式）
+IReadOnlyList<SelectColumn> columns = select.GetSelectColumns();
+// => [ {Kind:Column,ColumnName:id,TableAlias:u}, {Kind:Expression,Alias:cnt} ]
+
+// 3. WHERE 条件拍平（AND/OR 链 → 条件列表）
+IReadOnlyList<WhereCondition> conds = select.Where!.GetWhereConditions();
+// => [ {LinkType:"",Op:">",Left:u.age,Right:18}, {LinkType:"AND",Op:"IN",Left:o.status,Right:(1,2)} ]
+```
+
+> 三组方法返回的中性 DTO（`TableReference`/`SelectColumn`/`WhereCondition`）只描述 AST 事实，
+> 不含产品业务字段（如虚拟列必填别名校验、列归属启发式、前端契约 DTO）——这些由业务方按需处理。
+> `GetTableReferences` 仅遍历 FROM/JOIN/CTE；需要含 WHERE 子查询的全部表名时用 `ExtractTableNames`。
+
 ### SQL 校验
 
 ```csharp
@@ -199,6 +227,16 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta7
+
+结构化提取扩展方法，下沉下游常用的纯 AST 提取。
+
+- **新增扩展方法**：`GetTableReferences()`（FROM/JOIN/CTE 表引用，含别名与全名）、`GetSelectColumns()`（SELECT 列结构化，区分 * / t.* / 列 / 表达式）、`GetWhereConditions()`（WHERE AND/OR 树拍平为条件列表）。
+- **中性 DTO**：新增 `Models/TableReference`、`SelectColumn`、`WhereCondition`，只描述 AST 事实，不含产品业务约定与前端契约字段，业务方自行映射。
+- **边界明确**：业务约定（别名优先、虚拟列必填、单表启发式）与 DTO 装配留业务方；`GetTableReferences` 仅 FROM/JOIN/CTE，含 WHERE 子查询的全部表名仍用 `ExtractTableNames`。
+- **WHERE 增强**：递归穿透 `Parenthesis`（比下游 LocalSqlParser 原逻辑更完整，原逻辑会漏掉括号内复合条件）；`LikeExpression` 作为二元运算符被提取。
+- **测试**：新增 32 项结构化提取测试，全量 1431 项通过。
 
 ### 1.0.0-beta6
 

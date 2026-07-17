@@ -1,3 +1,4 @@
+using Azrng.JSqlParser.Models;
 using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser;
@@ -54,5 +55,26 @@ public static class ExpressionExtension
         ArgumentNullException.ThrowIfNull(action);
         foreach (var node in expression.Descendants<T>())
             action(node);
+    }
+
+    /// <summary>
+    /// 把 WHERE 表达式的 AND/OR 树拍平为条件列表。
+    /// </summary>
+    /// <remarks>
+    /// 仅覆盖 And/Or/Binary/In/Between 五类运算符（与下游常用逻辑一致）。
+    /// 其他运算符（Exists/IsNull/Like 等）不在此结果中；需要时用 <see cref="Descendants{T}"/>。
+    /// 不含列归属反查、参数收集等产品逻辑——业务方按字段自行映射到业务 DTO。
+    /// </remarks>
+    /// <param name="where">WHERE 表达式（通常是 <c>PlainSelect.Where</c>），为 null 时返回空列表。</param>
+    /// <example>
+    /// <code>
+    /// var conds = select.Where!.GetWhereConditions();
+    /// // WHERE a = 1 AND b > 2 =>
+    /// //   [ {LinkType:"",Op:"=",Left:a,Right:1}, {LinkType:"AND",Op:"&gt;",Left:b,Right:2} ]
+    /// </code>
+    /// </example>
+    public static IReadOnlyList<WhereCondition> GetWhereConditions(this Expression.Expression where)
+    {
+        return WhereConditionsExtractor.Extract(where);
     }
 }
