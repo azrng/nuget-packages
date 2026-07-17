@@ -216,6 +216,51 @@ public class ExpressionVisitorAdapter<T> : ExpressionVisitor<T>
         return default!;
     }
 
+    // 以下节点原先由接口 default method 提供递归（批 1 下沉至 Adapter，消除接口/Adapter 双份实现）
+    public virtual T Visit<S>(DateUnitExpression dateUnitExpression, S context) => default!;
+    public virtual T Visit<S>(OracleNamedFunctionParameter oracleNamedFunctionParameter, S context) { oracleNamedFunctionParameter.Expression?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(PostgresNamedFunctionParameter postgresNamedFunctionParameter, S context) { postgresNamedFunctionParameter.Expression?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(OracleHint oracleHint, S context) => default!;
+    public virtual T Visit<S>(TrimFunction trimFunction, S context)
+    {
+        trimFunction.Expression?.Accept(this, context);
+        trimFunction.FromExpression?.Accept(this, context);
+        return default!;
+    }
+    public virtual T Visit<S>(CollateExpression collateExpression, S context) { collateExpression.LeftExpression?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(TimezoneExpression timezoneExpression, S context)
+    {
+        timezoneExpression.LeftExpression?.Accept(this, context);
+        timezoneExpression.TimeZoneExpression?.Accept(this, context);
+        return default!;
+    }
+    public virtual T Visit<S>(NextValExpression nextValExpression, S context) => default!;
+    public virtual T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => default!;
+    public virtual T Visit<S>(ArrayConstructor arrayConstructor, S context)
+    {
+        if (arrayConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in arrayConstructor.Expressions.Expressions) expr.Accept(this, context);
+        }
+        return default!;
+    }
+    public virtual T Visit<S>(ArrayExpression arrayExpression, S context)
+    {
+        arrayExpression.ObjExpression?.Accept(this, context);
+        arrayExpression.IndexExpression?.Accept(this, context);
+        arrayExpression.StartIndexExpression?.Accept(this, context);
+        arrayExpression.StopIndexExpression?.Accept(this, context);
+        return default!;
+    }
+    public virtual T Visit<S>(RowConstructor rowConstructor, S context)
+    {
+        if (rowConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in rowConstructor.Expressions.Expressions) expr.Accept(this, context);
+        }
+        return default!;
+    }
+
     private T VisitBinary<S>(BinaryExpression binary, S context)
     {
         binary.LeftExpression.Accept(this, context);

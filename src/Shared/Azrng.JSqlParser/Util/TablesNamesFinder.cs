@@ -1,4 +1,5 @@
 using Azrng.JSqlParser.Expression;
+using Azrng.JSqlParser.Expression.Cnf;
 using Azrng.JSqlParser.Expression.Operators.Arithmetic;
 using Azrng.JSqlParser.Expression.Operators.Conditional;
 using Azrng.JSqlParser.Expression.Operators.Relational;
@@ -297,6 +298,93 @@ public class TablesNamesFinder : ExpressionVisitor<object?>, Statement.Statement
     {
         // Delegate to StatementVisitor logic to traverse subquery contents
         ((Statement.StatementVisitor<object?>)this).Visit(select, context);
+        return null;
+    }
+
+    // 批 1：以下节点原先由 ExpressionVisitor 接口 default method 提供递归，
+    // 接口下沉为纯契约后，直接实现接口的 TablesNamesFinder 必须显式补全。
+    // 含子表达式的节点递归（防漏子查询/列引用），纯叶子返回 null。
+    public object? Visit<S>(MultiAndExpression multiAndExpression, S context)
+    {
+        foreach (var expr in multiAndExpression.Expressions) expr.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(ExpressionList expressionList, S context)
+    {
+        foreach (var expr in expressionList.Expressions) expr.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(RowGetExpression rowGetExpression, S context)
+    {
+        rowGetExpression.Expression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(KeyExpression keyExpression, S context)
+    {
+        keyExpression.Expression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(DateUnitExpression dateUnitExpression, S context) => null;
+    public object? Visit<S>(OracleNamedFunctionParameter oracleNamedFunctionParameter, S context)
+    {
+        oracleNamedFunctionParameter.Expression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(PostgresNamedFunctionParameter postgresNamedFunctionParameter, S context)
+    {
+        postgresNamedFunctionParameter.Expression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(OracleHint oracleHint, S context) => null;
+    public object? Visit<S>(KeepExpression keepExpression, S context)
+    {
+        if (keepExpression.OrderByElements != null)
+        {
+            foreach (var obe in keepExpression.OrderByElements) obe.Expression?.Accept(this);
+        }
+        return null;
+    }
+    public object? Visit<S>(TrimFunction trimFunction, S context)
+    {
+        trimFunction.Expression?.Accept(this);
+        trimFunction.FromExpression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(CollateExpression collateExpression, S context)
+    {
+        collateExpression.LeftExpression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(TimezoneExpression timezoneExpression, S context)
+    {
+        timezoneExpression.LeftExpression?.Accept(this);
+        timezoneExpression.TimeZoneExpression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(NextValExpression nextValExpression, S context) => null;
+    public object? Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => null;
+    public object? Visit<S>(ArrayConstructor arrayConstructor, S context)
+    {
+        if (arrayConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in arrayConstructor.Expressions.Expressions) expr.Accept(this);
+        }
+        return null;
+    }
+    public object? Visit<S>(ArrayExpression arrayExpression, S context)
+    {
+        arrayExpression.ObjExpression?.Accept(this);
+        arrayExpression.IndexExpression?.Accept(this);
+        arrayExpression.StartIndexExpression?.Accept(this);
+        arrayExpression.StopIndexExpression?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(RowConstructor rowConstructor, S context)
+    {
+        if (rowConstructor.Expressions?.Expressions != null)
+        {
+            foreach (var expr in rowConstructor.Expressions.Expressions) expr.Accept(this);
+        }
         return null;
     }
 

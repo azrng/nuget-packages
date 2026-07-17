@@ -427,7 +427,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 | 日期 | 批次 | 改动摘要 | 影响面 | 验证 |
 |------|------|----------|--------|------|
-| — | — | （尚未开始） | — | — |
+| 2026-07-17 | 批 1（动作 B） | `ExpressionVisitor<T>` 接口的 17 个 default method（含递归逻辑）下沉为纯签名声明；递归实现统一搬到 `ExpressionVisitorAdapter<T>`（补全原先缺失的 12 个边缘节点 override：TrimFunction/CollateExpression/TimezoneExpression/ArrayConstructor/ArrayExpression/RowConstructor/NextValExpression/AnyComparisonExpression/DateUnitExpression/OracleHint/OracleNamedFunctionParameter/PostgresNamedFunctionParameter）；`TablesNamesFinder`（直接实现接口）补全对应 17 个 Visit 方法 + 加 `using Expression.Cnf`。**动作 A（删无 context 重载）未做**：`ValuesSelectVisitorTest` 有测试明确依赖无 context 重载作为公开 API 契约，升级为破坏性变更挪至 2.0 | 库内 3 文件；公开接口行为不变 | 全量 1431 项通过，0 失败 |
 
 ---
 

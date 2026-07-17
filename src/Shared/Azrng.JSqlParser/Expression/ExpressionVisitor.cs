@@ -117,101 +117,24 @@ public interface ExpressionVisitor<T>
     T Visit<S>(Operators.Relational.IsUnknownExpression isUnknownExpression, S context);
     T Visit<S>(Statement.Select.FunctionAllColumns functionAllColumns, S context);
 
-    // Collection expressions (DIM defaults - iterate children)
-    T Visit<S>(MultiAndExpression multiAndExpression, S context)
-    {
-        foreach (var expr in multiAndExpression.Expressions)
-            expr.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(ExpressionList expressionList, S context)
-    {
-        foreach (var expr in expressionList.Expressions)
-            expr.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(RowGetExpression rowGetExpression, S context)
-    {
-        rowGetExpression.Expression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(KeyExpression keyExpression, S context)
-    {
-        keyExpression.Expression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(DateUnitExpression dateUnitExpression, S context) => default!;
-    T Visit<S>(OracleNamedFunctionParameter oracleNamedFunctionParameter, S context)
-    {
-        oracleNamedFunctionParameter.Expression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(PostgresNamedFunctionParameter postgresNamedFunctionParameter, S context)
-    {
-        postgresNamedFunctionParameter.Expression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(OracleHint oracleHint, S context) => default!;
-    T Visit<S>(KeepExpression keepExpression, S context)
-    {
-        if (keepExpression.OrderByElements != null)
-        {
-            foreach (var obe in keepExpression.OrderByElements)
-            {
-                obe.Expression?.Accept(this, context);
-            }
-        }
-        return default!;
-    }
-    T Visit<S>(TrimFunction trimFunction, S context)
-    {
-        trimFunction.Expression?.Accept(this, context);
-        trimFunction.FromExpression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(CollateExpression collateExpression, S context)
-    {
-        collateExpression.LeftExpression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(TimezoneExpression timezoneExpression, S context)
-    {
-        timezoneExpression.LeftExpression?.Accept(this, context);
-        timezoneExpression.TimeZoneExpression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(NextValExpression nextValExpression, S context) => default!;
-    T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => default!;
-    T Visit<S>(ArrayConstructor arrayConstructor, S context)
-    {
-        if (arrayConstructor.Expressions?.Expressions != null)
-        {
-            foreach (var expr in arrayConstructor.Expressions.Expressions)
-            {
-                expr.Accept(this, context);
-            }
-        }
-        return default!;
-    }
-    T Visit<S>(ArrayExpression arrayExpression, S context)
-    {
-        arrayExpression.ObjExpression?.Accept(this, context);
-        arrayExpression.IndexExpression?.Accept(this, context);
-        arrayExpression.StartIndexExpression?.Accept(this, context);
-        arrayExpression.StopIndexExpression?.Accept(this, context);
-        return default!;
-    }
-    T Visit<S>(RowConstructor rowConstructor, S context)
-    {
-        if (rowConstructor.Expressions?.Expressions != null)
-        {
-            foreach (var expr in rowConstructor.Expressions.Expressions)
-            {
-                expr.Accept(this, context);
-            }
-        }
-        return default!;
-    }
+    // Collection / DIM expressions（批 1：接口恢复为纯契约，递归实现下沉到 ExpressionVisitorAdapter<T>）
+    T Visit<S>(MultiAndExpression multiAndExpression, S context);
+    T Visit<S>(ExpressionList expressionList, S context);
+    T Visit<S>(RowGetExpression rowGetExpression, S context);
+    T Visit<S>(KeyExpression keyExpression, S context);
+    T Visit<S>(DateUnitExpression dateUnitExpression, S context);
+    T Visit<S>(OracleNamedFunctionParameter oracleNamedFunctionParameter, S context);
+    T Visit<S>(PostgresNamedFunctionParameter postgresNamedFunctionParameter, S context);
+    T Visit<S>(OracleHint oracleHint, S context);
+    T Visit<S>(KeepExpression keepExpression, S context);
+    T Visit<S>(TrimFunction trimFunction, S context);
+    T Visit<S>(CollateExpression collateExpression, S context);
+    T Visit<S>(TimezoneExpression timezoneExpression, S context);
+    T Visit<S>(NextValExpression nextValExpression, S context);
+    T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context);
+    T Visit<S>(ArrayConstructor arrayConstructor, S context);
+    T Visit<S>(ArrayExpression arrayExpression, S context);
+    T Visit<S>(RowConstructor rowConstructor, S context);
 
     // Convenience overloads (no context)
     void Visit(NullValue nullValue) => Visit<object?>(nullValue, default);
