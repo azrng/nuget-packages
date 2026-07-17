@@ -5083,7 +5083,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // Oracle 老式外连接语法 column(+) — commit 834afe18
         if (context.oracleOuterJoinSuffix() != null)
         {
-            column.OldOracleJoinSyntax = OracleJoinSyntax.OracleJoinRight;
+            column.OldOracleJoinSyntax = OracleJoinSyntax.Right;
         }
         return column;
     }

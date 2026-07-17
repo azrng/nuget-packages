@@ -5,14 +5,19 @@ using Azrng.JSqlParser.Statement;
 namespace Azrng.JSqlParser.Schema;
 
 /// <summary>
-/// Oracle 老式外连接语法（+）的连接方向常量。
+/// Oracle 老式外连接语法（+）的连接方向。
 /// 对齐上游 SupportsOldOracleJoinSyntax，仅保留 Column 实际使用的部分。
 /// </summary>
-public static class OracleJoinSyntax
+public enum OracleJoinSyntax
 {
-    public const int NoOracleJoin = 0;
-    public const int OracleJoinRight = 1;
-    public const int OracleJoinLeft = 2;
+    /// <summary>无外连接标记。</summary>
+    None,
+
+    /// <summary>右侧外连接（列后跟 (+)）。</summary>
+    Right,
+
+    /// <summary>左侧外连接。</summary>
+    Left
 }
 
 /// <summary>
@@ -31,9 +36,9 @@ public class Column : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
 
     /// <summary>
     /// Oracle 老式外连接语法标记：列名后跟(+) 表示该侧为外连接的可选侧。
-    /// 0 = 无外连接标记，1 = ORACLE_JOIN_RIGHT。对齐上游 commit 834afe18。
+    /// 默认 <see cref="OracleJoinSyntax.None"/>。对齐上游 commit 834afe18。
     /// </summary>
-    public int OldOracleJoinSyntax { get; set; } = OracleJoinSyntax.NoOracleJoin;
+    public OracleJoinSyntax OldOracleJoinSyntax { get; set; } = OracleJoinSyntax.None;
 
     /// <summary>列注释文本（COMMENT 'x' 或 /* x */），对齐上游 commentText。未指定时为 null。</summary>
     public string? CommentText { get; set; }
@@ -68,7 +73,7 @@ public class Column : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
     {
         var baseName = GetFullyQualifiedName();
         // Oracle 老式外连接 (+) 后缀
-        if (OldOracleJoinSyntax != OracleJoinSyntax.NoOracleJoin)
+        if (OldOracleJoinSyntax != OracleJoinSyntax.None)
         {
             baseName += "(+)";
         }
