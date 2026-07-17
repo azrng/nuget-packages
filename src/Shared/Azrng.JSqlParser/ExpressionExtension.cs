@@ -61,8 +61,15 @@ public static class ExpressionExtension
     /// 把 WHERE 表达式的 AND/OR 树拍平为条件列表。
     /// </summary>
     /// <remarks>
-    /// 仅覆盖 And/Or/Binary/In/Between 五类运算符（与下游常用逻辑一致）。
-    /// 其他运算符（Exists/IsNull/Like 等）不在此结果中；需要时用 <see cref="Descendants{T}"/>。
+    /// <b>通用化设计</b>，不随运算符枚举膨胀：
+    /// <list type="bullet">
+    /// <item>逻辑连接符（AND/OR/括号）按结构递归。</item>
+    /// <item>所有二元运算符（继承 <c>BinaryExpression</c>，含 =、&gt;、LIKE、!=、加减乘除等）统一提取，
+    /// 新增二元运算符自动覆盖。</item>
+    /// <item>IN/BETWEEN 结构特殊单独处理。</item>
+    /// <item>未匹配的叶子（IS NULL/EXISTS 等单目运算符）兜底提取为单目条件（<c>RightExpression</c> 为 null），
+    /// 不静默丢弃。</item>
+    /// </list>
     /// 不含列归属反查、参数收集等产品逻辑——业务方按字段自行映射到业务 DTO。
     /// </remarks>
     /// <param name="where">WHERE 表达式（通常是 <c>PlainSelect.Where</c>），为 null 时返回空列表。</param>

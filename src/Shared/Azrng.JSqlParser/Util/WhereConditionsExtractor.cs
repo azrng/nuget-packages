@@ -11,8 +11,15 @@ namespace Azrng.JSqlParser.Util;
 /// WHERE 条件结构化提取引擎：把 AND/OR 树拍平为中性 <see cref="WhereCondition"/> 列表。
 /// </summary>
 /// <remarks>
-/// 不对外公开。对应 LocalSqlParser.CollectOperators 的纯 AST 遍历部分，
-/// 仅覆盖 And/Or/Binary/In/Between 五类运算符（与原逻辑一致）。
+/// 不对外公开。<b>通用化设计</b>（方案 B）：
+/// <list type="bullet">
+/// <item>逻辑连接符（And/Or/Parenthesis）按结构递归——结构性判断，永远正确。</item>
+/// <item>所有二元运算符（继承 <see cref="BinaryExpression"/>，含 =、&gt;、LIKE、!=、加减乘除等）统一提取，
+/// 新增二元运算符自动覆盖，无需改库。</item>
+/// <item><see cref="InExpression"/>/<see cref="Between"/> 结构特殊（非二元或需拆解），单独处理。</item>
+/// <item><b>未匹配的叶子（IS NULL/EXISTS/单目运算符）兜底提取</b>为单目条件，Operator 取类型名，
+/// 不再静默丢弃。</item>
+/// </list>
 /// 不含列归属反查、参数收集装配到业务 DTO 的逻辑——业务方按字段自行映射。
 /// </remarks>
 internal static class WhereConditionsExtractor
@@ -31,8 +38,8 @@ internal static class WhereConditionsExtractor
 
         switch (expression)
         {
+            // 逻辑连接符：按结构递归（左子沿用 linkType，右子带连接符）
             case AndExpression and:
-                // 左子沿用当前 linkType（首个条件可能为空），右子带 AND
                 Collect(and.LeftExpression, result, linkType);
                 Collect(and.RightExpression, result, "AND");
                 break;
@@ -42,17 +49,12 @@ internal static class WhereConditionsExtractor
                 Collect(or.RightExpression, result, "OR");
                 break;
 
-            case BinaryExpression binary:
-                result.Add(new WhereCondition
-                {
-                    LinkType = linkType,
-                    LeftExpression = binary.LeftExpression,
-                    RightExpression = binary.RightExpression,
-                    Operator = binary.GetStringExpression(),
-                    SqlInfo = binary.ToString() ?? string.Empty
-                });
+            case Parenthesis parenthesis:
+                // 递归穿透括号：括号只是分组，内部条件仍应被提取
+                Collect(parenthesis.Expression, result, linkType);
                 break;
 
+            // 特殊结构：In（非二元，左右独立字段）/ Between（拆成 [start, end] 两条件）
             case InExpression inExpr:
                 result.Add(new WhereCondition
                 {
@@ -65,7 +67,6 @@ internal static class WhereConditionsExtractor
                 break;
 
             case Between between:
-                // BETWEEN 拆成两个条件：[start, end]，对齐 LocalSqlParser line 183-188
                 result.Add(new WhereCondition
                 {
                     LinkType = linkType,
@@ -84,9 +85,29 @@ internal static class WhereConditionsExtractor
                 });
                 break;
 
-            case Parenthesis parenthesis:
-                // 递归穿透括号：括号只是分组，内部条件仍应被提取（比 LocalSqlParser 原逻辑更完整）
-                Collect(parenthesis.Expression, result, linkType);
+            // 所有二元运算符统一兜底（=、>、<、LIKE、!=、加减乘除、位运算等继承 BinaryExpression 的类型）
+            case BinaryExpression binary:
+                result.Add(new WhereCondition
+                {
+                    LinkType = linkType,
+                    LeftExpression = binary.LeftExpression,
+                    RightExpression = binary.RightExpression,
+                    Operator = binary.GetStringExpression(),
+                    SqlInfo = binary.ToString() ?? string.Empty
+                });
+                break;
+
+            // 兜底：未识别的叶子（IS NULL/EXISTS/单目运算符等）也提取，不静默丢弃。
+            // Operator 取类型名，RightExpression 为 null（单目语义）。
+            default:
+                result.Add(new WhereCondition
+                {
+                    LinkType = linkType,
+                    LeftExpression = expression,
+                    RightExpression = null,
+                    Operator = expression.GetType().Name,
+                    SqlInfo = expression.ToString() ?? string.Empty
+                });
                 break;
         }
     }

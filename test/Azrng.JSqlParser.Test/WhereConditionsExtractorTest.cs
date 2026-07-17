@@ -95,6 +95,36 @@ public class WhereConditionsExtractorTest
     }
 
     [Fact]
+    public void GetWhereConditions_IsNull_ShouldBeExtractedAsUnaryFallback()
+    {
+        // IS NULL 是单目运算符（非 BinaryExpression），走兜底分支：不丢弃，RightExpression 为 null
+        var conds = ParseWhere("SELECT id FROM t WHERE name IS NULL").GetWhereConditions();
+        var cond = Assert.Single(conds);
+        Assert.Null(cond.RightExpression);
+        Assert.Equal("IsNullExpression", cond.Operator);
+        Assert.NotNull(cond.LeftExpression);
+    }
+
+    [Fact]
+    public void GetWhereConditions_Exists_ShouldBeExtractedAsUnaryFallback()
+    {
+        var conds = ParseWhere("SELECT id FROM t WHERE EXISTS (SELECT 1 FROM s)").GetWhereConditions();
+        var cond = Assert.Single(conds);
+        Assert.Null(cond.RightExpression);
+        Assert.Contains("Exists", cond.Operator);
+    }
+
+    [Fact]
+    public void GetWhereConditions_IsNullInAndChain_ShouldNotBeDropped()
+    {
+        // IS NULL 混在 AND 链里，不应被丢弃（此前会静默丢失）
+        var conds = ParseWhere("SELECT id FROM t WHERE a = 1 AND b IS NULL").GetWhereConditions();
+        Assert.Equal(2, conds.Count);
+        Assert.Contains(conds, c => c.Operator == "=");
+        Assert.Contains(conds, c => c.RightExpression == null); // IS NULL 兜底
+    }
+
+    [Fact]
     public void GetWhereConditions_NullExpression_ShouldReturnEmpty()
     {
         JExpression expr = null!;

@@ -35,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta9" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta10" />
 ```
 
 **依赖项：**
@@ -229,6 +229,15 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta10
+
+GetWhereConditions 通用化（方案 B：结构折叠 + 兜底）。
+
+- **二元运算符统一覆盖**：所有继承 `BinaryExpression` 的运算符（=、>、<、LIKE、!=、加减乘除、位运算等）统一提取，新增二元运算符自动覆盖，不再逐个加 case。
+- **未识别叶子兜底提取**：IS NULL/EXISTS 等单目运算符不再静默丢弃，作为单目条件提取（`RightExpression` 为 null，`Operator` 取类型名），不随方言/运算符枚举膨胀。
+- **DTO 语义澄清**：`WhereCondition.RightExpression` 改为可空，单目条件时为 null。
+- **测试**：新增 IS NULL/EXISTS 兜底提取与 AND 链不丢失验证，全量 1436 项通过。
 
 ### 1.0.0-beta9
 
