@@ -35,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta10" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta7" />
 ```
 
 **依赖项：**
@@ -232,40 +232,25 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
-### 1.0.0-beta10
-
-GetWhereConditions 通用化（方案 B：结构折叠 + 兜底）。
-
-- **二元运算符统一覆盖**：所有继承 `BinaryExpression` 的运算符（=、>、<、LIKE、!=、加减乘除、位运算等）统一提取，新增二元运算符自动覆盖，不再逐个加 case。
-- **未识别叶子兜底提取**：IS NULL/EXISTS 等单目运算符不再静默丢弃，作为单目条件提取（`RightExpression` 为 null，`Operator` 取类型名），不随方言/运算符枚举膨胀。
-- **DTO 语义澄清**：`WhereCondition.RightExpression` 改为可空，单目条件时为 null。
-- **测试**：新增 IS NULL/EXISTS 兜底提取与 AND 链不丢失验证，全量 1436 项通过。
-
-### 1.0.0-beta9
-
-Descendants 覆盖完整性修复。
-
-- **根因修复**：`ExpressionDescendantsWalker` 此前继承 `ExpressionVisitorAdapter`，对约 12 个仅有接口默认实现的节点类型（TrimFunction/CollateExpression/ArrayConstructor 等）静默漏覆盖——`Descendants<TrimFunction>` 会错误返回空。
-- **编译期保证**：walker 改为直接实现 `ExpressionVisitor<T>` 接口，所有节点类型的 Visit 方法显式实现；上游新增节点类型时若漏实现会编译失败，强制补全，杜绝静默漏覆盖。
-- **回归测试**：新增 TrimFunction/CollateExpression 收集验证，全量 1433 项通过。
-
-### 1.0.0-beta8
-
-API 命名收敛：表名提取动词统一为 `Get`。
-
-- **改名**：`ExtractTableNames` → `GetTableNames`，与 `GetTableReferences`/`GetSelectColumns`/`GetWhereConditions` 动词一致，消除"Extract 与 Get 并存"的分裂困惑。
-- **向后兼容**：旧 `ExtractTableNames` 保留为 `[Obsolete]` 转发，存量代码零破坏。
-- **文档同步**：README/ARCHITECTURE 当前描述统一为 `GetTableNames`；版本历史段落保留对各版本当时状态的真实记录。
-
 ### 1.0.0-beta7
 
-结构化提取扩展方法，下沉下游常用的纯 AST 提取。
+结构化提取扩展方法 + 中性 DTO，并经一轮库内审查整改（API 命名收敛、Descendants 覆盖完整性、WHERE 通用化）。
 
-- **新增扩展方法**：`GetTableReferences()`（FROM/JOIN/CTE 表引用，含别名与全名）、`GetSelectColumns()`（SELECT 列结构化，区分 * / t.* / 列 / 表达式）、`GetWhereConditions()`（WHERE AND/OR 树拍平为条件列表）。
-- **中性 DTO**：新增 `Models/TableReference`、`SelectColumn`、`WhereCondition`，只描述 AST 事实，不含产品业务约定与前端契约字段，业务方自行映射。
-- **边界明确**：业务约定（别名优先、虚拟列必填、单表启发式）与 DTO 装配留业务方；`GetTableReferences` 仅 FROM/JOIN/CTE，含 WHERE 子查询的全部表名仍用 `ExtractTableNames`。
-- **WHERE 增强**：递归穿透 `Parenthesis`（比下游 LocalSqlParser 原逻辑更完整，原逻辑会漏掉括号内复合条件）；`LikeExpression` 作为二元运算符被提取。
-- **测试**：新增 32 项结构化提取测试，全量 1431 项通过。
+**新增扩展方法**（C# 风格，替代 visitor 副作用写法）：
+- `GetTableReferences()` — FROM/JOIN/CTE 表引用（含别名与全名），返回中性 `TableReference`
+- `GetSelectColumns()` — SELECT 列结构化，区分 * / t.* / 列 / 表达式，返回中性 `SelectColumn`
+- `GetWhereConditions()` — WHERE AND/OR 树拍平为条件列表，返回中性 `WhereCondition`
+- `GetTableNames()` — 全部表名（含 WHERE 子查询）；旧 `ExtractTableNames` 标 `[Obsolete]` 转发
+
+**审查整改**（beta7 合并内容）：
+- **命名收敛**：`ExtractTableNames` → `GetTableNames`，动词统一 `Get`，旧名保留转发。
+- **Descendants 覆盖完整性**：`ExpressionDescendantsWalker` 改为直接实现 `ExpressionVisitor<T>` 接口，编译期强制覆盖所有节点类型，杜绝约 12 个边缘类型（TrimFunction/CollateExpression/ArrayConstructor 等）静默漏覆盖。
+- **WHERE 通用化**：二元运算符（继承 `BinaryExpression`）统一提取、新增自动覆盖；未识别单目运算符（IS NULL/EXISTS）兜底提取不丢弃。`WhereCondition.RightExpression` 改可空。
+- **集合运算语义**：`GetSelectColumns` 对 UNION/INTERSECT/EXCEPT 按首个分支取列（文档明确）。
+
+**边界**：业务约定（别名优先、虚拟列必填、单表启发式）与前端契约 DTO 装配留业务方，库只提供中性 DTO。
+
+**测试**：新增结构化提取 + 整改回归共 60+ 项，全量 1438 项通过。
 
 ### 1.0.0-beta6
 
