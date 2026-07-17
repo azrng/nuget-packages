@@ -23,7 +23,7 @@
 > 「C# 风格遍历（推荐）」中的 `Descendants`/`GetTableNames` 是日常推荐使用的 LINQ 式封装。
 > 日常收集/遍历需求请优先用扩展方法，避免「new visitor + Accept + 掏字段」的副作用式写法。
 >
-> **完整的"上游 Java → C#"API 对照**见 [MIGRATION.md](./MIGRATION.md)，涵盖解析入口、遍历收集、
+> **完整的"上游 Java → C#"API 对照**见 [MIGRATION.md](https://github.com/azrng/nuget-packages/blob/master/src/Shared/Azrng.JSqlParser/MIGRATION.md)，涵盖解析入口、遍历收集、
 > 结构化提取、visitor 体系、类名差异。后续从上游同步新功能或改造旧 visitor 代码时，按该文档对照定位。
 
 ### C# 风格遍历（推荐）

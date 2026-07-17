@@ -4,8 +4,8 @@
 
 将 SQL 解析为强类型 AST，支持 Visitor 模式遍历、表名提取、CNF 转换、SQL 校验以及 AST 反序列化为 SQL 文本。
 
-> 从 JSqlParser（Java 上游）迁移、或改造旧 visitor 写法？见 [MIGRATION.md](./MIGRATION.md)（上游 → C# API 对照）。
-> 架构与 visitor 体系说明见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
+> 从 JSqlParser（Java 上游）迁移、或改造旧 visitor 写法？见 [MIGRATION.md](https://github.com/azrng/nuget-packages/blob/master/src/Shared/Azrng.JSqlParser/MIGRATION.md)（上游 → C# API 对照）。
+> 架构与 visitor 体系说明见 [ARCHITECTURE.md](https://github.com/azrng/nuget-packages/blob/master/src/Shared/Azrng.JSqlParser/ARCHITECTURE.md)。
 
 ## 快速开始
 
