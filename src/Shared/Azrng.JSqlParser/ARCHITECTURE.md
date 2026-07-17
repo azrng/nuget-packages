@@ -50,8 +50,9 @@ var tables = stmt.GetTableNames();
 ```
 
 > **上游同步说明**：`Descendants`/`Walk`/`GetTableNames` 是 Azrng 自有封装，JSqlParser 上游无对应物。
-> 与上游同步时，**只需对照 visitor 接口签名与 AST 节点结构**；扩展方法无需对照，新增节点类型时
-> 内部 walker 若漏覆盖某节点（参见 `ExpressionDescendantsWalker` 末尾注释），其子节点仍会被递归收集。
+> 与上游同步时，**只需对照 visitor 接口签名与 AST 节点结构**；扩展方法无需对照。
+> `ExpressionDescendantsWalker` 直接实现 `ExpressionVisitor<T>` 接口，**编译期保证完整覆盖**所有节点类型——
+> 上游新增节点类型时若 walker 漏实现会编译失败，强制补全，杜绝"某类节点静默不进 Descendants 结果"。
 
 ### 底层 Visitor 接口（复杂自定义遍历 / 上游对照）
 

@@ -35,7 +35,7 @@ Console.WriteLine(stmt.ToString());
 
 ```xml
 
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta8" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta9" />
 ```
 
 **依赖项：**
@@ -229,6 +229,14 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta9
+
+Descendants 覆盖完整性修复。
+
+- **根因修复**：`ExpressionDescendantsWalker` 此前继承 `ExpressionVisitorAdapter`，对约 12 个仅有接口默认实现的节点类型（TrimFunction/CollateExpression/ArrayConstructor 等）静默漏覆盖——`Descendants<TrimFunction>` 会错误返回空。
+- **编译期保证**：walker 改为直接实现 `ExpressionVisitor<T>` 接口，所有节点类型的 Visit 方法显式实现；上游新增节点类型时若漏实现会编译失败，强制补全，杜绝静默漏覆盖。
+- **回归测试**：新增 TrimFunction/CollateExpression 收集验证，全量 1433 项通过。
 
 ### 1.0.0-beta8
 

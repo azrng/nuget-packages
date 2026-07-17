@@ -240,6 +240,26 @@ public class ExpressionExtensionTest
         Assert.Throws<ArgumentNullException>(() => where.Walk<Column>(null!));
     }
 
+    // ---------- 此前漏覆盖的节点类型（隐患2 修复回归）----------
+
+    [Fact]
+    public void Descendants_OfTrimFunction_ShouldBeCollected()
+    {
+        // TrimFunction 此前仅接口默认实现、Adapter 未 override，Descendants<TrimFunction> 静默返回空。
+        // walker 改为直接实现接口后，应能收集到。
+        var where = ParseWhere("SELECT id FROM t WHERE TRIM(a) = 'x'");
+        var trims = where.Descendants<TrimFunction>().ToList();
+        Assert.Single(trims);
+    }
+
+    [Fact]
+    public void Descendants_OfCollateExpression_ShouldBeCollected()
+    {
+        var where = ParseWhere("SELECT id FROM t WHERE a COLLATE utf8_bin = 'x'");
+        var collates = where.Descendants<CollateExpression>().ToList();
+        Assert.Single(collates);
+    }
+
     // ---------- 旧式 visitor（仅用于等价验证对照，非推荐写法）----------
 
     private sealed class LegacyColumnCollector : ExpressionVisitorAdapter<object?>
