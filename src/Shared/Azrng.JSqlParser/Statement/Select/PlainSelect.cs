@@ -124,13 +124,4 @@ public class PlainSelect : Select
         if (orderByElements == null || orderByElements.Count == 0) return "";
         return " ORDER BY " + string.Join(", ", orderByElements);
     }
-
-    public static string GetStringList<T>(IEnumerable<T> list, bool useComma = true, bool useBrackets = false)
-    {
-        if (list == null) return "";
-        var items = list.Select(x => x?.ToString() ?? "");
-        var result = useComma ? string.Join(", ", items) : string.Join(" ", items);
-        if (useBrackets) result = $"({result})";
-        return result;
-    }
 }

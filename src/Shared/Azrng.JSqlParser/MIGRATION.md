@@ -428,6 +428,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 日期 | 批次 | 改动摘要 | 影响面 | 验证 |
 |------|------|----------|--------|------|
 | 2026-07-17 | 批 1（动作 B） | `ExpressionVisitor<T>` 接口的 17 个 default method（含递归逻辑）下沉为纯签名声明；递归实现统一搬到 `ExpressionVisitorAdapter<T>`（补全原先缺失的 12 个边缘节点 override：TrimFunction/CollateExpression/TimezoneExpression/ArrayConstructor/ArrayExpression/RowConstructor/NextValExpression/AnyComparisonExpression/DateUnitExpression/OracleHint/OracleNamedFunctionParameter/PostgresNamedFunctionParameter）；`TablesNamesFinder`（直接实现接口）补全对应 17 个 Visit 方法 + 加 `using Expression.Cnf`。**动作 A（删无 context 重载）未做**：`ValuesSelectVisitorTest` 有测试明确依赖无 context 重载作为公开 API 契约，升级为破坏性变更挪至 2.0 | 库内 3 文件；公开接口行为不变 | 全量 1431 项通过，0 失败 |
+| 2026-07-17 | 批 2 | 删除 `ForUpdateClause` 的 5 个 builder 方法（SetMode/SetTables/SetWait/SetNoWait/SetSkipLocked），`Select.GetForUpdate()` 改对象初始化器；`ForUpdateClause.GetFirstTable()` → `FirstTable` 属性（旧名标 Obsolete 转发）；`Select.GetForUpdateTable()` → `ForUpdateTable` 属性（旧名标 Obsolete 转发）；`Validation.GetParsedStatements()/GetErrors()` → `ParsedStatements`/`Errors` 属性（旧名标 Obsolete 转发，`Errors` 返回类型升为 `IReadOnlyList`）；删除零调用的死代码 `PlainSelect.GetStringList<T>()`；测试同步改用新属性。**`GetAlias()/SetAlias()` 暂未改**：属 `FromItem` 接口契约，多实现类，单独评估 | 库内 4 文件 + 测试 1 文件；旧 API 全部保留 Obsolete 转发，无破坏性 | 全量 1431 项通过，0 失败 |
 
 ---
 

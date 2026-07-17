@@ -48,9 +48,13 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
 
     public T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
-    /// <summary>返回 OF 子句的第一个表，未指定时为 null（兼容旧 API）。</summary>
-    public Table? GetForUpdateTable() =>
+    /// <summary>返回 OF 子句的第一个表，未指定时为 null。</summary>
+    public Table? ForUpdateTable =>
         (ForUpdateTables != null && ForUpdateTables.Count > 0) ? ForUpdateTables[0] : null;
+
+    /// <summary>返回 OF 子句的第一个表，未指定时为 null（兼容旧 API）。</summary>
+    [Obsolete("改用 " + nameof(ForUpdateTable) + " 属性")]
+    public Table? GetForUpdateTable() => ForUpdateTable;
 
     /// <summary>
     /// 根据当前 FOR UPDATE 字段组装并返回 <see cref="ForUpdateClause"/> 视图。
@@ -59,12 +63,14 @@ public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expressi
     public ForUpdateClause? GetForUpdate()
     {
         if (ForMode == null) return null;
-        return new ForUpdateClause()
-            .SetMode(ForMode)
-            .SetTables(ForUpdateTables)
-            .SetWait(Wait)
-            .SetNoWait(NoWait)
-            .SetSkipLocked(SkipLocked);
+        return new ForUpdateClause
+        {
+            Mode = ForMode,
+            Tables = ForUpdateTables,
+            Wait = Wait,
+            NoWait = NoWait,
+            SkipLocked = SkipLocked
+        };
     }
 
     public abstract StringBuilder AppendSelectBodyTo(StringBuilder builder);

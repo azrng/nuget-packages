@@ -57,22 +57,22 @@ public class ValidationTest
     }
 
     [Fact]
-    public void Validation_GetParsedStatements_ShouldReturnStatements()
+    public void Validation_ParsedStatements_ShouldReturnStatements()
     {
         var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
         var validation = new Validation(capabilities, "SELECT id FROM users");
         validation.Validate();
-        Assert.NotNull(validation.GetParsedStatements());
+        Assert.NotNull(validation.ParsedStatements);
     }
 
     [Fact]
-    public void Validation_GetErrors_ShouldReturnEmptyList()
+    public void Validation_Errors_ShouldReturnEmptyList()
     {
         var capabilities = new List<FeaturesAllowed> { FeaturesAllowed.SELECT };
         var validation = new Validation(capabilities, "SELECT id FROM users");
         validation.Validate();
-        Assert.NotNull(validation.GetErrors());
-        Assert.Empty(validation.GetErrors());
+        Assert.NotNull(validation.Errors);
+        Assert.Empty(validation.Errors);
     }
 
     #endregion

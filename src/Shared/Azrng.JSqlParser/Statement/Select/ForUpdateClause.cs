@@ -37,38 +37,12 @@ public class ForUpdateClause
     /// <summary>是否指定 SKIP LOCKED。</summary>
     public bool SkipLocked { get; set; }
 
-    public ForUpdateClause SetMode(ForMode? mode)
-    {
-        Mode = mode;
-        return this;
-    }
-
-    public ForUpdateClause SetTables(List<Table>? tables)
-    {
-        Tables = tables;
-        return this;
-    }
-
-    public ForUpdateClause SetWait(Wait? wait)
-    {
-        Wait = wait;
-        return this;
-    }
-
-    public ForUpdateClause SetNoWait(bool noWait)
-    {
-        NoWait = noWait;
-        return this;
-    }
-
-    public ForUpdateClause SetSkipLocked(bool skipLocked)
-    {
-        SkipLocked = skipLocked;
-        return this;
-    }
+    /// <summary>返回 OF 子句中的第一个表，未指定时为 null。</summary>
+    public Table? FirstTable => (Tables != null && Tables.Count > 0) ? Tables[0] : null;
 
     /// <summary>返回 OF 子句中的第一个表，未指定时为 null。</summary>
-    public Table? GetFirstTable() => (Tables != null && Tables.Count > 0) ? Tables[0] : null;
+    [Obsolete("改用 " + nameof(FirstTable) + " 属性")]
+    public Table? GetFirstTable() => FirstTable;
 
     /// <summary>当 Mode 为 UPDATE 时返回 true。</summary>
     public bool IsForUpdate() => Mode == ForMode.UPDATE;
