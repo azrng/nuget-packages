@@ -104,6 +104,35 @@ public class ExpressionExtensionTest
         Assert.Contains(all, n => n is Column);
     }
 
+    [Fact]
+    public void Descendants_ComplexWhere_ShouldCollectAllNodeKinds()
+    {
+        // 一棵覆盖算术/逻辑/比较/函数/CASE/IN/BETWEEN/括号/Cast 的复杂 WHERE，验证 walker 递归完整性
+        var where = ParseWhere(
+            "SELECT id FROM t WHERE (a + 1 > b AND UPPER(c) LIKE 'x%') OR " +
+            "d IN (1, 2) OR e BETWEEN 1 AND 10 OR CASE WHEN f IS NULL THEN 0 ELSE 1 END = 1 OR CAST(g AS INT) > 0");
+        var all = where.Descendants().ToList();
+
+        // 各类节点都应被收集到（任一缺失说明 walker 漏递归该分支）
+        Assert.Contains(all, n => n is Azrng.JSqlParser.Expression.Operators.Relational.GreaterThan);     // 算术比较
+        Assert.Contains(all, n => n is Azrng.JSqlParser.Expression.Operators.Arithmetic.Addition);        // 算术
+        Assert.Contains(all, n => n is Azrng.JSqlParser.Expression.Operators.Conditional.AndExpression);  // 逻辑
+        Assert.Contains(all, n => n is Function);                             // 函数 UPPER
+        Assert.Contains(all, n => n is Column);                              // 列 a/b/c/...
+        Assert.Contains(all, n => n is LongValue);                           // 字面量
+    }
+
+    [Fact]
+    public void Descendants_ComplexWhere_ShouldCollectExpectedColumns()
+    {
+        // 同一棵复杂树，验证列 a~g 全部收集到（任一丢失说明递归在某分支中断）
+        var where = ParseWhere(
+            "SELECT id FROM t WHERE (a + 1 > b AND UPPER(c) LIKE 'x%') OR " +
+            "d IN (1, 2) OR e BETWEEN 1 AND 10 OR CASE WHEN f IS NULL THEN 0 ELSE 1 END = 1 OR CAST(g AS INT) > 0");
+        var columns = where.Descendants<Column>().Select(c => c.ColumnName).OrderBy(n => n).ToList();
+        Assert.Equal(new[] { "a", "b", "c", "d", "e", "f", "g" }, columns);
+    }
+
     // ---------- Walk<T>：推送委托 ----------
 
     [Fact]
