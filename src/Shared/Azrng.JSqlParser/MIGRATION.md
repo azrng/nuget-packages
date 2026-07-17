@@ -399,6 +399,8 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | `Function.Name` | `= ""` | `required` |
 
 > **风险**：上游 Java 用无参构造 + setter，`AstBuilderVisitor` 接线大量依赖 `new X()` 后逐字段赋值。改 `required`/构造注入需同步改 visitor 接线，工作量大，建议放在专门迭代。
+>
+> **批 8 评估结论（2026-07-18，暂缓）**：经盘点，全库 61 个 `null!` 字段分布在 50 个文件，核心是 `Expression` 类型字段（约 35 个）。激进改造（`required`）会破坏 `AstBuilderVisitor` 普遍的 `new X()` 无参构造 + 条件逐字段赋值模式（如 `var paren = new Parenthesis(); if (...) paren.Expression = ...`），需重写 visitor 接线，与上游 Java 对照模式冲突最大。保守改造（逐字段判可空性改 `?`）需逐一核实字段语义，收益有限。**关键事实**：`null!` 不影响运行时行为（仅骗编译器关 NRT 警告），全量 1433 测试通过已证明运行正确。按「不为个人偏好过度优化、最小扰动」原则，批 8 整体暂缓，列为已知技术债，待 visitor 接线模式重构时一并处理。
 
 ---
 
@@ -415,7 +417,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 5** | `[NonSerialized]` 删除；`JjtGet*Token` → `Get*Token` | 中 | `[锚]` 需跑 round-trip 测试 | ✅ 已完成 |
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
-| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 留 2.0 |
+| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 暂缓（2026-07-18 评估：见第十四章结论，运行时无 bug，激进改造与上游对照模式冲突） |
 | **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 
