@@ -8,5 +8,5 @@ public class SimilarToExpression : BinaryExpression
     public bool Not { get; set; }
 
     public override T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
-    public override string GetStringExpression() => Not ? "NOT SIMILAR TO" : "SIMILAR TO";
+    public override string OperatorSymbol => Not ? "NOT SIMILAR TO" : "SIMILAR TO";
 }

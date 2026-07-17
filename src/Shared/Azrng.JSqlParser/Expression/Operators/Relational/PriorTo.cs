@@ -16,7 +16,7 @@ public class PriorTo : BinaryExpression
         RightExpression = rightExpression;
     }
 
-    public override string GetStringExpression() => "PRIOR TO";
+    public override string OperatorSymbol => "PRIOR TO";
 
     public override T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 }

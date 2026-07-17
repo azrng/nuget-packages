@@ -8,10 +8,12 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public abstract class ComparisonOperator : BinaryExpression
 {
+    /// <summary>比较运算符文本（如 "="、"&lt;&gt;"）。</summary>
     public string Operator { get; set; } = "";
 
     protected ComparisonOperator() { }
     protected ComparisonOperator(string op) => Operator = op;
 
-    public override string GetStringExpression() => Operator;
+    /// <summary>运算符符号，取自 <see cref="Operator"/> 字段。</summary>
+    public override string OperatorSymbol => Operator;
 }

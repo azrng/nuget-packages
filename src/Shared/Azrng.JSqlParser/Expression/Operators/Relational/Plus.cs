@@ -16,7 +16,7 @@ public class Plus : BinaryExpression
         RightExpression = rightExpression;
     }
 
-    public override string GetStringExpression() => "PLUS";
+    public override string OperatorSymbol => "PLUS";
 
     public override T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 }

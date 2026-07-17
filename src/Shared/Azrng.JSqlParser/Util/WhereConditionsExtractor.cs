@@ -92,7 +92,7 @@ internal static class WhereConditionsExtractor
                     LinkType = linkType,
                     LeftExpression = binary.LeftExpression,
                     RightExpression = binary.RightExpression,
-                    Operator = binary.GetStringExpression(),
+                    Operator = binary.OperatorSymbol,
                     SqlInfo = binary.ToString() ?? string.Empty
                 });
                 break;

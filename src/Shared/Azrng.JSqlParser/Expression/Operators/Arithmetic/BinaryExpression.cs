@@ -13,9 +13,15 @@ public abstract class BinaryExpression : ASTNodeAccessImpl, Expression
 
     public abstract T Accept<T, S>(ExpressionVisitor<T> visitor, S context);
 
-    protected string StringExpression => $"{LeftExpression} {GetStringExpression()} {RightExpression}";
+    /// <summary>运算符符号（如 "+"、"AND"），由子类重写。</summary>
+    public abstract string OperatorSymbol { get; }
 
-    public abstract string GetStringExpression();
+    /// <summary>拼接好的运算表达式文本：左 操作符 右。</summary>
+    protected string OperatorExpressionText => $"{LeftExpression} {OperatorSymbol} {RightExpression}";
 
-    public override string ToString() => StringExpression;
+    /// <summary>返回运算符符号（兼容旧 API，改用 <see cref="OperatorSymbol"/> 属性）。</summary>
+    [Obsolete("改用 OperatorSymbol 属性")]
+    public string GetStringExpression() => OperatorSymbol;
+
+    public override string ToString() => OperatorExpressionText;
 }

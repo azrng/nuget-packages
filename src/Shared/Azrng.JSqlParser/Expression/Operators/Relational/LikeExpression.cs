@@ -8,5 +8,5 @@ public class LikeExpression : BinaryExpression
     public bool Not { get; set; }
 
     public override T Accept<T, S>(ExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
-    public override string GetStringExpression() => Not ? "NOT LIKE" : "LIKE";
+    public override string OperatorSymbol => Not ? "NOT LIKE" : "LIKE";
 }

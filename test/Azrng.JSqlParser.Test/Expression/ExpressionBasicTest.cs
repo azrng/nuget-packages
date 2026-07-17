@@ -645,19 +645,19 @@ public class ExpressionBasicTest
     #region BinaryExpression 通用属性
 
     [Fact]
-    public void BinaryExpression_StringExpression_ShouldBeEquals()
+    public void BinaryExpression_OperatorSymbol_ShouldBeEquals()
     {
         var expr = (Azrng.JSqlParser.Expression.Operators.Arithmetic.BinaryExpression)
             CCJSqlParserUtil.ParseCondExpression("id = 1")!;
-        Assert.Equal("=", expr.GetStringExpression());
+        Assert.Equal("=", expr.OperatorSymbol);
     }
 
     [Fact]
-    public void BinaryExpression_StringExpression_ShouldBeGreaterThan()
+    public void BinaryExpression_OperatorSymbol_ShouldBeGreaterThan()
     {
         var expr = (Azrng.JSqlParser.Expression.Operators.Arithmetic.BinaryExpression)
             CCJSqlParserUtil.ParseCondExpression("id > 1")!;
-        Assert.Equal(">", expr.GetStringExpression());
+        Assert.Equal(">", expr.OperatorSymbol);
     }
 
     #endregion
