@@ -32,9 +32,22 @@ public class JoinMultiOnTest
     }
 
     [Fact]
+    public void Join_MultiOn_Parsed_ShouldCollectAllOnExpressions()
+    {
+        // grammar 现已支持 JOIN 多 ON（JOIN t ON a ON b），对齐上游 jjt:5995 ( <K_ON> expr )*。
+        // 此前 grammar 仅单 ON，OnExpressions 列表形同虚设。
+        var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN t2 ON a = b ON c = d");
+        var plainSelect = Assert.IsType<PlainSelect>(stmt);
+        var join = Assert.Single(plainSelect.Joins!);
+
+        Assert.Equal(2, join.OnExpressions.Count);
+        Assert.Contains("ON a = b ON c = d", stmt.ToString()!);
+    }
+
+    [Fact]
     public void Join_OnExpressions_ProgrammaticMultipleOn_ShouldSerialize()
     {
-        // grammar 仅支持单 ON，但 OnExpressions 列表 API 支持程序化构造多 ON
+        // 程序化构造多 ON 仍可序列化（与上一测试互补：覆盖无源 SQL 的纯 API 场景）
         var stmt = SqlParser.Parse("SELECT * FROM t1 JOIN t2 ON a = b");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
         var join = plainSelect.Joins![0];

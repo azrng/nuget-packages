@@ -415,7 +415,7 @@ joinType
     ;
 
 joinCondition
-    : ON expression
+    : ON expression (ON expression)*
     | USING OPENING_PAREN identifierList CLOSING_PAREN
     ;
 

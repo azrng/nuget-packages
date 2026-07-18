@@ -84,7 +84,15 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, IExpression
     {
         if (WithItemsList != null && WithItemsList.Count > 0)
         {
+            // RECURSIVE 关键字只输出一次（紧跟 WITH 之后），SQL 标准：WITH RECURSIVE a, b。
+            // 任一 WithItem.Recursive=true 即视为整体递归（对齐上游 WithItem.recursive 字段语义）。
+            bool anyRecursive = false;
+            foreach (var w in WithItemsList)
+            {
+                if (w.Recursive) { anyRecursive = true; break; }
+            }
             builder.Append("WITH ");
+            if (anyRecursive) builder.Append("RECURSIVE ");
             for (int i = 0; i < WithItemsList.Count; i++)
             {
                 if (i > 0) builder.Append(", ");

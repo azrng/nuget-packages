@@ -46,7 +46,8 @@ public class WithItem : Select
             return builder;
         }
 
-        builder.Append(Recursive ? "RECURSIVE " : "");
+        // 注意：RECURSIVE 关键字不在单个 WithItem 上输出，而是由 Select.AppendTo
+        // 在 WITH 关键字后整体输出一次（SQL 标准：WITH RECURSIVE a, b）。
         if (Alias != null) builder.Append(Alias.Name);
         if (WithItemList != null && WithItemList.Count > 0)
         {

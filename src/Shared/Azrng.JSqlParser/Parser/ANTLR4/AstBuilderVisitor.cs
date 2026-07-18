@@ -279,9 +279,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitWithClause(JSqlParserGrammar.WithClauseContext context)
     {
         var items = new List<WithItem>();
+        // Azrng grammar 把 RECURSIVE 放在 withClause 级别（WITH RECURSIVE a, b），
+        // 而上游 jjt 放在每个 WithItem 内。对齐上游存储模型：赋给每个 WithItem.Recursive，
+        // 输出时只在 WITH 关键字后输出一次 RECURSIVE（见 Select.AppendTo）。
+        bool recursive = context.RECURSIVE() != null;
         foreach (var withItemCtx in context.withItem())
         {
-            items.Add((WithItem)Visit(withItemCtx));
+            var item = (WithItem)Visit(withItemCtx);
+            if (recursive) item.Recursive = true;
+            items.Add(item);
         }
         return items;
     }
@@ -995,9 +1001,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.joinCondition() != null)
         {
             var cond = context.joinCondition();
-            if (cond.ON() != null)
+            if (cond.ON().Length > 0)
             {
-                join.OnExpressions.Add((Expression.IExpression)Visit(cond.expression()));
+                // 支持 JOIN 多 ON（JOIN t ON a ON b），对齐上游 jjt:5995 ( <K_ON> expr )*。
+                // 此前 grammar 只允许单个 ON，导致 OnExpressions 列表形同虚设。
+                foreach (var onExpr in cond.expression())
+                {
+                    join.OnExpressions.Add((Expression.IExpression)Visit(onExpr));
+                }
             }
             else if (cond.USING() != null)
             {
@@ -1401,6 +1412,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             AscDescPresent = context.ASC() != null || context.DESC() != null
         };
         item.CollateName = collateName;
+
+        // NULLS FIRST/LAST：grammar 已解析（orderByItem: ... (NULLS (FIRST|LAST))?），赋给 NullOrder。
+        // 此前未读 context.NULLS()，导致 round-trip 丢失 NULLS 子句。
+        if (context.NULLS() != null)
+        {
+            item.NullOrder = context.FIRST() != null
+                ? OrderByElement.NullOrdering.NULLS_FIRST
+                : OrderByElement.NullOrdering.NULLS_LAST;
+        }
+
         return item;
     }
 
@@ -4897,7 +4918,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var allExprs = context.expression();
             for (int i = 1; i < allExprs.Length; i++)
             {
-                func.AdditionalQueryPathArguments.Add(((Expression.IExpression)Visit(allExprs[i])).ToString());
+                var pathExpression = (Expression.IExpression?)Visit(allExprs[i]);
+                func.AdditionalQueryPathArguments.Add(pathExpression?.ToString() ?? string.Empty);
             }
         }
         return func;
@@ -5392,8 +5414,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.joinCondition() != null)
         {
             var condCtx = context.joinCondition();
-            if (condCtx.ON() != null)
-                join.OnExpressions.Add((Expression.IExpression)Visit(condCtx.expression()));
+            if (condCtx.ON().Length > 0)
+            {
+                // 与 VisitJoinClause 同步：JOIN 多 ON 收集到 OnExpressions 列表
+                foreach (var onExpr in condCtx.expression())
+                {
+                    join.OnExpressions.Add((Expression.IExpression)Visit(onExpr));
+                }
+            }
             else if (condCtx.USING() != null)
                 join.UsingColumns = condCtx.identifierList().identifier()
                     .Select(id => new Column { ColumnName = id.GetText() }).ToList();
