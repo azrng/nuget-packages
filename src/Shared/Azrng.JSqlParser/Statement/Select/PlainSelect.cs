@@ -1,5 +1,6 @@
 using System.Text;
 using Azrng.JSqlParser.Expression;
+using Azrng.JSqlParser.Schema;
 
 namespace Azrng.JSqlParser.Statement.Select;
 
@@ -68,6 +69,19 @@ public class PlainSelect : Select
     /// <summary>Oracle 层次查询（START WITH ... CONNECT BY ...），对齐上游 oracleHierarchical。</summary>
     public OracleHierarchicalExpression? OracleHierarchical { get; set; }
 
+    /// <summary>
+    /// PostgreSQL/Informix <c>SELECT ... INTO target_table</c> 的目标表列表。对齐上游 intoTables。
+    /// 与 <see cref="IntoTempTable"/> 互斥；与 <see cref="MySqlIntoOutfile"/> 也互斥。
+    /// 未指定时为 null。
+    /// </summary>
+    public List<Table>? IntoTables { get; set; }
+
+    /// <summary>
+    /// Informix <c>SELECT ... INTO TEMP tmp_table</c> 的临时表。对齐上游 intoTempTable。
+    /// 与 <see cref="IntoTables"/> 互斥。未指定时为 null。
+    /// </summary>
+    public Table? IntoTempTable { get; set; }
+
     public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -86,6 +100,17 @@ public class PlainSelect : Select
 
         // MySQL INTO OUTFILE/DUMPFILE 前置位置（FROM 之前）
         if (MySqlIntoOutfile is { BeforeFrom: true }) builder.Append(' ').Append(MySqlIntoOutfile);
+
+        // PostgreSQL/Informix SELECT ... INTO target / INTO TEMP tmp（FROM 之前）
+        // 对齐上游 PlainSelect.java:566-573 / 648-649
+        if (IntoTables is { Count: > 0 })
+        {
+            builder.Append(" INTO ").Append(string.Join(", ", IntoTables));
+        }
+        else if (IntoTempTable != null)
+        {
+            builder.Append(" INTO TEMP ").Append(IntoTempTable);
+        }
 
         if (FromItem != null)
         {

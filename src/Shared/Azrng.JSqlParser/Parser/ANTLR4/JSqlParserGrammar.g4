@@ -191,7 +191,7 @@ valuesClause
     ;
 
 plainSelect
-    : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? informixSkipFirstClause? (DISTINCT | DISTINCTROW | ALL)? selectColumnList
+    : SELECT (ORACLE_HINT | ORACLE_HINT_ML)? topClause? informixSkipFirstClause? (DISTINCT distinctOnClause? | DISTINCTROW | ALL)? selectColumnList
       intoClause?
       fromClause?
       ksqlWindowClause?
@@ -204,6 +204,11 @@ plainSelect
       qualifyClause?
       (INTO OUTFILE S_CHAR_LITERAL outfileTail? | INTO DUMPFILE S_CHAR_LITERAL)?
       optimizeForClause?
+    ;
+
+// PostgreSQL DISTINCT ON (cols)
+distinctOnClause
+    : ON OPENING_PAREN selectColumnList CLOSING_PAREN
     ;
 
 setOperator
@@ -543,7 +548,7 @@ orderByItem
     ;
 
 limitClause
-    : LIMIT (ALL | expression (COMMA expression)?)
+    : LIMIT (ALL | expression (COMMA expression)?) (BY expressionList)?
     ;
 
 offsetClause

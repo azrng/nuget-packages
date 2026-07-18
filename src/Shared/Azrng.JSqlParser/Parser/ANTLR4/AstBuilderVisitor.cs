@@ -497,7 +497,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
-        if (context.DISTINCT() != null || context.DISTINCTROW() != null)
+        if (context.DISTINCT() != null)
+        {
+            var distinct = new Distinct();
+            // PostgreSQL DISTINCT ON (cols)：对齐上游 PlainSelectCC.jjt:4994-4995
+            if (context.distinctOnClause() != null)
+            {
+                distinct.OnSelectItems = context.distinctOnClause().selectColumnList().selectItem()
+                    .Select(item => (SelectItem)Visit(item)).ToList();
+            }
+            select.Distinct = distinct;
+        }
+        else if (context.DISTINCTROW() != null)
         {
             select.Distinct = new Distinct();
         }
@@ -625,6 +636,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 FileName = intoClause.S_CHAR_LITERAL().GetText(),
                 BeforeFrom = true
             };
+        }
+        else if (intoClause != null && intoClause.table() != null)
+        {
+            // PostgreSQL/Informix SELECT ... INTO target_table / INTO TEMP tmp / INTO UNLOGGED tmp
+            // 对齐上游 PlainSelect.intoTables / intoTempTable
+            var target = (Table)Visit(intoClause.table());
+            if (intoClause.TEMPORARY() != null || intoClause.TEMP() != null || intoClause.UNLOGGED() != null)
+            {
+                select.IntoTempTable = target;
+            }
+            else
+            {
+                select.IntoTables = new List<Table> { target };
+            }
         }
 
         // MySQL INTO OUTFILE/DUMPFILE（尾部位置：SELECT ... FROM ... INTO OUTFILE ...）
@@ -1443,6 +1468,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             limit.Offset = (Expression.IExpression)Visit(exprs[0]);
             limit.RowCount = (Expression.IExpression)Visit(exprs[1]);
         }
+
+        // ClickHouse LIMIT n BY expr_list：对齐上游 Limit.byExpressions。
+        // grammar limitClause 末尾可选 (BY expressionList)?
+        if (context.BY() != null && context.expressionList() != null)
+        {
+            limit.ByExpressions = ((ExpressionList)Visit(context.expressionList())).Expressions;
+        }
+
         return limit;
     }
 
