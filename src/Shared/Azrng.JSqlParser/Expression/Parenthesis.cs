@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class Parenthesis : ASTNodeAccessImpl, Expression
 {
-    public Expression Expression { get; set; } = null!;
+    public required Expression Expression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

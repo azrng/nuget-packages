@@ -419,7 +419,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 5** | `[NonSerialized]` 删除；`JjtGet*Token` → `Get*Token` | 中 | `[锚]` 需跑 round-trip 测试 | ✅ 已完成 |
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
-| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 暂缓（2026-07-18 评估：见第十四章结论，运行时无 bug，激进改造与上游对照模式冲突） |
+| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | 🔶 增量进行（Between/Parenthesis 已改；BinaryExpression 体系等触及面大，按需推进） |
 | **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 部分完成（6 个低风险接口已改；Expression/Statement 经多轮正则尝试无法可靠区分 4 种身份，需 Roslyn 语义级重命名，见第十四章结论） |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（旧名保留 [Obsolete] 转发壳，无破坏） |
 
@@ -441,6 +441,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 2026-07-18 | 批 7 | 4 个枚举 SCREAMING_SNAKE_CASE → PascalCase（共 60 个值）：`ForMode`（UPDATE→Update 等 6 值）、`AlterOperation`（ADD→Add 等 47 值）、`ReturningReferenceType`（OLD→Old/NEW→New）、`DateTimeType`（DATE→Date/DATETIME→Datetime 等 5 值，DATETIME→Datetime 避免 C# `DateTime` 类型同名冲突）；全部引用点同步（AstBuilderVisitor 赋值、switch case、测试断言、ForModeExtensions switch）；修复 2 处依赖枚举名输出 SQL 的点：`AlterExpression.ToString()` 通用分支加 `ToUpperInvariant()`、`DateTimeLiteralExpression.ToString()` 同；`AstBuilderVisitor.VisitDateTimeLiteral` 的 `Enum.Parse` 改用 `ignoreCase: true`（不再 ToUpperInvariant 原文） | 公开 API 破坏性（[锚][风险]），9 文件；外部代码引用 `ForMode.UPDATE` 等需改为 `ForMode.Update` | 全量 1433 项通过，0 失败 |
 | 2026-07-18 | 批 9 | 6 个接口加 `I` 前缀（C# 接口命名规范）：`ExpressionVisitor`→`IExpressionVisitor`、`StatementVisitor`→`IStatementVisitor`、`SelectVisitor`→`ISelectVisitor`、`FromItem`→`IFromItem`、`Model`→`IModel`、`ASTNodeAccess`→`IASTNodeAccess`（文件 Model.cs/ASTNodeAccess.cs 同步重命名为 IModel.cs/IASTNodeAccess.cs）；全部实现类、字段类型、泛型参数、测试同步（206 文件）。**`Expression`/`Statement` 接口暂不改**：与命名空间同名（`Azrng.JSqlParser.Expression.Expression`），引用上千（Expression 1018 处/Statement 623 处），改名易误伤 `ExpressionList`/`LambdaExpression` 等含 Expression 的类型名，留 2.0 配合 `using` 别名专项处理 | 公开 API 破坏性（[锚][风险]），206 文件；外部 visitor 实现需改接口名 | 全量 1433 项通过，0 失败 |
 | 2026-07-18 | 批 10 | 解析主入口改名：新增 `SqlParser`（实际实现所在，5 个方法 Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable + 私有 CreateParser）；`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳（5 个方法逐个转发到 SqlParser）；库内 `Validation.cs` 改用新名；77 个测试文件改用 `SqlParser`；补 1 项旧名转发回归测试 `Legacy_CCJSqlParserUtil_ForwardsToSqlParser` | 公开 API 破坏性（[锚][风险]），但旧名保留转发壳，外部调用方无破坏（仅 obsolete 警告）；新代码应改用 SqlParser | 全量 1434 项通过（净增 1），0 失败 |
+| 2026-07-18 | 批 8（增量 1） | `null!` 治理首批：`Between`（3 字段 LeftExpression/BetweenExpressionStart/BetweenExpressionEnd）+ `Parenthesis`（Expression 字段）改为 `required`；visitor 接线对应改为对象初始化器（`new Between { ... }` / `new Parenthesis { ... }`）；补 2 项 required 字段初始化器构造+序列化测试。**其余 50+ `null!` 字段维持现状**（BinaryExpression 体系触及 28 子类+十几处 visitor 接线，Function/Table/Column 名字段已有默认值非 null!） | 库内 4 文件 + 测试 1 文件；required 为编译期检查，外部 `new Between()` 无参构造需改为初始化器 | 全量 1436 项通过（净增 2），0 失败 |
 
 ---
 

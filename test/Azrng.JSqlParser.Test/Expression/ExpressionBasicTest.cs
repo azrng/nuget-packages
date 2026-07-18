@@ -2,6 +2,7 @@ using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Expression.Operators.Conditional;
 using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
+using Azrng.JSqlParser.Schema;
 using Azrng.JSqlParser.Statement.Select;
 
 namespace Azrng.JSqlParser.Test.Expression;
@@ -672,6 +673,38 @@ public class ExpressionBasicTest
         var item = select.SelectItems![0];
         Assert.NotNull(item.Alias);
         Assert.Equal("user_id", item.Alias!.Name);
+    }
+
+    #endregion
+
+    #region required 字段初始化器构造（批 8）
+
+    /// <summary>
+    /// Between 的三个必填字段（批 8 改为 required）用对象初始化器构造，序列化正确。
+    /// </summary>
+    [Fact]
+    public void Between_RequiredFields_ObjectInitializer_ShouldSerialize()
+    {
+        var between = new Between
+        {
+            LeftExpression = new Column { ColumnName = "age" },
+            BetweenExpressionStart = new LongValue(18),
+            BetweenExpressionEnd = new LongValue(65)
+        };
+        Assert.Equal("age BETWEEN 18 AND 65", between.ToString());
+    }
+
+    /// <summary>
+    /// Parenthesis 的必填 Expression 字段（批 8 改为 required）用对象初始化器构造，序列化正确。
+    /// </summary>
+    [Fact]
+    public void Parenthesis_RequiredField_ObjectInitializer_ShouldSerialize()
+    {
+        var paren = new Parenthesis
+        {
+            Expression = new LongValue(42)
+        };
+        Assert.Equal("(42)", paren.ToString());
     }
 
     #endregion

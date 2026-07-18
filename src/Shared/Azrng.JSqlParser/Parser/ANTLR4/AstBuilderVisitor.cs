@@ -3628,10 +3628,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (suffix.BETWEEN() != null)
         {
-            var between = new Between();
-            between.LeftExpression = concat;
-            between.BetweenExpressionStart = (Expression.Expression)Visit(suffix.concatenationExpr(0));
-            between.BetweenExpressionEnd = (Expression.Expression)Visit(suffix.concatenationExpr(1));
+            var between = new Between
+            {
+                LeftExpression = concat,
+                BetweenExpressionStart = (Expression.Expression)Visit(suffix.concatenationExpr(0)),
+                BetweenExpressionEnd = (Expression.Expression)Visit(suffix.concatenationExpr(1))
+            };
             if (suffix.NOT() != null) between.Not = true;
             if (suffix.SYMMETRIC() != null) between.UsingSymmetric = true;
             else if (suffix.ASYMMETRIC() != null) between.UsingAsymmetric = true;
@@ -4035,9 +4037,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.OPENING_PAREN() != null && context.expression() != null)
         {
-            var paren = new Parenthesis();
-            paren.Expression = (Expression.Expression)Visit(context.expression());
-            return paren;
+            return new Parenthesis
+            {
+                Expression = (Expression.Expression)Visit(context.expression())
+            };
         }
 
         return new NullValue();

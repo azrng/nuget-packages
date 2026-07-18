@@ -7,9 +7,9 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public class Between : ASTNodeAccessImpl, Expression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression BetweenExpressionStart { get; set; } = null!;
-    public Expression BetweenExpressionEnd { get; set; } = null!;
+    public required Expression LeftExpression { get; set; }
+    public required Expression BetweenExpressionStart { get; set; }
+    public required Expression BetweenExpressionEnd { get; set; }
     public bool Not { get; set; }
 
     /// <summary>SQL:2016 BETWEEN SYMMETRIC。</summary>
