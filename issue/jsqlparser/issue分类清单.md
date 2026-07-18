@@ -1,0 +1,198 @@
+# JSqlParser Issue 分类清单
+
+> 数据来源：`collect.json`（GitHub `JSQLParser/JSqlParser` 仓库，共 **88** 条 open issue）
+> 分类主轴：按「**修复区域 / 解析器触碰点**」——同区域的 issue 改同一处文法/AST，知识可复用、适合打包批次推进；数据库方言作为每条副标签。
+> 生成日期：2026-07-18　|　图例：`[B]`=BUG　`[F]`=FEATURE
+
+---
+
+## 总览
+
+| 类别 | 条数 | 说明 / 修复特点 |
+|---|---:|---|
+| ① DDL 解析：CREATE / ALTER / DROP / INDEX / CONSTRAINT | 20 | 跨方言，最大批；模式重复，适合集中清。子主题：(a) 约束/索引 #1570 #1893 #1589 #823 #538 #1060 #652 #1927 #1295；(b) ALTER IF 系列 #2112 #1875 #599 #2039；(c) 分区/视图/库 #1668 #1735 #2070 #2353；(d) 整体失败 #1567 #2020 |
+| ② 过程化 SQL 与例程：PROCEDURE / FUNCTION / PL-SQL / DO 块 | 9 | 难度最高（块语法/控制流），建议单独排期、靠后做 |
+| ③ 词法 / Token / 字面量 / 类型 / 查询子句 | 7 | 多为词法规则补丁，独立、风险低，适合先做。ClickHouse #2442/.N 与 #2436/?: 是词法歧义，可一起做 |
+| ④ PostgreSQL 专项 | 12 | 特性多但上游支持成熟，可对照参考实现。窗口帧 #2431 #2430；JSON #2412 #1511；字符串 #2233；interval #1728 |
+| ⑤ Oracle 专项 | 4 | XML / JSON / 外连接 |
+| ⑥ SQL Server / T-SQL 专项 | 6 | 含全文搜索、FOR XML、hints 等独有语法 |
+| ⑦ MySQL 专项 | 5 | #2427 与 #2006 是同一特性（_utf8mb4 introducer），可合并修 |
+| ⑧ 其他方言 + 跨方言特性 | 17 | Hive/BigQuery/Snowflake/DuckDB/Teradata/Informix/Informatica/KsqlDB/CockroachDB/Druid/Spark/Interval/ODBC，多数小众，优先级低 |
+| ⑨ AST 语义正确性：能解析但树错 / NPE / 父节点错 | 5 | 影响所有用户，正确性问题，建议中等优先 |
+| ⑩ 工程 / 架构 / 非解析 | 3 | #2438 是提问可直接回复关闭；#467 marker 接口建议配合当前接口 I 前缀治理一起做 |
+| **合计** | **88** | |
+
+---
+
+## 修复推进顺序建议
+
+1. **#467**（marker 接口）—— 与 `Azrng.JSqlParser` 当前「接口加 I 前缀」治理同源，顺手做
+2. **③ 词法**（7 条）—— 独立、风险低、见效快
+3. **① DDL**（20 条，按 4 个子主题分批）—— 量大利好清债
+4. **⑨ AST 正确性**（5 条）—— 影响面广
+5. **④→⑥→⑦→⑤ 方言专项** —— PG 最值得先做（条数多、参考实现全）
+6. **② 过程化**（9 条）—— 难度高，单独排期
+7. **⑧ 小众方言**（17 条）—— 按需，多数可暂缓
+8. **#2438** 提问类 —— 直接回复关闭
+
+---
+
+## 分类明细
+
+### ① DDL 解析：CREATE / ALTER / DROP / INDEX / CONSTRAINT  [20 条]
+
+> 跨方言，最大批；模式重复，适合集中清。子主题：(a) 约束/索引 #1570 #1893 #1589 #823 #538 #1060 #652 #1927 #1295；(b) ALTER IF 系列 #2112 #1875 #599 #2039；(c) 分区/视图/库 #1668 #1735 #2070 #2353；(d) 整体失败 #1567 #2020
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2353](https://github.com/JSQLParser/JSqlParser/issues/2353) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : Clickhouse : ORDER BY after CREATE TABLE unsupported | CREATE TABLE ORDER BY (ClickHouse) |
+| [#2112](https://github.com/JSQLParser/JSqlParser/issues/2112) | [B] | [BUG] `ALTER TABLE ... MODIFY/DROP` should support the `IF EXIST` option | ALTER TABLE MODIFY/DROP 的 IF EXIST 选项 |
+| [#2070](https://github.com/JSQLParser/JSqlParser/issues/2070) | [B] | How to parse CREATE DATABASE DATABASE_NAME  ? | CREATE DATABASE 语句 |
+| [#2065](https://github.com/JSQLParser/JSqlParser/issues/2065) | [F] | [FEATURE] Dropping multiple tables IF EXISTS is not supported | DROP 多表 IF EXISTS (MySQL) [FEATURE] |
+| [#2039](https://github.com/JSQLParser/JSqlParser/issues/2039) | [B] | ORACLE: ALTER TABLE ... ADD CONSTRAINT ... with tablespace option unsupported | ALTER ADD CONSTRAINT 带 tablespace (Oracle) |
+| [#2020](https://github.com/JSQLParser/JSqlParser/issues/2020) | [B] | [BUG] SQLServer  Validation fail  jsqlparser Version :4.9 | SQLServer 校验失败 |
+| [#1927](https://github.com/JSQLParser/JSqlParser/issues/1927) | [B] | [BUG] JSQLParser 4.7 : MySQL 8 : Cannot parse functional indices in table creation DDL | 建表 DDL 函数索引 (MySQL 8) |
+| [#1893](https://github.com/JSQLParser/JSqlParser/issues/1893) | [B] | Caused by: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "UNIQUE" "UNIQUE" | UNIQUE token |
+| [#1875](https://github.com/JSQLParser/JSqlParser/issues/1875) | [B] | [BUG] JSQLParser 4.7: `ADD COLUMN IF NOT EXISTS` not supported | ADD COLUMN IF NOT EXISTS (PG) |
+| [#1735](https://github.com/JSQLParser/JSqlParser/issues/1735) | [B] | [BUG] JSQLParser 4.6 : Redshift : CREATE MATERIALIZED VIEW with BACKUP NO is not supported | CREATE MATERIALIZED VIEW BACKUP NO (Redshift) |
+| [#1668](https://github.com/JSQLParser/JSqlParser/issues/1668) | [B] | parser sql of MySQL create or alter table with partition occur  exception | 分区表 create/alter (MySQL) |
+| [#1589](https://github.com/JSQLParser/JSqlParser/issues/1589) | [B] | Error in parsing create statement: Encountered unexpected token: "KEY" "KEY" | KEY token |
+| [#1570](https://github.com/JSQLParser/JSqlParser/issues/1570) | [B] | MySQL (optional) Index Names | CONSTRAINT UNIQUE KEY 索引名 (MySQL) |
+| [#1567](https://github.com/JSQLParser/JSqlParser/issues/1567) | [B] | Failed to parse SQL Server ddl | SQL Server DDL 解析失败 |
+| [#1295](https://github.com/JSQLParser/JSqlParser/issues/1295) | [B] | Failed to parse MySQL statement and add common index statement with alter | ALTER ADD INDEX (MySQL) |
+| [#1060](https://github.com/JSQLParser/JSqlParser/issues/1060) | [B] | Incorrect index type for indices parsed from create table statement | 索引类型解析错误 |
+| [#823](https://github.com/JSQLParser/JSqlParser/issues/823) | [B] | Failed to parse when creating unique index in creation DDL | 建表 DDL 内 unique index |
+| [#652](https://github.com/JSQLParser/JSqlParser/issues/652) | [B] | Indices with multiple parameters are not parsed correctly | 多参数索引解析错误 |
+| [#599](https://github.com/JSQLParser/JSqlParser/issues/599) | [B] | Modify column with "NULL" or "NOT NULL" is not getting parsed. | MODIFY column NULL/NOT NULL |
+| [#538](https://github.com/JSQLParser/JSqlParser/issues/538) | [B] | Format create table sql error when encounter unique key with comment | unique key 带 comment |
+
+### ② 过程化 SQL 与例程：PROCEDURE / FUNCTION / PL-SQL / DO 块  [9 条]
+
+> 难度最高（块语法/控制流），建议单独排期、靠后做
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2358](https://github.com/JSQLParser/JSqlParser/issues/2358) | [B] | [BUG] JSQLParser 5.3 Encountered unexpected token K_DO "DO". | DO token |
+| [#2192](https://github.com/JSQLParser/JSqlParser/issues/2192) | [B] | [BUG] JSQLParser 5.0-5.1: SQL Server: Stored procedure with placeholders being parsed wrong when it was working in v1 | 存储过程占位符解析退步 (SQL Server) |
+| [#2007](https://github.com/JSQLParser/JSqlParser/issues/2007) | [F] | [FEATURE] Stored procedure support Oracle | 存储过程 (Oracle) [FEATURE] |
+| [#1994](https://github.com/JSQLParser/JSqlParser/issues/1994) | [B] | [BUG] JSQLParser 4.9 fails to parse subsequent statements after parsing FUNCTION statement | 解析 FUNCTION 后无法继续解析后续语句 |
+| [#1978](https://github.com/JSQLParser/JSqlParser/issues/1978) | [B] | [BUG] JSQLParser Version : 4.8: Does not support "ALTER FUNCTION" or "ALTER PROCEDURE". | ALTER FUNCTION / ALTER PROCEDURE (SQL Server) |
+| [#1946](https://github.com/JSQLParser/JSqlParser/issues/1946) | [F] | [Feature] Prostgres Procedural `DO $$BEGIN ... END$$` | DO $$BEGIN...END$$ 过程化块 (PG) [FEATURE] |
+| [#1786](https://github.com/JSQLParser/JSqlParser/issues/1786) | [F] | [FEATURE] missing feature on parsing PL/SQL with "DECLARE" cluase | PL/SQL DECLARE 块 (Oracle) [FEATURE] |
+| [#715](https://github.com/JSQLParser/JSqlParser/issues/715) | [B] | Is it feasible to add support in jsqlparser for "table-valued" functions as defined by t-sql? | table-valued CREATE FUNCTION (T-SQL) |
+| [#268](https://github.com/JSQLParser/JSqlParser/issues/268) | [B] | Support for OUTPUT variable arguments to procedure calls | 过程调用 OUTPUT 变量参数 |
+
+### ③ 词法 / Token / 字面量 / 类型 / 查询子句  [7 条]
+
+> 多为词法规则补丁，独立、风险低，适合先做。ClickHouse #2442/.N 与 #2436/?: 是词法歧义，可一起做
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2442](https://github.com/JSQLParser/JSqlParser/issues/2442) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Tuple positional access via .N not supported in SELECT | .N tuple 位置访问，.2 被当浮点 (ClickHouse) |
+| [#2441](https://github.com/JSQLParser/JSqlParser/issues/2441) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Parametric type Nullable(Decimal(p, s)) not supported as CAST target | Nullable(Decimal(p,s)) 参数化类型作 CAST 目标 (ClickHouse) |
+| [#2436](https://github.com/JSQLParser/JSqlParser/issues/2436) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : C-style ternary operator (? :) not supported in SELECT | C 风格三元运算符 ?: (ClickHouse) |
+| [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) |
+| [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 |
+| [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 |
+| [#1169](https://github.com/JSQLParser/JSqlParser/issues/1169) | [B] | net.sf.jsqlparser.JSQLParserException: Encountered unexpected token: "desc" "DESC" | desc / DESC token 意外 |
+
+### ④ PostgreSQL 专项  [12 条]
+
+> 特性多但上游支持成熟，可对照参考实现。窗口帧 #2431 #2430；JSON #2412 #1511；字符串 #2233；interval #1728
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2432](https://github.com/JSQLParser/JSqlParser/issues/2432) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : LIKE ANY (ARRAY[...]) / LIKE ALL (ARRAY[...]) fails to parse | LIKE ANY/ALL (ARRAY[...]) |
+| [#2431](https://github.com/JSQLParser/JSqlParser/issues/2431) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : GROUPS not supported in window function frame clause | 窗口帧 GROUPS 子句 [Missing Standard Feature] |
+| [#2430](https://github.com/JSQLParser/JSqlParser/issues/2430) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : EXCLUDE TIES not supported in window function frame clause | 窗口帧 EXCLUDE TIES [Missing Standard Feature] |
+| [#2412](https://github.com/JSQLParser/JSqlParser/issues/2412) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : json_populate_record row expansion with (…). * not supported | json_populate_record 行展开 (...).*  |
+| [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 |
+| [#2342](https://github.com/JSQLParser/JSqlParser/issues/2342) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : Nesting can cause NullPointerException | 嵌套导致 NullPointerException |
+| [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 |
+| [#2233](https://github.com/JSQLParser/JSqlParser/issues/2233) | [B] | [BUG] JSQLParser 5.1: PostgreSQL: fail to parse dollar-quoted string constants with tags | $tag$ dollar-quoted 带标签字符串 |
+| [#1728](https://github.com/JSQLParser/JSqlParser/issues/1728) | [B] | [BUG] JSQLParser 4.5 : Postgres : fails to parse `interval hour to minute` | interval hour to minute |
+| [#1511](https://github.com/JSQLParser/JSqlParser/issues/1511) | [B] | Cannot parse PGSQL JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() |
+| [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag |
+| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 |
+
+### ⑤ Oracle 专项  [4 条]
+
+> XML / JSON / 外连接
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2146](https://github.com/JSQLParser/JSqlParser/issues/2146) | [B] | Oracle `xmlparse(content  ...)` not supported | xmlparse(content ...) (Oracle) |
+| [#1825](https://github.com/JSQLParser/JSqlParser/issues/1825) | [F] | [FEATURE] missing JSON_VALUE function for Oracle | JSON_VALUE 函数 (Oracle) [FEATURE] |
+| [#1564](https://github.com/JSQLParser/JSqlParser/issues/1564) | [B] | Oracle SQL XMLSERIALIZE syntax not supported | XMLSERIALIZE 语法 (Oracle) |
+| [#672](https://github.com/JSQLParser/JSqlParser/issues/672) | [B] | parse error between with oracle outer join(+) | 外连接 (+) 语法 |
+
+### ⑥ SQL Server / T-SQL 专项  [6 条]
+
+> 含全文搜索、FOR XML、hints 等独有语法
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2033](https://github.com/JSQLParser/JSqlParser/issues/2033) | [B] | [BUG] JSQLParser Version : 4.7 : sqlserver insert bulk  sql failed! | insert bulk (SQL Server) |
+| [#1563](https://github.com/JSQLParser/JSqlParser/issues/1563) | [B] | TSQL/MS SQL Server statements/syntax not supported. | TSQL 语法不支持 |
+| [#911](https://github.com/JSQLParser/JSqlParser/issues/911) | [B] | SQL Server table variables not supported \| SELECT columnName FROM @table | 表变量 @table |
+| [#397](https://github.com/JSQLParser/JSqlParser/issues/397) | [B] | SqlServer full text search %% | 全文搜索 %% |
+| [#386](https://github.com/JSQLParser/JSqlParser/issues/386) | [B] | Support for TSQL "STUFF" and "FOR XML PATH" instructions | STUFF / FOR XML PATH |
+| [#161](https://github.com/JSQLParser/JSqlParser/issues/161) | [B] | add support for SQL Server Query Hints | Query Hints |
+
+### ⑦ MySQL 专项  [5 条]
+
+> #2427 与 #2006 是同一特性（_utf8mb4 introducer），可合并修
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2428](https://github.com/JSQLParser/JSqlParser/issues/2428) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : PROCEDURE ANALYSE() not supported in SELECT statements | PROCEDURE ANALYSE() |
+| [#2427](https://github.com/JSQLParser/JSqlParser/issues/2427) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : charset introducer (_utf8mb4) with COLLATE not supported | _utf8mb4 introducer + COLLATE |
+| [#2298](https://github.com/JSQLParser/JSqlParser/issues/2298) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : Failed to parse CAST as CHAR with CHARACTER SET | CAST as CHAR with CHARACTER SET |
+| [#2006](https://github.com/JSQLParser/JSqlParser/issues/2006) | [B] | [BUG] JSQLParser 4.8 : MYSQL : not able to parse _utf8mb4 dialects | _utf8mb4 方言解析 |
+| [#854](https://github.com/JSQLParser/JSqlParser/issues/854) | [B] | Cannot use MySQL user variables after INTO clause | INTO 后用户变量 |
+
+### ⑧ 其他方言 + 跨方言特性  [17 条]
+
+> Hive/BigQuery/Snowflake/DuckDB/Teradata/Informix/Informatica/KsqlDB/CockroachDB/Druid/Spark/Interval/ODBC，多数小众，优先级低
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2433](https://github.com/JSQLParser/JSqlParser/issues/2433) | [B] | [BUG] JSQLParser Version : 5.3 : LATERAL VIEW with three or more column aliases silently mis-parses extras as cross-join tables | LATERAL VIEW 三列及以上别名误解析 (Hive) |
+| [#2429](https://github.com/JSQLParser/JSqlParser/issues/2429) | [F] | [FEATURE] missing feature description, IDENTIFIER from Snowflake | IDENTIFIER() (Snowflake) [FEATURE] |
+| [#2423](https://github.com/JSQLParser/JSqlParser/issues/2423) | [B] | [BUG] JSQLParser Version : RDBMS : failing feature description | MAP / PIVOT (DuckDB) |
+| [#2421](https://github.com/JSQLParser/JSqlParser/issues/2421) | [B] | [BUG] BigQuery statement MERGE ... WHEN NOT MATCHED BY TARGET | MERGE ... WHEN NOT MATCHED BY TARGET (BigQuery) |
+| [#2350](https://github.com/JSQLParser/JSqlParser/issues/2350) | [F] | [FEATURE] Add support for MATCH_RECOGNIZE clause (BigQuery) to JSQLParser | MATCH_RECOGNIZE 子句 (BigQuery) [FEATURE] |
+| [#2119](https://github.com/JSQLParser/JSqlParser/issues/2119) | [B] | [BUG] JSQLParser Version : 5.0 RDBMS : Hive syntax is not supported INSERT OVERWRITE PARTITION (dtime = '20220403')CASE WHEN condition THEN END ELSE ... | INSERT OVERWRITE PARTITION ... CASE WHEN (Hive) |
+| [#1846](https://github.com/JSQLParser/JSqlParser/issues/1846) | [B] | [BUG] JSQLParser Version : 4.6 hive  overwrite | INSERT OVERWRITE (Hive) |
+| [#1752](https://github.com/JSQLParser/JSqlParser/issues/1752) | [B] | [BUG] JSQLParser 4.6 : KsqlDB : Not able to parse Ksqldb queries | KsqlDB 查询 |
+| [#1743](https://github.com/JSQLParser/JSqlParser/issues/1743) | [F] | [FEATURE] Support for CockroachDB | CockroachDB 支持 [FEATURE] |
+| [#1625](https://github.com/JSQLParser/JSqlParser/issues/1625) | [B] | Cannot parse druid sql | FLOOR(__time TO HOUR) 时间函数 (Druid) |
+| [#1620](https://github.com/JSQLParser/JSqlParser/issues/1620) | [B] | sql contain  join [shuffle], so error | [shuffle] join hint (Spark) |
+| [#1161](https://github.com/JSQLParser/JSqlParser/issues/1161) | [B] | support for informix db fnc | CURRENT YEAR TO DAY 等函数 (Informix) |
+| [#1139](https://github.com/JSQLParser/JSqlParser/issues/1139) | [B] | support for (date({fn timestampadd(SQL_TSI_YEAR, 2, date("travel_date"))})) | {fn timestampadd(...)} ODBC 转义 |
+| [#891](https://github.com/JSQLParser/JSqlParser/issues/891) | [B] | JSqlParser failed to parse Teradata "UPDATE" statement with "FROM" clause | UPDATE ... FROM (Teradata) |
+| [#673](https://github.com/JSQLParser/JSqlParser/issues/673) | [B] | `DAY TO SECOND` is not supported | DAY TO SECOND interval |
+| [#297](https://github.com/JSQLParser/JSqlParser/issues/297) | [B] | JSQLParser not able to parse the informatica sql query. | { } 转义语法 (Informatica) |
+| [#271](https://github.com/JSQLParser/JSqlParser/issues/271) | [B] | Parse errors for ALTER TABLE with Informix syntax | ALTER TABLE Informix 语法 |
+
+### ⑨ AST 语义正确性：能解析但树错 / NPE / 父节点错  [5 条]
+
+> 影响所有用户，正确性问题，建议中等优先
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2440](https://github.com/JSQLParser/JSqlParser/issues/2440) | [B] | [BUG] JSQLParser 5.3 : Incorrect parse of WHERE column IN ('CONFIRMED') AND .... | WHERE col IN (...) AND ... 解析错误 |
+| [#2195](https://github.com/JSQLParser/JSqlParser/issues/2195) | [B] | JSQLParser 5.1: LambdaExpression parameters error | LambdaExpression 参数错误 |
+| [#2194](https://github.com/JSQLParser/JSqlParser/issues/2194) | [B] | JSQLParser 5.1: Incorrect Parent node | Parent 节点错误 |
+| [#2163](https://github.com/JSQLParser/JSqlParser/issues/2163) | [B] | [BUG] JSQLParser Version : 5.1   RDBMS : PostgreSQL 10   mix the JSON and relational operators, it outputs the wrong AST and sql. | JSON 与关系运算符混用，AST 输出错 (PG) |
+| [#1170](https://github.com/JSQLParser/JSqlParser/issues/1170) | [B] | NotExpression parsing error | NotExpression 解析错误 |
+
+### ⑩ 工程 / 架构 / 非解析  [3 条]
+
+> #2438 是提问可直接回复关闭；#467 marker 接口建议配合当前接口 I 前缀治理一起做
+
+| # | 类型 | 标题 | 要点 |
+|---:|:--:|---|---|
+| [#2438](https://github.com/JSQLParser/JSqlParser/issues/2438) | [B] | Any plan for the next release? | 下个版本计划（提问，非 bug） |
+| [#2403](https://github.com/JSQLParser/JSqlParser/issues/2403) | [B] | compileJavacc emits JavaCC warnings for shadowed literals and unreachable DATA_TYPE branches | compileJavacc 产生 JavaCC 警告（遮蔽字面量/不可达分支） |
+| [#467](https://github.com/JSQLParser/JSqlParser/issues/467) | [B] | Add marker interfaces to allow OOP classification of expressions | 为表达式加 marker 接口以支持 OOP 分类 [improvement] |
