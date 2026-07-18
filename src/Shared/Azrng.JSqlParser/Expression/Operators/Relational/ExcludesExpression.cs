@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression.Operators.Relational;
@@ -7,11 +8,10 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public class ExcludesExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression LeftExpression { get; set; } = null!;
-    public IExpression RightExpression { get; set; } = null!;
+    public required IExpression LeftExpression { get; set; }
+    public required IExpression RightExpression { get; set; }
 
-    public ExcludesExpression() { }
-
+    [SetsRequiredMembers]
     public ExcludesExpression(IExpression leftExpression, IExpression rightExpression)
     {
         LeftExpression = leftExpression;

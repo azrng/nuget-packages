@@ -4,8 +4,8 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 
 public class MemberOfExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression LeftExpression { get; set; } = null!;
-    public IExpression RightExpression { get; set; } = null!;
+    public required IExpression LeftExpression { get; set; }
+    public required IExpression RightExpression { get; set; }
 
     /// <summary>是否为 NOT MEMBER OF（对齐上游 isNot 字段）。</summary>
     public bool Not { get; set; }

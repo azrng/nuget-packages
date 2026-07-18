@@ -3613,8 +3613,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (suffix.IN() != null)
         {
-            var inExpr = new InExpression();
-            inExpr.LeftExpression = concat;
+            var inExpr = new InExpression { LeftExpression = concat };
             if (suffix.selectStatement() != null)
             {
                 inExpr.RightExpression = (Expression.IExpression)Visit(suffix.selectStatement());
@@ -3685,72 +3684,57 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
             if (suffix.TRUE() != null)
             {
-                var isBool = new IsBooleanExpression();
-                isBool.LeftExpression = concat;
-                isBool.IsTrue = true;
+                var isBool = new IsBooleanExpression { LeftExpression = concat, IsTrue = true };
                 if (suffix.NOT() != null) isBool.Not = true;
                 return isBool;
             }
 
             if (suffix.FALSE() != null)
             {
-                var isBool = new IsBooleanExpression();
-                isBool.LeftExpression = concat;
-                isBool.IsTrue = false;
+                var isBool = new IsBooleanExpression { LeftExpression = concat, IsTrue = false };
                 if (suffix.NOT() != null) isBool.Not = true;
                 return isBool;
             }
 
             if (suffix.UNKNOWN() != null)
             {
-                var isUnknown = new IsUnknownExpression();
-                isUnknown.LeftExpression = concat;
+                var isUnknown = new IsUnknownExpression { LeftExpression = concat };
                 if (suffix.NOT() != null) isUnknown.Not = true;
                 return isUnknown;
             }
 
-            var isNull = new IsNullExpression();
-            isNull.LeftExpression = concat;
+            var isNull = new IsNullExpression { LeftExpression = concat };
             if (suffix.NOT() != null) isNull.Not = true;
             return isNull;
         }
 
         if (suffix.ISNULL() != null)
         {
-            var isNull = new IsNullExpression();
-            isNull.LeftExpression = concat;
-            return isNull;
+            return new IsNullExpression { LeftExpression = concat };
         }
 
         if (suffix.NOTNULL() != null)
         {
-            var isNull = new IsNullExpression();
-            isNull.LeftExpression = concat;
-            isNull.Not = true;
-            return isNull;
+            return new IsNullExpression { LeftExpression = concat, Not = true };
         }
 
         if (suffix.EXCLUDES() != null)
         {
-            var excludes = new ExcludesExpression();
-            excludes.LeftExpression = concat;
-            excludes.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
-            return excludes;
+            return new ExcludesExpression(concat, (Expression.IExpression)Visit(suffix.expressionList()));
         }
 
         if (suffix.INCLUDES() != null)
         {
-            var includes = new IncludesExpression();
-            includes.LeftExpression = concat;
-            includes.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
-            return includes;
+            return new IncludesExpression(concat, (Expression.IExpression)Visit(suffix.expressionList()));
         }
 
         if (suffix.MEMBER() != null)
         {
-            var memberOf = new MemberOfExpression();
-            memberOf.LeftExpression = concat;
-            memberOf.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
+            var memberOf = new MemberOfExpression
+            {
+                LeftExpression = concat,
+                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
+            };
             if (suffix.NOT() != null) memberOf.Not = true;
             return memberOf;
         }

@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public class ExistsExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression RightExpression { get; set; } = null!;
+    public IExpression? RightExpression { get; set; }
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

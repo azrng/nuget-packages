@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public class IsUnknownExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression LeftExpression { get; set; } = null!;
+    public required IExpression LeftExpression { get; set; }
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

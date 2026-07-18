@@ -4,7 +4,7 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 
 public class IsBooleanExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression LeftExpression { get; set; } = null!;
+    public required IExpression LeftExpression { get; set; }
     public bool Not { get; set; }
     public bool IsTrue { get; set; }
 
