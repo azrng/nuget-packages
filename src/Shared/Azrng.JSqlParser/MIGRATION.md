@@ -304,6 +304,65 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | —（无 builder） | 无 SetXxx 方法 | 用对象初始化器 `new ForUpdateClause { Mode=.., Tables=.. }`；字段已 public set |
 | `getFirstTable()` | `Table? FirstTable` 属性 + `GetFirstTable()` `[Obsolete]` 转发 | getter→表达式属性 |
 
+### 10.8 正则 / 模式匹配族（beta9 对齐上游）
+
+> **重要**：本节是 beta9 破坏性变更的核心，迁移时务必逐项核对。
+> 上游权威定义见 `JSqlParserCC.jjt:6833-6837`（符号形式）与 `LikeExpression.java`（关键字形式）。
+
+**上游模型**（权威语义）：
+
+| SQL 输入 | 上游 AST 类型 | 区分方式 |
+|----------|--------------|----------|
+| `c ~ 'x'` / `~*` / `!~` / `!~*` | `RegExpMatchOperator` | `RegExpMatchOperatorType` 枚举（4 态） |
+| `c REGEXP 'x'` / `RLIKE` / `REGEXP_LIKE` | `LikeExpression` | `KeyWord` 枚举（`REGEXP`/`RLIKE`/`REGEXP_LIKE`） |
+| `c LIKE 'x'` / `ILIKE` / `SIMILAR TO` / `MATCH_*` | `LikeExpression` | `KeyWord` 枚举 |
+| `c @@ 'x'` | `Matches` | — |
+
+**`RegExpMatchOperator` 对照**：
+
+| 上游 Java | Azrng C#（beta9） | 说明 |
+|-----------|----------|------|
+| `RegExpMatchOperatorType` enum（4 态） | `RegExpMatchOperatorType` enum（`MatchCaseSensitive`/`MatchCaseInsensitive`/`NotMatchCaseSensitive`/`NotMatchCaseInsensitive`） | 值对齐，仅大小写风格（PascalCase） |
+| `RegExpMatchOperator(RegExpMatchOperatorType)` 构造必填 | 同（`new RegExpMatchOperator(RegExpMatchOperatorType)`） | 对齐上游 `requireNonNull` |
+| `getOperatorType()` | `RegExpMatchOperatorType OperatorType { get; set; }` | getter→属性 |
+| `getStringExpression()` switch 返回 `~`/`~*`/`!~`/`!~*` | `override string OperatorSymbol` switch 返回同 | 方法→只读属性（继承 `BinaryExpression`） |
+
+> **beta8 及之前的偏差（已修复）**：曾用 `string Operator` + `bool Not` 两字段承载（丢失类型安全区分），且 PG 符号 `~`/`!~` 被 visitor 误建成 `EqualsTo`。beta9 改回枚举模型。
+
+**`LikeExpression` 对照**：
+
+| 上游 Java | Azrng C#（beta9） | 说明 |
+|-----------|----------|------|
+| `KeyWord` enum（11 态：LIKE/ILIKE/RLIKE/REGEXP_LIKE/REGEXP/SIMILAR_TO/MATCH_ANY/MATCH_ALL/MATCH_PHRASE/MATCH_PHRASE_PREFIX/MATCH_REGEXP） | `KeyWord` enum（`Like`/`Ilike`/`Rlike`/`RegexpLike`/`Regexp`/`SimilarTo`/`MatchAny`/`MatchAll`/`MatchPhrase`/`MatchPhrasePrefix`/`MatchRegexp`） | 值对齐，PascalCase；`SIMILAR_TO`→`SimilarTo`（去下划线） |
+| `KeyWord likeKeyWord` 字段 | `KeyWord LikeKeyWord` 字段（默认 `Like`） | 对齐 |
+| `Expression escapeExpression` | `IExpression? Escape` 字段 | 可空；grammar `ESCAPE` 子句接线 |
+| `boolean not` | `bool Not` | 对齐 |
+| `getStringExpression()` → `likeKeyWord.toString()` | `override string OperatorSymbol`（`SimilarTo` 特判为 `"SIMILAR TO"`，其余 `ToUpperInvariant()`） | 方法→只读属性 |
+| `toString()` 含 NOT/KeyWord/ESCAPE 拼接 | `override string ToString()` 同 | 对齐上游拼接顺序 |
+
+> **beta8 及之前的偏差（已修复）**：
+> - `LikeExpression` 无 `KeyWord` 字段，`ILIKE`/`REGEXP` 等关键字信息丢失（统一记成 LIKE）
+> - `REGEXP`/`RLIKE`/`REGEXP_LIKE` 被 visitor 错误建成 `RegExpMatchOperator`（应为 `LikeExpression`）
+> - `SIMILAR TO` 是独立的 `SimilarToExpression` 类（上游归 `LikeExpression(KeyWord.SIMILAR_TO)`），beta9 已合并删除
+> - `ESCAPE` 子句 grammar 已解析但 visitor 丢弃，beta9 已接线
+
+**`SimilarToExpression`（beta9 已删除）**：
+
+| 上游 Java | Azrng C# | 说明 |
+|-----------|----------|------|
+| 无独立类（`SIMILAR TO` 归 `LikeExpression`） | beta9 起无独立类 | beta8 及之前有 `SimilarToExpression`，beta9 合并到 `LikeExpression(KeyWord.SimilarTo)` |
+
+> **迁移**：`new SimilarToExpression { ... }` → `new LikeExpression { LikeKeyWord = LikeExpression.KeyWord.SimilarTo, ... }`；`is SimilarToExpression` → `is LikeExpression && ((LikeExpression)x).LikeKeyWord == LikeExpression.KeyWord.SimilarTo`。
+
+**`Matches` 对照**：
+
+| 上游 Java | Azrng C#（beta9） | 说明 |
+|-----------|----------|------|
+| `Matches` 类（`@@` 全文匹配） | `Matches` 类 | 同名 |
+| `getStringExpression()="@"` → 实为 `"@@"` | `override string OperatorSymbol => "@@"` | beta8 及之前误写为 `"~"`，beta9 修正 |
+
+> **已知遗留**：当前 grammar 未定义 `@@` token，AstBuilderVisitor 也不构建 `Matches` 实例，故 `@@` 运算符目前不可解析。类骨架已对齐上游（符号正确），待后续补 grammar 时激活。
+
 ---
 
 ## 十一、枚举对照
@@ -334,6 +393,8 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | `AnalyticType` | `Over, WithinGroup, WithinGroupOver, FilterOnly` | |
 | `RefreshMode` | `Default, WithData, WithNoData` | |
 | `SelectColumnKind` | `All, AllTable, Column, Expression` | Azrng 自有 DTO，无对照 |
+| `RegExpMatchOperatorType` | `MatchCaseSensitive, MatchCaseInsensitive, NotMatchCaseSensitive, NotMatchCaseInsensitive` | beta9 新增，对齐上游同名枚举（值 PascalCase） |
+| `LikeExpression.KeyWord` | `Like, Ilike, Rlike, RegexpLike, Regexp, SimilarTo, MatchAny, MatchAll, MatchPhrase, MatchPhrasePrefix, MatchRegexp` | beta9 新增，对齐上游 `LikeExpression.KeyWord`（`SIMILAR_TO`→`SimilarTo` 去下划线） |
 
 ---
 

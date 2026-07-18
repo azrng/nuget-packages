@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta8" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta9" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta8`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta9`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -212,7 +212,7 @@ Console.WriteLine(stmt.ToString());
 
 - 字面量：整数、浮点数、字符串、十六进制、布尔值、null
 - 运算符：算术（`+`、`-`、`*`、`/`、`%`）、比较（`=`、`<>`、`>`、`<`、`>=`、`<=`）、逻辑（`AND`、`OR`、`NOT`、`XOR`）、字符串（`||`、`CONCAT`）、位运算
-- 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
+- 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`REGEXP_LIKE`、`SIMILAR TO`、PostgreSQL 正则符号（`~`、`~*`、`!~`、`!~*`）、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
 - 高级：`CASE WHEN`、`CAST`、`EXTRACT`、`INTERVAL`、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
 - 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数
 - 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 返回不含前缀的名称，`Prefix` 字段保留原始前缀 `:`/`@`）
@@ -232,6 +232,27 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta9
+
+正则 / 模式匹配模型对齐上游（JSqlParser 5.4）。**本版本含破坏性 API 变更**，从 beta8 升级需按下表同步代码。
+
+**背景**：beta8 周期为两段真实业务 SQL 补结构化提取测试时，发现 PostgreSQL 正则符号 `~`/`!~` 被误解析为 `=`。深入对比上游 `JSqlParserCC.jjt:6833-6837` + `LikeExpression.java` 后定位到**迁移时模型走样 5 处**，本次彻底纠正。
+
+**破坏性变更（编译期需同步）**：
+- **`RegExpMatchOperator` 字段重构**：`string Operator` + `bool Not` 两字段删除，改为 `RegExpMatchOperatorType OperatorType` 枚举（`MatchCaseSensitive`/`MatchCaseInsensitive`/`NotMatchCaseSensitive`/`NotMatchCaseInsensitive` 四态）；构造从无参改为 `new RegExpMatchOperator(RegExpMatchOperatorType)` 必填。**外部访问 `.Operator`/`.Not` 的代码需改为 `.OperatorType`**。
+- **`SimilarToExpression` 类删除**：合并到 `LikeExpression(KeyWord.SimilarTo)`。**外部 `new SimilarToExpression()` / `is SimilarToExpression` 需改为 `LikeExpression`**（`SIMILAR TO` 的 round-trip 行为不变）。
+- **`Matches.OperatorSymbol`**：从 `"~"` 改为 `"@@"`（对齐上游，`Matches` 类对应 PostgreSQL 全文匹配 `@@`，此前误写为 `~`）。**外部若依赖旧值需改**（实际无 grammar 产出该类，影响面极小）。
+- **`LikeExpression` 字段扩展**：新增 `KeyWord` 枚举（`Like`/`Ilike`/`Rlike`/`Regexp`/`RegexpLike`/`SimilarTo`/`MatchAny`/`MatchAll`/`MatchPhrase`/`MatchPhrasePrefix`/`MatchRegexp` 共 11 态）+ `LikeKeyWord` 字段（默认 `Like`）+ `Escape` 字段。**外部 `is LikeExpression` 后按关键字判断的代码需改**：此前 `ILIKE`/`REGEXP` 关键字信息丢失（统一记成 LIKE），现在通过 `LikeKeyWord` 区分。
+- **REGEXP / RLIKE / REGEXP_LIKE 的 AST 类型变更**：从 `RegExpMatchOperator` 改为 `LikeExpression`（对齐上游，关键字形式归 `LikeExpression`）。**外部 `is RegExpMatchOperator` 断言 REGEXP 的代码需改为 `is LikeExpression && LikeKeyWord==Regexp`**。
+
+**非破坏性变更（向后兼容）**：
+- PostgreSQL 正则符号 `~`/`~*`/`!~`/`!~*` 现正确解析为 `RegExpMatchOperator`（此前被误解析为 `EqualsTo`，是本次治理的起点）。
+- `LIKE`/`ILIKE`/`SIMILAR TO` 现支持 `ESCAPE` 子句（`LikeExpression.Escape` 字段，grammar 已支持、visitor 此前丢弃）。
+- `ExpressionVisitorAdapter` 修复 `Matches`/`RegExpMatchOperator` 的 Visit 空实现 bug（此前 `=> default!` 不递归子节点，现改为 `VisitBinary` 正确下钻）。
+- `ExpressionVisitor`/`ExpressionVisitorAdapter`/`ExpressionDescendantsWalker`/`TablesNamesFinder` 同步移除 `Visit(SimilarToExpression)`（类已删）。
+
+**测试**：全量 1465 项 × 3 TFM（net8/9/10）全部通过，0 失败。
 
 ### 1.0.0-beta8
 
