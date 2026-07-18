@@ -171,8 +171,8 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 上游 Java | Azrng C# | 说明 |
 |-----------|----------|------|
 | `ASTNodeAccess` | `IASTNodeAccess` | C# 接口加 `I` 前缀 |
-| `jjtGetASTNode()` | `SimpleNode? GetASTNode()` | getter 仍为方法形态 |
-| `jjtSetASTNode(node)` | `void SetASTNode(SimpleNode node)` | setter 仍为方法形态 |
+| `jjtGetASTNode()` | `SimpleNode? GetASTNode()` | |
+| `jjtSetASTNode(node)` | `void SetASTNode(SimpleNode node)` | |
 
 ### 8.2 `ASTNodeAccessImpl`（`Parser/ASTNodeAccessImpl.cs`）
 
@@ -259,16 +259,14 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | `Parenthesis.Expression` | `public required IExpression Expression { get; set; }` | C# 11 `required` 强制非空；字段名保留 `Expression`（与类型同名） |
 | `Between.LeftExpression` | `public required IExpression LeftExpression / BetweenExpressionStart / BetweenExpressionEnd` | 三个字段均 `required` |
 
-> **值语义类相等性**：`Alias` 已补 `sealed` + `Equals/GetHashCode`（按 Name+UseAs，使 LINQ Distinct/Contains 符合 SQL 别名语义）。`Column`/`Table` 暂未补相等性。
-
 ### 10.4 Schema 类
 
 | 上游 Java | Azrng C# | 说明 |
 |-----------|----------|------|
-| `Column` | `public class Column : ASTNodeAccessImpl, IExpression` | 未加 `sealed`，未补 `Equals` |
-| `Column.getFullyQualifiedName()` | `public string GetFullyQualifiedName()` | 仍为方法 |
-| `Table` | `public class Table : ASTNodeAccessImpl, IFromItem` | 未加 `sealed`，未补 `Equals` |
-| `Table.getFullyQualifiedName()` | `public string GetFullyQualifiedName()` | 仍为方法 |
+| `Column` | `public class Column : ASTNodeAccessImpl, IExpression` | |
+| `Column.getFullyQualifiedName()` | `public string GetFullyQualifiedName()` | |
+| `Table` | `public class Table : ASTNodeAccessImpl, IFromItem` | |
+| `Table.getFullyQualifiedName()` | `public string GetFullyQualifiedName()` | |
 | `Table.getAlias()` / `setAlias()` | `Alias? Alias { get; set; }` | `GetAlias()`/`SetAlias()` 保留 `[Obsolete]` 转发 |
 | `Alias` | `public sealed class Alias` | 已加 `sealed` + `Equals/GetHashCode`（按 Name+UseAs） |
 | `OracleJoinSyntax`（上游 enum） | `enum OracleJoinSyntax { None, Right, Left }` | Java 5 之前的 `static final int` 模式改为 C# enum；`Column.OldOracleJoinSyntax` 字段类型同步改为 `OracleJoinSyntax` |
@@ -286,23 +284,23 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | —（`PlainSelect` 静态 helper） | 已删除 | 上游 `StringUtils.join` 风格 helper 不再挂在 PlainSelect 上 |
 | `Select.getSelectBody()` | `Select GetSelectBody() => this` `[Obsolete]` | 上游为兼容旧 API 保留，Azrng 标 Obsolete |
 | `Select.getForUpdateTable()` | `Table? ForUpdateTable` 属性 + `GetForUpdateTable()` `[Obsolete]` 转发 | getter→表达式属性 |
-| `Select.getForUpdate()` | `ForUpdateClause? GetForUpdate()` | 仍为方法（组装 ForUpdateClause 视图） |
+| `Select.getForUpdate()` | `ForUpdateClause? GetForUpdate()` | |
 
 ### 10.6 `Function` 字段（节选）
 
 | 上游 Java | Azrng C# | 说明 |
 |-----------|----------|------|
-| `Function.name` | `string Name { get; set; } = ""` | 默认空串，未加 `required` |
+| `Function.name` | `string Name { get; set; } = ""` | |
 | `Function.parameters` | `Expression? Parameters` | 可空 |
 | `Function.allColumns` | `bool AllColumns` | |
 | `Function.keywordArguments` | `List<KeywordArgument>? KeywordArguments` | 可空 |
-| `KeywordArgument`（内部类） | `public class KeywordArgument : ASTNodeAccessImpl, IModel` | 仍为 class |
+| `KeywordArgument`（内部类） | `public class KeywordArgument : ASTNodeAccessImpl, IModel` | |
 
 ### 10.7 `ForUpdateClause`
 
 | 上游 Java | Azrng C# | 说明 |
 |-----------|----------|------|
-| `ForUpdateClause` | `public class ForUpdateClause` | 仍为 class |
+| `ForUpdateClause` | `public class ForUpdateClause` | |
 | —（无 builder） | 无 SetXxx 方法 | 用对象初始化器 `new ForUpdateClause { Mode=.., Tables=.. }`；字段已 public set |
 | `getFirstTable()` | `Table? FirstTable` 属性 + `GetFirstTable()` `[Obsolete]` 转发 | getter→表达式属性 |
 

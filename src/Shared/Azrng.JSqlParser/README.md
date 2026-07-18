@@ -43,7 +43,7 @@ Console.WriteLine(stmt.ToString());
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
 
-**目标框架：** `net10.0`
+**目标框架：** `net8.0` / `net9.0` / `net10.0`
 
 ## API 概览
 
