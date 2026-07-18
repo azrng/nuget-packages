@@ -3616,7 +3616,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 if (op.GREATER_THAN_EQUALS() != null) return new GreaterThanEquals { LeftExpression = concat, RightExpression = result };
                 if (op.MINOR_THAN() != null) return new MinorThan { LeftExpression = concat, RightExpression = result };
                 if (op.MINOR_THAN_EQUALS() != null) return new MinorThanEquals { LeftExpression = concat, RightExpression = result };
-                return new EqualsTo { LeftExpression = concat, RightExpression = result };
+                // 理论不可达：comparisonOperator production 限定为 14 个 token，全部在上面分支覆盖。
+                // 此前兜底为 EqualsTo 会静默把未知 token 当作 =（正是 ~ / !~ bug 的同型根因）。
+                // 改抛异常让 grammar 漏列 token 时立即暴露，避免静默误归类。
+                throw new JSqlParserException(
+                    $"Unreachable: comparisonOperator with ANY/ALL/SOME 未匹配任何已知 token。grammar comparisonOperator production 可能漏列。原操作符文本：{op.GetText()}");
             }
 
             Expression.IExpression right = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
@@ -3650,7 +3654,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 };
             }
 
-            return new EqualsTo { LeftExpression = concat, RightExpression = right };
+            // 理论不可达：comparisonOperator production 限定为 14 个 token，全部在上面分支覆盖。
+            // 此前兜底为 EqualsTo 会静默把未知 token 当作 =（正是 ~ / !~ bug 的同型根因）。
+            // 改抛异常让 grammar 漏列 token 时立即暴露，避免静默误归类。
+            throw new JSqlParserException(
+                $"Unreachable: comparisonOperator 未匹配任何已知 token。grammar comparisonOperator production 可能漏列。原操作符文本：{op.GetText()}");
         }
 
         if (suffix.IN() != null)
