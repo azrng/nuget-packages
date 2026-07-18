@@ -703,6 +703,61 @@ public class ExpressionCoverageTest
         Assert.Equal("name NOT REGEXP '^test'", regexp.ToString());
     }
 
+    // PostgreSQL 正则匹配运算符 ~ / ~* / !~ / !~*
+    // 修复前 visitor 遗漏这四个 token，全部被错误地建成 EqualsTo（=）
+
+    [Fact]
+    public void RegExpMatchOperator_PostgresTilde_ShouldParseAsRegexpNotEquals()
+    {
+        var expr = SqlParser.ParseCondExpression("name ~ '^test'");
+        var regexp = Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.Equal("~", regexp.Operator);
+        Assert.False(regexp.Not);
+        Assert.Equal("name ~ '^test'", regexp.ToString());
+    }
+
+    [Fact]
+    public void RegExpMatchOperator_PostgresTildeStar_ShouldCarryCaseInsensitiveSymbol()
+    {
+        var expr = SqlParser.ParseCondExpression("name ~* '^test'");
+        var regexp = Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.Equal("~*", regexp.Operator);
+        Assert.False(regexp.Not);
+        Assert.Equal("name ~* '^test'", regexp.ToString());
+    }
+
+    [Fact]
+    public void RegExpMatchOperator_PostgresNotTilde_ShouldCarryNegatedSymbol()
+    {
+        var expr = SqlParser.ParseCondExpression("name !~ '^test'");
+        var regexp = Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.Equal("!~", regexp.Operator);
+        Assert.False(regexp.Not); // 否定已内嵌在符号 !~，不用 Not 标记
+        Assert.Equal("name !~ '^test'", regexp.ToString());
+    }
+
+    [Fact]
+    public void RegExpMatchOperator_PostgresNotTildeStar_ShouldCarryNegatedSymbol()
+    {
+        var expr = SqlParser.ParseCondExpression("name !~* '^test'");
+        var regexp = Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.Equal("!~*", regexp.Operator);
+        Assert.Equal("name !~* '^test'", regexp.ToString());
+    }
+
+    [Theory]
+    [InlineData("~")]
+    [InlineData("~*")]
+    [InlineData("!~")]
+    [InlineData("!~*")]
+    public void RegExpMatchOperator_PostgresOperators_NotEqualsTo(string op)
+    {
+        // 防回归：确保这些符号不再被误解析为 EqualsTo
+        var expr = SqlParser.ParseCondExpression($"name {op} '^test'");
+        Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.IsNotType<EqualsTo>(expr);
+    }
+
     #endregion
 
     #region IntervalExpression

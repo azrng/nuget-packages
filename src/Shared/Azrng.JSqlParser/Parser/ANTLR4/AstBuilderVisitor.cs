@@ -3612,6 +3612,24 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (op.MINOR_THAN() != null) return new MinorThan { LeftExpression = concat, RightExpression = right };
             if (op.MINOR_THAN_EQUALS() != null) return new MinorThanEquals { LeftExpression = concat, RightExpression = right };
 
+            // PostgreSQL 正则匹配运算符 ~ / ~* / !~ / !~*：归一到 RegExpMatchOperator，
+            // Operator 字段填原始符号文本（如 "!~"），Not 保持 false —— 避免 OperatorSymbol
+            // 错误地拼成 "NOT ~"（PG 否定写法是符号前置 !~，非 NOT 前缀）。
+            // 修复前这些 token 落到下面默认分支被错误地建成 EqualsTo（=）。
+            if (op.TILDE() != null || op.TILDE_STAR() != null || op.NOT_TILDE() != null || op.NOT_TILDE_STAR() != null)
+            {
+                var symbol = op.TILDE() != null ? "~"
+                    : op.TILDE_STAR() != null ? "~*"
+                    : op.NOT_TILDE() != null ? "!~" : "!~*";
+                return new RegExpMatchOperator
+                {
+                    LeftExpression = concat,
+                    RightExpression = right,
+                    Operator = symbol,
+                    Not = false
+                };
+            }
+
             return new EqualsTo { LeftExpression = concat, RightExpression = right };
         }
 
