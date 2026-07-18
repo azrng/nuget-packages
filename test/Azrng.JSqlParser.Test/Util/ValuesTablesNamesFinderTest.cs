@@ -1,19 +1,16 @@
 using Azrng.JSqlParser.Parser;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test.Util;
 
 /// <summary>
 /// TablesNamesFinder 对 VALUES 表构造器的表名提取测试（T097 补充）。
 /// 验证 VisitValues 分支正确遍历 Rows 内表达式并提取列引用中的表名。
+/// 公开入口为 <see cref="StatementExtension.GetTableNames"/>；底层遍历语义不变。
 /// </summary>
 public class ValuesTablesNamesFinderTest
 {
-    private static HashSet<string> GetTables(string sql)
-    {
-        var finder = new TablesNamesFinder();
-        return finder.GetTables(SqlParser.Parse(sql)!);
-    }
+    private static System.Collections.Generic.IReadOnlyCollection<string> GetTables(string sql)
+        => SqlParser.Parse(sql)!.GetTableNames();
 
     /// <summary>独立 VALUES 语句含列引用，应提取出表名。</summary>
     [Fact]

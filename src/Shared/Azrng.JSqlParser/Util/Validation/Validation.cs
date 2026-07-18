@@ -62,14 +62,6 @@ public class Validation
     /// </summary>
     public IReadOnlyList<ValidationError> Errors => _errors;
 
-    /// <summary>解析后的语句（兼容旧 API，改用 <see cref="ParsedStatements"/> 属性）。</summary>
-    [Obsolete("改用 " + nameof(ParsedStatements) + " 属性")]
-    public Statement.Statements? GetParsedStatements() => _parsedStatements;
-
-    /// <summary>校验错误列表（兼容旧 API，改用 <see cref="Errors"/> 属性）。</summary>
-    [Obsolete("改用 " + nameof(Errors) + " 属性")]
-    public List<ValidationError> GetErrors() => _errors;
-
     private void ValidateStatements(Statement.Statements statements)
     {
         foreach (var stmt in statements.StatementList)

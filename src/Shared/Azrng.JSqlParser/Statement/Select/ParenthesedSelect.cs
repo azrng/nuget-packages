@@ -13,10 +13,6 @@ public class ParenthesedSelect : ASTNodeAccessImpl, Expression.IExpression, IFro
     public Alias? Alias { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => Select.Accept(visitor, context);
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public Alias? GetAlias() => Alias;
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public void SetAlias(Alias alias) { Alias = alias; }
 
     public PlainSelect GetPlainSelect()
     {

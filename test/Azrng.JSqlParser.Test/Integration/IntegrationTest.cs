@@ -1,6 +1,5 @@
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test.Integration;
 
@@ -247,8 +246,7 @@ public class IntegrationTest
     public void TableNames_SimpleSelect_ShouldReturnTable()
     {
         var stmt = SqlParser.Parse("SELECT id FROM users")!;
-        var finder = new TablesNamesFinder();
-        var tables = finder.GetTables(stmt);
+        var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
     }
 
@@ -257,8 +255,7 @@ public class IntegrationTest
     {
         var stmt = SqlParser.Parse(
             "SELECT u.id, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id")!;
-        var finder = new TablesNamesFinder();
-        var tables = finder.GetTables(stmt);
+        var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
         Assert.Contains("orders", tables);
     }
@@ -268,8 +265,7 @@ public class IntegrationTest
     {
         var stmt = SqlParser.Parse(
             "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)")!;
-        var finder = new TablesNamesFinder();
-        var tables = finder.GetTables(stmt);
+        var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
         Assert.Contains("orders", tables);
     }

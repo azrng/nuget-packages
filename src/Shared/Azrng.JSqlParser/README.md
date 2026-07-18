@@ -115,9 +115,8 @@ IReadOnlyCollection<string> tables = stmt.GetTableNames();
 // => { "users", "orders" }
 ```
 
-> 旧的 `new TablesNamesFinder().GetTables(stmt)` 已标记 `[Obsolete]`，请改用 `stmt.GetTableNames()`。
-> 动词统一为 `Get`，与 `GetTableReferences`/`GetSelectColumns`/`GetWhereConditions` 一致；
-> 旧扩展方法 `ExtractTableNames` 已标记 `[Obsolete]`，转发到 `GetTableNames`。
+> 动词统一为 `Get`，与 `GetTableReferences`/`GetSelectColumns`/`GetWhereConditions` 一致。
+> 早期版本曾存在 `new TablesNamesFinder().GetTables(stmt)` / `stmt.ExtractTableNames()` 公开 API，已于后续版本删除，统一收敛到 `stmt.GetTableNames()`。
 
 ### 遍历与收集 AST（C# 风格）
 
@@ -252,7 +251,20 @@ Console.WriteLine(stmt.ToString());
 - `ExpressionVisitorAdapter` 修复 `Matches`/`RegExpMatchOperator` 的 Visit 空实现 bug（此前 `=> default!` 不递归子节点，现改为 `VisitBinary` 正确下钻）。
 - `ExpressionVisitor`/`ExpressionVisitorAdapter`/`ExpressionDescendantsWalker`/`TablesNamesFinder` 同步移除 `Visit(SimilarToExpression)`（类已删）。
 
-**测试**：全量 1465 项 × 3 TFM（net8/9/10）全部通过，0 失败。
+**Obsolete 兼容层清理（beta9 二次迭代，版本号不变）**：
+- 移除 beta6-beta8 引入的全部 `[Obsolete]` 转发壳，对外统一使用 C# 风格 API：
+  - 解析入口：`CCJSqlParserUtil`（整类删除）→ 统一用 `SqlParser`。
+  - `BinaryExpression.GetStringExpression()` → `OperatorSymbol` 属性。
+  - `SimpleNode.JjtGetFirstToken/JjtGetLastToken` → `GetFirstToken/GetLastToken`。
+  - `FromItem.GetAlias()/SetAlias()`（6 个实现类：Table/JsonTable/LateralView/ParenthesedSelect/TableFunction/Values）→ `Alias` 属性。
+  - `Select.GetForUpdateTable()` → `ForUpdateTable`；`Select.GetSelectBody()` 删除（用具体子类型）；`ForUpdateClause.GetFirstTable()` → `FirstTable`。
+  - `TablesNamesFinder.GetTables()` 公开方法删除（内部改为 `Traverse`，仅供 `GetTableNames()` 扩展方法复用）→ 统一用 `stmt.GetTableNames()`。
+  - `StatementExtension.ExtractTableNames()` → `GetTableNames()`。
+  - `Validation.GetParsedStatements()/GetErrors()` → `ParsedStatements`/`Errors` 属性。
+- 受影响的外部代码：凡是引用上述 API 的位置都需改写（具体迁移路径见 MIGRATION.md）。
+- `IFromItem` 接口签名不变；`TablesNamesFinder` 类本身及所有 visitor 方法保留。
+
+**测试**：全量 1566 项 × 3 TFM（net8/9/10）全部通过，0 失败。
 
 ### 1.0.0-beta8
 
@@ -263,18 +275,18 @@ C# 风格化治理收口 + 多目标框架支持。**本版本含多处破坏性
 - 显式 `<LangVersion>latest</LangVersion>` 统一三 TFM 语言版本。
 
 **破坏性变更（编译期需同步）**：
-- **解析入口改名**：新增 `SqlParser`（推荐入口），`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳。新代码用 `SqlParser.Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable`，旧代码无需改（仅 obsolete 警告）。
+- **解析入口改名**：新增 `SqlParser`（推荐入口），`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳（beta9 二次迭代中删除，仅保留 `SqlParser`）。新代码用 `SqlParser.Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable`。
 - **接口加 `I` 前缀**（C# 命名规范）：`ExpressionVisitor<T>`→`IExpressionVisitor<T>`、`StatementVisitor<T>`→`IStatementVisitor<T>`、`SelectVisitor<T>`→`ISelectVisitor<T>`、`Expression`→`IExpression`、`Statement`→`IStatement`、`ASTNodeAccess`→`IASTNodeAccess`、`Model`→`IModel`、`FromItem`→`IFromItem`（共 8 个接口；外部 visitor 实现需同步改接口名）。
 - **枚举值 SCREAMING_SNAKE_CASE → PascalCase**（共 60 值）：`ForMode`（UPDATE→Update 等 6 值）、`AlterOperation`（ADD→Add 等 47 值）、`ReturningReferenceType`（OLD→Old/NEW→New）、`DateTimeType`（DATE→Date/DATETIME→Datetime 等 5 值）。外部 switch case 与枚举名引用需全替换。
 - **`null!` 字段治理 → `required`**：`BinaryExpression.LeftExpression/RightExpression` + 28 个 AST 类字段 + `WhereCondition.LeftExpression` DTO 改为 `required`，外部 `new X()` 无参构造需改为对象初始化器或带 `[SetsRequiredMembers]` 的构造。
 
-**非破坏性变更（向后兼容）**：
-- `BinaryExpression.GetStringExpression()` → `OperatorSymbol` 属性（旧方法 `[Obsolete]` 转发）。
-- `JjtGetFirstToken/JjtGetLastToken` → `GetFirstToken/GetLastToken`（旧名 `[Obsolete]` 转发）。
+**非破坏性变更（向后兼容）**（其中标注 `[Obsolete]` 的转发壳已于 beta9 二次迭代删除）：
+- `BinaryExpression.GetStringExpression()` → `OperatorSymbol` 属性（旧方法 beta8 标 `[Obsolete]`，beta9 二次迭代删除）。
+- `JjtGetFirstToken/JjtGetLastToken` → `GetFirstToken/GetLastToken`（旧名 beta8 标 `[Obsolete]`，beta9 二次迭代删除）。
 - `OracleJoinSyntax` 从 `static class` 常量改为 `enum { None, Right, Left }`，`Column.OldOracleJoinSyntax` 字段类型同步。
 - 6 个字面量叶子类（NullValue/LongValue/DoubleValue/StringValue/HexValue/BooleanValue）加 `sealed`；`Alias` 加 `sealed` + 值相等。
-- `FromItem.GetAlias()/SetAlias()` → `Alias` 属性（6 实现类旧方法 `[Obsolete]` 转发）。
-- `Select.GetForUpdateTable()` → `ForUpdateTable` 属性；`ForUpdateClause.GetFirstTable()` → `FirstTable` 属性（旧名 `[Obsolete]` 转发）。
+- `FromItem.GetAlias()/SetAlias()` → `Alias` 属性（6 实现类旧方法 beta8 标 `[Obsolete]`，beta9 二次迭代删除）。
+- `Select.GetForUpdateTable()` → `ForUpdateTable` 属性；`ForUpdateClause.GetFirstTable()` → `FirstTable` 属性（旧名 beta8 标 `[Obsolete]`，beta9 二次迭代删除）。
 - 删除 `ForUpdateClause` 的 5 个 SetXxx builder 方法、`PlainSelect.GetStringList<T>()` 死代码。
 - `[NonSerialized]` 删除（本库无二进制序列化路径）。
 
@@ -288,10 +300,10 @@ C# 风格化治理收口 + 多目标框架支持。**本版本含多处破坏性
 - `GetTableReferences()` — FROM/JOIN/CTE 表引用（含别名与全名），返回中性 `TableReference`
 - `GetSelectColumns()` — SELECT 列结构化，区分 * / t.* / 列 / 表达式，返回中性 `SelectColumn`
 - `GetWhereConditions()` — WHERE AND/OR 树拍平为条件列表，返回中性 `WhereCondition`
-- `GetTableNames()` — 全部表名（含 WHERE 子查询）；旧 `ExtractTableNames` 标 `[Obsolete]` 转发
+- `GetTableNames()` — 全部表名（含 WHERE 子查询）；旧 `ExtractTableNames` 曾转发到本方法（beta9 二次迭代删除旧名）。
 
 **审查整改**（beta7 合并内容）：
-- **命名收敛**：`ExtractTableNames` → `GetTableNames`，动词统一 `Get`，旧名保留转发。
+- **命名收敛**：`ExtractTableNames` → `GetTableNames`，动词统一 `Get`（beta9 二次迭代删除旧名转发，仅保留 `GetTableNames`）。
 - **Descendants 覆盖完整性**：`ExpressionDescendantsWalker` 改为直接实现 `ExpressionVisitor<T>` 接口，编译期强制覆盖所有节点类型，杜绝约 12 个边缘类型（TrimFunction/CollateExpression/ArrayConstructor 等）静默漏覆盖。
 - **WHERE 通用化**：二元运算符（继承 `BinaryExpression`）统一提取、新增自动覆盖；未识别单目运算符（IS NULL/EXISTS）兜底提取不丢弃。`WhereCondition.RightExpression` 改可空。
 - **集合运算语义**：`GetSelectColumns` 对 UNION/INTERSECT/EXCEPT 按首个分支取列（文档明确）。
@@ -306,7 +318,7 @@ C# 风格遍历扩展方法，消除 visitor 副作用返回写法。
 
 - **新增扩展方法**：`ExpressionExtension`（`Descendants<T>()` / `Walk<T>()`）与 `StatementExtension`（`ExtractTableNames()` / `Descendants<T>()` / `Walk<T>()`），底层复用已验证的 visitor 递归逻辑，AST 结构与 visitor 接口零改动。
 - **消除 Java 味写法**：收集 AST 中某类节点无需再「定义 visitor 类 + new + Accept + 从字段掏结果」，直接 `expr.Descendants<Column>().ToList()`，有返回值、可接 LINQ。
-- **Obsolete 标记**：`TablesNamesFinder.GetTables()` 标记 `[Obsolete]`，改用 `stmt.ExtractTableNames()`。
+- **Obsolete 标记**：`TablesNamesFinder.GetTables()` 在 beta6 标记 `[Obsolete]`，改用 `stmt.ExtractTableNames()`（beta7 进一步改名为 `GetTableNames()`；beta9 二次迭代删除 `GetTables()` 公开方法）。
 - **架构同步**：`ARCHITECTURE.md` 新增「C# 风格遍历（推荐）」对照表，明确扩展方法是 Azrng 自有封装、上游同步无需对照。
 - **测试**：新增 42 项扩展方法测试（含与旧 ColumnCollector/ParameterCollector/GetTables 的等价验证），全量 1399 项通过。
 

@@ -40,10 +40,6 @@ public class ForUpdateClause
     /// <summary>返回 OF 子句中的第一个表，未指定时为 null。</summary>
     public Table? FirstTable => (Tables != null && Tables.Count > 0) ? Tables[0] : null;
 
-    /// <summary>返回 OF 子句中的第一个表，未指定时为 null。</summary>
-    [Obsolete("改用 " + nameof(FirstTable) + " 属性")]
-    public Table? GetFirstTable() => FirstTable;
-
     /// <summary>当 Mode 为 UPDATE 时返回 true。</summary>
     public bool IsForUpdate() => Mode == ForMode.Update;
 

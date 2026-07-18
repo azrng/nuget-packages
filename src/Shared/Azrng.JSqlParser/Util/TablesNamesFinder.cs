@@ -17,8 +17,11 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     private readonly HashSet<string> _tables = new();
     private readonly HashSet<string> _tableAliases = new(StringComparer.OrdinalIgnoreCase);
 
-    [Obsolete("改用 statement.GetTableNames() 扩展方法，后续版本将移除")]
-    public HashSet<string> GetTables(Statement.IStatement statement)
+    /// <summary>
+    /// 遍历语句收集表名（内部入口，供 <see cref="StatementExtension.GetTableNames"/> 复用）。
+    /// 公开 API 请使用 <c>statement.GetTableNames()</c> 扩展方法。
+    /// </summary>
+    internal HashSet<string> Traverse(Statement.IStatement statement)
     {
         _tables.Clear();
         _tableAliases.Clear();

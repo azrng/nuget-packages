@@ -57,10 +57,6 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, IExpression
     /// <summary>返回 OF 子句的第一个表，未指定时为 null。</summary>
     public Table? ForUpdateTable => (ForUpdateTables != null && ForUpdateTables.Count > 0) ? ForUpdateTables[0] : null;
 
-    /// <summary>返回 OF 子句的第一个表，未指定时为 null（兼容旧 API）。</summary>
-    [Obsolete("改用 " + nameof(ForUpdateTable) + " 属性")]
-    public Table? GetForUpdateTable() => ForUpdateTable;
-
     /// <summary>
     /// 根据当前 FOR UPDATE 字段组装并返回 <see cref="ForUpdateClause"/> 视图。
     /// 当 <see cref="ForMode"/> 为 null（未指定 FOR 子句）时返回 null。
@@ -181,7 +177,4 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, IExpression
     }
 
     public override string ToString() => AppendTo(new StringBuilder()).ToString();
-
-    [Obsolete("改用具体的 select body 子类型（PlainSelect/SetOperationList/Values 等）")]
-    public Select GetSelectBody() => this;
 }

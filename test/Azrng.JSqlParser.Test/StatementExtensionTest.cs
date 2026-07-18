@@ -1,31 +1,25 @@
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement;
 using Azrng.JSqlParser.Statement.Select;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test;
 
 /// <summary>
 /// 语句扩展方法（GetTableNames / Descendants / Walk）测试。
-/// GetTableNames 验证与旧 TablesNamesFinder.GetTables 结果等价；
-/// Descendants/Walk 验证语句层遍历与嵌套子语句递归。
+/// GetTableNames 验证表名提取语义；Descendants/Walk 验证语句层遍历与嵌套子语句递归。
 /// </summary>
 public class StatementExtensionTest
 {
-    // ---------- GetTableNames：与旧 GetTables 等价 ----------
+    // ---------- GetTableNames：表名提取语义 ----------
 
     [Fact]
-    public void GetTableNames_SimpleSelect_ShouldEqualLegacyGetTables()
+    public void GetTableNames_SimpleSelect_ShouldReturnTableName()
     {
         var stmt = SqlParser.Parse("SELECT id FROM users")!;
-        var viaExtension = stmt.GetTableNames();
+        var tables = stmt.GetTableNames();
 
-#pragma warning disable CS0618 // 等价对照
-        var viaLegacy = new TablesNamesFinder().GetTables(stmt);
-#pragma warning restore CS0618
-
-        Assert.Equal(viaLegacy.OrderBy(n => n), viaExtension.OrderBy(n => n));
-        Assert.Contains("users", viaExtension);
+        Assert.Contains("users", tables);
+        Assert.Single(tables);
     }
 
     [Fact]

@@ -148,16 +148,14 @@ public class PerformanceBenchmarkTest
         for (var i = 0; i < WarmupIterations; i++)
         {
             var stmt = SqlParser.Parse(sql)!;
-            var finder = new TablesNamesFinder();
-            finder.GetTables(stmt);
+            stmt.GetTableNames();
         }
 
         var sw = Stopwatch.StartNew();
         for (var i = 0; i < MeasureIterations; i++)
         {
             var stmt = SqlParser.Parse(sql)!;
-            var finder = new TablesNamesFinder();
-            finder.GetTables(stmt);
+            stmt.GetTableNames();
         }
         sw.Stop();
 

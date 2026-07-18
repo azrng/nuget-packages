@@ -1,6 +1,5 @@
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Alter;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test.Statement;
 
@@ -63,8 +62,7 @@ public class RenameTableStatementTest
     public void Rename_TableNamesFinder_ShouldExtractBothTables()
     {
         var stmt = SqlParser.Parse("RENAME TABLE old_t TO new_t");
-        var finder = new TablesNamesFinder();
-        var tables = finder.GetTables(stmt!);
+        var tables = stmt!.GetTableNames();
 
         Assert.Contains("old_t", tables);
         Assert.Contains("new_t", tables);

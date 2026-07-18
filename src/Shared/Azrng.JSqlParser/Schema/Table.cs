@@ -47,13 +47,6 @@ public class Table : ASTNodeAccessImpl, IFromItem
         return string.Join(".", parts);
     }
 
-    /// <summary>返回别名（兼容旧 API，改用 <see cref="Alias"/> 属性）。</summary>
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public Alias? GetAlias() => Alias;
-    /// <summary>设置别名（兼容旧 API，改用 <see cref="Alias"/> 属性）。</summary>
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public void SetAlias(Alias alias) { Alias = alias; }
-
     public override string ToString()
     {
         var name = GetFullyQualifiedName();

@@ -34,11 +34,4 @@ public class Values : Select, IFromItem
         }
         return builder;
     }
-
-    /// <summary>FROM 子项输出（带别名），用于 <c>FROM (VALUES ...) AS t</c> 场景。</summary>
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public Alias? GetAlias() => Alias;
-
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public void SetAlias(Alias alias) { Alias = alias; }
 }

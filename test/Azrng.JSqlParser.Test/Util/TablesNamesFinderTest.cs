@@ -1,18 +1,15 @@
 using Azrng.JSqlParser.Parser;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test.Util;
 
 /// <summary>
-/// TablesNamesFinder 测试 — 从各种 SQL 中提取表名
+/// TablesNamesFinder 测试 — 从各种 SQL 中提取表名。
+/// 公开入口为 <see cref="StatementExtension.GetTableNames"/>；本测试覆盖其底层遍历语义。
 /// </summary>
 public class TablesNamesFinderTest
 {
-    private HashSet<string> GetTables(Azrng.JSqlParser.Statement.IStatement stmt)
-    {
-        var finder = new TablesNamesFinder();
-        return finder.GetTables(stmt);
-    }
+    private System.Collections.Generic.IReadOnlyCollection<string> GetTables(Azrng.JSqlParser.Statement.IStatement stmt)
+        => stmt.GetTableNames();
 
     [Fact]
     public void FindTables_SimpleSelect_ShouldReturnTable()

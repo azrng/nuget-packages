@@ -142,26 +142,4 @@ public class ParserSmokeTest
         var select = (PlainSelect)statement;
         Assert.NotNull(select.Limit);
     }
-
-    /// <summary>
-    /// 旧名 CCJSqlParserUtil 已标 [Obsolete] 转发到 SqlParser，验证转发仍可用（向后兼容回归保护）。
-    /// </summary>
-    [Fact]
-#pragma warning disable CS0618 // 旧名测试预期触发 obsolete 警告
-    public void Legacy_CCJSqlParserUtil_ForwardsToSqlParser()
-    {
-        var statement = CCJSqlParserUtil.Parse("SELECT id FROM users");
-        Assert.NotNull(statement);
-        Assert.IsType<PlainSelect>(statement);
-
-        var expr = CCJSqlParserUtil.ParseExpression("id = 1");
-        Assert.NotNull(expr);
-
-        var stmts = CCJSqlParserUtil.ParseStatements("SELECT 1; SELECT 2");
-        Assert.NotNull(stmts);
-        Assert.Equal(2, stmts!.StatementList.Count);
-
-        Assert.Null(CCJSqlParserUtil.ParseNullable("INVALID SQL $$$"));
-    }
-#pragma warning restore CS0618
 }

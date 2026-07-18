@@ -7,8 +7,7 @@ namespace Azrng.JSqlParser.Parser;
 /// SQL 解析入口：把 SQL 文本解析为强类型 AST。
 /// </summary>
 /// <remarks>
-/// 原 <c>CCJSqlParserUtil</c>（保留为 [Obsolete] 转发别名）的实际实现所在。
-/// 新代码请直接使用 <see cref="SqlParser"/>。
+/// 历史命名 <c>CCJSqlParserUtil</c> 已删除，统一使用 <see cref="SqlParser"/>。
 /// </remarks>
 public static class SqlParser
 {

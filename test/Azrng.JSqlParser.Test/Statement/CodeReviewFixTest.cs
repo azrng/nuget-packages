@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Threading;
 using Azrng.JSqlParser.Parser;
-using Azrng.JSqlParser.Util;
 
 namespace Azrng.JSqlParser.Test.Statement;
 
@@ -37,8 +36,7 @@ public class CodeReviewFixTest
     [Fact]
     public void H1_Merge_SourceTable_Extracted()
     {
-        var tables = new TablesNamesFinder().GetTables(
-            SqlParser.Parse("MERGE INTO t USING src ON t.id = src.id WHEN MATCHED THEN DELETE")!);
+        var tables = SqlParser.Parse("MERGE INTO t USING src ON t.id = src.id WHEN MATCHED THEN DELETE")!.GetTableNames();
         Assert.Contains("t", tables);
         Assert.Contains("src", tables);
     }
@@ -76,15 +74,14 @@ public class CodeReviewFixTest
     [Fact]
     public void H4_TableStatement_ExtractsTableName()
     {
-        var tables = new TablesNamesFinder().GetTables(SqlParser.Parse("TABLE users")!);
+        var tables = SqlParser.Parse("TABLE users")!.GetTableNames();
         Assert.Contains("users", tables);
     }
 
     [Fact]
     public void H4_UpdateJoin_ExtractsBothTables()
     {
-        var tables = new TablesNamesFinder().GetTables(
-            SqlParser.Parse("UPDATE a JOIN b ON a.id = b.a_id SET a.x = b.y")!);
+        var tables = SqlParser.Parse("UPDATE a JOIN b ON a.id = b.a_id SET a.x = b.y")!.GetTableNames();
         Assert.Contains("a", tables);
         Assert.Contains("b", tables);
     }
@@ -92,8 +89,7 @@ public class CodeReviewFixTest
     [Fact]
     public void H4_OrderBySubquery_Extracted()
     {
-        var tables = new TablesNamesFinder().GetTables(
-            SqlParser.Parse("SELECT * FROM users ORDER BY (SELECT name FROM cfg)")!);
+        var tables = SqlParser.Parse("SELECT * FROM users ORDER BY (SELECT name FROM cfg)")!.GetTableNames();
         Assert.Contains("users", tables);
         Assert.Contains("cfg", tables);
     }
@@ -101,8 +97,7 @@ public class CodeReviewFixTest
     [Fact]
     public void H4_GroupBySubquery_Extracted()
     {
-        var tables = new TablesNamesFinder().GetTables(
-            SqlParser.Parse("SELECT * FROM users GROUP BY id HAVING COUNT(*) > (SELECT COUNT(*) FROM orders)")!);
+        var tables = SqlParser.Parse("SELECT * FROM users GROUP BY id HAVING COUNT(*) > (SELECT COUNT(*) FROM orders)")!.GetTableNames();
         Assert.Contains("orders", tables);
     }
 

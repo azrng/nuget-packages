@@ -25,11 +25,6 @@ public class LateralView : ASTNodeAccessImpl, IFromItem
     /// <summary>IFromItem 接口的别名（通常 LateralView 不使用，别名在 TableAlias/ColumnAliases）。</summary>
     public Alias? Alias { get; set; }
 
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public Alias? GetAlias() => Alias;
-    [Obsolete("改用 " + nameof(Alias) + " 属性")]
-    public void SetAlias(Alias alias) => Alias = alias;
-
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder("LATERAL VIEW");

@@ -19,9 +19,5 @@ public abstract class BinaryExpression : ASTNodeAccessImpl, IExpression
     /// <summary>拼接好的运算表达式文本：左 操作符 右。</summary>
     protected string OperatorExpressionText => $"{LeftExpression} {OperatorSymbol} {RightExpression}";
 
-    /// <summary>返回运算符符号（兼容旧 API，改用 <see cref="OperatorSymbol"/> 属性）。</summary>
-    [Obsolete("改用 OperatorSymbol 属性")]
-    public string GetStringExpression() => OperatorSymbol;
-
     public override string ToString() => OperatorExpressionText;
 }

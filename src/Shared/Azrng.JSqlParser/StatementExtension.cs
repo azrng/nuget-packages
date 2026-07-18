@@ -28,7 +28,7 @@ public static class StatementExtension
     /// <returns>表名只读集合（已去重）。</returns>
     /// <example>
     /// <code>
-    /// var stmt = CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
+    /// var stmt = SqlParser.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
     /// IReadOnlyCollection&lt;string&gt; tables = stmt.GetTableNames();
     /// // => { "users", "orders" }
     /// </code>
@@ -37,17 +37,10 @@ public static class StatementExtension
     {
         ArgumentNullException.ThrowIfNull(statement);
         var finder = new TablesNamesFinder();
-#pragma warning disable CS0618 // 内部复用成熟遍历，Obsolete 面向外部调用方
-        var tables = finder.GetTables(statement);
-#pragma warning restore CS0618
+        var tables = finder.Traverse(statement);
         // 返回只读视图，避免调用方误改 finder 内部状态
         return tables;
     }
-
-    /// <summary>已过时，请改用 <see cref="GetTableNames"/>。</summary>
-    [Obsolete("改用 GetTableNames()，后续版本将移除")]
-    public static IReadOnlyCollection<string> ExtractTableNames(this Statement.IStatement statement)
-        => statement.GetTableNames();
 
     /// <summary>
     /// 提取 SELECT 语句中引用的全部表（含别名映射、全限定名）。
