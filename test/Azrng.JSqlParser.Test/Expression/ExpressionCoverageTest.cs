@@ -672,90 +672,147 @@ public class ExpressionCoverageTest
 
     #endregion
 
-    #region RegExpMatchOperator
+    #region RegExpMatchOperator（PostgreSQL 符号形式 ~ / ~* / !~ / !~*）
+
+    // 对齐上游模型后：PG 符号形式正则匹配 → RegExpMatchOperator + OperatorType 枚举
+    // 关键字形式（REGEXP/RLIKE/REGEXP_LIKE/SIMILAR TO 等）→ LikeExpression，见下方 LikeExpression region
 
     [Fact]
-    public void RegExpMatchOperator_Regexp_ShouldParse()
-    {
-        var expr = SqlParser.ParseCondExpression("name REGEXP '^test'");
-        Assert.IsType<RegExpMatchOperator>(expr);
-        var regexp = (RegExpMatchOperator)expr!;
-        Assert.Equal("REGEXP", regexp.Operator);
-        Assert.NotNull(regexp.LeftExpression);
-        Assert.NotNull(regexp.RightExpression);
-    }
-
-    [Fact]
-    public void RegExpMatchOperator_Rlike_ShouldParse()
-    {
-        var expr = SqlParser.ParseCondExpression("name RLIKE '^test'");
-        Assert.IsType<RegExpMatchOperator>(expr);
-        Assert.Equal("RLIKE", ((RegExpMatchOperator)expr!).Operator);
-    }
-
-    [Fact]
-    public void RegExpMatchOperator_NotRegexp_ShouldSetNot()
-    {
-        var expr = SqlParser.ParseCondExpression("name NOT REGEXP '^test'");
-        Assert.IsType<RegExpMatchOperator>(expr);
-        var regexp = (RegExpMatchOperator)expr!;
-        Assert.True(regexp.Not);
-        Assert.Equal("name NOT REGEXP '^test'", regexp.ToString());
-    }
-
-    // PostgreSQL 正则匹配运算符 ~ / ~* / !~ / !~*
-    // 修复前 visitor 遗漏这四个 token，全部被错误地建成 EqualsTo（=）
-
-    [Fact]
-    public void RegExpMatchOperator_PostgresTilde_ShouldParseAsRegexpNotEquals()
+    public void RegExpMatchOperator_PostgresTilde_ShouldUseMatchCaseSensitiveType()
     {
         var expr = SqlParser.ParseCondExpression("name ~ '^test'");
         var regexp = Assert.IsType<RegExpMatchOperator>(expr);
-        Assert.Equal("~", regexp.Operator);
-        Assert.False(regexp.Not);
+        Assert.Equal(RegExpMatchOperatorType.MatchCaseSensitive, regexp.OperatorType);
         Assert.Equal("name ~ '^test'", regexp.ToString());
     }
 
     [Fact]
-    public void RegExpMatchOperator_PostgresTildeStar_ShouldCarryCaseInsensitiveSymbol()
+    public void RegExpMatchOperator_PostgresTildeStar_ShouldUseCaseInsensitiveType()
     {
         var expr = SqlParser.ParseCondExpression("name ~* '^test'");
         var regexp = Assert.IsType<RegExpMatchOperator>(expr);
-        Assert.Equal("~*", regexp.Operator);
-        Assert.False(regexp.Not);
+        Assert.Equal(RegExpMatchOperatorType.MatchCaseInsensitive, regexp.OperatorType);
         Assert.Equal("name ~* '^test'", regexp.ToString());
     }
 
     [Fact]
-    public void RegExpMatchOperator_PostgresNotTilde_ShouldCarryNegatedSymbol()
+    public void RegExpMatchOperator_PostgresNotTilde_ShouldUseNotMatchCaseSensitiveType()
     {
         var expr = SqlParser.ParseCondExpression("name !~ '^test'");
         var regexp = Assert.IsType<RegExpMatchOperator>(expr);
-        Assert.Equal("!~", regexp.Operator);
-        Assert.False(regexp.Not); // 否定已内嵌在符号 !~，不用 Not 标记
+        // 否定通过 OperatorType 枚举成员表达，不再用 Not 字段
+        Assert.Equal(RegExpMatchOperatorType.NotMatchCaseSensitive, regexp.OperatorType);
         Assert.Equal("name !~ '^test'", regexp.ToString());
     }
 
     [Fact]
-    public void RegExpMatchOperator_PostgresNotTildeStar_ShouldCarryNegatedSymbol()
+    public void RegExpMatchOperator_PostgresNotTildeStar_ShouldUseNotMatchCaseInsensitiveType()
     {
         var expr = SqlParser.ParseCondExpression("name !~* '^test'");
         var regexp = Assert.IsType<RegExpMatchOperator>(expr);
-        Assert.Equal("!~*", regexp.Operator);
+        Assert.Equal(RegExpMatchOperatorType.NotMatchCaseInsensitive, regexp.OperatorType);
         Assert.Equal("name !~* '^test'", regexp.ToString());
     }
 
     [Theory]
-    [InlineData("~")]
-    [InlineData("~*")]
-    [InlineData("!~")]
-    [InlineData("!~*")]
-    public void RegExpMatchOperator_PostgresOperators_NotEqualsTo(string op)
+    [InlineData("~", RegExpMatchOperatorType.MatchCaseSensitive)]
+    [InlineData("~*", RegExpMatchOperatorType.MatchCaseInsensitive)]
+    [InlineData("!~", RegExpMatchOperatorType.NotMatchCaseSensitive)]
+    [InlineData("!~*", RegExpMatchOperatorType.NotMatchCaseInsensitive)]
+    public void RegExpMatchOperator_PostgresOperators_NotEqualsTo(string op, RegExpMatchOperatorType expectedType)
     {
-        // 防回归：确保这些符号不再被误解析为 EqualsTo
+        // 防回归：确保这些符号不再被误解析为 EqualsTo，且 OperatorType 正确
         var expr = SqlParser.ParseCondExpression($"name {op} '^test'");
-        Assert.IsType<RegExpMatchOperator>(expr);
+        var regexp = Assert.IsType<RegExpMatchOperator>(expr);
+        Assert.Equal(expectedType, regexp.OperatorType);
         Assert.IsNotType<EqualsTo>(expr);
+    }
+
+    #endregion
+
+    #region LikeExpression（关键字形式匹配：LIKE/ILIKE/REGEXP/RLIKE/SIMILAR TO 等）
+
+    // 对齐上游模型：关键字形式统一归 LikeExpression + KeyWord 枚举
+    // 此前 REGEXP/RLIKE 错误建成 RegExpMatchOperator，SIMILAR TO 建成独立 SimilarToExpression，已合并
+
+    [Fact]
+    public void LikeExpression_Regexp_ShouldUseRegexpKeyWord()
+    {
+        var expr = SqlParser.ParseCondExpression("name REGEXP '^test'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.Equal(LikeExpression.KeyWord.Regexp, like.LikeKeyWord);
+        Assert.False(like.Not);
+        Assert.Equal("name REGEXP '^test'", like.ToString());
+    }
+
+    [Fact]
+    public void LikeExpression_Rlike_ShouldUseRlikeKeyWord()
+    {
+        var expr = SqlParser.ParseCondExpression("name RLIKE '^test'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.Equal(LikeExpression.KeyWord.Rlike, like.LikeKeyWord);
+    }
+
+    [Fact]
+    public void LikeExpression_NotRegexp_ShouldSetNot()
+    {
+        var expr = SqlParser.ParseCondExpression("name NOT REGEXP '^test'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.True(like.Not);
+        Assert.Equal(LikeExpression.KeyWord.Regexp, like.LikeKeyWord);
+        Assert.Equal("name NOT REGEXP '^test'", like.ToString());
+    }
+
+    [Fact]
+    public void LikeExpression_Ilike_ShouldPreserveKeyWord()
+    {
+        // 此前 ILIKE 信息丢失（LikeExpression 无 KeyWord 字段，被记成普通 LIKE）
+        var expr = SqlParser.ParseCondExpression("name ILIKE '%test%'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.Equal(LikeExpression.KeyWord.Ilike, like.LikeKeyWord);
+        Assert.Equal("name ILIKE '%test%'", like.ToString());
+    }
+
+    [Fact]
+    public void LikeExpression_SimilarTo_ShouldBeLikeExpressionNotSeparateClass()
+    {
+        // SIMILAR TO 现归 LikeExpression(KeyWord.SimilarTo)，不再建独立 SimilarToExpression
+        var expr = SqlParser.ParseCondExpression("name SIMILAR TO 'A%'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.Equal(LikeExpression.KeyWord.SimilarTo, like.LikeKeyWord);
+        Assert.Equal("name SIMILAR TO 'A%'", like.ToString());
+    }
+
+    [Fact]
+    public void LikeExpression_NotSimilarTo_ShouldSetNot()
+    {
+        var expr = SqlParser.ParseCondExpression("name NOT SIMILAR TO 'A%'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.True(like.Not);
+        Assert.Equal(LikeExpression.KeyWord.SimilarTo, like.LikeKeyWord);
+        Assert.Equal("name NOT SIMILAR TO 'A%'", like.ToString());
+    }
+
+    [Fact]
+    public void LikeExpression_Escape_ShouldBeCaptured()
+    {
+        // grammar 已支持 ESCAPE，visitor 补处理后 Escape 字段应被填充
+        var expr = SqlParser.ParseCondExpression("name LIKE 'a%' ESCAPE '#'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.NotNull(like.Escape);
+        Assert.Contains("ESCAPE", like.ToString()!);
+    }
+
+    [Theory]
+    [InlineData("LIKE", LikeExpression.KeyWord.Like)]
+    [InlineData("ILIKE", LikeExpression.KeyWord.Ilike)]
+    [InlineData("REGEXP", LikeExpression.KeyWord.Regexp)]
+    [InlineData("RLIKE", LikeExpression.KeyWord.Rlike)]
+    public void LikeExpression_KeyWords_ShouldMapCorrectly(string keyword, LikeExpression.KeyWord expected)
+    {
+        var expr = SqlParser.ParseCondExpression($"name {keyword} 'x'");
+        var like = Assert.IsType<LikeExpression>(expr);
+        Assert.Equal(expected, like.LikeKeyWord);
     }
 
     #endregion

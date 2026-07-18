@@ -141,7 +141,6 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
     public object? Visit<S>(IsBooleanExpression isBooleanExpression, S context) { _onVisit(isBooleanExpression); return default; }
     public object? Visit<S>(IsDistinctExpression isDistinctExpression, S context) { _onVisit(isDistinctExpression); return default; }
     public object? Visit<S>(LikeExpression likeExpression, S context) { _onVisit(likeExpression); return VisitBinary(likeExpression, context); }
-    public object? Visit<S>(SimilarToExpression similarToExpression, S context) { _onVisit(similarToExpression); return default; }
     public object? Visit<S>(ExistsExpression existsExpression, S context) { _onVisit(existsExpression); existsExpression.RightExpression?.Accept(this, context); return default; }
     public object? Visit<S>(FullTextSearch fullTextSearch, S context) { _onVisit(fullTextSearch); return default; }
     public object? Visit<S>(JsonOperator jsonOperator, S context) { _onVisit(jsonOperator); return default; }

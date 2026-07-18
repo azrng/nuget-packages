@@ -63,7 +63,6 @@ public interface IExpressionVisitor<T>
     T Visit<S>(IsBooleanExpression isBooleanExpression, S context);
     T Visit<S>(IsDistinctExpression isDistinctExpression, S context);
     T Visit<S>(LikeExpression likeExpression, S context);
-    T Visit<S>(SimilarToExpression similarToExpression, S context);
     T Visit<S>(ExistsExpression existsExpression, S context);
     T Visit<S>(FullTextSearch fullTextSearch, S context);
     T Visit<S>(JsonOperator jsonOperator, S context);
@@ -177,7 +176,6 @@ public interface IExpressionVisitor<T>
     void Visit(IsBooleanExpression isBooleanExpression) => Visit<object?>(isBooleanExpression, default);
     void Visit(IsDistinctExpression isDistinctExpression) => Visit<object?>(isDistinctExpression, default);
     void Visit(LikeExpression likeExpression) => Visit<object?>(likeExpression, default);
-    void Visit(SimilarToExpression similarToExpression) => Visit<object?>(similarToExpression, default);
     void Visit(ExistsExpression existsExpression) => Visit<object?>(existsExpression, default);
     void Visit(FullTextSearch fullTextSearch) => Visit<object?>(fullTextSearch, default);
     void Visit(JsonOperator jsonOperator) => Visit<object?>(jsonOperator, default);

@@ -148,7 +148,6 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     }
 
     public object? Visit<S>(LikeExpression likeExpression, S context) => VisitBinary(likeExpression);
-    public object? Visit<S>(SimilarToExpression similarToExpression, S context) => VisitBinary(similarToExpression);
 
     public object? Visit<S>(ExistsExpression existsExpression, S context)
     {

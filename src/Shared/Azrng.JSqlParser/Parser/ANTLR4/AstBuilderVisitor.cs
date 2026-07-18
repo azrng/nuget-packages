@@ -3612,21 +3612,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (op.MINOR_THAN() != null) return new MinorThan { LeftExpression = concat, RightExpression = right };
             if (op.MINOR_THAN_EQUALS() != null) return new MinorThanEquals { LeftExpression = concat, RightExpression = right };
 
-            // PostgreSQL 正则匹配运算符 ~ / ~* / !~ / !~*：归一到 RegExpMatchOperator，
-            // Operator 字段填原始符号文本（如 "!~"），Not 保持 false —— 避免 OperatorSymbol
-            // 错误地拼成 "NOT ~"（PG 否定写法是符号前置 !~，非 NOT 前缀）。
+            // PostgreSQL 正则匹配运算符 ~ / ~* / !~ / !~*：归一到 RegExpMatchOperator + 枚举，
+            // 对齐上游 JSqlParserCC.jjt:6834-6837。否定语义内嵌在 OperatorType 枚举成员
+            //（NotMatchCaseSensitive 等），不依赖 Not 前缀——PG 否定写法是符号前置 !~。
             // 修复前这些 token 落到下面默认分支被错误地建成 EqualsTo（=）。
             if (op.TILDE() != null || op.TILDE_STAR() != null || op.NOT_TILDE() != null || op.NOT_TILDE_STAR() != null)
             {
-                var symbol = op.TILDE() != null ? "~"
-                    : op.TILDE_STAR() != null ? "~*"
-                    : op.NOT_TILDE() != null ? "!~" : "!~*";
-                return new RegExpMatchOperator
+                var opType = op.TILDE() != null ? RegExpMatchOperatorType.MatchCaseSensitive
+                    : op.TILDE_STAR() != null ? RegExpMatchOperatorType.MatchCaseInsensitive
+                    : op.NOT_TILDE() != null ? RegExpMatchOperatorType.NotMatchCaseSensitive
+                    : RegExpMatchOperatorType.NotMatchCaseInsensitive;
+                return new RegExpMatchOperator(opType)
                 {
                     LeftExpression = concat,
-                    RightExpression = right,
-                    Operator = symbol,
-                    Not = false
+                    RightExpression = right
                 };
             }
 
@@ -3662,41 +3661,40 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return between;
         }
 
-        if (suffix.REGEXP() != null || suffix.RLIKE() != null || suffix.REGEXP_LIKE() != null)
-        {
-            var regexp = new RegExpMatchOperator
-            {
-                LeftExpression = concat,
-                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
-            };
-            regexp.Operator = suffix.REGEXP() != null ? "REGEXP" : suffix.RLIKE() != null ? "RLIKE" : "REGEXP_LIKE";
-            if (suffix.NOT() != null) regexp.Not = true;
-            return regexp;
-        }
-
-        if (suffix.LIKE() != null || suffix.ILIKE() != null
+        // 关键字形式的模式匹配（LIKE/ILIKE/RLIKE/REGEXP/REGEXP_LIKE/MATCH_*/SIMILAR TO）
+        // 统一建成 LikeExpression，通过 KeyWord 区分——对齐上游 LikeExpression 模型。
+        // 此前 REGEXP/RLIKE 错误地建成 RegExpMatchOperator、SIMILAR TO 建成独立 SimilarToExpression，已合并。
+        if (suffix.LIKE() != null || suffix.ILIKE() != null || suffix.RLIKE() != null
+            || suffix.REGEXP() != null || suffix.REGEXP_LIKE() != null
             || suffix.MATCH_ANY() != null || suffix.MATCH_ALL() != null
-            || suffix.MATCH_PHRASE() != null || suffix.MATCH_PHRASE_PREFIX() != null || suffix.MATCH_REGEXP() != null)
+            || suffix.MATCH_PHRASE() != null || suffix.MATCH_PHRASE_PREFIX() != null || suffix.MATCH_REGEXP() != null
+            || suffix.SIMILAR() != null)
         {
             var like = new LikeExpression
             {
                 LeftExpression = concat,
                 RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
             };
+            // 关键字映射到 KeyWord 枚举（对齐上游 LikeExpression.KeyWord.from(token.image)）
+            like.LikeKeyWord =
+                suffix.LIKE() != null ? LikeExpression.KeyWord.Like
+                : suffix.ILIKE() != null ? LikeExpression.KeyWord.Ilike
+                : suffix.RLIKE() != null ? LikeExpression.KeyWord.Rlike
+                : suffix.REGEXP() != null ? LikeExpression.KeyWord.Regexp
+                : suffix.REGEXP_LIKE() != null ? LikeExpression.KeyWord.RegexpLike
+                : suffix.MATCH_ANY() != null ? LikeExpression.KeyWord.MatchAny
+                : suffix.MATCH_ALL() != null ? LikeExpression.KeyWord.MatchAll
+                : suffix.MATCH_PHRASE() != null ? LikeExpression.KeyWord.MatchPhrase
+                : suffix.MATCH_PHRASE_PREFIX() != null ? LikeExpression.KeyWord.MatchPhrasePrefix
+                : suffix.MATCH_REGEXP() != null ? LikeExpression.KeyWord.MatchRegexp
+                : LikeExpression.KeyWord.SimilarTo;
             if (suffix.NOT() != null) like.Not = true;
-            return like;
-        }
-
-        // SIMILAR TO / NOT SIMILAR TO
-        if (suffix.SIMILAR() != null)
-        {
-            var similar = new SimilarToExpression
+            // ESCAPE 子句（grammar 1238/1239 行已支持，对齐上游 escapeExpression）
+            if (suffix.ESCAPE() != null)
             {
-                LeftExpression = concat,
-                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
-            };
-            if (suffix.NOT() != null) similar.Not = true;
-            return similar;
+                like.Escape = (Expression.IExpression)Visit(suffix.concatenationExpr(1));
+            }
+            return like;
         }
 
         if (suffix.IS() != null)

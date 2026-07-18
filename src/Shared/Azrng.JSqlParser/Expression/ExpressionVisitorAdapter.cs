@@ -105,15 +105,14 @@ public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
     public virtual T Visit<S>(IsBooleanExpression isBooleanExpression, S context) => default!;
     public virtual T Visit<S>(IsDistinctExpression isDistinctExpression, S context) => default!;
     public virtual T Visit<S>(LikeExpression likeExpression, S context) => VisitBinary(likeExpression, context);
-    public virtual T Visit<S>(SimilarToExpression similarToExpression, S context) => default!;
     public virtual T Visit<S>(ExistsExpression existsExpression, S context) { existsExpression.RightExpression?.Accept(this, context); return default!; }
     public virtual T Visit<S>(FullTextSearch fullTextSearch, S context) => default!;
     public virtual T Visit<S>(JsonOperator jsonOperator, S context) => default!;
     public virtual T Visit<S>(DoubleAnd doubleAnd, S context) => VisitBinary(doubleAnd, context);
     public virtual T Visit<S>(Contains contains, S context) => default!;
     public virtual T Visit<S>(ContainedBy containedBy, S context) => default!;
-    public virtual T Visit<S>(Matches matches, S context) => default!;
-    public virtual T Visit<S>(RegExpMatchOperator regExpMatchOperator, S context) => default!;
+    public virtual T Visit<S>(Matches matches, S context) => VisitBinary(matches, context);
+    public virtual T Visit<S>(RegExpMatchOperator regExpMatchOperator, S context) => VisitBinary(regExpMatchOperator, context);
     public virtual T Visit<S>(MemberOfExpression memberOfExpression, S context) { memberOfExpression.LeftExpression?.Accept(this, context); memberOfExpression.RightExpression?.Accept(this, context); return default!; }
     public virtual T Visit<S>(OverlapsCondition overlapsCondition, S context) { overlapsCondition.LeftExpression?.Accept(this, context); overlapsCondition.RightExpression?.Accept(this, context); return default!; }
 
