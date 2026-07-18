@@ -91,4 +91,24 @@ public class PostgreSqlFixRoundTripTest
         Assert.Contains("PASSING", output);
         Assert.Contains("FOR ORDINALITY", output);
     }
+
+    [Fact]
+    public void CreateIndex_UsingMethodAndColumns_RoundTrips()
+    {
+        var sql = "CREATE INDEX idx1 ON t USING gist (col1, col2 DESC) WHERE active";
+        var output = SqlParser.Parse(sql)!.ToString();
+        Assert.Contains("USING gist", output);
+        Assert.Contains("col1, col2 DESC", output);
+        Assert.Contains("WHERE active", output);
+    }
+
+    [Fact]
+    public void XmlTable_WithNamespaces_RoundTrips()
+    {
+        var sql = "SELECT * FROM XMLTABLE(XMLNAMESPACES('http://x' AS x, DEFAULT 'http://d'), '//x:ROW' PASSING data COLUMNS (id int))";
+        var output = SqlParser.Parse(sql)!.ToString();
+        Assert.Contains("XMLNAMESPACES", output);
+        Assert.Contains("DEFAULT", output);
+        Assert.Contains("PASSING", output);
+    }
 }

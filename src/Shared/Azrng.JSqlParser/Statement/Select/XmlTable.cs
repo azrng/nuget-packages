@@ -16,6 +16,12 @@ public class XmlTable : ASTNodeAccessImpl, IFromItem
     /// <summary>行 XPath 查询串（如 <c>'//ROWS/ROW'</c>）。</summary>
     public string? RowPath { get; set; }
 
+    /// <summary>
+    /// XMLNAMESPACES(...) 声明原始文本（如 <c>XMLNAMESPACES('http://x' AS x, DEFAULT 'http://d')</c>），
+    /// 未指定时为 null。原样存取保 round-trip。
+    /// </summary>
+    public string? XmlNamespaces { get; set; }
+
     /// <summary>PASSING 子句传入的表达式列表（如 <c>data</c>）。</summary>
     public List<IExpression> Passing { get; } = new();
 
@@ -28,6 +34,7 @@ public class XmlTable : ASTNodeAccessImpl, IFromItem
     public override string ToString()
     {
         var sb = new StringBuilder("XMLTABLE(");
+        if (XmlNamespaces != null) sb.Append(XmlNamespaces).Append(", ");
         sb.Append(RowPath);
         if (Passing.Count > 0)
             sb.Append(" PASSING ").Append(string.Join(", ", Passing));

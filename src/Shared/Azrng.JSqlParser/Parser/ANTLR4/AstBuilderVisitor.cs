@@ -1438,6 +1438,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             // 行 XPath 查询串（带引号原样保留，保 round-trip）
             RowPath = context.S_CHAR_LITERAL().GetText()
         };
+        // 可选 XMLNAMESPACES(...) 前缀，原样保留
+        if (context.xmlNamespacesClause() is { } ns)
+        {
+            xmlTable.XmlNamespaces = GetOriginalText(ns);
+        }
         foreach (var expr in context.expression())
         {
             xmlTable.Passing.Add((Expression.IExpression)Visit(expr));
@@ -3634,11 +3639,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitCreateIndex(JSqlParserGrammar.CreateIndexContext context)
     {
         var createIndex = new CreateIndex();
-        // identifier(0) = 索引名；可选的 USING identifier（索引方法）当前未结构化捕获，
-        // 与既有"索引列未 round-trip"行为一致，仅保证可解析。
         createIndex.Index = new Schema.Index { Name = context.identifier(0).GetText() };
         createIndex.Table = (Table)Visit(context.table());
         createIndex.Unique = context.UNIQUE() != null;
+        // PostgreSQL 索引方法 USING btree|gist|gin|...
+        if (context.USING() != null)
+            createIndex.UsingMethod = context.identifier(1).GetText();
+        // 索引列（含 ASC/DESC/表达式/opclass），取原始文本保 round-trip
+        foreach (var item in context.orderByItem())
+            createIndex.ColumnNames.Add(GetOriginalText(item));
+        // 部分索引 WHERE
+        if (context.whereClause() != null)
+            createIndex.Where = (Expression.IExpression)Visit(context.whereClause().expression());
         return createIndex;
     }
 

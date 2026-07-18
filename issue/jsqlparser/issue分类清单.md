@@ -115,12 +115,12 @@
 | [#2412](https://github.com/JSQLParser/JSqlParser/issues/2412) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : json_populate_record row expansion with (…). * not supported | json_populate_record 行展开 (...).*  | 🔧 已修复（selectItem 加 `(expr).*` → RowGetExpression+Parenthesis 保括号） |
 | [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 | 🔧 已修复（tableOrSubquery 加 ROWS FROM(...) → 新 RowsFrom 模型） |
 | [#2342](https://github.com/JSQLParser/JSqlParser/issues/2342) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : Nesting can cause NullPointerException | 嵌套导致 NullPointerException | ✅ 已支持（ANTLR 无栈深 NPE） |
-| [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 | 🔧 已修复（新 XMLTABLE 词法 token + xmlTable 规则 + XmlTable 模型） |
+| [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 | 🔧 已修复（新 XMLTABLE/XMLNAMESPACES 词法 token + xmlTable 规则含 XMLNAMESPACES 前缀 + XmlTable 模型） |
 | [#2233](https://github.com/JSQLParser/JSqlParser/issues/2233) | [B] | [BUG] JSQLParser 5.1: PostgreSQL: fail to parse dollar-quoted string constants with tags | $tag$ dollar-quoted 带标签字符串 | ✅ 已支持（S_DOLLAR_QUOTED_STRING 早支持带标签） |
 | [#1728](https://github.com/JSQLParser/JSqlParser/issues/1728) | [B] | [BUG] JSQLParser 4.5 : Postgres : fails to parse `interval hour to minute` | interval hour to minute | 🔧 已修复（dataType 加 `INTERVAL intervalField (TO intervalField)?` 分支） |
 | [#1511](https://github.com/JSQLParser/JSqlParser/issues/1511) | [B] | Cannot parse PGSQL JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | 🔧 已修复（tableFunction 加 `[WITH ORDINALITY] alias? (cols)?` + TableFunction.WithOrdinality/ColumnAliases） |
 | [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag | 🔧 已修复（explainStatement 加 `explainOptionList` + Analyze/Verbose/Options 字段；新增 VERBOSE/BUFFERS/TIMING/SUMMARY/WAL/YAML token） |
-| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 | 🔧 已修复（新增 @@/@@@ token + comparisonOperator + Matches 节点；createIndex 加 `USING method`） |
+| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 | 🔧 已修复（新增 @@/@@@ token + comparisonOperator + Matches 节点；createIndex 加 `USING method` 并补全索引列/WHERE round-trip） |
 
 ### ⑤ Oracle 专项  [4 条]
 

@@ -386,10 +386,21 @@ jsonTablePassingItem
 //   XMLTABLE(xpath_row_query PASSING expr [, ...] [COLUMNS (col_def, ...)])
 xmlTable
     : XMLTABLE OPENING_PAREN
+      (xmlNamespacesClause COMMA)?                      // 可选 XMLNAMESPACES(...) 前缀
       S_CHAR_LITERAL                                    // 行 XPath 查询串（如 '//ROWS/ROW'）
       (PASSING expression (COMMA expression)*)?         // PASSING data [, ...]
       (COLUMNS OPENING_PAREN xmlTableColumn (COMMA xmlTableColumn)* CLOSING_PAREN)?
       CLOSING_PAREN
+    ;
+
+// XMLTABLE 命名空间声明：XMLNAMESPACES('uri' AS prefix, ..., DEFAULT 'uri')
+xmlNamespacesClause
+    : XMLNAMESPACES OPENING_PAREN xmlNamespaceItem (COMMA xmlNamespaceItem)* CLOSING_PAREN
+    ;
+
+xmlNamespaceItem
+    : S_CHAR_LITERAL AS identifier    // 'uri' AS prefix
+    | DEFAULT S_CHAR_LITERAL          // DEFAULT 'uri'
     ;
 
 // XMLTABLE 列定义：name [datatype] [PATH 'xpath'] [DEFAULT expr]  或  name FOR ORDINALITY
@@ -1793,6 +1804,7 @@ nonReservedKeyword
     | UNLOGGED | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
     | WAL | WITHIN | WITHOUT | WORK | ZONE
     | XMLTABLE
+    | XMLNAMESPACES
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     | YAML
     ;

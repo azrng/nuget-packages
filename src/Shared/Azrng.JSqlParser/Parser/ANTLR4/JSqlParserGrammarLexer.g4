@@ -362,6 +362,7 @@ VARCHAR         : [Vv][Aa][Rr][Cc][Hh][Aa][Rr] ;
 VARYING         : [Vv][Aa][Rr][Yy][Ii][Nn][Gg] ;
 XML             : [Xx][Mm][Ll] ;
 XMLTABLE        : [Xx][Mm][Ll][Tt][Aa][Bb][Ll][Ee] ;
+XMLNAMESPACES   : [Xx][Mm][Ll][Nn][Aa][Mm][Ee][Ss][Pp][Aa][Cc][Ee][Ss] ;
 
 // ── Date/Time component keywords ──────────────
 
