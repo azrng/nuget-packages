@@ -3720,6 +3720,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 : suffix.MATCH_REGEXP() != null ? LikeExpression.KeyWord.MatchRegexp
                 : LikeExpression.KeyWord.SimilarTo;
             if (suffix.NOT() != null) like.Not = true;
+            // MySQL BINARY 前缀（x LIKE BINARY 'A' 大小写敏感匹配），对齐上游 useBinary
+            if (suffix.BINARY() != null) like.UseBinary = true;
             // ESCAPE 子句（grammar 1238/1239 行已支持，对齐上游 escapeExpression）
             if (suffix.ESCAPE() != null)
             {
