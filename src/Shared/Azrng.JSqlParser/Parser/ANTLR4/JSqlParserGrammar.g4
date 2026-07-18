@@ -329,9 +329,9 @@ sqlServerHint
     | NOLOCK
     ;
 
-// MySQL 索引提示：USE|IGNORE|FORCE INDEX|KEY (idx1, idx2, ...)
+// MySQL 索引提示：USE|IGNORE|FORCE INDEX|KEY [FOR JOIN|ORDER BY|GROUP BY] (idx1, idx2, ...)
 mySqlIndexHint
-    : (USE | IGNORE | FORCE) (INDEX | KEY) OPENING_PAREN identifier (COMMA identifier)* CLOSING_PAREN
+    : (USE | IGNORE | FORCE) (INDEX | KEY) (FOR (JOIN | ORDER BY | GROUP BY))? OPENING_PAREN identifier (COMMA identifier)* CLOSING_PAREN
     ;
 
 subSelect
@@ -544,7 +544,7 @@ orderByClause
     ;
 
 orderByItem
-    : expression (COLLATE (S_CHAR_LITERAL | QUOTED_IDENTIFIER))? (ASC | DESC)? (NULLS (FIRST | LAST))?
+    : expression (COLLATE (S_CHAR_LITERAL | QUOTED_IDENTIFIER))? (ASC | DESC)? (NULLS (FIRST | LAST))? (WITH ROLLUP)?
     ;
 
 limitClause

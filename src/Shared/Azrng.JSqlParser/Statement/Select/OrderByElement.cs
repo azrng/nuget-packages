@@ -19,6 +19,12 @@ public class OrderByElement
     /// <summary>COLLATE 排序规则名（含引号），未指定时为 null。</summary>
     public string? CollateName { get; set; }
 
+    /// <summary>
+    /// MySQL ORDER BY ... WITH ROLLUP 标记。对齐上游 mysqlWithRollup。
+    /// 为 true 时 ToString 末尾输出 <c> WITH ROLLUP</c>。
+    /// </summary>
+    public bool MysqlWithRollup { get; set; }
+
     public OrderByElement() { }
 
     public override string ToString()
@@ -29,6 +35,7 @@ public class OrderByElement
         else if (AscDescPresent) sb.Append(" ASC");
         if (NullOrder.HasValue)
             sb.Append(' ').Append(NullOrder == NullOrdering.NULLS_FIRST ? "NULLS FIRST" : "NULLS LAST");
+        if (MysqlWithRollup) sb.Append(" WITH ROLLUP");
         return sb.ToString();
     }
 }

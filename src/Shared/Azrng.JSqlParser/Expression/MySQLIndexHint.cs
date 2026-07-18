@@ -21,6 +21,12 @@ public class MySQLIndexHint : ASTNodeAccessImpl, IModel
     /// <summary>索引名列表。</summary>
     public List<string> IndexNames { get; set; } = new();
 
+    /// <summary>
+    /// MySQL 限定符：FOR JOIN / FOR ORDER BY / FOR GROUP BY。未指定时为 null。
+    /// 对齐上游 MySQLIndexHint.forClause（join/order/group）。
+    /// </summary>
+    public string? ForClause { get; set; }
+
     public MySQLIndexHint() { }
 
     public MySQLIndexHint(string action, string indexQualifier, List<string> indexNames)
@@ -32,7 +38,8 @@ public class MySQLIndexHint : ASTNodeAccessImpl, IModel
 
     public override string ToString()
     {
-        // use|ignore|force key|index (index1,...,indexN)
-        return $" {Action} {IndexQualifier} ({string.Join(",", IndexNames)})";
+        // use|ignore|force key|index [FOR JOIN|ORDER BY|GROUP BY] (index1,...,indexN)
+        var forSegment = string.IsNullOrEmpty(ForClause) ? "" : $" {ForClause}";
+        return $" {Action} {IndexQualifier}{forSegment} ({string.Join(",", IndexNames)})";
     }
 }

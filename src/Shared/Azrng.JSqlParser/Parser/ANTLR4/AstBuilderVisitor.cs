@@ -1451,6 +1451,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 : OrderByElement.NullOrdering.NULLS_LAST;
         }
 
+        // MySQL ORDER BY ... WITH ROLLUP：对齐上游 mysqlWithRollup（jjt:6382）
+        if (context.WITH() != null && context.ROLLUP() != null)
+        {
+            item.MysqlWithRollup = true;
+        }
+
         return item;
     }
 
@@ -4257,7 +4263,20 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var qualifier = context.INDEX() != null ? "INDEX"
             : context.KEY() != null ? "KEY" : "INDEX";
         var names = context.identifier().Select(id => id.GetText()).ToList();
-        return new MySQLIndexHint(action.ToUpperInvariant(), qualifier.ToUpperInvariant(), names);
+
+        // MySQL USE/FORCE/IGNORE INDEX FOR JOIN|ORDER BY|GROUP BY（对齐上游 forClause）
+        string? forClause = null;
+        if (context.FOR() != null)
+        {
+            if (context.JOIN() != null) forClause = "FOR JOIN";
+            else if (context.ORDER() != null) forClause = "FOR ORDER BY";
+            else if (context.GROUP() != null) forClause = "FOR GROUP BY";
+        }
+
+        return new MySQLIndexHint(action.ToUpperInvariant(), qualifier.ToUpperInvariant(), names)
+        {
+            ForClause = forClause
+        };
     }
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
