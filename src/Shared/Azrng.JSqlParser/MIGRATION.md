@@ -401,6 +401,8 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 > **风险**：上游 Java 用无参构造 + setter，`AstBuilderVisitor` 接线大量依赖 `new X()` 后逐字段赋值。改 `required`/构造注入需同步改 visitor 接线，工作量大，建议放在专门迭代。
 >
 > **批 8 评估结论（2026-07-18，暂缓）**：经盘点，全库 61 个 `null!` 字段分布在 50 个文件，核心是 `Expression` 类型字段（约 35 个）。激进改造（`required`）会破坏 `AstBuilderVisitor` 普遍的 `new X()` 无参构造 + 条件逐字段赋值模式（如 `var paren = new Parenthesis(); if (...) paren.Expression = ...`），需重写 visitor 接线，与上游 Java 对照模式冲突最大。保守改造（逐字段判可空性改 `?`）需逐一核实字段语义，收益有限。**关键事实**：`null!` 不影响运行时行为（仅骗编译器关 NRT 警告），全量 1433 测试通过已证明运行正确。按「不为个人偏好过度优化、最小扰动」原则，批 8 整体暂缓，列为已知技术债，待 visitor 接线模式重构时一并处理。
+>
+> **批 9b 评估结论（2026-07-18，暂缓）**：`Expression`/`Statement` 接口加 `I` 前缀经多轮脚本尝试（M1-M6 模式）均无法可靠完成。**根因**：`Expression`/`Statement` 在代码中有 4 种身份且正则无法区分——(1) 命名空间段 `Azrng.JSqlParser.Expression`；(2) 接口类型 `: Expression`；(3) 属性名成员访问 `paren.Expression`；(4) 类型+属性同名声明 `public Expression Expression`。改名触及 654 处编译错误，逐个手工不现实。**正确做法**是用 Roslyn 语义级重命名（区分类型符号 vs 成员符号），属工具化专项任务。留 2.0 配合 Roslyn 重构工具处理。当前 `Expression`/`Statement` 接口名虽与命名空间同名（需全限定 `Expression.Expression`），但已工作且不影响功能。
 
 ---
 
@@ -418,7 +420,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 | **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ⏸ 暂缓（2026-07-18 评估：见第十四章结论，运行时无 bug，激进改造与上游对照模式冲突） |
-| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 部分完成（6 个低风险接口 IExpressionVisitor/IStatementVisitor/ISelectVisitor/IFromItem/IModel/IASTNodeAccess 已改；Expression/Statement 与命名空间同名留 2.0） |
+| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 部分完成（6 个低风险接口已改；Expression/Statement 经多轮正则尝试无法可靠区分 4 种身份，需 Roslyn 语义级重命名，见第十四章结论） |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（旧名保留 [Obsolete] 转发壳，无破坏） |
 
 ---
