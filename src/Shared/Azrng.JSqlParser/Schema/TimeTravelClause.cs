@@ -13,7 +13,7 @@ public class TimeTravelClause
     public string TravelType { get; set; } = "";
 
     /// <summary>时间表达式。</summary>
-    public Expression.IExpression Expression { get; set; } = null!;
+    public required Expression.IExpression Expression { get; set; }
 
     public override string ToString()
     {

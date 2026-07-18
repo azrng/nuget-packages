@@ -36,17 +36,21 @@ public static class CNFConverter
             if (inner is AndExpression andExpr)
             {
                 // De Morgan: NOT (A AND B) → (NOT A) OR (NOT B)
-                var newOr = new OrExpression();
-                newOr.LeftExpression = PushNotDown(new NotExpression { Expression = andExpr.LeftExpression });
-                newOr.RightExpression = PushNotDown(new NotExpression { Expression = andExpr.RightExpression });
+                var newOr = new OrExpression
+                {
+                    LeftExpression = PushNotDown(new NotExpression { Expression = andExpr.LeftExpression }),
+                    RightExpression = PushNotDown(new NotExpression { Expression = andExpr.RightExpression })
+                };
                 return PushNotDown(newOr);
             }
             if (inner is OrExpression orExpr)
             {
                 // De Morgan: NOT (A OR B) → (NOT A) AND (NOT B)
-                var newAnd = new AndExpression();
-                newAnd.LeftExpression = PushNotDown(new NotExpression { Expression = orExpr.LeftExpression });
-                newAnd.RightExpression = PushNotDown(new NotExpression { Expression = orExpr.RightExpression });
+                var newAnd = new AndExpression
+                {
+                    LeftExpression = PushNotDown(new NotExpression { Expression = orExpr.LeftExpression }),
+                    RightExpression = PushNotDown(new NotExpression { Expression = orExpr.RightExpression })
+                };
                 return PushNotDown(newAnd);
             }
             if (inner is NotExpression innerNot)
@@ -59,17 +63,19 @@ public static class CNFConverter
         }
         if (expr is AndExpression and)
         {
-            var result = new AndExpression();
-            result.LeftExpression = PushNotDown(and.LeftExpression);
-            result.RightExpression = PushNotDown(and.RightExpression);
-            return result;
+            return new AndExpression
+            {
+                LeftExpression = PushNotDown(and.LeftExpression),
+                RightExpression = PushNotDown(and.RightExpression)
+            };
         }
         if (expr is OrExpression or)
         {
-            var result = new OrExpression();
-            result.LeftExpression = PushNotDown(or.LeftExpression);
-            result.RightExpression = PushNotDown(or.RightExpression);
-            return result;
+            return new OrExpression
+            {
+                LeftExpression = PushNotDown(or.LeftExpression),
+                RightExpression = PushNotDown(or.RightExpression)
+            };
         }
         // Leaf expression
         return expr;
@@ -90,31 +96,35 @@ public static class CNFConverter
             if (left is AndExpression leftAnd)
             {
                 // (A AND B) OR C → (A OR C) AND (B OR C)
-                var newAnd = new AndExpression();
-                newAnd.LeftExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = leftAnd.LeftExpression, RightExpression = right });
-                newAnd.RightExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = leftAnd.RightExpression, RightExpression = right });
-                return newAnd;
+                return new AndExpression
+                {
+                    LeftExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = leftAnd.LeftExpression, RightExpression = right }),
+                    RightExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = leftAnd.RightExpression, RightExpression = right })
+                };
             }
             if (right is AndExpression rightAnd)
             {
                 // A OR (B AND C) → (A OR B) AND (A OR C)
-                var newAnd = new AndExpression();
-                newAnd.LeftExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = left, RightExpression = rightAnd.LeftExpression });
-                newAnd.RightExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = left, RightExpression = rightAnd.RightExpression });
-                return newAnd;
+                return new AndExpression
+                {
+                    LeftExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = left, RightExpression = rightAnd.LeftExpression }),
+                    RightExpression = DistributeOrOverAnd(new OrExpression { LeftExpression = left, RightExpression = rightAnd.RightExpression })
+                };
             }
             // Both sides are not AND - keep as OR
-            var newOr = new OrExpression();
-            newOr.LeftExpression = left;
-            newOr.RightExpression = right;
-            return newOr;
+            return new OrExpression
+            {
+                LeftExpression = left,
+                RightExpression = right
+            };
         }
         if (expr is AndExpression andExpr)
         {
-            var result = new AndExpression();
-            result.LeftExpression = DistributeOrOverAnd(andExpr.LeftExpression);
-            result.RightExpression = DistributeOrOverAnd(andExpr.RightExpression);
-            return result;
+            return new AndExpression
+            {
+                LeftExpression = DistributeOrOverAnd(andExpr.LeftExpression),
+                RightExpression = DistributeOrOverAnd(andExpr.RightExpression)
+            };
         }
         // Leaf
         return expr;

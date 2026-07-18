@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class AllTableColumns : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.IExpression
 {
-    public Table Table { get; set; } = null!;
+    public required Table Table { get; set; }
 
     /// <summary>RETURNING 子句中 OLD/NEW 引用类型（PostgreSQL 18），非 RETURNING 场景为 null。</summary>
     public ReturningReferenceType? ReturningReferenceType { get; set; }

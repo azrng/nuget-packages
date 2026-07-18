@@ -7,8 +7,8 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class WhenClause : ASTNodeAccessImpl, IExpression
 {
-    public IExpression WhenExpression { get; set; } = null!;
-    public IExpression ThenExpression { get; set; } = null!;
+    public required IExpression WhenExpression { get; set; }
+    public required IExpression ThenExpression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Azrng.JSqlParser.Expression;
 
@@ -8,10 +9,11 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class FunctionAllColumns : AllColumns
 {
-    public Function Function { get; set; } = null!;
+    public required Function Function { get; set; }
 
     public FunctionAllColumns() { }
 
+    [SetsRequiredMembers]
     public FunctionAllColumns(Function function)
     {
         Function = function;

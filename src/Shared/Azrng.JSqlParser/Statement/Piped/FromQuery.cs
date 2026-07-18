@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
@@ -8,18 +9,20 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class FromQuery : Select.Select
 {
-    public IFromItem IFromItem { get; set; } = null!;
+    public required IFromItem IFromItem { get; set; }
     public bool UsingFromKeyword { get; set; } = true;
     public List<PipeOperator> PipeOperators { get; set; } = new();
     public List<Join>? Joins { get; set; }
 
     public FromQuery() { }
 
+    [SetsRequiredMembers]
     public FromQuery(IFromItem fromItem)
     {
         IFromItem = fromItem;
     }
 
+    [SetsRequiredMembers]
     public FromQuery(IFromItem fromItem, bool usingFromKeyword)
     {
         IFromItem = fromItem;

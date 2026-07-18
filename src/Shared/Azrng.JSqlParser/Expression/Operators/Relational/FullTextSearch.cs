@@ -13,7 +13,7 @@ public class FullTextSearch : ASTNodeAccessImpl, IExpression
     public System.Collections.Generic.List<string> Columns { get; set; } = new();
 
     /// <summary>AGAINST 的匹配表达式（字符串字面量、参数或 concat 等复合表达式）。</summary>
-    public IExpression MatchExpression { get; set; } = null!;
+    public required IExpression MatchExpression { get; set; }
 
     /// <summary>搜索修饰符原文（如 "IN BOOLEAN MODE"），未指定时为 null。</summary>
     public string? SearchModifier { get; set; }

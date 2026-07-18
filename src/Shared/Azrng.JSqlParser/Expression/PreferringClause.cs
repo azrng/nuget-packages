@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
@@ -10,11 +11,12 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class PreferringClause : ASTNodeAccessImpl
 {
-    public IExpression Preferring { get; set; } = null!;
+    public required IExpression Preferring { get; set; }
     public ExpressionList? PartitionBy { get; set; }
 
     public PreferringClause() { }
 
+    [SetsRequiredMembers]
     public PreferringClause(IExpression preferring)
     {
         Preferring = preferring;

@@ -12,7 +12,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 public class TableFunction : ASTNodeAccessImpl, IFromItem
 {
     /// <summary>函数表达式（Function 节点）。</summary>
-    public Function Function { get; set; } = null!;
+    public required Function Function { get; set; }
 
     /// <summary>别名，可选。</summary>
     public Alias? Alias { get; set; }

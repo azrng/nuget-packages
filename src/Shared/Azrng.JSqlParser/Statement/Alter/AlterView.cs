@@ -11,9 +11,9 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// </summary>
 public class AlterView : ASTNodeAccessImpl, IStatement
 {
-    public Schema.Table View { get; set; } = null!;
+    public required Schema.Table View { get; set; }
 
-    public Select.Select Select { get; set; } = null!;
+    public required Select.Select Select { get; set; }
 
     public bool UseReplace { get; set; }
 

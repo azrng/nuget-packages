@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class JoinPipeOperator : PipeOperator
 {
-    public Join Join { get; set; } = null!;
+    public required Join Join { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)
     {

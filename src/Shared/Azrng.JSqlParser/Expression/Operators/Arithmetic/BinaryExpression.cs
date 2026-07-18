@@ -8,8 +8,8 @@ namespace Azrng.JSqlParser.Expression.Operators.Arithmetic;
 /// </summary>
 public abstract class BinaryExpression : ASTNodeAccessImpl, IExpression
 {
-    public IExpression LeftExpression { get; set; } = null!;
-    public IExpression RightExpression { get; set; } = null!;
+    public required IExpression LeftExpression { get; set; }
+    public required IExpression RightExpression { get; set; }
 
     public abstract T Accept<T, S>(IExpressionVisitor<T> visitor, S context);
 

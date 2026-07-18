@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Schema;
@@ -9,11 +10,12 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class SelectItem : ASTNodeAccessImpl
 {
-    public Expression.IExpression Expression { get; set; } = null!;
+    public required Expression.IExpression Expression { get; set; }
     public Alias? Alias { get; set; }
 
     public SelectItem() { }
 
+    [SetsRequiredMembers]
     public SelectItem(Expression.IExpression expression, Alias? alias = null)
     {
         Expression = expression;

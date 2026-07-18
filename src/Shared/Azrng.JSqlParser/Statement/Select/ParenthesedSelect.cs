@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class ParenthesedSelect : ASTNodeAccessImpl, Expression.IExpression, IFromItem
 {
-    public Select Select { get; set; } = null!;
+    public required Select Select { get; set; }
     public Alias? Alias { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => Select.Accept(visitor, context);

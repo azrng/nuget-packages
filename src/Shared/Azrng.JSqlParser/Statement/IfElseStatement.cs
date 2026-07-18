@@ -13,10 +13,10 @@ namespace Azrng.JSqlParser.Statement;
 public class IfElseStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>IF 条件。</summary>
-    public Expression.IExpression Condition { get; set; } = null!;
+    public required Expression.IExpression Condition { get; set; }
 
     /// <summary>IF 分支语句。</summary>
-    public IStatement IfStatement { get; set; } = null!;
+    public required IStatement IfStatement { get; set; }
 
     /// <summary>ELSE 分支语句，可选。</summary>
     public IStatement? ElseStatement { get; set; }

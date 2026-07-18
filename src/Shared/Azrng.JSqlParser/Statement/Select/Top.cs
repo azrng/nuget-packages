@@ -19,7 +19,7 @@ public class Top : ASTNodeAccessImpl
     public bool IsWithTies { get; set; }
 
     /// <summary>行数表达式（通常为 LongValue，括号形式下可为任意表达式）。</summary>
-    public Expression.IExpression Expression { get; set; } = null!;
+    public required Expression.IExpression Expression { get; set; }
 
     public override string ToString()
     {

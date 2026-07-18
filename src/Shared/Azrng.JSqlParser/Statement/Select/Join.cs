@@ -37,7 +37,7 @@ public class Join : ASTNodeAccessImpl
     /// <summary>SQL Server Join 提示（LOOP/HASH/MERGE），强制连接策略。未指定时为 null。对齐上游 JoinHint。</summary>
     public string? JoinHint { get; set; }
 
-    public IFromItem RightItem { get; set; } = null!;
+    public required IFromItem RightItem { get; set; }
 
     /// <summary>ksqlDB 流式 JOIN 的 WITHIN 窗口，对齐上游 joinWindow。在 RightItem 之后、ON 之前输出。</summary>
     public KSQLJoinWindow? JoinWindow { get; set; }

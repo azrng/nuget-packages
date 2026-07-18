@@ -9,8 +9,8 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// </summary>
 public class OverlapsCondition : ASTNodeAccessImpl, IExpression
 {
-    public ExpressionList LeftExpression { get; set; } = null!;
-    public ExpressionList RightExpression { get; set; } = null!;
+    public required ExpressionList LeftExpression { get; set; }
+    public required ExpressionList RightExpression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

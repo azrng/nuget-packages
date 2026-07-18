@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Analyze;
 /// </summary>
 public class Analyze : ASTNodeAccessImpl, IStatement
 {
-    public Table Table { get; set; } = null!;
+    public required Table Table { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

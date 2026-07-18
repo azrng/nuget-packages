@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Piped;
 public class WindowPipeOperator : PipeOperator
 {
     public string WindowName { get; set; } = "";
-    public Expression.IExpression WindowExpression { get; set; } = null!;
+    public required Expression.IExpression WindowExpression { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)
     {

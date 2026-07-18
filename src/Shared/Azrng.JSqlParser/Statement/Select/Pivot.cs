@@ -12,7 +12,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 public class Pivot
 {
     /// <summary>聚合函数项（如 SUM(amount)）。</summary>
-    public Function Function { get; set; } = null!;
+    public required Function Function { get; set; }
 
     /// <summary>是否 PIVOT XML 变体（Oracle）：PIVOT XML (...) 输出 XML 格式结果。</summary>
     public bool IsXml { get; set; }

@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class TableSamplePipeOperator : PipeOperator
 {
-    public Expression.IExpression SampleSize { get; set; } = null!;
+    public required Expression.IExpression SampleSize { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)
     {

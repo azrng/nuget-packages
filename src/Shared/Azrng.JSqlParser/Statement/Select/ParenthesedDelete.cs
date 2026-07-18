@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class ParenthesedDelete : ASTNodeAccessImpl, IStatement
 {
-    public Delete.Delete Delete { get; set; } = null!;
+    public required Delete.Delete Delete { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

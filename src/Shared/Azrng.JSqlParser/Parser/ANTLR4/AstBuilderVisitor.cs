@@ -464,16 +464,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.topClause() != null)
         {
             var topCtx = context.topClause();
-            var top = new Top();
-            if (topCtx.OPENING_PAREN() != null)
+            var top = new Top
             {
-                top.HasParenthesis = true;
-                top.Expression = (Expression.IExpression)Visit(topCtx.expression());
-            }
-            else
-            {
-                top.Expression = new LongValue(topCtx.LONG_VALUE().GetText());
-            }
+                HasParenthesis = topCtx.OPENING_PAREN() != null,
+                Expression = topCtx.OPENING_PAREN() != null
+                    ? (Expression.IExpression)Visit(topCtx.expression())
+                    : new LongValue(topCtx.LONG_VALUE().GetText())
+            };
             if (topCtx.PERCENT() != null) top.IsPercentage = true;
             if (topCtx.TIES() != null) top.IsWithTies = true;
             select.Top = top;
@@ -908,8 +905,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         if (context.identifier() != null && context.DOT() != null)
         {
-            var allTableCols = new AllTableColumns();
-            allTableCols.Table = new Table { Name = context.identifier().GetText() };
+            var allTableCols = new AllTableColumns
+            {
+                Table = new Table { Name = context.identifier().GetText() }
+            };
             return new SelectItem(allTableCols);
         }
 
@@ -950,7 +949,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new Join { Simple = true, RightItem = lv };
         }
 
-        var join = new Join();
+        // RightItem 是 required，需先计算以便在初始化器中赋值
+        var rightItem = (IFromItem)Visit(context.tableOrSubquery());
+        var join = new Join { RightItem = rightItem };
 
         // STRAIGHT_JOIN（ClickHouse/MySQL 强制连接顺序）
         if (context.STRAIGHT_JOIN() != null)
@@ -984,8 +985,6 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             join.Fetch = true;
         }
-
-        join.RightItem = (IFromItem)Visit(context.tableOrSubquery());
 
         // ksqlDB WITHIN 窗口（RightItem 之后、ON/USING 之前）
         if (context.ksqlJoinWindowClause() != null)
@@ -1127,12 +1126,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var clause = new TimeTravelClause
         {
-            IsBefore = context.BEFORE() != null
+            IsBefore = context.BEFORE() != null,
+            Expression = (Expression.IExpression)Visit(context.expression())
         };
         if (context.TIMESTAMP() != null) clause.TravelType = "TIMESTAMP";
         else if (context.OFFSET() != null) clause.TravelType = "OFFSET";
         else if (context.STATEMENT() != null) clause.TravelType = "STATEMENT";
-        clause.Expression = (Expression.IExpression)Visit(context.expression());
         return clause;
     }
 
@@ -1357,8 +1356,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitSubSelect(JSqlParserGrammar.SubSelectContext context)
     {
         var select = (Select)Visit(context.selectStatement());
-        var parenSelect = new ParenthesedSelect();
-        parenSelect.Select = select;
+        var parenSelect = new ParenthesedSelect { Select = select };
 
         if (context.alias() != null)
         {
@@ -1380,25 +1378,29 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitOrderByItem(JSqlParserGrammar.OrderByItemContext context)
     {
-        var item = new OrderByElement();
         var expr = (Expression.IExpression)Visit(context.expression());
+        string? collateName = null;
 
         // 兼容：当 COLLATE 由 concatenationExpr 解析后，从表达式层提取 Collate 信息
         if (expr is CollateExpression collateExpr)
         {
-            item.CollateName = collateExpr.Collate;
+            collateName = collateExpr.Collate;
             expr = collateExpr.LeftExpression!;
         }
 
         // 兼容：当 ORDER BY 文法直接消费 COLLATE 时（向后兼容）
         if (context.COLLATE() != null)
         {
-            item.CollateName = context.S_CHAR_LITERAL()?.GetText() ?? context.QUOTED_IDENTIFIER()?.GetText();
+            collateName = context.S_CHAR_LITERAL()?.GetText() ?? context.QUOTED_IDENTIFIER()?.GetText();
         }
 
-        item.Expression = expr;
-        item.Asc = context.DESC() == null;
-        item.AscDescPresent = context.ASC() != null || context.DESC() != null;
+        var item = new OrderByElement
+        {
+            Expression = expr,
+            Asc = context.DESC() == null,
+            AscDescPresent = context.ASC() != null || context.DESC() != null
+        };
+        item.CollateName = collateName;
         return item;
     }
 
@@ -3514,10 +3516,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         Expression.IExpression result = (Expression.IExpression)Visit(andExprs[0]);
         for (int i = 1; i < andExprs.Length; i++)
         {
-            var or = new OrExpression();
-            or.LeftExpression = result;
-            or.RightExpression = (Expression.IExpression)Visit(andExprs[i]);
-            result = or;
+            result = new OrExpression
+            {
+                LeftExpression = result,
+                RightExpression = (Expression.IExpression)Visit(andExprs[i])
+            };
         }
         return result;
     }
@@ -3533,10 +3536,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         Expression.IExpression result = (Expression.IExpression)Visit(notExprs[0]);
         for (int i = 1; i < notExprs.Length; i++)
         {
-            var and = new AndExpression();
-            and.LeftExpression = result;
-            and.RightExpression = (Expression.IExpression)Visit(notExprs[i]);
-            result = and;
+            result = new AndExpression
+            {
+                LeftExpression = result,
+                RightExpression = (Expression.IExpression)Visit(notExprs[i])
+            };
         }
         return result;
     }
@@ -3584,14 +3588,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 // 包装成比较运算符 + ANY/ALL/SOME
                 var anyCompare = new AnyComparisonExpression(anyType, select);
                 Expression.IExpression result = anyCompare;
-                if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, result);
+                if (op.EQUALS() != null) return new EqualsTo { LeftExpression = concat, RightExpression = result };
                 if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)
-                    return CreateBinary<NotEqualsTo>(concat, result);
-                if (op.GREATER_THAN() != null) return CreateBinary<GreaterThan>(concat, result);
-                if (op.GREATER_THAN_EQUALS() != null) return CreateBinary<GreaterThanEquals>(concat, result);
-                if (op.MINOR_THAN() != null) return CreateBinary<MinorThan>(concat, result);
-                if (op.MINOR_THAN_EQUALS() != null) return CreateBinary<MinorThanEquals>(concat, result);
-                return CreateBinary<EqualsTo>(concat, result);
+                    return new NotEqualsTo { LeftExpression = concat, RightExpression = result };
+                if (op.GREATER_THAN() != null) return new GreaterThan { LeftExpression = concat, RightExpression = result };
+                if (op.GREATER_THAN_EQUALS() != null) return new GreaterThanEquals { LeftExpression = concat, RightExpression = result };
+                if (op.MINOR_THAN() != null) return new MinorThan { LeftExpression = concat, RightExpression = result };
+                if (op.MINOR_THAN_EQUALS() != null) return new MinorThanEquals { LeftExpression = concat, RightExpression = result };
+                return new EqualsTo { LeftExpression = concat, RightExpression = result };
             }
 
             Expression.IExpression right = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
@@ -3600,15 +3604,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 return new GeometryDistance("<->") { LeftExpression = concat, RightExpression = right };
             if (op.GEOMETRY_DISTANCE_HASH() != null)
                 return new GeometryDistance("<#>") { LeftExpression = concat, RightExpression = right };
-            if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, right);
+            if (op.EQUALS() != null) return new EqualsTo { LeftExpression = concat, RightExpression = right };
             if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)
-                return CreateBinary<NotEqualsTo>(concat, right);
-            if (op.GREATER_THAN() != null) return CreateBinary<GreaterThan>(concat, right);
-            if (op.GREATER_THAN_EQUALS() != null) return CreateBinary<GreaterThanEquals>(concat, right);
-            if (op.MINOR_THAN() != null) return CreateBinary<MinorThan>(concat, right);
-            if (op.MINOR_THAN_EQUALS() != null) return CreateBinary<MinorThanEquals>(concat, right);
+                return new NotEqualsTo { LeftExpression = concat, RightExpression = right };
+            if (op.GREATER_THAN() != null) return new GreaterThan { LeftExpression = concat, RightExpression = right };
+            if (op.GREATER_THAN_EQUALS() != null) return new GreaterThanEquals { LeftExpression = concat, RightExpression = right };
+            if (op.MINOR_THAN() != null) return new MinorThan { LeftExpression = concat, RightExpression = right };
+            if (op.MINOR_THAN_EQUALS() != null) return new MinorThanEquals { LeftExpression = concat, RightExpression = right };
 
-            return CreateBinary<EqualsTo>(concat, right);
+            return new EqualsTo { LeftExpression = concat, RightExpression = right };
         }
 
         if (suffix.IN() != null)
@@ -3642,9 +3646,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (suffix.REGEXP() != null || suffix.RLIKE() != null || suffix.REGEXP_LIKE() != null)
         {
-            var regexp = new RegExpMatchOperator();
-            regexp.LeftExpression = concat;
-            regexp.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
+            var regexp = new RegExpMatchOperator
+            {
+                LeftExpression = concat,
+                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
+            };
             regexp.Operator = suffix.REGEXP() != null ? "REGEXP" : suffix.RLIKE() != null ? "RLIKE" : "REGEXP_LIKE";
             if (suffix.NOT() != null) regexp.Not = true;
             return regexp;
@@ -3654,9 +3660,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             || suffix.MATCH_ANY() != null || suffix.MATCH_ALL() != null
             || suffix.MATCH_PHRASE() != null || suffix.MATCH_PHRASE_PREFIX() != null || suffix.MATCH_REGEXP() != null)
         {
-            var like = new LikeExpression();
-            like.LeftExpression = concat;
-            like.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
+            var like = new LikeExpression
+            {
+                LeftExpression = concat,
+                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
+            };
             if (suffix.NOT() != null) like.Not = true;
             return like;
         }
@@ -3664,9 +3672,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // SIMILAR TO / NOT SIMILAR TO
         if (suffix.SIMILAR() != null)
         {
-            var similar = new SimilarToExpression();
-            similar.LeftExpression = concat;
-            similar.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
+            var similar = new SimilarToExpression
+            {
+                LeftExpression = concat,
+                RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
+            };
             if (suffix.NOT() != null) similar.Not = true;
             return similar;
         }
@@ -3675,9 +3685,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             if (suffix.DISTINCT() != null)
             {
-                var isDistinct = new IsDistinctExpression();
-                isDistinct.LeftExpression = concat;
-                isDistinct.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
+                var isDistinct = new IsDistinctExpression
+                {
+                    LeftExpression = concat,
+                    RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0))
+                };
                 if (suffix.NOT() != null) isDistinct.Not = true;
                 return isDistinct;
             }
@@ -3764,10 +3776,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             result = (Expression.IExpression)Visit(additiveExprs[0]);
             for (int i = 1; i < additiveExprs.Length; i++)
             {
-                var concat = new Concat();
-                concat.LeftExpression = result;
-                concat.RightExpression = (Expression.IExpression)Visit(additiveExprs[i]);
-                result = concat;
+                result = new Concat
+                {
+                    LeftExpression = result,
+                    RightExpression = (Expression.IExpression)Visit(additiveExprs[i])
+                };
             }
         }
 
@@ -3799,17 +3812,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 if (terminal.Symbol.Type == JSqlParserGrammarLexer.PLUS)
                 {
-                    var add = new Addition();
-                    add.LeftExpression = result;
-                    add.RightExpression = right;
-                    result = add;
+                    result = new Addition
+                    {
+                        LeftExpression = result,
+                        RightExpression = right
+                    };
                 }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.MINUS)
                 {
-                    var sub = new Subtraction();
-                    sub.LeftExpression = result;
-                    sub.RightExpression = right;
-                    result = sub;
+                    result = new Subtraction
+                    {
+                        LeftExpression = result,
+                        RightExpression = right
+                    };
                 }
             }
         }
@@ -3834,24 +3849,27 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 if (terminal.Symbol.Type == JSqlParserGrammarLexer.MULTIPLY)
                 {
-                    var mul = new Multiplication();
-                    mul.LeftExpression = result;
-                    mul.RightExpression = right;
-                    result = mul;
+                    result = new Multiplication
+                    {
+                        LeftExpression = result,
+                        RightExpression = right
+                    };
                 }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.DIVIDE)
                 {
-                    var div = new Division();
-                    div.LeftExpression = result;
-                    div.RightExpression = right;
-                    result = div;
+                    result = new Division
+                    {
+                        LeftExpression = result,
+                        RightExpression = right
+                    };
                 }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.MODULO)
                 {
-                    var mod = new Modulo();
-                    mod.LeftExpression = result;
-                    mod.RightExpression = right;
-                    result = mod;
+                    result = new Modulo
+                    {
+                        LeftExpression = result,
+                        RightExpression = right
+                    };
                 }
             }
         }
@@ -4156,12 +4174,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
     {
-        var fts = new FullTextSearch();
+        var columns = new List<string>();
         foreach (var colCtx in context.columnRef())
         {
-            fts.Columns.Add(((Column)Visit(colCtx)).GetFullyQualifiedName());
+            columns.Add(((Column)Visit(colCtx)).GetFullyQualifiedName());
         }
-        fts.MatchExpression = (Expression.IExpression)Visit(context.expression());
+
+        var fts = new FullTextSearch
+        {
+            Columns = columns,
+            MatchExpression = (Expression.IExpression)Visit(context.expression())
+        };
 
         if (context.searchModifier() != null)
         {
@@ -4282,9 +4305,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         foreach (var whenCtx in context.whenExpr())
         {
-            var whenClause = new WhenClause();
-            whenClause.WhenExpression = (Expression.IExpression)Visit(whenCtx.expression(0));
-            whenClause.ThenExpression = (Expression.IExpression)Visit(whenCtx.expression(1));
+            var whenClause = new WhenClause
+            {
+                WhenExpression = (Expression.IExpression)Visit(whenCtx.expression(0)),
+                ThenExpression = (Expression.IExpression)Visit(whenCtx.expression(1))
+            };
             caseExpr.WhenClauses.Add(whenClause);
         }
 
@@ -5185,8 +5210,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitPreferringClause(JSqlParserGrammar.PreferringClauseContext context)
     {
-        var preferring = new PreferringClause();
-        preferring.Preferring = (Expression.IExpression)Visit(context.preferenceTerm());
+        var preferring = new PreferringClause((Expression.IExpression)Visit(context.preferenceTerm()));
 
         if (context.expressionList() != null)
         {
@@ -5244,9 +5268,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitFromQuery(JSqlParserGrammar.FromQueryContext context)
     {
-        var fromQuery = new FromQuery();
-        fromQuery.UsingFromKeyword = context.FROM() != null;
-        fromQuery.IFromItem = (IFromItem)Visit(context.fromItem());
+        var fromQuery = new FromQuery((IFromItem)Visit(context.fromItem()))
+        {
+            UsingFromKeyword = context.FROM() != null
+        };
 
         if (context.joinClause() != null)
         {
@@ -5278,9 +5303,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitWherePipeOp(JSqlParserGrammar.WherePipeOpContext context)
     {
-        var op = new WherePipeOperator();
-        op.Expression = (Expression.IExpression)Visit(context.expression());
-        return op;
+        return new WherePipeOperator
+        {
+            Expression = (Expression.IExpression)Visit(context.expression())
+        };
     }
 
     public override object VisitAggregatePipeOp(JSqlParserGrammar.AggregatePipeOpContext context)
@@ -5344,10 +5370,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitJoinPipeOp(JSqlParserGrammar.JoinPipeOpContext context)
     {
-        var join = new Join();
+        var join = new Join { RightItem = (IFromItem)Visit(context.tableOrSubquery()) };
         if (context.joinType() != null)
             SetJoinType(join, context.joinType());
-        join.RightItem = (IFromItem)Visit(context.tableOrSubquery());
         if (context.joinCondition() != null)
         {
             var condCtx = context.joinCondition();
@@ -5383,8 +5408,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitExtendPipeOp(JSqlParserGrammar.ExtendPipeOpContext context)
     {
-        var op = new ExtendPipeOperator();
-        op.Expression = (Expression.IExpression)Visit(context.expression());
+        var op = new ExtendPipeOperator
+        {
+            Expression = (Expression.IExpression)Visit(context.expression())
+        };
         if (context.alias() != null)
             op.Alias = (Alias)Visit(context.alias());
         return op;
@@ -5474,11 +5501,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitWindowPipeOp(JSqlParserGrammar.WindowPipeOpContext context)
     {
-        var op = new WindowPipeOperator();
-        op.WindowName = context.identifier().GetText();
-        // Window expression is the full specification
-        op.WindowExpression = new Column { ColumnName = context.windowSpecification().GetText() };
-        return op;
+        return new WindowPipeOperator
+        {
+            WindowName = context.identifier().GetText(),
+            // Window expression is the full specification
+            WindowExpression = new Column { ColumnName = context.windowSpecification().GetText() }
+        };
     }
 
     public override object VisitSetOperationPipeOp(JSqlParserGrammar.SetOperationPipeOpContext context)
@@ -5488,14 +5516,6 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         op.OperationType = setOp.Type;
         op.All = setOp.All;
         return op;
-    }
-
-    private static T CreateBinary<T>(Expression.IExpression left, Expression.IExpression right) where T : BinaryExpression, new()
-    {
-        var expr = new T();
-        expr.LeftExpression = left;
-        expr.RightExpression = right;
-        return expr;
     }
 
     private static SetOperation CreateSetOperation(JSqlParserGrammar.SetOperatorContext context)

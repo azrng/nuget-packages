@@ -10,7 +10,7 @@ public class TableSample
     public string? SamplingMethod { get; set; }
 
     /// <summary>采样比例/行数表达式。</summary>
-    public Expression.IExpression SampleSize { get; set; } = null!;
+    public required Expression.IExpression SampleSize { get; set; }
 
     /// <summary>是否带 PERCENT。</summary>
     public bool Percentage { get; set; }

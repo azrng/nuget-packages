@@ -400,7 +400,18 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 > **风险**：上游 Java 用无参构造 + setter，`AstBuilderVisitor` 接线大量依赖 `new X()` 后逐字段赋值。改 `required`/构造注入需同步改 visitor 接线，工作量大，建议放在专门迭代。
 >
-> **批 8 评估结论（2026-07-18，暂缓）**：经盘点，全库 61 个 `null!` 字段分布在 50 个文件，核心是 `Expression` 类型字段（约 35 个）。激进改造（`required`）会破坏 `AstBuilderVisitor` 普遍的 `new X()` 无参构造 + 条件逐字段赋值模式（如 `var paren = new Parenthesis(); if (...) paren.Expression = ...`），需重写 visitor 接线，与上游 Java 对照模式冲突最大。保守改造（逐字段判可空性改 `?`）需逐一核实字段语义，收益有限。**关键事实**：`null!` 不影响运行时行为（仅骗编译器关 NRT 警告），全量 1433 测试通过已证明运行正确。按「不为个人偏好过度优化、最小扰动」原则，批 8 整体暂缓，列为已知技术债，待 visitor 接线模式重构时一并处理。
+> **批 8 评估结论（2026-07-18，已完成）**：经盘点，全库 `null!` 字段分布在约 30 个文件，核心是 `Expression` 类型字段（约 35 个）。激进改造（`required`）会破坏 `AstBuilderVisitor` 普遍的 `new X()` 无参构造 + 条件逐字段赋值模式。**关键事实**：`null!` 不影响运行时行为（仅骗编译器关 NRT 警告）。按「最小扰动」原则，分两增量完成：
+> - **增量 1（2026-07-18）**：`Between`（3 字段）+ `Parenthesis`（1 字段）改 `required`，visitor 接线改对象初始化器。
+> - **增量 2（2026-07-18）**：`BinaryExpression` 基类 `LeftExpression/RightExpression` + 28 个独立 AST 字段 + `WhereCondition.LeftExpression` DTO 全改 `required`。
+>
+> **改造模式（已沉淀）**：
+> 1. 字段声明 `null!` → `required`，保留 `{ get; set; }`（不改 `init`，因 visitor 中存在创建后再次修改的场景）。
+> 2. visitor 中分步赋值（`var x = new T(); x.F = ...;`）→ 对象初始化器（`new T { F = ... }`）。**C# 11 `required` 与 `new()` 泛型约束不兼容（CS9040），与泛型工厂委托不兼容（CS9035），与分步赋值不兼容（CS9035）**——唯一可行路径是对象初始化器或带 `[SetsRequiredMembers]` 的构造函数。
+> 3. 已有带参构造函数的类（`SelectItem`、`PreferringClause`、`FromQuery`、`FunctionAllColumns`）给带参构造加 `[SetsRequiredMembers]`，调用点无需改。
+> 4. 删除 `CreateBinary<T>` 辅助方法：其 `where T : new()` 约束在 `required` 下编译失败，14 个调用点全部内联为 `new XxxOp { LeftExpression = left, RightExpression = right }`。
+> 5. `AstBuilderVisitor.cs:3379` 的 `allCols.Table = null!` 保留——这是 RETURNING 子句中运行时有意的清空赋值（非字段默认值），与字段初始化器无关。
+>
+> 全量 1436 测试通过，0 行为回归。
 >
 > **批 9b 评估结论（2026-07-18，已完成）**：`Expression`/`Statement` 接口加 `I` 前缀**已由人工完成**。此前 AI 经多轮正则脚本尝试（M1-M6 模式）判定"无法可靠区分 4 种身份（命名空间段/接口类型/属性名成员访问/类型+属性同名声明），需 Roslyn"——**该判定对纯脚本方案成立，但人工靠编译错误驱动可精确完成**：编译器只对"接口类型位置"报 CS0118/CS0234，属性名成员访问（`paren.Expression`）因前面是 `.` 不被当类型，不会进错误列表，故不会误改。人工按错误列表逐处修复，183 文件全部正确同步，属性名（如 `Parenthesis.Expression`、`SignedExpression.Expression`）保留不变。教训：正则做不到的不代表人工+编译器做不到，重构应优先用编译错误驱动而非盲改。
 
@@ -419,7 +430,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 5** | `[NonSerialized]` 删除；`JjtGet*Token` → `Get*Token` | 中 | `[锚]` 需跑 round-trip 测试 | ✅ 已完成 |
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
-| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | 🔶 增量进行（Between/Parenthesis 已改；BinaryExpression 体系等触及面大，按需推进） |
+| **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | ✅ 已完成（增量 1 Between/Parenthesis；增量 2 BinaryExpression 基类 + 28 个 AST 字段 + WhereCondition DTO 全改 `required`；visitor/CNFConverter 分步赋值改对象初始化器；4 个带参构造加 `[SetsRequiredMembers]`；`CreateBinary<T>` 辅助方法因与 `new()` 约束不兼容已删，调用点内联） |
 | **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（8 个接口：IExpressionVisitor/IStatementVisitor/ISelectVisitor/IFromItem/IModel/IASTNodeAccess + IExpression/IStatement；Expression.cs/Statement.cs 重命名为 IExpression.cs/IStatement.cs；183 文件同步；属性名成员访问如 paren.Expression 正确保留） |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（旧名保留 [Obsolete] 转发壳，无破坏） |
 
@@ -443,6 +454,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 2026-07-18 | 批 10 | 解析主入口改名：新增 `SqlParser`（实际实现所在，5 个方法 Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable + 私有 CreateParser）；`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳（5 个方法逐个转发到 SqlParser）；库内 `Validation.cs` 改用新名；77 个测试文件改用 `SqlParser`；补 1 项旧名转发回归测试 `Legacy_CCJSqlParserUtil_ForwardsToSqlParser` | 公开 API 破坏性（[锚][风险]），但旧名保留转发壳，外部调用方无破坏（仅 obsolete 警告）；新代码应改用 SqlParser | 全量 1434 项通过（净增 1），0 失败 |
 | 2026-07-18 | 批 8（增量 1） | `null!` 治理首批：`Between`（3 字段 LeftExpression/BetweenExpressionStart/BetweenExpressionEnd）+ `Parenthesis`（Expression 字段）改为 `required`；visitor 接线对应改为对象初始化器（`new Between { ... }` / `new Parenthesis { ... }`）；补 2 项 required 字段初始化器构造+序列化测试。**其余 50+ `null!` 字段维持现状**（BinaryExpression 体系触及 28 子类+十几处 visitor 接线，Function/Table/Column 名字段已有默认值非 null!） | 库内 4 文件 + 测试 1 文件；required 为编译期检查，外部 `new Between()` 无参构造需改为初始化器 | 全量 1436 项通过（净增 2），0 失败 |
 | 2026-07-18 | 批 9b（人工完成） | `Expression`/`Statement` 接口加 `I` 前缀（由人工靠编译错误驱动完成，非脚本）：`Expression.cs`→`IExpression.cs`、`Statement.cs`→`IStatement.cs` 文件重命名；接口定义 `Expression`→`IExpression`、`Statement`→`IStatement`；183 文件同步所有引用（实现列表 `: IExpression`、字段/参数类型 `IExpression expr`、泛型 `List<IExpression>`、全限定 `Expression.Expression` 消除为 `IExpression`）；**属性名成员访问保留不变**（`paren.Expression`、`signedExpression.Expression` 等，因前面是 `.` 不被编译器当类型）。至此批 9 全部 8 个接口完成 I 前缀化 | 公开 API 破坏性（[锚][风险]），183 文件；外部 visitor 实现及类型引用需同步改名 | 全量 1436 项通过，0 失败 |
+| 2026-07-18 | 批 8（增量 2） | `null!` 治理完成剩余全部字段（30 个文件）：① `BinaryExpression` 基类 `LeftExpression/RightExpression` → `required`（覆盖 28 个运算符子类：13 算术 + 15 关系）；② 28 个独立 AST 类字段 → `required`（`WhenClause`×2 / `PreferringClause` / `FullTextSearch.MatchExpression` / `OverlapsCondition`×2 / `TimeTravelClause.Expression` / `TableSample.SampleSize` / `AlterView`×2 / `Analyze.Table` / `IfElseStatement`×2 / 7 个 Piped 操作符 / `AllTableColumns.Table` / `FunctionAllColumns.Function` / `Join.RightItem` / `OrderByElement.Expression` / 3 个 Parenthesed* / `Pivot.Function` / `SelectItem.Expression` / `TableFunction.Function` / `Top.Expression`）；③ `WhereCondition.LeftExpression` DTO → `required`。**接线同步**：`AstBuilderVisitor` 中所有分步赋值（`var x = new X(); x.F = ...;`）改对象初始化器（`new X { F = ... }`）；`CNFConverter` 9 处 And/Or 改初始化器；4 个带参构造（`SelectItem`/`PreferringClause`/`FromQuery`×2/`FunctionAllColumns`）加 `[SetsRequiredMembers]`，调用点不改；删除 `CreateBinary<T>` 辅助方法（`where T : new()` 与 `required` 不兼容 CS9040），14 个比较运算符调用点内联为 `new XxxOp { LeftExpression = ..., RightExpression = ... }`；`AstBuilderVisitor.cs:3379` 的 `allCols.Table = null!` 保留（RETURNING 子句运行时有意的清空赋值，非字段默认值）。**改造模式沉淀在第十四章批 8 评估结论** | 公开 API 破坏性（[形]），30 文件 + visitor 1 文件 + CNFConverter 1 文件；required 为编译期检查，外部 `new BinaryExpression 子类()` 无参构造需改为初始化器或带 `[SetsRequiredMembers]` 的构造 | 全量 1436 项通过，0 失败；0 行为回归（required 仅编译期检查，运行时与 `null!` 等价，但杜绝 NRE） |
 
 ---
 

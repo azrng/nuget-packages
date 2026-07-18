@@ -18,7 +18,7 @@ public sealed record WhereCondition
     public string LinkType { get; init; } = string.Empty;
 
     /// <summary>左侧表达式（通常是列引用）。</summary>
-    public IExpression LeftExpression { get; init; } = null!;
+    public required IExpression LeftExpression { get; init; }
 
     /// <summary>
     /// 右侧表达式（通常是值/参数/列引用）。
