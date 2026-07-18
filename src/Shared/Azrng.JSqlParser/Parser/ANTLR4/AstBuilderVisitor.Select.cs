@@ -531,6 +531,12 @@ public partial class AstBuilderVisitor
                 select.IntoTables = new List<Table> { target };
             }
         }
+        else if (intoClause != null && intoClause.parameter() is { } paramCtxs && paramCtxs.Length > 0)
+        {
+            // MySQL SELECT ... INTO @var, @var2（用户变量赋值，对齐 #854）
+            // parameter 规则覆盖 SINGLE_AT_IDENTIFIER (@x) / S_AT_IDENTIFIER (@@x) / :name / ? 等
+            select.IntoVariables = paramCtxs.Select(GetOriginalText).ToList();
+        }
 
         // MySQL INTO OUTFILE/DUMPFILE（尾部位置：SELECT ... FROM ... INTO OUTFILE ...）
         // plainSelect 文法末尾的可选 INTO 分支

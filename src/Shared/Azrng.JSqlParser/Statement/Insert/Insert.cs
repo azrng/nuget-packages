@@ -19,6 +19,15 @@ public class Insert : ASTNodeAccessImpl, IStatement
     public System.Collections.Generic.List<Update.UpdateSet>? SetUpdateSets { get; set; }
     public bool UseValues { get; set; } = true;
 
+    /// <summary>MySQL INSERT ... SET col=val 形式标志（与 UseValues 互斥）。对齐上游 Insert.useSet()。对齐 #1314。</summary>
+    public bool UseSet { get; set; }
+
+    /// <summary>MySQL INSERT ... SET col=val AS new(m,n,p) 的表别名名，未指定时为 null。对齐 #1314。</summary>
+    public string? AliasName { get; set; }
+
+    /// <summary>MySQL INSERT ... SET col=val AS new(m,n,p) 的列别名列表，未指定时为 null。对齐 #1314。</summary>
+    public System.Collections.Generic.List<string>? ColumnAlias { get; set; }
+
     /// <summary>
     /// MySQL INSERT 优先级修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY）。
     /// 与上游 InsertModifierPriority 对齐。None 表示未指定。
@@ -102,7 +111,12 @@ public class Insert : ASTNodeAccessImpl, IStatement
             sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
         if (OutputClause != null) sb.Append(' ').Append(OutputClause);
-        if (Select != null) sb.Append(" ").Append(Select);
+        if (UseSet && SetUpdateSets != null && SetUpdateSets.Count > 0)
+        {
+            // MySQL INSERT ... SET col=val, col2=val2（对齐 #1314）
+            sb.Append(" SET ").Append(string.Join(", ", SetUpdateSets));
+        }
+        else if (Select != null) sb.Append(" ").Append(Select);
         else if (ValuesItems != null && ValuesItems.Count > 0)
         {
             sb.Append(" VALUES ");
@@ -111,6 +125,14 @@ public class Insert : ASTNodeAccessImpl, IStatement
                 if (i > 0) sb.Append(", ");
                 sb.Append('(').Append(ValuesItems[i]).Append(')');
             }
+        }
+        // MySQL 8.0 行别名：INSERT INTO t SET ... AS new(m,n,p) ON DUPLICATE KEY UPDATE ...
+        // 别名输出位置在 INSERT 体（SET/VALUES/SELECT）之后、ON DUPLICATE 之前（对齐 #1314）
+        if (AliasName != null)
+        {
+            sb.Append(" AS ").Append(AliasName);
+            if (ColumnAlias is { Count: > 0 })
+                sb.Append(" (").Append(string.Join(", ", ColumnAlias)).Append(')');
         }
         if (DuplicateUpdateNothing) sb.Append(" ON DUPLICATE KEY UPDATE NOTHING");
         else if (DuplicateUpdateSets != null && DuplicateUpdateSets.Count > 0)

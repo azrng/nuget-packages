@@ -127,6 +127,19 @@ public sealed class StringValue : ASTNodeAccessImpl, IExpression
             }
         }
 
+        // MySQL introducer 字面量：_utf8mb4'...' / _latin1'...' / _binary'...' / _ascii'...' 等
+        // StringPrefix lexer 规则匹配 '_' [a-zA-Z0-9]+，对齐 #2006 #2427
+        if (rawValue.Length > 3 && rawValue[0] == '_')
+        {
+            var quoteIdx = rawValue.IndexOf('\'');
+            if (quoteIdx > 1 && rawValue.EndsWith("'"))
+            {
+                Prefix = rawValue[..quoteIdx];
+                Value = rawValue[(quoteIdx + 1)..^1].Replace("''", "'");
+                return;
+            }
+        }
+
         // 兜底：直接当字符串内容
         Value = rawValue;
     }

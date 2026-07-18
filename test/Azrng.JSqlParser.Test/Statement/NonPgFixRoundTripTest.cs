@@ -172,4 +172,193 @@ public class NonPgFixRoundTripTest
     }
 
     #endregion
+
+    // ===== Commit 2：MySQL 专项 =====
+
+    #region #854 SELECT INTO @var
+
+    [Fact]
+    public void IntoUserVariable_RoundTrips()
+    {
+        var sql = "SELECT COUNT(*) INTO @countTotal FROM employee";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("INTO @countTotal", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void IntoMultipleUserVariables_RoundTrips()
+    {
+        var sql = "SELECT a, b INTO @x, @y FROM t";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("INTO @x, @y", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void IntoUserVariable_StructuredField()
+    {
+        var stmt = SqlParser.Parse("SELECT a INTO @x FROM t") as PlainSelectType;
+        Assert.NotNull(stmt);
+        Assert.NotNull(stmt!.IntoVariables);
+        Assert.Single(stmt.IntoVariables!);
+        Assert.Equal("@x", stmt.IntoVariables![0]);
+    }
+
+    #endregion
+
+    #region #1314 INSERT SET AS alias
+
+    [Fact]
+    public void InsertSetBasic_RoundTrips()
+    {
+        var sql = "INSERT INTO t SET a = 1, b = 2";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("SET a = 1, b = 2", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void InsertSetWithAsAlias_RoundTrips()
+    {
+        var sql = "INSERT INTO t1 SET a = 1, b = 2, c = 3 AS new(m, n, p) ON DUPLICATE KEY UPDATE c = m + n";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("SET a = 1, b = 2, c = 3", output);
+        Assert.Contains("AS new", output);
+        Assert.Contains("m, n, p", output);
+        Assert.Contains("ON DUPLICATE KEY UPDATE", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void InsertSetAsAlias_StructuredFields()
+    {
+        var stmt = SqlParser.Parse("INSERT INTO t SET a = 1 AS new(m, n)") as Azrng.JSqlParser.Statement.Insert.Insert;
+        Assert.NotNull(stmt);
+        Assert.True(stmt!.UseSet);
+        Assert.Equal("new", stmt.AliasName);
+        Assert.NotNull(stmt.ColumnAlias);
+        Assert.Equal(new[] { "m", "n" }, stmt.ColumnAlias!);
+    }
+
+    #endregion
+
+    #region #2298 CAST CHARACTER SET
+
+    [Fact]
+    public void CastCharCharacterSet_RoundTrips()
+    {
+        var sql = "SELECT CAST('abc' AS CHAR CHARACTER SET utf8mb4)";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("CHAR CHARACTER SET utf8mb4", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void CastCharCharacterSetCollate_RoundTrips()
+    {
+        var sql = "SELECT CAST('abc' AS CHAR CHARACTER SET utf8mb4 COLLATE utf8mb4_bin)";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("CHARACTER SET utf8mb4", output);
+        Assert.Contains("COLLATE utf8mb4_bin", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void CastCharacterSet_StructuredField()
+    {
+        // 通过 ToString 间接验证结构化字段（CastExpression 是内部 AST）
+        var output = SqlParser.Parse("SELECT CAST('x' AS CHAR CHARACTER SET utf8mb4)")!.ToString();
+        Assert.Contains("CHARACTER SET utf8mb4", output);
+    }
+
+    #endregion
+
+    #region #2427 + #2006 _utf8mb4 introducer
+
+    [Fact]
+    public void IntroducerNoSpace_RoundTrips()
+    {
+        // _utf8mb4'text' 紧贴形式（#2427）
+        var sql = "SELECT _utf8mb4'some text' COLLATE utf8mb4_unicode_ci AS custom_string";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("_utf8mb4", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void IntroducerWithSpace_RoundTrips()
+    {
+        // _utf8mb4 'text' 带空格形式（#2006）
+        var sql = "SELECT short_name FROM player_table WHERE `short_name` LIKE _utf8mb4 '%Felipe%'";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("_utf8mb4", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void Latin1Introducer_RoundTrips()
+    {
+        // 其他 MySQL introducer：_latin1
+        var sql = "SELECT _latin1'some text'";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("_latin1", output);
+        SqlParser.Parse(output);
+    }
+
+    #endregion
+
+    #region #2428 PROCEDURE ANALYSE
+
+    [Fact]
+    public void ProcedureAnalyse_RoundTrips()
+    {
+        var sql = "SELECT col1, col2 FROM heavy_table PROCEDURE ANALYSE(10, 256)";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("PROCEDURE", output);
+        Assert.Contains("ANALYSE", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void ProcedureAnalyseNoArgs_RoundTrips()
+    {
+        var sql = "SELECT * FROM t PROCEDURE ANALYSE()";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString();
+        Assert.Contains("PROCEDURE ANALYSE", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void ProcedureAnalyse_StructuredField()
+    {
+        var stmt = SqlParser.Parse("SELECT * FROM t PROCEDURE ANALYSE(10, 256)") as PlainSelectType;
+        Assert.NotNull(stmt);
+        Assert.NotNull(stmt!.MySqlProcedure);
+        Assert.Contains("ANALYSE", stmt.MySqlProcedure!);
+    }
+
+    #endregion
 }

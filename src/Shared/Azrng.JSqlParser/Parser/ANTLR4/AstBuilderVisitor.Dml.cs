@@ -58,6 +58,16 @@ public partial class AstBuilderVisitor
             }
         }
 
+        // MySQL 8.0 行别名：INSERT INTO t SET ... AS new(m,n,p) ON DUPLICATE KEY UPDATE ...
+        // alias 在 INSERT 体之后、ON DUPLICATE 之前（对齐 #1314）
+        if (context.insertRowAlias() is { } rowAliasCtx)
+        {
+            insert.AliasName = rowAliasCtx.identifier().GetText();
+            insert.ColumnAlias = new List<string>();
+            foreach (var id in rowAliasCtx.identifierList().identifier())
+                insert.ColumnAlias.Add(id.GetText());
+        }
+
         // MSSQL OUTPUT 子句（透传原始文本保 round-trip）
         if (context.outputClause() is { } outputCtx)
             insert.OutputClause = GetOriginalText(outputCtx);
@@ -65,6 +75,25 @@ public partial class AstBuilderVisitor
         if (context.selectStatement() != null)
         {
             insert.Select = (Select)Visit(context.selectStatement());
+        }
+        else if (context.SET() != null)
+        {
+            // MySQL INSERT INTO t SET col=val, col2=val2（对齐 #1314）
+            insert.UseValues = false;
+            insert.UseSet = true;
+            insert.SetUpdateSets = new List<UpdateSet>();
+            foreach (var assignment in context.assignmentItem())
+            {
+                var updateSet = new UpdateSet
+                {
+                    Columns = new List<Column>(),
+                    Values = new List<Expression.IExpression>()
+                };
+                foreach (var target in assignment.assignmentTarget())
+                    updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
+                updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
+                insert.SetUpdateSets.Add(updateSet);
+            }
         }
         else if (context.valuesList() != null)
         {

@@ -264,7 +264,8 @@ topClause
     ;
 
 intoClause
-    : INTO (TEMPORARY | TEMP | UNLOGGED)? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+    : INTO parameter (COMMA parameter)*
+    | INTO (TEMPORARY | TEMP | UNLOGGED)? table (OPENING_PAREN identifierList CLOSING_PAREN)?
     | INTO OUTFILE S_CHAR_LITERAL outfileTail?
     | INTO DUMPFILE S_CHAR_LITERAL
     ;
@@ -620,12 +621,20 @@ insertStatement
     : INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
       outputClause?
       ( VALUES valuesList
+      | SET assignmentItem (COMMA assignmentItem)*
       | selectStatement
       | DEFAULT VALUES
       )
+      // MySQL 8.0 行别名：AS new(m,n,p) 出现在 INSERT 体之后、ON DUPLICATE 之前，用于 ON DUPLICATE 引用新行
+      insertRowAlias?
       onDuplicateKey?
       onConflictClause?
       returningClause?
+    ;
+
+// MySQL 8.0 行别名：AS new(m,n,p)，给 INSERT 新行命名以供 ON DUPLICATE KEY UPDATE 引用（对齐 #1314）
+insertRowAlias
+    : AS identifier OPENING_PAREN identifierList CLOSING_PAREN
     ;
 
 // MSSQL OUTPUT 子句：OUTPUT selectItems [INTO @var | table [(cols)]]，透传保 round-trip
@@ -1505,7 +1514,12 @@ whenExpr
     ;
 
 castExpr
-    : (CAST | TRY_CAST | SAFE_CAST) OPENING_PAREN expression AS dataType (FORMAT S_CHAR_LITERAL)? CLOSING_PAREN
+    : (CAST | TRY_CAST | SAFE_CAST) OPENING_PAREN expression AS dataType castCharacterSetClause? (FORMAT S_CHAR_LITERAL)? CLOSING_PAREN
+    ;
+
+// MySQL CAST 目标类型后的字符集子句：CHARACTER SET utf8mb4 [COLLATE x]，对齐 #2298
+castCharacterSetClause
+    : CHARACTER SET identifier (COLLATE identifier)?
     ;
 
 extractExpr

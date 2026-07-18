@@ -24,32 +24,32 @@ public class NonPgIssuesProbeTest
     public void Issue1169_GroupByDesc() => Probe("SELECT a FROM b GROUP BY c DESC");
 
     // ⑦ #2428 PROCEDURE ANALYSE()
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue2428_MysqlProcedureAnalyse() =>
         Probe("SELECT col1, col2 FROM heavy_table PROCEDURE ANALYSE(10, 256)");
 
     // ⑦ #2427 _utf8mb4 introducer + COLLATE
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue2427_MysqlUtf8mb4Introducer() =>
         Probe("SELECT _utf8mb4'some text' COLLATE utf8mb4_unicode_ci AS custom_string");
 
     // ⑦ #2006 _utf8mb4 dialects（与 #2427 同源修复）
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue2006_MysqlUtf8mb4Dialect() =>
         Probe("SELECT short_name FROM player_table WHERE (`short_name` LIKE _utf8mb4 '%Felipe%')");
 
     // ⑦ #2298 CAST as CHAR with CHARACTER SET
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue2298_MysqlCastCharCharset() =>
         Probe("SELECT CAST('abc' AS CHAR CHARACTER SET utf8mb4)");
 
     // ⑦ #854 INTO @var
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue854_MysqlIntoUserVar() =>
         Probe("SELECT COUNT(*) INTO @countTotal FROM employee");
 
     // ⑦ #1314 INSERT SET 带 AS 别名
-    [Fact(Skip = "commit 2 待修")]
+    [Fact]
     public void Issue1314_InsertSetAlias() =>
         Probe("INSERT INTO t1 SET a=1,b=2,c=3 AS new(m,n,p) ON DUPLICATE KEY UPDATE c = m+n");
 

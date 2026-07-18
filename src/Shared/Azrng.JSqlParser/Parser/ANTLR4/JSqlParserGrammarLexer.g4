@@ -119,8 +119,14 @@ S_HEX
     | '0x' [0-9A-Fa-f]+
     ;
 
+// S_CHAR_LITERAL: 字符串字面量，支持：
+//   - 普通字符串 'text'
+//   - introducer 前缀 _utf8mb4'text'（紧贴）
+//   - introducer + 空格 _utf8mb4 'text'（对齐 #2006）
+// introducer + 空格形式必须列在最前，ANTLR4 按定义顺序匹配最长前缀
 S_CHAR_LITERAL
-    : StringPrefix? '\'' (('\'' '\'') | ~['\\] | '\\' .)* '\''
+    : StringPrefix [ \t]+ '\'' (('\'' '\'') | ~['\\] | '\\' .)* '\''
+    | StringPrefix? '\'' (('\'' '\'') | ~['\\] | '\\' .)* '\''
     ;
 
 // Oracle q'...{...}...' quoting：自定义分隔符，分隔符成对匹配（左右括号、单字符等）
@@ -138,7 +144,9 @@ S_DOLLAR_QUOTED_STRING
 
 fragment
 StringPrefix
-    : 'N' | 'E' | 'U' | 'R' | 'B' | 'RB' | '_utf8'
+    // N/E/U/R/B/RB：SQL 标准与 PostgreSQL 字符串前缀
+    // _utf8 / _utf8mb4 / _latin1 / _binary / _ascii / _ucs2 等：MySQL 字符集 introducer（对齐 #2006 #2427）
+    : 'N' | 'E' | 'U' | 'R' | 'B' | 'RB' | '_' [a-zA-Z0-9]+
     ;
 
 fragment

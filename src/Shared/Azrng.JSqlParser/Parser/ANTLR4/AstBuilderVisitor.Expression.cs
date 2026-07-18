@@ -899,7 +899,7 @@ public partial class AstBuilderVisitor
 
     public override object VisitCastExpr(JSqlParserGrammar.CastExprContext context)
     {
-        return new CastExpression
+        var cast = new CastExpression
         {
             Expression = (Expression.IExpression)Visit(context.expression()),
             DataType = context.dataType().GetText(),
@@ -907,6 +907,15 @@ public partial class AstBuilderVisitor
             Keyword = context.SAFE_CAST() != null ? "SAFE_CAST"
                 : context.TRY_CAST() != null ? "TRY_CAST" : "CAST"
         };
+
+        // MySQL CHARACTER SET utf8mb4 [COLLATE x]，对齐 #2298
+        if (context.castCharacterSetClause() is { } csCtx)
+        {
+            var ids = csCtx.identifier();
+            if (ids.Length > 0) cast.CharacterSet = ids[0].GetText();
+            if (ids.Length > 1) cast.Collation = ids[1].GetText();
+        }
+        return cast;
     }
 
     public override object VisitExtractExpr(JSqlParserGrammar.ExtractExprContext context)
