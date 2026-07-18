@@ -7,7 +7,7 @@
 | 项 | 排除原因 |
 |----|----------|
 | Oracle MODEL 子句 | **上游根本不存在**（grammar 零命中），非 Azrng 缺口 |
-| 子 visitor 适配层（FromItemVisitor/OrderByVisitor 等 7 套） | **架构差异**：Azrng 扁平 visitor（StatementVisitor/ExpressionVisitor）已覆盖功能，强行移植是负优化 |
+| 子 visitor 适配层（FromItemVisitor/OrderByVisitor 等 7 套） | **架构差异**：Azrng 扁平 visitor（IStatementVisitor/IExpressionVisitor）已覆盖功能，强行移植是负优化 |
 | Skip/First/OptimizeFor/SampleClause | **等价实现**：Azrng 内联为 PlainSelect 字段/Table.TableSample，功能等价 |
 | MySQLGroupConcat/UserVariable/VariableAssignment/AllValue/JsonExpression/XMLSerializeExpr | **等价合并**：已合入 Function.cs/SetStatement/AnyType.All 等 |
 | CURRVAL / JSON_TRANSFORM | **上游不支持**：核查确认上游 main/ 无此特性 |
@@ -53,7 +53,7 @@ var tables = stmt.GetTableNames();
 
 > **上游同步说明**：`Descendants`/`GetTableNames` 是 Azrng 自有封装，JSqlParser 上游无对应物。
 > 与上游同步时，**只需对照 visitor 接口签名与 AST 节点结构**；扩展方法无需对照。
-> `ExpressionDescendantsWalker` 直接实现 `ExpressionVisitor<T>` 接口，**编译期保证完整覆盖**所有节点类型——
+> `ExpressionDescendantsWalker` 直接实现 `IExpressionVisitor<T>` 接口，**编译期保证完整覆盖**所有节点类型——
 > 上游新增节点类型时若 walker 漏实现会编译失败，强制补全，杜绝"某类节点静默不进 Descendants 结果"。
 
 ### 底层 Visitor 接口（复杂自定义遍历 / 上游对照）
@@ -62,11 +62,11 @@ Azrng.JSqlParser 提供三种 Visitor 接口，均采用双泛型签名 `T Visit
 
 | Visitor | 用途 | 适配器基类 |
 |---------|------|-----------|
-| `ExpressionVisitor<T>` | 遍历表达式节点 | `ExpressionVisitorAdapter<T>` |
-| `StatementVisitor<T>` | 遍历语句节点 | `StatementVisitorAdapter<T>` |
-| `SelectVisitor<T>` | 遍历 SELECT body | 无（只有 3 个方法，直接实现即可） |
+| `IExpressionVisitor<T>` | 遍历表达式节点 | `ExpressionVisitorAdapter<T>` |
+| `IStatementVisitor<T>` | 遍历语句节点 | `StatementVisitorAdapter<T>` |
+| `ISelectVisitor<T>` | 遍历 SELECT body | 无（只有 3 个方法，直接实现即可） |
 
-#### ExpressionVisitor — 收集表达式中的列名
+#### IExpressionVisitor — 收集表达式中的列名
 
 ```csharp
 using Azrng.JSqlParser.Expression;
@@ -84,7 +84,7 @@ class ColumnCollector : ExpressionVisitorAdapter<object?>
 }
 
 // 使用
-var select = (PlainSelect)CCJSqlParserUtil.Parse(
+var select = (PlainSelect)SqlParser.Parse(
     "SELECT id FROM users WHERE name = 'test' AND age > 18")!;
 
 var collector = new ColumnCollector();
@@ -94,7 +94,7 @@ Console.WriteLine(string.Join(", ", collector.Columns));
 // => "name, age"
 ```
 
-#### StatementVisitor — 按语句类型分派处理
+#### IStatementVisitor — 按语句类型分派处理
 
 ```csharp
 using Azrng.JSqlParser.Statement;
@@ -131,17 +131,17 @@ class DmlRouter : StatementVisitorAdapter<object?>
 }
 
 // 使用
-var stmt = CCJSqlParserUtil.Parse("INSERT INTO users (name) VALUES ('Alice')")!;
+var stmt = SqlParser.Parse("INSERT INTO users (name) VALUES ('Alice')")!;
 stmt.Accept(new DmlRouter());
 // => "INSERT INTO users"
 ```
 
-#### SelectVisitor — 处理不同 SELECT body 类型
+#### ISelectVisitor — 处理不同 SELECT body 类型
 
 ```csharp
 using Azrng.JSqlParser.Statement.Select;
 
-class SelectInfo : SelectVisitor<object?>
+class SelectInfo : ISelectVisitor<object?>
 {
     public object? Visit<S>(PlainSelect plainSelect, S context)
     {
@@ -174,7 +174,7 @@ class SelectInfo : SelectVisitor<object?>
 #### SELECT — 获取列、表、WHERE、JOIN
 
 ```csharp
-var select = (PlainSelect)CCJSqlParserUtil.Parse(
+var select = (PlainSelect)SqlParser.Parse(
     "SELECT u.id, u.name FROM users u INNER JOIN orders o ON u.id = o.user_id WHERE u.active = 1")!;
 
 // 列
@@ -200,7 +200,7 @@ Console.WriteLine(select.Where);        // u.active = 1
 #### INSERT — 获取目标表和列
 
 ```csharp
-var insert = (Insert)CCJSqlParserUtil.Parse(
+var insert = (Insert)SqlParser.Parse(
     "INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com')")!;
 
 Console.WriteLine(insert.Table?.Name);  // users
@@ -211,7 +211,7 @@ foreach (var col in insert.Columns!)
 #### UPDATE — 获取 SET 子句
 
 ```csharp
-var update = (Update)CCJSqlParserUtil.Parse(
+var update = (Update)SqlParser.Parse(
     "UPDATE users SET name = 'Bob', active = 0 WHERE id = 1")!;
 
 Console.WriteLine(update.Table?.Name);  // users
@@ -227,7 +227,7 @@ Console.WriteLine(update.Where);        // id = 1
 #### DELETE — 获取表和条件
 
 ```csharp
-var delete = (Delete)CCJSqlParserUtil.Parse(
+var delete = (Delete)SqlParser.Parse(
     "DELETE FROM users WHERE active = 0")!;
 
 Console.WriteLine(delete.Table?.Name);  // users
@@ -237,10 +237,10 @@ Console.WriteLine(delete.Where);        // active = 0
 #### 修改 WHERE 后生成新 SQL
 
 ```csharp
-var select = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM users WHERE active = 1")!;
+var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users WHERE active = 1")!;
 
 // 修改 WHERE 子句
-select.Where = CCJSqlParserUtil.ParseExpression("active = 1 AND role = 'admin'")!;
+select.Where = SqlParser.ParseExpression("active = 1 AND role = 'admin'")!;
 
 Console.WriteLine(select.ToString());
 // => SELECT id FROM users WHERE active = 1 AND role = 'admin'
@@ -248,7 +248,7 @@ Console.WriteLine(select.ToString());
 ## 架构
 
 ```
-CCJSqlParserUtil.Parse(sql)
+SqlParser.Parse(sql)
         |
         v
   ANTLR4 Lexer/Parser  (JSqlParserGrammar.g4)
@@ -259,8 +259,8 @@ CCJSqlParserUtil.Parse(sql)
         v
   Statement / Expression  (强类型 C# 对象)
         |
-        +-- Accept(StatementVisitor)   — 遍历语句（底层机制）
-        +-- Accept(ExpressionVisitor)  — 遍历表达式（底层机制）
+        +-- Accept(IStatementVisitor)  — 遍历语句（底层机制）
+        +-- Accept(IExpressionVisitor) — 遍历表达式（底层机制）
         +-- Descendants/GetTableNames — LINQ 式遍历扩展（C# 风格，推荐）
         +-- ToString()                 — 反序列化为 SQL
         +-- TablesNamesFinder          — 提取表名（内部，对外用 GetTableNames）
@@ -274,11 +274,11 @@ CCJSqlParserUtil.Parse(sql)
 |----------|------|
 | `Azrng.JSqlParser` | C# 风格遍历扩展方法（`ExpressionExtension`/`StatementExtension`：Descendants/GetTableNames/GetTableReferences/GetSelectColumns/GetWhereConditions） |
 | `Azrng.JSqlParser.Models` | 结构化提取的中性 DTO（`TableReference`/`SelectColumn`/`WhereCondition` 等） |
-| `Azrng.JSqlParser.Parser` | `CCJSqlParserUtil` 入口、AST 节点基类 |
+| `Azrng.JSqlParser.Parser` | `SqlParser` 入口、AST 节点基类 |
 | `Azrng.JSqlParser.Expression` | 所有表达式类型（字面量、运算符、函数、参数） |
 | `Azrng.JSqlParser.Expression.Operators.*` | 算术、条件、关系运算符 |
 | `Azrng.JSqlParser.Expression.Cnf` | CNF 转换 |
-| `Azrng.JSqlParser.Statement` | 所有语句类型、`StatementVisitor` |
+| `Azrng.JSqlParser.Statement` | 所有语句类型、`IStatementVisitor` |
 | `Azrng.JSqlParser.Statement.Select` | SELECT 层级结构（`PlainSelect`、`Join`、`WithItem` 等） |
 | `Azrng.JSqlParser.Statement.Piped` | BigQuery 风格管道查询（`FromQuery`、`PipeOperator` 及 17 种操作符） |
 | `Azrng.JSqlParser.Schema` | `Table`、`Column`、`Database`、`Index`、`Sequence` 等 |

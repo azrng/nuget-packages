@@ -15,7 +15,7 @@ using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Statement.Select;
 
 // 解析 SQL
-var stmt = CCJSqlParserUtil.Parse("SELECT id, name FROM users WHERE age > 18");
+var stmt = SqlParser.Parse("SELECT id, name FROM users WHERE age > 18");
 
 if (stmt is PlainSelect select)
 {
@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta7" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta8" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta7`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta8`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -49,23 +49,23 @@ Console.WriteLine(stmt.ToString());
 
 ### 解析入口
 
-所有入口均为 `CCJSqlParserUtil` 上的静态方法：
+所有入口均为 `SqlParser` 上的静态方法：
 
 ```csharp
 using Azrng.JSqlParser.Parser;
 
 // 单条语句
-Statement? stmt = CCJSqlParserUtil.Parse("SELECT * FROM users");
+Statement? stmt = SqlParser.Parse("SELECT * FROM users");
 
 // 多条语句
-Statements? stmts = CCJSqlParserUtil.ParseStatements(
+Statements? stmts = SqlParser.ParseStatements(
     "INSERT INTO users (name) VALUES ('Alice'); UPDATE users SET active = 1");
 
 // 独立表达式
-Expression? expr = CCJSqlParserUtil.ParseExpression("age BETWEEN 18 AND 65");
+Expression? expr = SqlParser.ParseExpression("age BETWEEN 18 AND 65");
 
 // 安全解析（失败返回 null，不抛异常）
-Statement? stmt = CCJSqlParserUtil.ParseNullable("INVALID SQL");
+Statement? stmt = SqlParser.ParseNullable("INVALID SQL");
 ```
 
 ### 错误处理
@@ -77,7 +77,7 @@ using Azrng.JSqlParser.Parser;
 
 try
 {
-    var stmt = CCJSqlParserUtil.Parse("SELCT * FORM users");
+    var stmt = SqlParser.Parse("SELCT * FORM users");
 }
 catch (JSqlParserException ex)
 {
@@ -89,7 +89,7 @@ catch (JSqlParserException ex)
 如果不想处理异常，使用 `ParseNullable`：
 
 ```csharp
-var stmt = CCJSqlParserUtil.ParseNullable("INVALID SQL");
+var stmt = SqlParser.ParseNullable("INVALID SQL");
 if (stmt == null)
     Console.WriteLine("解析失败");
 ```
@@ -110,7 +110,7 @@ if (stmt == null)
 ```csharp
 using Azrng.JSqlParser;
 
-var stmt = CCJSqlParserUtil.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
+var stmt = SqlParser.Parse("SELECT u.id FROM users u JOIN orders o ON u.id = o.uid")!;
 IReadOnlyCollection<string> tables = stmt.GetTableNames();
 // => { "users", "orders" }
 ```
@@ -126,7 +126,7 @@ IReadOnlyCollection<string> tables = stmt.GetTableNames();
 ```csharp
 using Azrng.JSqlParser;
 
-var stmt = (PlainSelect)CCJSqlParserUtil.Parse("SELECT id FROM t WHERE name = 'x' AND age > 18 AND status IN (:p1, :p2)")!;
+var stmt = (PlainSelect)SqlParser.Parse("SELECT id FROM t WHERE name = 'x' AND age > 18 AND status IN (:p1, :p2)")!;
 
 // 收集 WHERE 中的所有列引用
 var columns = stmt.Where!.Descendants<Column>().Select(c => c.ColumnName).ToList();
@@ -151,7 +151,7 @@ foreach (var c in stmt.Where!.Descendants<Column>())
 using Azrng.JSqlParser;
 using Azrng.JSqlParser.Models;
 
-var select = (PlainSelect)CCJSqlParserUtil.Parse(
+var select = (PlainSelect)SqlParser.Parse(
     "SELECT u.id, COUNT(*) AS cnt FROM users u JOIN orders o ON u.id = o.uid WHERE u.age > 18 AND o.status IN (1, 2)")!;
 
 // 1. 表引用（含别名、全名）——仅 FROM/JOIN/CTE，不含 WHERE 子查询
@@ -191,7 +191,7 @@ List<ValidationError> errors = validation.Validate();
 ```csharp
 using Azrng.JSqlParser.Expression.Cnf;
 
-var expr = CCJSqlParserUtil.ParseExpression("a = 1 AND (b = 2 OR c = 3)");
+var expr = SqlParser.ParseExpression("a = 1 AND (b = 2 OR c = 3)");
 var cnf = CNFConverter.ConvertToCNF(expr);
 // => (a = 1 OR b = 2) AND (a = 1 OR c = 3)
 ```
@@ -201,7 +201,7 @@ var cnf = CNFConverter.ConvertToCNF(expr);
 每个 AST 节点都重写了 `ToString()` 以生成 SQL 文本：
 
 ```csharp
-var stmt = CCJSqlParserUtil.Parse("SELECT id FROM users WHERE active = 1");
+var stmt = SqlParser.Parse("SELECT id FROM users WHERE active = 1");
 Console.WriteLine(stmt.ToString());
 // => SELECT id FROM users WHERE active = 1
 ```
@@ -232,6 +232,32 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta8
+
+C# 风格化治理收口 + 多目标框架支持。**本版本含多处破坏性 API 变更**，从 beta7 升级需按下表同步代码。
+
+**多目标框架**：
+- `TargetFrameworks` 由 `net10.0` 扩展为 `net8.0;net9.0;net10.0`，net8/9 项目可直接引用。
+- 显式 `<LangVersion>latest</LangVersion>` 统一三 TFM 语言版本。
+
+**破坏性变更（编译期需同步）**：
+- **解析入口改名**：新增 `SqlParser`（推荐入口），`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳。新代码用 `SqlParser.Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable`，旧代码无需改（仅 obsolete 警告）。
+- **接口加 `I` 前缀**（C# 命名规范）：`ExpressionVisitor<T>`→`IExpressionVisitor<T>`、`StatementVisitor<T>`→`IStatementVisitor<T>`、`SelectVisitor<T>`→`ISelectVisitor<T>`、`Expression`→`IExpression`、`Statement`→`IStatement`、`ASTNodeAccess`→`IASTNodeAccess`、`Model`→`IModel`、`FromItem`→`IFromItem`（共 8 个接口；外部 visitor 实现需同步改接口名）。
+- **枚举值 SCREAMING_SNAKE_CASE → PascalCase**（共 60 值）：`ForMode`（UPDATE→Update 等 6 值）、`AlterOperation`（ADD→Add 等 47 值）、`ReturningReferenceType`（OLD→Old/NEW→New）、`DateTimeType`（DATE→Date/DATETIME→Datetime 等 5 值）。外部 switch case 与枚举名引用需全替换。
+- **`null!` 字段治理 → `required`**：`BinaryExpression.LeftExpression/RightExpression` + 28 个 AST 类字段 + `WhereCondition.LeftExpression` DTO 改为 `required`，外部 `new X()` 无参构造需改为对象初始化器或带 `[SetsRequiredMembers]` 的构造。
+
+**非破坏性变更（向后兼容）**：
+- `BinaryExpression.GetStringExpression()` → `OperatorSymbol` 属性（旧方法 `[Obsolete]` 转发）。
+- `JjtGetFirstToken/JjtGetLastToken` → `GetFirstToken/GetLastToken`（旧名 `[Obsolete]` 转发）。
+- `OracleJoinSyntax` 从 `static class` 常量改为 `enum { None, Right, Left }`，`Column.OldOracleJoinSyntax` 字段类型同步。
+- 6 个字面量叶子类（NullValue/LongValue/DoubleValue/StringValue/HexValue/BooleanValue）加 `sealed`；`Alias` 加 `sealed` + 值相等。
+- `FromItem.GetAlias()/SetAlias()` → `Alias` 属性（6 实现类旧方法 `[Obsolete]` 转发）。
+- `Select.GetForUpdateTable()` → `ForUpdateTable` 属性；`ForUpdateClause.GetFirstTable()` → `FirstTable` 属性（旧名 `[Obsolete]` 转发）。
+- 删除 `ForUpdateClause` 的 5 个 SetXxx builder 方法、`PlainSelect.GetStringList<T>()` 死代码。
+- `[NonSerialized]` 删除（本库无二进制序列化路径）。
+
+**测试**：全量 1436 项 × 3 TFM（net8/9/10）全部通过，0 失败。
 
 ### 1.0.0-beta7
 

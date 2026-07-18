@@ -168,6 +168,6 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpres
 
     public override string ToString() => AppendTo(new StringBuilder()).ToString();
 
-    [Obsolete("Use the specific select body type directly")]
+    [Obsolete("改用具体的 select body 子类型（PlainSelect/SetOperationList/Values 等）")]
     public Select GetSelectBody() => this;
 }
