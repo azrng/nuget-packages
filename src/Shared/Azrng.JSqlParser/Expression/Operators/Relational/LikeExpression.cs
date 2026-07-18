@@ -32,6 +32,12 @@ public class LikeExpression : BinaryExpression
     /// <summary>ESCAPE 转义表达式（如 LIKE 'a%' ESCAPE '\'），未指定时为 null。</summary>
     public IExpression? Escape { get; set; }
 
+    /// <summary>
+    /// PostgreSQL 数组量词 ANY / ALL（如 <c>col LIKE ANY (ARRAY['%a%'])</c>）。
+    /// 为 null 表示无量词（普通 LIKE）；非 null 时 ToString 在关键字后输出 <c>ANY </c>/<c>ALL </c>。
+    /// </summary>
+    public AnyType? LikeQuantifier { get; set; }
+
     public override T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     /// <summary>
@@ -65,6 +71,7 @@ public class LikeExpression : BinaryExpression
         if (Not) sb.Append("NOT ");
         sb.Append(OperatorSymbol).Append(' ');
         if (UseBinary) sb.Append("BINARY ");
+        if (LikeQuantifier is { } q) sb.Append(q.ToString().ToUpperInvariant()).Append(' ');
         sb.Append(RightExpression);
         if (Escape != null) sb.Append(" ESCAPE ").Append(Escape);
         return sb.ToString();

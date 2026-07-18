@@ -99,21 +99,28 @@
 ### ④ PostgreSQL 专项  [12 条]
 
 > 特性多但上游支持成熟，可对照参考实现。窗口帧 #2431 #2430；JSON #2412 #1511；字符串 #2233；interval #1728
+>
+> **Azrng 移植版验证状态**（2026-07-18，探针 + round-trip 测试，测试文件
+> `test/Azrng.JSqlParser.Test/Statement/PostgreSqlUpstreamIssuesProbeTest.cs`
+> + `PostgreSqlFixRoundTripTest.cs`）：
+> - ✅ 已支持（移植版不存在上游缺陷）：#2233 #2342 #2430 #2431
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#187 #1416 #1511 #1728 #2326 #2411 #2412 #2432
+> - ⛔ 复现且未修复：无
 
-| # | 类型 | 标题 | 要点 |
-|---:|:--:|---|---|
-| [#2432](https://github.com/JSQLParser/JSqlParser/issues/2432) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : LIKE ANY (ARRAY[...]) / LIKE ALL (ARRAY[...]) fails to parse | LIKE ANY/ALL (ARRAY[...]) |
-| [#2431](https://github.com/JSQLParser/JSqlParser/issues/2431) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : GROUPS not supported in window function frame clause | 窗口帧 GROUPS 子句 [Missing Standard Feature] |
-| [#2430](https://github.com/JSQLParser/JSqlParser/issues/2430) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : EXCLUDE TIES not supported in window function frame clause | 窗口帧 EXCLUDE TIES [Missing Standard Feature] |
-| [#2412](https://github.com/JSQLParser/JSqlParser/issues/2412) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : json_populate_record row expansion with (…). * not supported | json_populate_record 行展开 (...).*  |
-| [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 |
-| [#2342](https://github.com/JSQLParser/JSqlParser/issues/2342) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : Nesting can cause NullPointerException | 嵌套导致 NullPointerException |
-| [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 |
-| [#2233](https://github.com/JSQLParser/JSqlParser/issues/2233) | [B] | [BUG] JSQLParser 5.1: PostgreSQL: fail to parse dollar-quoted string constants with tags | $tag$ dollar-quoted 带标签字符串 |
-| [#1728](https://github.com/JSQLParser/JSqlParser/issues/1728) | [B] | [BUG] JSQLParser 4.5 : Postgres : fails to parse `interval hour to minute` | interval hour to minute |
-| [#1511](https://github.com/JSQLParser/JSqlParser/issues/1511) | [B] | Cannot parse PGSQL JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() |
-| [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag |
-| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 |
+| # | 类型 | 标题 | 要点 | Azrng 状态 |
+|---:|:--:|---|---|---|
+| [#2432](https://github.com/JSQLParser/JSqlParser/issues/2432) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : LIKE ANY (ARRAY[...]) / LIKE ALL (ARRAY[...]) fails to parse | LIKE ANY/ALL (ARRAY[...]) | 🔧 已修复（predicateSuffix 加 `(ANY\|ALL)?` + LikeExpression.LikeQuantifier） |
+| [#2431](https://github.com/JSQLParser/JSqlParser/issues/2431) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : GROUPS not supported in window function frame clause | 窗口帧 GROUPS 子句 [Missing Standard Feature] | ✅ 已支持（windowFrame 早含 GROUPS） |
+| [#2430](https://github.com/JSQLParser/JSqlParser/issues/2430) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : EXCLUDE TIES not supported in window function frame clause | 窗口帧 EXCLUDE TIES [Missing Standard Feature] | ✅ 已支持（windowFrame 早含 EXCLUDE TIES） |
+| [#2412](https://github.com/JSQLParser/JSqlParser/issues/2412) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : json_populate_record row expansion with (…). * not supported | json_populate_record 行展开 (...).*  | 🔧 已修复（selectItem 加 `(expr).*` → RowGetExpression+Parenthesis 保括号） |
+| [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 | 🔧 已修复（tableOrSubquery 加 ROWS FROM(...) → 新 RowsFrom 模型） |
+| [#2342](https://github.com/JSQLParser/JSqlParser/issues/2342) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : Nesting can cause NullPointerException | 嵌套导致 NullPointerException | ✅ 已支持（ANTLR 无栈深 NPE） |
+| [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 | 🔧 已修复（新 XMLTABLE 词法 token + xmlTable 规则 + XmlTable 模型） |
+| [#2233](https://github.com/JSQLParser/JSqlParser/issues/2233) | [B] | [BUG] JSQLParser 5.1: PostgreSQL: fail to parse dollar-quoted string constants with tags | $tag$ dollar-quoted 带标签字符串 | ✅ 已支持（S_DOLLAR_QUOTED_STRING 早支持带标签） |
+| [#1728](https://github.com/JSQLParser/JSqlParser/issues/1728) | [B] | [BUG] JSQLParser 4.5 : Postgres : fails to parse `interval hour to minute` | interval hour to minute | 🔧 已修复（dataType 加 `INTERVAL intervalField (TO intervalField)?` 分支） |
+| [#1511](https://github.com/JSQLParser/JSqlParser/issues/1511) | [B] | Cannot parse PGSQL JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | 🔧 已修复（tableFunction 加 `[WITH ORDINALITY] alias? (cols)?` + TableFunction.WithOrdinality/ColumnAliases） |
+| [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag | 🔧 已修复（explainStatement 加 `explainOptionList` + Analyze/Verbose/Options 字段；新增 VERBOSE/BUFFERS/TIMING/SUMMARY/WAL/YAML token） |
+| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 | 🔧 已修复（新增 @@/@@@ token + comparisonOperator + Matches 节点；createIndex 加 `USING method`） |
 
 ### ⑤ Oracle 专项  [4 条]
 

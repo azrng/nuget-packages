@@ -934,6 +934,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitSelectItem(JSqlParserGrammar.SelectItemContext context)
     {
+        // PostgreSQL 行展开 (expr).* —— 用 RowGetExpression 保留外层括号保 round-trip
+        if (context.OPENING_PAREN() != null && context.DOT() != null)
+        {
+            var inner = (Expression.IExpression)Visit(context.expression());
+            return new SelectItem(new RowGetExpression(new Parenthesis { Expression = inner }, "*"));
+        }
+
         if (context.identifier() != null && context.DOT() != null)
         {
             var allTableCols = new AllTableColumns
@@ -1047,15 +1054,35 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitTableOrSubquery(JSqlParserGrammar.TableOrSubqueryContext context)
     {
-        // 表函数（FROM func(...) AS alias）
-        if (context.tableFunction() != null)
+        // 表函数（FROM func(...) [WITH ORDINALITY] alias[(cols)]）—— 必须在 ROWS FROM 之后判定
+        if (context.tableFunction().Length > 0 && context.ROWS() == null)
         {
-            var fn = BuildFunctionFromTableFunction(context.tableFunction());
+            var fn = BuildFunctionFromTableFunction(context.tableFunction(0));
             var tableFn = new TableFunction { Function = fn };
+            if (context.ORDINALITY() != null) tableFn.WithOrdinality = true;
             if (context.alias() != null)
                 tableFn.Alias = new Alias(context.alias().identifier().GetText(),
                     context.alias().AS() != null);
+            if (context.columnList() != null)
+                tableFn.ColumnAliases = context.columnList().identifier().Select(i => i.GetText()).ToList();
             return tableFn;
+        }
+
+        // PostgreSQL ROWS FROM (func(), func(), ...) AS t(a, b)
+        if (context.ROWS() != null)
+        {
+            var rowsFrom = new RowsFrom
+            {
+                TableFunctions = context.tableFunction()
+                    .Select(t => new TableFunction { Function = BuildFunctionFromTableFunction(t) })
+                    .ToList()
+            };
+            if (context.alias() != null)
+                rowsFrom.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            if (context.columnList() != null)
+                rowsFrom.ColumnAliases = context.columnList().identifier().Select(i => i.GetText()).ToList();
+            return rowsFrom;
         }
 
         if (context.table() != null)
@@ -1102,6 +1129,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     context.alias().AS() != null);
             }
             return jsonTable;
+        }
+
+        if (context.xmlTable() != null)
+        {
+            var xmlTable = (XmlTable)Visit(context.xmlTable());
+            if (context.alias() != null)
+            {
+                xmlTable.Alias = new Alias(context.alias().identifier().GetText(),
+                    context.alias().AS() != null);
+            }
+            return xmlTable;
         }
 
         if (context.LATERAL() != null)
@@ -1390,6 +1428,39 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
         }
 
+        return column;
+    }
+
+    public override object VisitXmlTable(JSqlParserGrammar.XmlTableContext context)
+    {
+        var xmlTable = new XmlTable
+        {
+            // 行 XPath 查询串（带引号原样保留，保 round-trip）
+            RowPath = context.S_CHAR_LITERAL().GetText()
+        };
+        foreach (var expr in context.expression())
+        {
+            xmlTable.Passing.Add((Expression.IExpression)Visit(expr));
+        }
+        foreach (var colCtx in context.xmlTableColumn())
+        {
+            xmlTable.Columns.Add((XmlTableColumn)Visit(colCtx));
+        }
+        return xmlTable;
+    }
+
+    public override object VisitXmlTableColumn(JSqlParserGrammar.XmlTableColumnContext context)
+    {
+        var column = new XmlTableColumn { Name = context.identifier().GetText() };
+        if (context.FOR() != null)
+        {
+            column.ForOrdinality = true;
+            return column;
+        }
+        column.DataType = BuildColDataType(context.colDataType()).ToString();
+        if (context.PATH() != null) column.Path = context.S_CHAR_LITERAL().GetText();
+        if (context.DEFAULT() != null)
+            column.DefaultExpression = (Expression.IExpression)Visit(context.expression());
         return column;
     }
 
@@ -3492,6 +3563,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var explain = new ExplainStatement();
         explain.Statement = (Statement.IStatement)Visit(context.statement());
+
+        // PostgreSQL 语句级前缀：首位关键字为 (EXPLAIN | ANALYZE)，其后 (ANALYZE | VERBOSE)* 为修饰符。
+        // context.ANALYZE() 含首位（当首位是 ANALYZE 时）+ 修饰符里的 ANALYZE，需扣掉首位。
+        var analyzeCount = context.ANALYZE().Length;
+        var leadingIsAnalyze = context.EXPLAIN() == null; // 首位是 ANALYZE（无 EXPLAIN）
+        explain.Analyze = analyzeCount - (leadingIsAnalyze ? 1 : 0) > 0;
+        explain.Verbose = context.VERBOSE().Length > 0;
+
+        if (context.explainOptionList() is { } optList)
+        {
+            explain.Options = GetOriginalText(optList);
+        }
         return explain;
     }
 
@@ -3551,7 +3634,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitCreateIndex(JSqlParserGrammar.CreateIndexContext context)
     {
         var createIndex = new CreateIndex();
-        createIndex.Index = new Schema.Index { Name = context.identifier().GetText() };
+        // identifier(0) = 索引名；可选的 USING identifier（索引方法）当前未结构化捕获，
+        // 与既有"索引列未 round-trip"行为一致，仅保证可解析。
+        createIndex.Index = new Schema.Index { Name = context.identifier(0).GetText() };
         createIndex.Table = (Table)Visit(context.table());
         createIndex.Unique = context.UNIQUE() != null;
         return createIndex;
@@ -3697,6 +3782,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 };
             }
 
+            // PostgreSQL 全文匹配运算符 @@ / @@@（tsvector @@ tsquery），
+            // 复用既有 Matches 类型（Operators/Relational/Matches.cs，符号 @@）。
+            if (op.AT_AT() != null || op.AT_AT_AT() != null)
+            {
+                return new Matches { LeftExpression = concat, RightExpression = right };
+            }
+
             // 理论不可达：comparisonOperator production 限定为 14 个 token，全部在上面分支覆盖。
             // 此前兜底为 EqualsTo 会静默把未知 token 当作 =（正是 ~ / !~ bug 的同型根因）。
             // 改抛异常让 grammar 漏列 token 时立即暴露，避免静默误归类。
@@ -3765,6 +3857,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (suffix.NOT() != null) like.Not = true;
             // MySQL BINARY 前缀（x LIKE BINARY 'A' 大小写敏感匹配），对齐上游 useBinary
             if (suffix.BINARY() != null) like.UseBinary = true;
+            // PostgreSQL 数组量词（col LIKE ANY (ARRAY[...]) / LIKE ALL (...)）
+            if (suffix.ANY() != null) like.LikeQuantifier = AnyType.Any;
+            else if (suffix.ALL() != null) like.LikeQuantifier = AnyType.All;
             // ESCAPE 子句（grammar 1238/1239 行已支持，对齐上游 escapeExpression）
             if (suffix.ESCAPE() != null)
             {

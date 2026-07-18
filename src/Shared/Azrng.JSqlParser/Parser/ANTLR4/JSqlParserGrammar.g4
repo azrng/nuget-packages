@@ -235,7 +235,8 @@ selectColumnList
     ;
 
 selectItem
-    : expression (AS? alias)?
+    : OPENING_PAREN expression CLOSING_PAREN DOT MULTIPLY   // PostgreSQL 行展开 (expr).*
+    | expression (AS? alias)?
     | MULTIPLY
     | identifier DOT MULTIPLY
     ;
@@ -278,7 +279,9 @@ fromItem
 
 tableOrSubquery
     : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause? timeTravelClause?
-    | tableFunction alias?
+    | xmlTable alias?   // PostgreSQL XMLTABLE(...) 表函数
+    | tableFunction (WITH ORDINALITY)? alias? (OPENING_PAREN columnList CLOSING_PAREN)?   // PG: func() WITH ORDINALITY ARR(item, pos)
+    | ROWS FROM OPENING_PAREN tableFunction (COMMA tableFunction)* CLOSING_PAREN alias? (OPENING_PAREN columnList CLOSING_PAREN)?   // PG ROWS FROM (...)
     | subSelect
     | jsonTable alias?
     | OPENING_PAREN fromItem CLOSING_PAREN alias?
@@ -377,6 +380,22 @@ jsonTablePlanTerm
 
 jsonTablePassingItem
     : expression AS identifier
+    ;
+
+// PostgreSQL XMLTABLE 行集函数：
+//   XMLTABLE(xpath_row_query PASSING expr [, ...] [COLUMNS (col_def, ...)])
+xmlTable
+    : XMLTABLE OPENING_PAREN
+      S_CHAR_LITERAL                                    // 行 XPath 查询串（如 '//ROWS/ROW'）
+      (PASSING expression (COMMA expression)*)?         // PASSING data [, ...]
+      (COLUMNS OPENING_PAREN xmlTableColumn (COMMA xmlTableColumn)* CLOSING_PAREN)?
+      CLOSING_PAREN
+    ;
+
+// XMLTABLE 列定义：name [datatype] [PATH 'xpath'] [DEFAULT expr]  或  name FOR ORDINALITY
+xmlTableColumn
+    : identifier FOR ORDINALITY
+    | identifier colDataType (PATH S_CHAR_LITERAL)? (DEFAULT expression)?
     ;
 
 jsonTableColumn
@@ -743,8 +762,14 @@ dataTypeArgument
 dataType
     : CHARACTER VARYING (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?   // SQL 标准 character varying(n)
     | SET (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?   // MySQL set('a','b')，SET 是保留 token 需显式分支
+    | INTERVAL intervalField (TO intervalField)?   // PostgreSQL: interval hour to minute / interval day to second(6)
     | identifier (DOT identifier)? (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
     | dataTypeKeyword (OPENING_PAREN dataTypeArgument (COMMA dataTypeArgument)* CLOSING_PAREN)?
+    ;
+
+// PostgreSQL interval 限定字段（含可选精度，仅 SECOND / 尾字段可带 (p)）
+intervalField
+    : (YEAR | MONTH | DAY | HOUR | MINUTE | SECOND) (OPENING_PAREN LONG_VALUE CLOSING_PAREN)?
     ;
 
 dataTypeKeyword
@@ -868,6 +893,7 @@ createView
 
 createIndex
     : CREATE UNIQUE? INDEX (IF NOT EXISTS)? identifier ON table
+      (USING identifier)?   // PostgreSQL 索引方法：USING btree | gist | gin | ...
       OPENING_PAREN orderByItem (COMMA orderByItem)* CLOSING_PAREN
       whereClause?
     ;
@@ -1084,7 +1110,18 @@ describeStatement
     ;
 
 explainStatement
-    : (EXPLAIN | ANALYZE) statement
+    : (EXPLAIN | ANALYZE) (ANALYZE | VERBOSE)* explainOptionList? statement
+    ;
+
+// PostgreSQL EXPLAIN 括号选项列表：(ANALYZE, VERBOSE, COSTS, BUFFERS) / (FORMAT JSON) / (SUMMARY) 等
+explainOptionList
+    : OPENING_PAREN explainOption (COMMA explainOption)* CLOSING_PAREN
+    ;
+
+explainOption
+    : (ANALYZE | VERBOSE | COSTS | BUFFERS | TIMING | SUMMARY | SETTINGS | WAL)
+      (TRUE | FALSE | ON | OFF | LONG_VALUE)?
+    | FORMAT (TEXT | XML | JSON | YAML)
     ;
 
 grantStatement
@@ -1240,7 +1277,7 @@ predicateSuffix
     | comparisonOperator (ANY | SOME | ALL) OPENING_PAREN selectStatement CLOSING_PAREN
     | (NOT? IN | GLOBAL NOT? IN) OPENING_PAREN (selectStatement | expressionList) CLOSING_PAREN
     | NOT? BETWEEN (SYMMETRIC | ASYMMETRIC)? concatenationExpr AND concatenationExpr
-    | NOT? (LIKE | ILIKE | RLIKE | REGEXP | REGEXP_LIKE | MATCH_ANY | MATCH_ALL | MATCH_PHRASE | MATCH_PHRASE_PREFIX | MATCH_REGEXP) BINARY? concatenationExpr (ESCAPE concatenationExpr)?
+    | NOT? (LIKE | ILIKE | RLIKE | REGEXP | REGEXP_LIKE | MATCH_ANY | MATCH_ALL | MATCH_PHRASE | MATCH_PHRASE_PREFIX | MATCH_REGEXP) BINARY? (ANY | ALL)? concatenationExpr (ESCAPE concatenationExpr)?
     | NOT? SIMILAR TO concatenationExpr (ESCAPE concatenationExpr)?
     | IS NOT? (NULL | TRUE | FALSE | UNKNOWN)
     | IS NOT? DISTINCT FROM concatenationExpr
@@ -1698,6 +1735,8 @@ comparisonOperator
     | TILDE_STAR
     | NOT_TILDE
     | NOT_TILDE_STAR
+    | AT_AT
+    | AT_AT_AT
     ;
 
 // ══════════════════════════════════════════════
@@ -1722,6 +1761,7 @@ nonReservedKeyword
     : ACTION | ACTIVE | ABSENT | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
     | BEFORE | BEGIN | BIT | BOTH
+    | BUFFERS
     | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
     | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT
     | CONFLICT | CONSTRAINTS | CONVERT | COSTS | COUNT | CREATED | CURRENT_DATE | CURRENT_TIME | CURRENT_TIMESTAMP | CURRENT_TIMEZONE | CYCLE
@@ -1747,12 +1787,14 @@ nonReservedKeyword
     | RANGE | READ | REBUILD | RECURSIVE | REFRESH | REGEXP
     | REJECT | RENAME | REPLACE | RESET | RESTART | RESUME | RESTRICT
     | RETURN | RETURNS | RETURNING | ROLLBACK | ROLLUP | RLIKE
-    | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW
-    | START | STRICT | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP
+    | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW | SUMMARY
+    | START | STRICT | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP | TIMING
     | TIES | TRAILING | TRIGGER | TRIM | TRY_CAST | TYPE
-    | UNLOGGED | VALIDATE | VERIFY | VISIBLE | VOLATILE
-    | WITHIN | WITHOUT | WORK | ZONE
+    | UNLOGGED | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
+    | WAL | WITHIN | WITHOUT | WORK | ZONE
+    | XMLTABLE
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
+    | YAML
     ;
 
 // ══════════════════════════════════════════════

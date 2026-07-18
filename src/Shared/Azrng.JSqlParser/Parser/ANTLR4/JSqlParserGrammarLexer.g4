@@ -53,6 +53,8 @@ COLON           : ':' ;
 DOUBLE_COLON    : '::' ;
 MODULO          : '%' ;
 AT_SIGN         : '@' ;
+AT_AT_AT        : '@@@' ;
+AT_AT           : '@@' ;
 DOLLAR          : '$' ;
 PIPE_GT         : '|>' ;
 PIPE            : '|' ;
@@ -359,6 +361,7 @@ VARBINARY       : [Vv][Aa][Rr][Bb][Ii][Nn][Aa][Rr][Yy] ;
 VARCHAR         : [Vv][Aa][Rr][Cc][Hh][Aa][Rr] ;
 VARYING         : [Vv][Aa][Rr][Yy][Ii][Nn][Gg] ;
 XML             : [Xx][Mm][Ll] ;
+XMLTABLE        : [Xx][Mm][Ll][Tt][Aa][Bb][Ll][Ee] ;
 
 // ── Date/Time component keywords ──────────────
 
@@ -427,6 +430,13 @@ COSTS           : [Cc][Oo][Ss][Tt][Ss] ;
 COUNT           : [Cc][Oo][Uu][Nn][Tt] ;
 CREATED         : [Cc][Rr][Ee][Aa][Tt][Ee][Dd] ;
 CYCLE           : [Cc][Yy][Cc][Ll][Ee] ;
+// PostgreSQL EXPLAIN 选项关键字（非保留，仍可作标识符）
+BUFFERS         : [Bb][Uu][Ff][Ff][Ee][Rr][Ss] ;
+SUMMARY         : [Ss][Uu][Mm][Mm][Aa][Rr][Yy] ;
+TIMING          : [Tt][Ii][Mm][Ii][Nn][Gg] ;
+VERBOSE         : [Vv][Ee][Rr][Bb][Oo][Ss][Ee] ;
+WAL             : [Ww][Aa][Ll] ;
+YAML            : [Yy][Aa][Mm][Ll] ;
 DATABASE        : [Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee] ;
 DATA            : [Dd][Aa][Tt][Aa] ;
 DECLARE         : [Dd][Ee][Cc][Ll][Aa][Rr][Ee] ;
