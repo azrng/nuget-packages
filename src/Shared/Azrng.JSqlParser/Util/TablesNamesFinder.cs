@@ -442,7 +442,7 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
 
     private void VisitPlainSelect(PlainSelect plainSelect)
     {
-        VisitFromItem(plainSelect.IFromItem);
+        VisitFromItem(plainSelect.FromItem);
 
         if (plainSelect.Joins != null)
         {

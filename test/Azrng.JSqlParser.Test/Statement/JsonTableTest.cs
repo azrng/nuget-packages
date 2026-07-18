@@ -15,7 +15,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Single(jsonTable.Columns);
         Assert.True(jsonTable.Columns[0].ForOrdinality);
         Assert.Equal("jt", jsonTable.Alias!.Name);
@@ -27,7 +27,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE(d, '$.path' COLUMNS (id INT PATH '$.id', name VARCHAR(100) PATH '$.name')) jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(2, jsonTable.Columns.Count);
         Assert.Equal("id", jsonTable.Columns[0].Name);
         Assert.False(jsonTable.Columns[0].ForOrdinality);
@@ -40,7 +40,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE(d COLUMNS (id FOR ORDINALITY, val INT)) jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(2, jsonTable.Columns.Count);
         Assert.True(jsonTable.Columns[0].ForOrdinality);
         Assert.False(jsonTable.Columns[1].ForOrdinality);
@@ -53,7 +53,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE(d, '$' COLUMNS (id INT, name VARCHAR(50))) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(2, jsonTable.Columns.Count);
         Assert.Null(jsonTable.Columns[0].Path);
         Assert.Equal(sql, select.ToString());
@@ -73,7 +73,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' PASSING 5 AS x COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Single(jsonTable.PassingClauses);
         Assert.Equal("x", jsonTable.PassingClauses[0].ParameterName);
         Assert.Equal(sql, select.ToString());
@@ -84,7 +84,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' NULL ON ERROR COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, jsonTable.OnErrorBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
@@ -94,7 +94,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id FOR ORDINALITY, NESTED PATH '$.items' COLUMNS (item_id INT PATH '$.id'))) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(2, jsonTable.Columns.Count);
         Assert.True(jsonTable.Columns[1].IsNested);
         Assert.Single(jsonTable.Columns[1].NestedColumns!);
@@ -110,7 +110,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' NULL ON EMPTY COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, jsonTable.OnEmptyBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
@@ -121,7 +121,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' EMPTY ON ERROR COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal(JsonFunction.OnResponseBehaviorType.EMPTY, jsonTable.OnErrorBehavior!.Type);
         Assert.Equal(sql, select.ToString());
     }
@@ -132,7 +132,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' TYPE (STRICT) COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.Equal("STRICT", jsonTable.ParsingType);
         Assert.Equal(sql, select.ToString());
     }
@@ -143,7 +143,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}' FORMAT JSON, '$' COLUMNS (id FOR ORDINALITY)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var jsonTable = Assert.IsType<JsonTable>(select.IFromItem);
+        var jsonTable = Assert.IsType<JsonTable>(select.FromItem);
         Assert.True(jsonTable.InputFormatJson);
         Assert.Equal(sql, select.ToString());
     }
@@ -154,7 +154,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id INT EXISTS PATH '$.id')) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.True(col.Exists);
         Assert.Equal(sql, select.ToString());
     }
@@ -165,7 +165,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' FORMAT JSON)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.True(col.FormatJson);
         Assert.Equal(sql, select.ToString());
     }
@@ -176,7 +176,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' WITH ARRAY WRAPPER)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.Equal(JsonFunction.WrapperType.WITH, col.Wrapper);
         Assert.True(col.WrapperArray);
         Assert.Equal(sql, select.ToString());
@@ -188,7 +188,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' KEEP QUOTES)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.Equal(JsonFunction.QuotesType.KEEP, col.Quotes);
         Assert.Equal(sql, select.ToString());
     }
@@ -199,7 +199,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' ALLOW SCALARS)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.Equal(JsonFunction.ScalarsType.ALLOW, col.Scalars);
         Assert.Equal(sql, select.ToString());
     }
@@ -210,7 +210,7 @@ public class JsonTableTest
     {
         var sql = "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (id VARCHAR(100) PATH '$.id' NULL ON EMPTY DEFAULT 'x' ON ERROR)) AS jt";
         var select = (PlainSelect)SqlParser.Parse(sql)!;
-        var col = Assert.IsType<JsonTable>(select.IFromItem).Columns[0];
+        var col = Assert.IsType<JsonTable>(select.FromItem).Columns[0];
         Assert.Equal(JsonFunction.OnResponseBehaviorType.NULL, col.OnEmptyBehavior!.Type);
         Assert.Equal(JsonFunction.OnResponseBehaviorType.DEFAULT, col.OnErrorBehavior!.Type);
         Assert.Equal(sql, select.ToString());

@@ -1,7 +1,4 @@
 using Azrng.JSqlParser.Expression;
-using Azrng.JSqlParser.Expression.Operators.Arithmetic;
-using Azrng.JSqlParser.Expression.Operators.Conditional;
-using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Schema;
 using PlainSelect = Azrng.JSqlParser.Statement.Select.PlainSelect;

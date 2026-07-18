@@ -9,14 +9,20 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// Abstract base class for SELECT statements.
 /// Implements both Statement and Expression interfaces.
 /// </summary>
-public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpression
+public abstract class Select : ASTNodeAccessImpl, IStatement, IExpression
 {
     public List<WithItem>? WithItemsList { get; set; }
+
     public Limit? Limit { get; set; }
+
     public Limit? LimitBy { get; set; }
+
     public Offset? Offset { get; set; }
+
     public Fetch? Fetch { get; set; }
+
     public bool OracleSiblings { get; set; }
+
     public List<OrderByElement>? OrderByElements { get; set; }
 
     /// <summary>FOR UPDATE / FOR SHARE 锁模式，未指定时为 null。</summary>
@@ -49,8 +55,7 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpres
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     /// <summary>返回 OF 子句的第一个表，未指定时为 null。</summary>
-    public Table? ForUpdateTable =>
-        (ForUpdateTables != null && ForUpdateTables.Count > 0) ? ForUpdateTables[0] : null;
+    public Table? ForUpdateTable => (ForUpdateTables != null && ForUpdateTables.Count > 0) ? ForUpdateTables[0] : null;
 
     /// <summary>返回 OF 子句的第一个表，未指定时为 null（兼容旧 API）。</summary>
     [Obsolete("改用 " + nameof(ForUpdateTable) + " 属性")]
@@ -64,13 +69,13 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpres
     {
         if (ForMode == null) return null;
         return new ForUpdateClause
-        {
-            Mode = ForMode,
-            Tables = ForUpdateTables,
-            Wait = Wait,
-            NoWait = NoWait,
-            SkipLocked = SkipLocked
-        };
+               {
+                   Mode = ForMode,
+                   Tables = ForUpdateTables,
+                   Wait = Wait,
+                   NoWait = NoWait,
+                   SkipLocked = SkipLocked
+               };
     }
 
     public abstract StringBuilder AppendSelectBodyTo(StringBuilder builder);
@@ -163,6 +168,7 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpres
             builder.Append(OracleSiblings ? " ORDER SIBLINGS BY " : " ORDER BY ");
             builder.Append(string.Join(", ", OrderByElements));
         }
+
         return builder;
     }
 

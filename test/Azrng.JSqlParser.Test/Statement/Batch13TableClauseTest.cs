@@ -34,7 +34,7 @@ public class Batch13TableClauseTest
     {
         var stmt = SqlParser.Parse("SELECT * FROM t TABLESAMPLE SYSTEM (1000)");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var table = Assert.IsType<Table>(plainSelect.IFromItem);
+        var table = Assert.IsType<Table>(plainSelect.FromItem);
 
         Assert.NotNull(table.TableSample);
         Assert.Equal("SYSTEM", table.TableSample.SamplingMethod);

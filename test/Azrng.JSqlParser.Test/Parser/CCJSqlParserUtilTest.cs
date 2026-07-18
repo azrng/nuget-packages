@@ -38,7 +38,7 @@ public class CCJSqlParserUtilTest
         var stmt = SqlParser.Parse("SELECT u.id, u.name FROM users u");
         Assert.NotNull(stmt);
         var select = (PlainSelect)stmt!;
-        Assert.NotNull(select.IFromItem);
+        Assert.NotNull(select.FromItem);
     }
 
     [Fact]

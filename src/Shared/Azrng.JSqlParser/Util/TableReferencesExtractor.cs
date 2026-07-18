@@ -50,7 +50,7 @@ internal static class TableReferencesExtractor
         switch (select)
         {
             case PlainSelect plainSelect:
-                CollectFromItem(plainSelect.IFromItem, result);
+                CollectFromItem(plainSelect.FromItem, result);
                 if (plainSelect.Joins != null)
                 {
                     foreach (var join in plainSelect.Joins)

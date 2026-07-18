@@ -32,7 +32,7 @@ public class TableFunctionTest
     {
         var stmt = SqlParser.Parse("SELECT * FROM unnest(arr) AS u");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var tableFn = Assert.IsType<TableFunction>(plainSelect.IFromItem);
+        var tableFn = Assert.IsType<TableFunction>(plainSelect.FromItem);
 
         Assert.Equal("unnest", tableFn.Function.Name);
         Assert.NotNull(tableFn.Alias);

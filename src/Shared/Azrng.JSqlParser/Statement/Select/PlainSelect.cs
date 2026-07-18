@@ -1,6 +1,5 @@
 using System.Text;
 using Azrng.JSqlParser.Expression;
-using Azrng.JSqlParser.Schema;
 
 namespace Azrng.JSqlParser.Statement.Select;
 
@@ -10,6 +9,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 public class PlainSelect : Select
 {
     public Distinct? Distinct { get; set; }
+
     public bool All { get; set; }
 
     /// <summary>SQL Server / Informix 风格的 SELECT TOP n 量词，未指定时为 null。</summary>
@@ -23,12 +23,19 @@ public class PlainSelect : Select
 
     /// <summary>DB2 OPTIMIZE FOR n ROWS 子句，未指定时为 null。</summary>
     public long? OptimizeFor { get; set; }
+
     public List<SelectItem>? SelectItems { get; set; }
-    public IFromItem? IFromItem { get; set; }
+
+    public IFromItem? FromItem { get; set; }
+
     public List<Join>? Joins { get; set; }
+
     public Expression.IExpression? Where { get; set; }
+
     public PreferringClause? Preferring { get; set; }
+
     public GroupByElement? GroupBy { get; set; }
+
     public Expression.IExpression? Having { get; set; }
 
     /// <summary>MySQL INTO OUTFILE/DUMPFILE 子句（前置或尾部位置），未指定时为 null。</summary>
@@ -47,7 +54,7 @@ public class PlainSelect : Select
     public OracleHint? OracleHint { get; set; }
 
     /// <summary>命名窗口定义（WINDOW w AS (...)），透传原始文本保 round-trip。对齐上游 windowDefinitions。</summary>
-    public System.Collections.Generic.List<string>? WindowDefinitions { get; set; }
+    public List<string>? WindowDefinitions { get; set; }
 
     /// <summary>ksqlDB 流式窗口（WINDOW HOPPING/TUMBLING/SESSION），对齐上游 ksqlWindow。与 WindowDefinitions 互斥。</summary>
     public KSQLWindow? KsqlWindow { get; set; }
@@ -80,9 +87,9 @@ public class PlainSelect : Select
         // MySQL INTO OUTFILE/DUMPFILE 前置位置（FROM 之前）
         if (MySqlIntoOutfile is { BeforeFrom: true }) builder.Append(' ').Append(MySqlIntoOutfile);
 
-        if (IFromItem != null)
+        if (FromItem != null)
         {
-            builder.Append(" FROM ").Append(IFromItem);
+            builder.Append(" FROM ").Append(FromItem);
         }
 
         if (Joins != null)
@@ -98,6 +105,7 @@ public class PlainSelect : Select
         if (KsqlWindow != null) builder.Append(" WINDOW ").Append(KsqlWindow);
 
         if (Where != null) builder.Append(" WHERE ").Append(Where);
+
         // Oracle 层次查询（WHERE 之后、GROUP BY 之前）
         if (OracleHierarchical != null) builder.Append(' ').Append(OracleHierarchical);
         if (GroupBy != null) builder.Append(' ').Append(GroupBy);

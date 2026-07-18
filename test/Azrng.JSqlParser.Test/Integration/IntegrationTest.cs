@@ -17,7 +17,7 @@ public class IntegrationTest
     {
         var stmt = SqlParser.Parse("SELECT id, name FROM users WHERE status = 'active'")!;
         var select = (PlainSelect)stmt;
-        Assert.NotNull(select.IFromItem);
+        Assert.NotNull(select.FromItem);
         Assert.NotNull(select.Where);
         Assert.Equal(2, select.SelectItems!.Count);
     }
@@ -221,7 +221,7 @@ public class IntegrationTest
         var stmt = SqlParser.Parse(
             "SELECT sub.id, sub.name FROM (SELECT id, name FROM users WHERE status = 'active') AS sub")!;
         var select = (PlainSelect)stmt;
-        Assert.NotNull(select.IFromItem);
+        Assert.NotNull(select.FromItem);
     }
 
     [Fact]

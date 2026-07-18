@@ -512,7 +512,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (fromItems.Length > 0)
             {
                 var firstFrom = fromItems[0];
-                select.IFromItem = (IFromItem)Visit(firstFrom.tableOrSubquery());
+                select.FromItem = (IFromItem)Visit(firstFrom.tableOrSubquery());
                 select.Joins = new List<Join>();
 
                 if (firstFrom.joinClause().Length > 0)

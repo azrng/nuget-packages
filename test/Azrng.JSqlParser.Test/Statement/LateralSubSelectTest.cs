@@ -29,7 +29,7 @@ public class LateralSubSelectTest
         var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
-        Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
+        Assert.IsType<LateralSubSelect>(plainSelect.FromItem);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class LateralSubSelectTest
     {
         var stmt = SqlParser.Parse("SELECT * FROM LATERAL (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var lateral = Assert.IsType<LateralSubSelect>(plainSelect.IFromItem);
+        var lateral = Assert.IsType<LateralSubSelect>(plainSelect.FromItem);
 
         Assert.Equal("LATERAL", lateral.Prefix);
     }
@@ -68,7 +68,7 @@ public class LateralSubSelectTest
         var stmt = SqlParser.Parse("SELECT * FROM (SELECT 1) t");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
 
-        Assert.IsType<ParenthesedSelect>(plainSelect.IFromItem);
-        Assert.IsNotType<LateralSubSelect>(plainSelect.IFromItem);
+        Assert.IsType<ParenthesedSelect>(plainSelect.FromItem);
+        Assert.IsNotType<LateralSubSelect>(plainSelect.FromItem);
     }
 }

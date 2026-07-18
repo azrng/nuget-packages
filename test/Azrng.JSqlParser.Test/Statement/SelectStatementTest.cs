@@ -17,7 +17,7 @@ public class SelectStatementTest
     public void Select_SingleTable_ShouldParse()
     {
         var select = (PlainSelect)SqlParser.Parse("SELECT id FROM users")!;
-        Assert.NotNull(select.IFromItem);
+        Assert.NotNull(select.FromItem);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class SelectStatementTest
     public void Select_TableAlias_ShouldHaveAlias()
     {
         var select = (PlainSelect)SqlParser.Parse("SELECT u.id FROM users u")!;
-        var from = (Table)select.IFromItem!;
+        var from = (Table)select.FromItem!;
         Assert.NotNull(from.Alias);
     }
 
@@ -483,7 +483,7 @@ public class SelectStatementTest
     {
         var select = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM (SELECT id, name FROM users) AS sub")!;
-        Assert.NotNull(select.IFromItem);
+        Assert.NotNull(select.FromItem);
     }
 
     [Fact]
@@ -820,7 +820,7 @@ public class SelectStatementTest
     public void SqlServerHints_NoLock_ShouldRoundTrip()
     {
         var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users WITH (NOLOCK)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.SqlServerHints);
         Assert.True(table.SqlServerHints!.NoLock);
         Assert.Contains("WITH (NOLOCK)", stmt.ToString()!);
@@ -830,7 +830,7 @@ public class SelectStatementTest
     public void SqlServerHints_Index_ShouldRoundTrip()
     {
         var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users WITH (INDEX(idx_users))")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.SqlServerHints);
         Assert.Equal("idx_users", table.SqlServerHints!.IndexName);
         // 上游 INDEX 后有空格：WITH (INDEX (idx_users))
@@ -842,7 +842,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users WITH (INDEX(idx_users), NOLOCK)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.SqlServerHints);
         Assert.Equal("idx_users", table.SqlServerHints!.IndexName);
         Assert.True(table.SqlServerHints.NoLock);
@@ -853,7 +853,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users u WITH (NOLOCK)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.Alias);
         Assert.Equal("u", table.Alias!.Name);
         Assert.NotNull(table.SqlServerHints);
@@ -864,7 +864,7 @@ public class SelectStatementTest
     public void SqlServerHints_None_ShouldBeNull()
     {
         var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.Null(table.SqlServerHints);
     }
 
@@ -877,7 +877,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users USE INDEX (idx_name, idx_age)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.MySqlIndexHint);
         Assert.Equal("USE", table.MySqlIndexHint!.Action);
         Assert.Equal("INDEX", table.MySqlIndexHint.IndexQualifier);
@@ -890,7 +890,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users IGNORE KEY (idx_name)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.Equal("IGNORE", table.MySqlIndexHint!.Action);
         Assert.Equal("KEY", table.MySqlIndexHint.IndexQualifier);
     }
@@ -900,7 +900,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users FORCE INDEX (pk)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.Equal("FORCE", table.MySqlIndexHint!.Action);
         Assert.Contains("FORCE INDEX (pk)", stmt.ToString()!);
     }
@@ -910,7 +910,7 @@ public class SelectStatementTest
     {
         var stmt = (PlainSelect)SqlParser.Parse(
             "SELECT * FROM users u USE INDEX (idx)")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.NotNull(table.Alias);
         Assert.Equal("u", table.Alias!.Name);
         Assert.NotNull(table.MySqlIndexHint);
@@ -920,7 +920,7 @@ public class SelectStatementTest
     public void MySqlIndexHint_None_ShouldBeNull()
     {
         var stmt = (PlainSelect)SqlParser.Parse("SELECT * FROM users")!;
-        var table = (Table)stmt.IFromItem!;
+        var table = (Table)stmt.FromItem!;
         Assert.Null(table.MySqlIndexHint);
     }
 
