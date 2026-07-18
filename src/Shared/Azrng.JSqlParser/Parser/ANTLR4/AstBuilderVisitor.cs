@@ -3673,6 +3673,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 inExpr.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
             }
             if (suffix.NOT() != null) inExpr.Not = true;
+            // ClickHouse GLOBAL IN / GLOBAL NOT IN：对齐上游 InExpression.global
+            if (suffix.GLOBAL() != null) inExpr.Global = true;
             return inExpr;
         }
 
@@ -3767,12 +3769,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (suffix.ISNULL() != null)
         {
-            return new IsNullExpression { LeftExpression = concat };
+            // PostgreSQL 简写 x ISNULL：UseIsNull=true，ToString 输出 x ISNULL（保 round-trip）
+            return new IsNullExpression { LeftExpression = concat, UseIsNull = true };
         }
 
         if (suffix.NOTNULL() != null)
         {
-            return new IsNullExpression { LeftExpression = concat, Not = true };
+            // PostgreSQL 简写 x NOTNULL：UseNotNull=true，ToString 输出 x NOTNULL（保 round-trip）
+            return new IsNullExpression { LeftExpression = concat, UseNotNull = true };
         }
 
         if (suffix.EXCLUDES() != null)

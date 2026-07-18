@@ -1233,7 +1233,7 @@ predicate
 predicateSuffix
     : comparisonOperator concatenationExpr
     | comparisonOperator (ANY | SOME | ALL) OPENING_PAREN selectStatement CLOSING_PAREN
-    | NOT? IN OPENING_PAREN (selectStatement | expressionList) CLOSING_PAREN
+    | (NOT? IN | GLOBAL NOT? IN) OPENING_PAREN (selectStatement | expressionList) CLOSING_PAREN
     | NOT? BETWEEN (SYMMETRIC | ASYMMETRIC)? concatenationExpr AND concatenationExpr
     | NOT? (LIKE | ILIKE | RLIKE | REGEXP | REGEXP_LIKE | MATCH_ANY | MATCH_ALL | MATCH_PHRASE | MATCH_PHRASE_PREFIX | MATCH_REGEXP) concatenationExpr (ESCAPE concatenationExpr)?
     | NOT? SIMILAR TO concatenationExpr (ESCAPE concatenationExpr)?
