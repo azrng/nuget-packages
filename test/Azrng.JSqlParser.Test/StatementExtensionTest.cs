@@ -36,6 +36,8 @@ public class StatementExtensionTest
         var tables = stmt.GetTableNames();
         Assert.Contains("users", tables);
         Assert.Contains("orders", tables);
+        Assert.DoesNotContain("u", tables);
+        Assert.DoesNotContain("o", tables);
     }
 
     [Fact]
@@ -80,6 +82,8 @@ public class StatementExtensionTest
         var tables = stmt.GetTableNames();
         Assert.Contains("target", tables);
         Assert.Contains("source", tables);
+        Assert.DoesNotContain("t", tables);
+        Assert.DoesNotContain("s", tables);
     }
 
     [Fact]
@@ -115,6 +119,8 @@ public class StatementExtensionTest
         var tables = stmt.GetTableNames();
         var count = tables.Count(t => t == "users");
         Assert.Equal(1, count);
+        Assert.DoesNotContain("a", tables);
+        Assert.DoesNotContain("b", tables);
     }
 
     // ---------- Descendants<TStatement>：嵌套子语句递归 ----------

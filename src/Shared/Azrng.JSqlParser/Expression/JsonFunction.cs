@@ -233,7 +233,7 @@ public class JsonFunction : ASTNodeAccessImpl, IExpression
             sb.Append("WITH");
             if (WrapperModeValue != null)
             {
-                sb.Append(' ').Append(WrapperModeValue.ToString().ToUpper());
+                sb.Append(' ').Append(WrapperModeValue.Value.ToString().ToUpperInvariant());
             }
         }
         if (WrapperArray)

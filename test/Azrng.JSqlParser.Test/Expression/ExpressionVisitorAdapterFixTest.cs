@@ -1,5 +1,6 @@
 using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Expression.Operators.Conditional;
+using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Schema;
 using PlainSelect = Azrng.JSqlParser.Statement.Select.PlainSelect;
@@ -165,5 +166,21 @@ public class ExpressionVisitorAdapterFixTest
 
         Assert.NotEmpty(visitor.SeenContexts);
         Assert.All(visitor.SeenContexts, c => Assert.Equal("DEEP_CTX", c));
+    }
+
+    /// <summary>InExpression 右侧允许为空时，默认访问器不应抛空引用异常。</summary>
+    [Fact]
+    public void M1_InExpression_NullRightExpression_ShouldNotThrow()
+    {
+        var expr = new InExpression
+        {
+            LeftExpression = new Column { ColumnName = "id" },
+            RightExpression = null
+        };
+        var visitor = new ExpressionVisitorAdapter<object?>();
+
+        var exception = Record.Exception(() => expr.Accept(visitor, (object?)null));
+
+        Assert.Null(exception);
     }
 }

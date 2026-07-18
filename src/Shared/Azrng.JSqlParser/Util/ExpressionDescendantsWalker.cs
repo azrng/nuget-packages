@@ -138,17 +138,17 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
         return default;
     }
     public object? Visit<S>(IsNullExpression isNullExpression, S context) { _onVisit(isNullExpression); isNullExpression.LeftExpression?.Accept(this, context); return default; }
-    public object? Visit<S>(IsBooleanExpression isBooleanExpression, S context) { _onVisit(isBooleanExpression); return default; }
-    public object? Visit<S>(IsDistinctExpression isDistinctExpression, S context) { _onVisit(isDistinctExpression); return default; }
+    public object? Visit<S>(IsBooleanExpression isBooleanExpression, S context) { _onVisit(isBooleanExpression); isBooleanExpression.LeftExpression?.Accept(this, context); return default; }
+    public object? Visit<S>(IsDistinctExpression isDistinctExpression, S context) { _onVisit(isDistinctExpression); return VisitBinary(isDistinctExpression, context); }
     public object? Visit<S>(LikeExpression likeExpression, S context) { _onVisit(likeExpression); return VisitBinary(likeExpression, context); }
     public object? Visit<S>(ExistsExpression existsExpression, S context) { _onVisit(existsExpression); existsExpression.RightExpression?.Accept(this, context); return default; }
     public object? Visit<S>(FullTextSearch fullTextSearch, S context) { _onVisit(fullTextSearch); return default; }
-    public object? Visit<S>(JsonOperator jsonOperator, S context) { _onVisit(jsonOperator); return default; }
+    public object? Visit<S>(JsonOperator jsonOperator, S context) { _onVisit(jsonOperator); return VisitBinary(jsonOperator, context); }
     public object? Visit<S>(DoubleAnd doubleAnd, S context) { _onVisit(doubleAnd); return VisitBinary(doubleAnd, context); }
-    public object? Visit<S>(Contains contains, S context) { _onVisit(contains); return default; }
-    public object? Visit<S>(ContainedBy containedBy, S context) { _onVisit(containedBy); return default; }
-    public object? Visit<S>(Matches matches, S context) { _onVisit(matches); return default; }
-    public object? Visit<S>(RegExpMatchOperator regExpMatchOperator, S context) { _onVisit(regExpMatchOperator); return default; }
+    public object? Visit<S>(Contains contains, S context) { _onVisit(contains); return VisitBinary(contains, context); }
+    public object? Visit<S>(ContainedBy containedBy, S context) { _onVisit(containedBy); return VisitBinary(containedBy, context); }
+    public object? Visit<S>(Matches matches, S context) { _onVisit(matches); return VisitBinary(matches, context); }
+    public object? Visit<S>(RegExpMatchOperator regExpMatchOperator, S context) { _onVisit(regExpMatchOperator); return VisitBinary(regExpMatchOperator, context); }
     public object? Visit<S>(MemberOfExpression memberOfExpression, S context)
     {
         _onVisit(memberOfExpression);

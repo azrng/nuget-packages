@@ -15,11 +15,13 @@ namespace Azrng.JSqlParser.Util;
 public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStatementVisitor<object?>
 {
     private readonly HashSet<string> _tables = new();
+    private readonly HashSet<string> _tableAliases = new(StringComparer.OrdinalIgnoreCase);
 
     [Obsolete("改用 statement.GetTableNames() 扩展方法，后续版本将移除")]
     public HashSet<string> GetTables(Statement.IStatement statement)
     {
         _tables.Clear();
+        _tableAliases.Clear();
         statement.Accept(this);
         return _tables;
     }
@@ -31,7 +33,19 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
             var name = table.Name;
             if (!string.IsNullOrEmpty(name))
                 _tables.Add(name);
+
+            var aliasName = table.Alias?.Name;
+            if (!string.IsNullOrEmpty(aliasName))
+                _tableAliases.Add(aliasName);
         }
+    }
+
+    private void AddColumnQualifier(Table? table)
+    {
+        if (table == null || string.IsNullOrEmpty(table.Name) || _tableAliases.Contains(table.Name))
+            return;
+
+        _tables.Add(table.Name);
     }
 
     // IExpressionVisitor<object?> implementation
@@ -179,15 +193,14 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
 
     public object? Visit<S>(Column column, S context)
     {
-        if (column.Table != null)
-            AddTable(column.Table);
+        AddColumnQualifier(column.Table);
         return null;
     }
 
     public object? Visit<S>(AllColumns allColumns, S context) => null;
     public object? Visit<S>(AllTableColumns allTableColumns, S context)
     {
-        AddTable(allTableColumns.Table);
+        AddColumnQualifier(allTableColumns.Table);
         return null;
     }
 
