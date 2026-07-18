@@ -12,7 +12,7 @@ namespace Azrng.JSqlParser.Statement.CreateTable;
 /// 表级选项（ENGINE / CHARSET / PARTITION BY / ORDER BY / SAMPLE BY 等）与 CREATE 选项
 /// 采用字符串透传策略（List&lt;string&gt;），与上游 <c>tableOptionsStrings</c> / <c>createOptionsStrings</c> 的 round-trip 行为一致。
 /// </remarks>
-public class CreateTable : ASTNodeAccessImpl, Statement
+public class CreateTable : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
     public System.Collections.Generic.List<ColumnDefinition>? ColumnDefinitions { get; set; }

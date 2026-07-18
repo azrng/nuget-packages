@@ -11,17 +11,17 @@ namespace Azrng.JSqlParser.Parser;
 public static class CCJSqlParserUtil
 {
     /// <inheritdoc cref="SqlParser.Parse(string?)"/>
-    public static Statement.Statement? Parse(string? sql) => SqlParser.Parse(sql);
+    public static Statement.IStatement? Parse(string? sql) => SqlParser.Parse(sql);
 
     /// <inheritdoc cref="SqlParser.ParseStatements(string?)"/>
     public static Statement.Statements? ParseStatements(string? sql) => SqlParser.ParseStatements(sql);
 
     /// <inheritdoc cref="SqlParser.ParseExpression(string?)"/>
-    public static Expression.Expression? ParseExpression(string? sql) => SqlParser.ParseExpression(sql);
+    public static Expression.IExpression? ParseExpression(string? sql) => SqlParser.ParseExpression(sql);
 
     /// <inheritdoc cref="SqlParser.ParseCondExpression(string?)"/>
-    public static Expression.Expression? ParseCondExpression(string? sql) => SqlParser.ParseCondExpression(sql);
+    public static Expression.IExpression? ParseCondExpression(string? sql) => SqlParser.ParseCondExpression(sql);
 
     /// <inheritdoc cref="SqlParser.ParseNullable(string)"/>
-    public static Statement.Statement? ParseNullable(string sql) => SqlParser.ParseNullable(sql);
+    public static Statement.IStatement? ParseNullable(string sql) => SqlParser.ParseNullable(sql);
 }

@@ -15,7 +15,7 @@ namespace Azrng.JSqlParser.Statement.Create.Policy;
 /// </para>
 /// 移植自上游 JSqlParser commit 999cdca2 的 CreatePolicy。
 /// </summary>
-public class CreatePolicy : ASTNodeAccessImpl, Statement
+public class CreatePolicy : ASTNodeAccessImpl, IStatement
 {
     public string? PolicyName { get; set; }
     public Table? Table { get; set; }
@@ -27,10 +27,10 @@ public class CreatePolicy : ASTNodeAccessImpl, Statement
     public List<string> Roles { get; set; } = new();
 
     /// <summary>USING ( expression ) 子句，未指定时为 null。</summary>
-    public Expression.Expression? UsingExpression { get; set; }
+    public Expression.IExpression? UsingExpression { get; set; }
 
     /// <summary>WITH CHECK ( expression ) 子句，未指定时为 null。</summary>
-    public Expression.Expression? WithCheckExpression { get; set; }
+    public Expression.IExpression? WithCheckExpression { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

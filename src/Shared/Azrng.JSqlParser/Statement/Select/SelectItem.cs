@@ -9,12 +9,12 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class SelectItem : ASTNodeAccessImpl
 {
-    public Expression.Expression Expression { get; set; } = null!;
+    public Expression.IExpression Expression { get; set; } = null!;
     public Alias? Alias { get; set; }
 
     public SelectItem() { }
 
-    public SelectItem(Expression.Expression expression, Alias? alias = null)
+    public SelectItem(Expression.IExpression expression, Alias? alias = null)
     {
         Expression = expression;
         Alias = alias;

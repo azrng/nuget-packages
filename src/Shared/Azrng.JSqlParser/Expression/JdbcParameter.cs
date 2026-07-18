@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a JDBC parameter (?) in SQL.
 /// </summary>
-public class JdbcParameter : ASTNodeAccessImpl, Expression
+public class JdbcParameter : ASTNodeAccessImpl, IExpression
 {
     public int Index { get; set; }
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

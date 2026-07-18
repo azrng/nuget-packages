@@ -14,7 +14,7 @@ public class ForUpdateTest
     /// 断言 SQL 可被解析，且再次序列化后与原 SQL（忽略大小写、运算符周围空格、多余空白）一致。
     /// 等价于上游 TestUtils.assertSqlCanBeParsedAndDeparsed。
     /// </summary>
-    private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
+    private static Azrng.JSqlParser.Statement.IStatement AssertParseAndDeparse(string sql)
     {
         var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);

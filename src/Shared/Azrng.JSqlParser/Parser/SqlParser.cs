@@ -15,7 +15,7 @@ public static class SqlParser
     /// <summary>
     /// 解析单条 SQL 语句为 AST。
     /// </summary>
-    public static Statement.Statement? Parse(string? sql)
+    public static Statement.IStatement? Parse(string? sql)
     {
         if (string.IsNullOrEmpty(sql)) return null;
 
@@ -27,11 +27,11 @@ public static class SqlParser
             throw new JSqlParserException($"Syntax error: {errorListener.Errors[0]}");
         }
 
-        Statement.Statement result;
+        Statement.IStatement result;
         try
         {
             var visitor = new AstBuilderVisitor();
-            result = (Statement.Statement)visitor.Visit(tree);
+            result = (Statement.IStatement)visitor.Visit(tree);
         }
         catch (InvalidCastException ex)
         {
@@ -77,7 +77,7 @@ public static class SqlParser
     /// <summary>
     /// 解析独立 SQL 表达式。
     /// </summary>
-    public static Expression.Expression? ParseExpression(string? sql)
+    public static Expression.IExpression? ParseExpression(string? sql)
     {
         if (string.IsNullOrEmpty(sql)) return null;
 
@@ -100,13 +100,13 @@ public static class SqlParser
         }
 
         var visitor = new AstBuilderVisitor();
-        return (Expression.Expression)visitor.Visit(tree);
+        return (Expression.IExpression)visitor.Visit(tree);
     }
 
     /// <summary>
     /// 解析条件表达式（<see cref="ParseExpression"/> 的别名）。
     /// </summary>
-    public static Expression.Expression? ParseCondExpression(string? sql)
+    public static Expression.IExpression? ParseCondExpression(string? sql)
     {
         if (string.IsNullOrEmpty(sql)) return null;
         return ParseExpression(sql);
@@ -116,7 +116,7 @@ public static class SqlParser
     /// 尝试解析 SQL，仅在语法错误（<see cref="JSqlParserException"/>）时返回 null。
     /// 其他异常（OOM、NRE 等程序缺陷）继续上抛，不被吞没。
     /// </summary>
-    public static Statement.Statement? ParseNullable(string sql)
+    public static Statement.IStatement? ParseNullable(string sql)
     {
         try
         {

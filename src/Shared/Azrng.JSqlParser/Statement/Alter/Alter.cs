@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// <summary>
 /// Represents an ALTER TABLE statement in SQL.
 /// </summary>
-public class Alter : ASTNodeAccessImpl, Statement
+public class Alter : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
     public System.Collections.Generic.List<AlterExpression> AlterExpressions { get; set; } = new();

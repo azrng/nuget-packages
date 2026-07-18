@@ -15,7 +15,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 public class JsonTable : ASTNodeAccessImpl, IFromItem
 {
     /// <summary>JSON 文档表达式（第一个参数）。</summary>
-    public Azrng.JSqlParser.Expression.Expression? JsonExpression { get; set; }
+    public Azrng.JSqlParser.Expression.IExpression? JsonExpression { get; set; }
 
     /// <summary>输入是否带 FORMAT JSON（Oracle），未指定时为 false。</summary>
     public bool InputFormatJson { get; set; }
@@ -110,7 +110,7 @@ public class JsonTable : ASTNodeAccessImpl, IFromItem
 /// </summary>
 public class JsonTablePassingClause
 {
-    public Azrng.JSqlParser.Expression.Expression? ValueExpression { get; set; }
+    public Azrng.JSqlParser.Expression.IExpression? ValueExpression { get; set; }
 
     public string? ParameterName { get; set; }
 

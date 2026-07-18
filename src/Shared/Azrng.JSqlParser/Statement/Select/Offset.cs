@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class Offset
 {
-    public Expression.Expression? OffsetExpression { get; set; }
+    public Expression.IExpression? OffsetExpression { get; set; }
     public string? OffsetParam { get; set; }
 
     public Offset() { }

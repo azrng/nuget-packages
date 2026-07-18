@@ -11,7 +11,7 @@ namespace Azrng.JSqlParser.Test.Statement;
 public class LockTest
 {
     /// <summary>断言 SQL 可被解析，且再次序列化后与原 SQL 一致。</summary>
-    private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
+    private static Azrng.JSqlParser.Statement.IStatement AssertParseAndDeparse(string sql)
     {
         var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);

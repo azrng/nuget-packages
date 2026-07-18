@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Refresh;
 /// <summary>
 /// PostgreSQL REFRESH MATERIALIZED VIEW 语句，对齐上游 RefreshMaterializedViewStatement。
 /// </summary>
-public class RefreshMaterializedViewStatement : ASTNodeAccessImpl, Statement
+public class RefreshMaterializedViewStatement : ASTNodeAccessImpl, IStatement
 {
     public Table? View { get; set; }
 

@@ -10,12 +10,12 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class PreferringClause : ASTNodeAccessImpl
 {
-    public Expression Preferring { get; set; } = null!;
+    public IExpression Preferring { get; set; } = null!;
     public ExpressionList? PartitionBy { get; set; }
 
     public PreferringClause() { }
 
-    public PreferringClause(Expression preferring)
+    public PreferringClause(IExpression preferring)
     {
         Preferring = preferring;
     }

@@ -29,7 +29,7 @@ public static class ExpressionExtension
     /// var paramNames = expr.Descendants&lt;JdbcNamedParameter&gt;().Select(p =&gt; p.Name).ToList();
     /// </code>
     /// </example>
-    public static IEnumerable<T> Descendants<T>(this Expression.Expression expression) where T : Expression.Expression
+    public static IEnumerable<T> Descendants<T>(this Expression.IExpression expression) where T : Expression.IExpression
     {
         ArgumentNullException.ThrowIfNull(expression);
         var matched = new List<T>();
@@ -43,8 +43,8 @@ public static class ExpressionExtension
     /// <summary>
     /// 按深度优先顺序收集表达式中所有后代节点（不限类型）。
     /// </summary>
-    public static IEnumerable<Expression.Expression> Descendants(this Expression.Expression expression)
-        => expression.Descendants<Expression.Expression>();
+    public static IEnumerable<Expression.IExpression> Descendants(this Expression.IExpression expression)
+        => expression.Descendants<Expression.IExpression>();
 
     /// <summary>
     /// 把 WHERE 表达式的 AND/OR 树拍平为条件列表。
@@ -69,7 +69,7 @@ public static class ExpressionExtension
     /// //   [ {LinkType:"",Op:"=",Left:a,Right:1}, {LinkType:"AND",Op:"&gt;",Left:b,Right:2} ]
     /// </code>
     /// </example>
-    public static IReadOnlyList<WhereCondition> GetWhereConditions(this Expression.Expression where)
+    public static IReadOnlyList<WhereCondition> GetWhereConditions(this Expression.IExpression where)
     {
         return WhereConditionsExtractor.Extract(where);
     }

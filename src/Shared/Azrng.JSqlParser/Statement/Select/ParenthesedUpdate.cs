@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// <summary>
 /// Represents a parenthesized UPDATE (for CTE like WITH x AS (UPDATE ... RETURNING ...)).
 /// </summary>
-public class ParenthesedUpdate : ASTNodeAccessImpl, Statement
+public class ParenthesedUpdate : ASTNodeAccessImpl, IStatement
 {
     public Update.Update Update { get; set; } = null!;
 

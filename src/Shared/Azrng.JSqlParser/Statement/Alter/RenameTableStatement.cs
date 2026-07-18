@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// 形式：<c>RENAME [TABLE] [IF EXISTS] old TO new [, old TO new]*</c>，
 /// 可选 <c>WAIT n</c> 或 <c>NOWAIT</c> 指令（Oracle）。
 /// </summary>
-public class RenameTableStatement : ASTNodeAccessImpl, Statement
+public class RenameTableStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>old → new 的映射（保留插入顺序，支持多表重命名）。</summary>
     public List<KeyValuePair<Table, Table>> TableNames { get; } = new();

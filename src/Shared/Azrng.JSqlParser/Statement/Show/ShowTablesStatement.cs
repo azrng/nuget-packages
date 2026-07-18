@@ -7,16 +7,16 @@ namespace Azrng.JSqlParser.Statement.Show;
 /// SHOW TABLES 语句，对齐上游 ShowTablesStatement。
 /// 形式：<c>SHOW TABLES [FROM db] [LIKE pattern | WHERE expr]</c>。
 /// </summary>
-public class ShowTablesStatement : ASTNodeAccessImpl, Statement
+public class ShowTablesStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>数据库名（FROM 子句），可选。</summary>
     public string? DbName { get; set; }
 
     /// <summary>LIKE 模式表达式，可选。</summary>
-    public Expression.Expression? LikeExpression { get; set; }
+    public Expression.IExpression? LikeExpression { get; set; }
 
     /// <summary>WHERE 条件，可选。</summary>
-    public Expression.Expression? WhereCondition { get; set; }
+    public Expression.IExpression? WhereCondition { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

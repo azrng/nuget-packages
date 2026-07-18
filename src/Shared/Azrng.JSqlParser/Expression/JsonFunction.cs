@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression;
 /// JSON 标量函数统一 AST（JSON_OBJECT / JSON_ARRAY / JSON_VALUE / JSON_QUERY / JSON_EXISTS）。
 /// 与上游 JsonFunction 对齐。
 /// </summary>
-public class JsonFunction : ASTNodeAccessImpl, Expression
+public class JsonFunction : ASTNodeAccessImpl, IExpression
 {
     public enum FunctionType
     {
@@ -74,7 +74,7 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
     public class JsonOnResponseBehavior
     {
         public OnResponseBehaviorType Type { get; set; }
-        public Expression? Expression { get; set; }
+        public IExpression? Expression { get; set; }
 
         public JsonOnResponseBehavior() { }
 
@@ -83,7 +83,7 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
             Type = type;
         }
 
-        public JsonOnResponseBehavior(OnResponseBehaviorType type, Expression? expression)
+        public JsonOnResponseBehavior(OnResponseBehaviorType type, IExpression? expression)
         {
             Type = type;
             Expression = expression;
@@ -129,7 +129,7 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
     public List<JsonFunctionExpression> Expressions { get; } = new();
 
     /// <summary>VALUE/QUERY/EXISTS 的 PASSING 子句表达式列表。</summary>
-    public List<Expression> PassingExpressions { get; } = new();
+    public List<IExpression> PassingExpressions { get; } = new();
 
     /// <summary>QUERY 的 Legacy 额外 path 参数（已序列化为字符串原样拼接）。</summary>
     public List<string> AdditionalQueryPathArguments { get; } = new();
@@ -142,7 +142,7 @@ public class JsonFunction : ASTNodeAccessImpl, Expression
 
     public JsonFunctionExpression? InputExpression { get; set; }
 
-    public Expression? JsonPathExpression { get; set; }
+    public IExpression? JsonPathExpression { get; set; }
 
     /// <summary>RETURNING 数据类型（字符串形式，与 CastExpression 一致）。</summary>
     public string? ReturningType { get; set; }

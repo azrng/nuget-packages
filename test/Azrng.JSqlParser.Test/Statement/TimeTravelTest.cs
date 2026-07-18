@@ -55,7 +55,7 @@ public class TimeTravelTest
         Assert.Equal("OFFSET", table.TimeTravel!.TravelType);
     }
 
-    private static Table ExtractFromItem(Azrng.JSqlParser.Statement.Statement stmt)
+    private static Table ExtractFromItem(Azrng.JSqlParser.Statement.IStatement stmt)
     {
         var plain = Assert.IsType<Azrng.JSqlParser.Statement.Select.PlainSelect>(stmt);
         return Assert.IsType<Table>(plain.IFromItem);

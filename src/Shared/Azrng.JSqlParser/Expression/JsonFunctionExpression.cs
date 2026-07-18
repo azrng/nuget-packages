@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class JsonFunctionExpression
 {
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public bool UsingFormatJson { get; set; }
 
@@ -16,7 +16,7 @@ public class JsonFunctionExpression
 
     public JsonFunctionExpression() { }
 
-    public JsonFunctionExpression(Expression? expression)
+    public JsonFunctionExpression(IExpression? expression)
     {
         Expression = expression;
     }

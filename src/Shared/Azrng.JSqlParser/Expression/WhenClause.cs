@@ -5,10 +5,10 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a WHEN clause in a CASE expression.
 /// </summary>
-public class WhenClause : ASTNodeAccessImpl, Expression
+public class WhenClause : ASTNodeAccessImpl, IExpression
 {
-    public Expression WhenExpression { get; set; } = null!;
-    public Expression ThenExpression { get; set; } = null!;
+    public IExpression WhenExpression { get; set; } = null!;
+    public IExpression ThenExpression { get; set; } = null!;
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

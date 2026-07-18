@@ -16,20 +16,20 @@ public class PlainSelect : Select
     public Top? Top { get; set; }
 
     /// <summary>Informix FIRST n 量词（SELECT FIRST n ...），未指定时为 null。与 Top 互斥使用。</summary>
-    public Expression.Expression? First { get; set; }
+    public Expression.IExpression? First { get; set; }
 
     /// <summary>Informix SKIP n 量词（SELECT SKIP n FIRST m ...），未指定时为 null。</summary>
-    public Expression.Expression? Skip { get; set; }
+    public Expression.IExpression? Skip { get; set; }
 
     /// <summary>DB2 OPTIMIZE FOR n ROWS 子句，未指定时为 null。</summary>
     public long? OptimizeFor { get; set; }
     public List<SelectItem>? SelectItems { get; set; }
     public IFromItem? IFromItem { get; set; }
     public List<Join>? Joins { get; set; }
-    public Expression.Expression? Where { get; set; }
+    public Expression.IExpression? Where { get; set; }
     public PreferringClause? Preferring { get; set; }
     public GroupByElement? GroupBy { get; set; }
-    public Expression.Expression? Having { get; set; }
+    public Expression.IExpression? Having { get; set; }
 
     /// <summary>MySQL INTO OUTFILE/DUMPFILE 子句（前置或尾部位置），未指定时为 null。</summary>
     public MySqlIntoOutfile? MySqlIntoOutfile { get; set; }
@@ -56,7 +56,7 @@ public class PlainSelect : Select
     public bool EmitChanges { get; set; }
 
     /// <summary>QUALIFY 过滤表达式（Snowflake/Teradata），对齐上游 qualify。</summary>
-    public Expression.Expression? Qualify { get; set; }
+    public Expression.IExpression? Qualify { get; set; }
 
     /// <summary>Oracle 层次查询（START WITH ... CONNECT BY ...），对齐上游 oracleHierarchical。</summary>
     public OracleHierarchicalExpression? OracleHierarchical { get; set; }

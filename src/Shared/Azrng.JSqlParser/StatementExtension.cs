@@ -33,7 +33,7 @@ public static class StatementExtension
     /// // => { "users", "orders" }
     /// </code>
     /// </example>
-    public static IReadOnlyCollection<string> GetTableNames(this Statement.Statement statement)
+    public static IReadOnlyCollection<string> GetTableNames(this Statement.IStatement statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
         var finder = new TablesNamesFinder();
@@ -46,7 +46,7 @@ public static class StatementExtension
 
     /// <summary>已过时，请改用 <see cref="GetTableNames"/>。</summary>
     [Obsolete("改用 GetTableNames()，后续版本将移除")]
-    public static IReadOnlyCollection<string> ExtractTableNames(this Statement.Statement statement)
+    public static IReadOnlyCollection<string> ExtractTableNames(this Statement.IStatement statement)
         => statement.GetTableNames();
 
     /// <summary>
@@ -67,7 +67,7 @@ public static class StatementExtension
     /// // SELECT u.id FROM users u JOIN orders o ON ... => [ {Name:users,Alias:u}, {Name:orders,Alias:o} ]
     /// </code>
     /// </example>
-    public static IReadOnlyList<TableReference> GetTableReferences(this Statement.Statement statement)
+    public static IReadOnlyList<TableReference> GetTableReferences(this Statement.IStatement statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
         return TableReferencesExtractor.Extract(statement);
@@ -109,7 +109,7 @@ public static class StatementExtension
     /// 仅遍历语句层；Select body 内的表达式（WHERE、SELECT 列表等）不属于语句节点，
     /// 收集这些请用 <see cref="ExpressionExtension.Descendants{T}"/>。
     /// </remarks>
-    public static IEnumerable<TStatement> Descendants<TStatement>(this Statement.Statement statement) where TStatement : Statement.Statement
+    public static IEnumerable<TStatement> Descendants<TStatement>(this Statement.IStatement statement) where TStatement : Statement.IStatement
     {
         ArgumentNullException.ThrowIfNull(statement);
         var matched = new List<TStatement>();

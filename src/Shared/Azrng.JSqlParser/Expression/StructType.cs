@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Expression;
 /// STRUCT type expression (BigQuery / DuckDB).
 /// Supports: STRUCT&lt;INT64&gt;, STRUCT(1 AS a, 'abc' AS b), { a:1, b:'abc' }::STRUCT(...)
 /// </summary>
-public class StructType : ASTNodeAccessImpl, Expression
+public class StructType : ASTNodeAccessImpl, IExpression
 {
     public Dialect StructDialect { get; set; } = Dialect.BigQuery;
     public string? Keyword { get; set; }

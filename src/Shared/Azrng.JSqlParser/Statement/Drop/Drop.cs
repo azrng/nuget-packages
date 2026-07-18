@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Drop;
 /// <summary>
 /// Represents a DROP statement in SQL (DROP TABLE/VIEW/INDEX, etc.).
 /// </summary>
-public class Drop : ASTNodeAccessImpl, Statement
+public class Drop : ASTNodeAccessImpl, IStatement
 {
     public string Type { get; set; } = "";
     public Table? Name { get; set; }

@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// <summary>
 /// Represents a parenthesized SELECT (subquery).
 /// </summary>
-public class ParenthesedSelect : ASTNodeAccessImpl, Expression.Expression, IFromItem
+public class ParenthesedSelect : ASTNodeAccessImpl, Expression.IExpression, IFromItem
 {
     public Select Select { get; set; } = null!;
     public Alias? Alias { get; set; }

@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression.Cnf;
 /// Represents a conjunction (AND) of multiple expressions.
 /// Used by CNFConverter to represent the result of CNF conversion.
 /// </summary>
-public class MultiAndExpression : ASTNodeAccessImpl, Expression
+public class MultiAndExpression : ASTNodeAccessImpl, IExpression
 {
-    public List<Expression> Expressions { get; set; } = new();
+    public List<IExpression> Expressions { get; set; } = new();
 
     public MultiAndExpression() { }
 
-    public MultiAndExpression(params Expression[] expressions)
+    public MultiAndExpression(params IExpression[] expressions)
     {
         Expressions.AddRange(expressions);
     }

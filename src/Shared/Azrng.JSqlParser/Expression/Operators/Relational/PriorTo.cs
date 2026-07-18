@@ -10,7 +10,7 @@ public class PriorTo : BinaryExpression
 {
     public PriorTo() { }
 
-    public PriorTo(Expression leftExpression, Expression rightExpression)
+    public PriorTo(IExpression leftExpression, IExpression rightExpression)
     {
         LeftExpression = leftExpression;
         RightExpression = rightExpression;

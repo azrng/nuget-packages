@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Lock;
 /// <para>示例：<c>LOCK TABLE t IN EXCLUSIVE MODE</c>、<c>LOCK TABLE t IN SHARE MODE NOWAIT</c>。</para>
 /// 移植自上游 JSqlParser commit 6697c063 的 LockStatement 类。
 /// </summary>
-public class LockStatement : ASTNodeAccessImpl, Statement
+public class LockStatement : ASTNodeAccessImpl, IStatement
 {
     private bool _noWait;
     private long? _waitSeconds;

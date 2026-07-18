@@ -5,11 +5,11 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Represents a BETWEEN expression in SQL.
 /// </summary>
-public class Between : ASTNodeAccessImpl, Expression
+public class Between : ASTNodeAccessImpl, IExpression
 {
-    public required Expression LeftExpression { get; set; }
-    public required Expression BetweenExpressionStart { get; set; }
-    public required Expression BetweenExpressionEnd { get; set; }
+    public required IExpression LeftExpression { get; set; }
+    public required IExpression BetweenExpressionStart { get; set; }
+    public required IExpression BetweenExpressionEnd { get; set; }
     public bool Not { get; set; }
 
     /// <summary>SQL:2016 BETWEEN SYMMETRIC。</summary>

@@ -17,7 +17,7 @@ namespace Azrng.JSqlParser.Test.Statement;
 public class ReturningClauseTest
 {
     /// <summary>断言 SQL 可被解析，且再次序列化后与原 SQL（忽略大小写、空白、运算符空格）一致。</summary>
-    private static Azrng.JSqlParser.Statement.Statement AssertParseAndDeparse(string sql)
+    private static Azrng.JSqlParser.Statement.IStatement AssertParseAndDeparse(string sql)
     {
         var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);

@@ -43,10 +43,10 @@ public class Join : ASTNodeAccessImpl
     public KSQLJoinWindow? JoinWindow { get; set; }
 
     /// <summary>JOIN 的 ON 表达式列表，支持多个 ON（如 JOIN t ON a ON b）。对齐上游 onExpressions。</summary>
-    public List<Expression.Expression> OnExpressions { get; set; } = new();
+    public List<Expression.IExpression> OnExpressions { get; set; } = new();
 
     /// <summary>单个 ON 表达式（兼容旧 API，取 OnExpressions 首项或 null）。</summary>
-    public Expression.Expression? OnExpression
+    public Expression.IExpression? OnExpression
     {
         get => OnExpressions.Count > 0 ? OnExpressions[0] : null;
         set

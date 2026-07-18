@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Execute;
 /// EXECUTE / EXEC / CALL 语句，对齐上游 Execute。
 /// 形式：<c>EXECUTE proc(args)</c> / <c>CALL proc(args)</c>。
 /// </summary>
-public class Execute : ASTNodeAccessImpl, Statement
+public class Execute : ASTNodeAccessImpl, IStatement
 {
     public ExecType ExecType { get; set; } = ExecType.EXECUTE;
 

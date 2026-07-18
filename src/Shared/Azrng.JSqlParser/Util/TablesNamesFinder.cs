@@ -17,7 +17,7 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     private readonly HashSet<string> _tables = new();
 
     [Obsolete("改用 statement.GetTableNames() 扩展方法，后续版本将移除")]
-    public HashSet<string> GetTables(Statement.Statement statement)
+    public HashSet<string> GetTables(Statement.IStatement statement)
     {
         _tables.Clear();
         statement.Accept(this);
@@ -265,8 +265,8 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     {
         foreach (var kvp in jsonFunction.KeyValuePairs)
         {
-            if (kvp.Key is Expression.Expression ke) ke.Accept(this);
-            if (kvp.Value is Expression.Expression ve) ve.Accept(this);
+            if (kvp.Key is Expression.IExpression ke) ke.Accept(this);
+            if (kvp.Value is Expression.IExpression ve) ve.Accept(this);
         }
         foreach (var expr in jsonFunction.Expressions)
         {

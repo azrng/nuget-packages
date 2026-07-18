@@ -6,14 +6,14 @@ namespace Azrng.JSqlParser.Expression;
 /// 表示 PostgreSQL 复合类型的字段访问，如 <c>(expr).field</c> 或 <c>(expr::type).field1.field2</c>。
 /// 移植自上游 JSqlParser 的 RowGetExpression。
 /// </summary>
-public class RowGetExpression : ASTNodeAccessImpl, Expression
+public class RowGetExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
     public string ColumnName { get; set; } = "";
 
     public RowGetExpression() { }
 
-    public RowGetExpression(Expression expression, string columnName)
+    public RowGetExpression(IExpression expression, string columnName)
     {
         Expression = expression;
         ColumnName = columnName;

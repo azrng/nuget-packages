@@ -12,15 +12,15 @@ namespace Azrng.JSqlParser.Statement;
 /// </remarks>
 internal sealed class StatementDescendantsWalker : StatementVisitorAdapter<object?>
 {
-    private readonly Action<Statement> _onVisit;
+    private readonly Action<IStatement> _onVisit;
 
-    private StatementDescendantsWalker(Action<Statement> onVisit)
+    private StatementDescendantsWalker(Action<IStatement> onVisit)
     {
         _onVisit = onVisit;
     }
 
     /// <summary>从根语句出发，按深度优先顺序回调每一个被访问到的语句节点。</summary>
-    public static void Walk(Statement root, Action<Statement> onVisit)
+    public static void Walk(IStatement root, Action<IStatement> onVisit)
     {
         var walker = new StatementDescendantsWalker(onVisit);
         root.Accept(walker);

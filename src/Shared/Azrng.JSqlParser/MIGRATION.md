@@ -402,7 +402,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 >
 > **批 8 评估结论（2026-07-18，暂缓）**：经盘点，全库 61 个 `null!` 字段分布在 50 个文件，核心是 `Expression` 类型字段（约 35 个）。激进改造（`required`）会破坏 `AstBuilderVisitor` 普遍的 `new X()` 无参构造 + 条件逐字段赋值模式（如 `var paren = new Parenthesis(); if (...) paren.Expression = ...`），需重写 visitor 接线，与上游 Java 对照模式冲突最大。保守改造（逐字段判可空性改 `?`）需逐一核实字段语义，收益有限。**关键事实**：`null!` 不影响运行时行为（仅骗编译器关 NRT 警告），全量 1433 测试通过已证明运行正确。按「不为个人偏好过度优化、最小扰动」原则，批 8 整体暂缓，列为已知技术债，待 visitor 接线模式重构时一并处理。
 >
-> **批 9b 评估结论（2026-07-18，暂缓）**：`Expression`/`Statement` 接口加 `I` 前缀经多轮脚本尝试（M1-M6 模式）均无法可靠完成。**根因**：`Expression`/`Statement` 在代码中有 4 种身份且正则无法区分——(1) 命名空间段 `Azrng.JSqlParser.Expression`；(2) 接口类型 `: Expression`；(3) 属性名成员访问 `paren.Expression`；(4) 类型+属性同名声明 `public Expression Expression`。改名触及 654 处编译错误，逐个手工不现实。**正确做法**是用 Roslyn 语义级重命名（区分类型符号 vs 成员符号），属工具化专项任务。留 2.0 配合 Roslyn 重构工具处理。当前 `Expression`/`Statement` 接口名虽与命名空间同名（需全限定 `Expression.Expression`），但已工作且不影响功能。
+> **批 9b 评估结论（2026-07-18，已完成）**：`Expression`/`Statement` 接口加 `I` 前缀**已由人工完成**。此前 AI 经多轮正则脚本尝试（M1-M6 模式）判定"无法可靠区分 4 种身份（命名空间段/接口类型/属性名成员访问/类型+属性同名声明），需 Roslyn"——**该判定对纯脚本方案成立，但人工靠编译错误驱动可精确完成**：编译器只对"接口类型位置"报 CS0118/CS0234，属性名成员访问（`paren.Expression`）因前面是 `.` 不被当类型，不会进错误列表，故不会误改。人工按错误列表逐处修复，183 文件全部正确同步，属性名（如 `Parenthesis.Expression`、`SignedExpression.Expression`）保留不变。教训：正则做不到的不代表人工+编译器做不到，重构应优先用编译错误驱动而非盲改。
 
 ---
 
@@ -420,7 +420,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | **批 6** | `OracleJoinSyntax` const → enum；字段类型同步 | 中 | `[锚]` | ✅ 已完成 |
 | **批 7** | 枚举 SCREAMING_CASE → PascalCase（`ForMode`/`AlterOperation`/`ReturningReferenceType`/`DateTimeType`） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 留 2.0 |
 | **批 8** | `null!` 治理（`required`/构造注入） | **高** | `[形]` 工作量大，触及 visitor 接线 | 🔶 增量进行（Between/Parenthesis 已改；BinaryExpression 体系等触及面大，按需推进） |
-| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ⏸ 部分完成（6 个低风险接口已改；Expression/Statement 经多轮正则尝试无法可靠区分 4 种身份，需 Roslyn 语义级重命名，见第十四章结论） |
+| **批 9** | 接口加 `I` 前缀（`Expression`→`IExpression` 等） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（8 个接口：IExpressionVisitor/IStatementVisitor/ISelectVisitor/IFromItem/IModel/IASTNodeAccess + IExpression/IStatement；Expression.cs/Statement.cs 重命名为 IExpression.cs/IStatement.cs；183 文件同步；属性名成员访问如 paren.Expression 正确保留） |
 | **批 10** | `CCJSqlParserUtil` → `SqlParser`（保留旧名转发） | **高** | `[锚][风险]` 公开 API 破坏性，建议 2.0 | ✅ 已完成（旧名保留 [Obsolete] 转发壳，无破坏） |
 
 ---
@@ -442,6 +442,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 2026-07-18 | 批 9 | 6 个接口加 `I` 前缀（C# 接口命名规范）：`ExpressionVisitor`→`IExpressionVisitor`、`StatementVisitor`→`IStatementVisitor`、`SelectVisitor`→`ISelectVisitor`、`FromItem`→`IFromItem`、`Model`→`IModel`、`ASTNodeAccess`→`IASTNodeAccess`（文件 Model.cs/ASTNodeAccess.cs 同步重命名为 IModel.cs/IASTNodeAccess.cs）；全部实现类、字段类型、泛型参数、测试同步（206 文件）。**`Expression`/`Statement` 接口暂不改**：与命名空间同名（`Azrng.JSqlParser.Expression.Expression`），引用上千（Expression 1018 处/Statement 623 处），改名易误伤 `ExpressionList`/`LambdaExpression` 等含 Expression 的类型名，留 2.0 配合 `using` 别名专项处理 | 公开 API 破坏性（[锚][风险]），206 文件；外部 visitor 实现需改接口名 | 全量 1433 项通过，0 失败 |
 | 2026-07-18 | 批 10 | 解析主入口改名：新增 `SqlParser`（实际实现所在，5 个方法 Parse/ParseStatements/ParseExpression/ParseCondExpression/ParseNullable + 私有 CreateParser）；`CCJSqlParserUtil` 改为 `[Obsolete]` 转发壳（5 个方法逐个转发到 SqlParser）；库内 `Validation.cs` 改用新名；77 个测试文件改用 `SqlParser`；补 1 项旧名转发回归测试 `Legacy_CCJSqlParserUtil_ForwardsToSqlParser` | 公开 API 破坏性（[锚][风险]），但旧名保留转发壳，外部调用方无破坏（仅 obsolete 警告）；新代码应改用 SqlParser | 全量 1434 项通过（净增 1），0 失败 |
 | 2026-07-18 | 批 8（增量 1） | `null!` 治理首批：`Between`（3 字段 LeftExpression/BetweenExpressionStart/BetweenExpressionEnd）+ `Parenthesis`（Expression 字段）改为 `required`；visitor 接线对应改为对象初始化器（`new Between { ... }` / `new Parenthesis { ... }`）；补 2 项 required 字段初始化器构造+序列化测试。**其余 50+ `null!` 字段维持现状**（BinaryExpression 体系触及 28 子类+十几处 visitor 接线，Function/Table/Column 名字段已有默认值非 null!） | 库内 4 文件 + 测试 1 文件；required 为编译期检查，外部 `new Between()` 无参构造需改为初始化器 | 全量 1436 项通过（净增 2），0 失败 |
+| 2026-07-18 | 批 9b（人工完成） | `Expression`/`Statement` 接口加 `I` 前缀（由人工靠编译错误驱动完成，非脚本）：`Expression.cs`→`IExpression.cs`、`Statement.cs`→`IStatement.cs` 文件重命名；接口定义 `Expression`→`IExpression`、`Statement`→`IStatement`；183 文件同步所有引用（实现列表 `: IExpression`、字段/参数类型 `IExpression expr`、泛型 `List<IExpression>`、全限定 `Expression.Expression` 消除为 `IExpression`）；**属性名成员访问保留不变**（`paren.Expression`、`signedExpression.Expression` 等，因前面是 `.` 不被编译器当类型）。至此批 9 全部 8 个接口完成 I 前缀化 | 公开 API 破坏性（[锚][风险]），183 文件；外部 visitor 实现及类型引用需同步改名 | 全量 1436 项通过，0 失败 |
 
 ---
 

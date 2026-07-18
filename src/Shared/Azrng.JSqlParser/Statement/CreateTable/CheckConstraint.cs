@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.CreateTable;
 public class CheckConstraint : Constraint
 {
     /// <summary>CHECK 约束表达式。</summary>
-    public Expression.Expression? Expression { get; set; }
+    public Expression.IExpression? Expression { get; set; }
 
     public override string ToString()
     {

@@ -23,7 +23,7 @@ public class JsonAggregateFunction : Function
 
     public bool UsingKeyKeyword { get; set; }
 
-    public Expression? Value { get; set; }
+    public IExpression? Value { get; set; }
 
     public bool UsingValueKeyword { get; set; }
 
@@ -41,7 +41,7 @@ public class JsonAggregateFunction : Function
 
     // ARRAYAGG 字段
     /// <summary>ARRAYAGG 的聚合表达式。</summary>
-    public Expression? AggregateExpression { get; set; }
+    public IExpression? AggregateExpression { get; set; }
 
     public override string ToString()
     {

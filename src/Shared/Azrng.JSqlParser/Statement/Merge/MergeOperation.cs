@@ -8,5 +8,5 @@ namespace Azrng.JSqlParser.Statement.Merge;
 public abstract class MergeOperation : ASTNodeAccessImpl
 {
     public bool Not { get; set; }
-    public Expression.Expression? Condition { get; set; }
+    public Expression.IExpression? Condition { get; set; }
 }

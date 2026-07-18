@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement;
 /// <summary>
 /// Represents SQL session management commands: SESSION START/APPLY/DROP/SHOW/DESCRIBE.
 /// </summary>
-public class SessionStatement : ASTNodeAccessImpl, Statement
+public class SessionStatement : ASTNodeAccessImpl, IStatement
 {
     public enum Action
     {

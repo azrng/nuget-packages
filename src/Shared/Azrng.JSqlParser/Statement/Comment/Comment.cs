@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Comment;
 /// COMMENT ON 语句，对齐上游 Comment。
 /// 形式：<c>COMMENT ON TABLE t IS 'xxx'</c> / <c>COMMENT ON COLUMN c IS 'xxx'</c> / <c>COMMENT ON VIEW v IS 'xxx'</c>。
 /// </summary>
-public class Comment : ASTNodeAccessImpl, Statement
+public class Comment : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
     public Column? Column { get; set; }

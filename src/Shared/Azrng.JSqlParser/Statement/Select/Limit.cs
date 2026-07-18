@@ -7,8 +7,8 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class Limit : ASTNodeAccessImpl
 {
-    public Expression.Expression? RowCount { get; set; }
-    public Expression.Expression? Offset { get; set; }
+    public Expression.IExpression? RowCount { get; set; }
+    public Expression.IExpression? Offset { get; set; }
 
     public Limit() { }
 

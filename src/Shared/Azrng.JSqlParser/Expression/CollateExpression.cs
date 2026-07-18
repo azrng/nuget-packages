@@ -9,14 +9,14 @@ namespace Azrng.JSqlParser.Expression;
 /// 示例：<c>name COLLATE 'en_US.utf8'</c>、<c>'abc' COLLATE "C"</c>。
 /// </para>
 /// </summary>
-public class CollateExpression : ASTNodeAccessImpl, Expression
+public class CollateExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression? LeftExpression { get; set; }
+    public IExpression? LeftExpression { get; set; }
     public string Collate { get; set; } = "";
 
     public CollateExpression() { }
 
-    public CollateExpression(Expression? leftExpression, string collate)
+    public CollateExpression(IExpression? leftExpression, string collate)
     {
         LeftExpression = leftExpression;
         Collate = collate;

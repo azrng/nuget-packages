@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 或 VALUES 子句、PostgreSQL 复合类型构造。
 /// </para>
 /// </summary>
-public class RowConstructor : ASTNodeAccessImpl, Expression
+public class RowConstructor : ASTNodeAccessImpl, IExpression
 {
     /// <summary>构造器名，通常是 "ROW"；括号形式时为 null。</summary>
     public string? Name { get; set; }

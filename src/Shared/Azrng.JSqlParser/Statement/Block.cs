@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement;
 /// 块体为 <see cref="Statements"/> 列表（复用通用 statement 入口）。
 /// 注意：上游不含 DECLARE 段和 EXCEPTION 段（DECLARE 在 Block 外）。
 /// </summary>
-public class Block : ASTNodeAccessImpl, Statement
+public class Block : ASTNodeAccessImpl, IStatement
 {
     public Statements Statements { get; set; } = new();
 

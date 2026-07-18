@@ -15,7 +15,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 出现位置：SELECT/INSERT/UPDATE/DELETE/MERGE 关键字之后。
 /// 与上游 OracleHint 对齐。
 /// </summary>
-public class OracleHint : ASTNodeAccessImpl, Expression
+public class OracleHint : ASTNodeAccessImpl, IExpression
 {
     private static readonly Regex SingleLinePattern = new(@"--\+ *(.+)", RegexOptions.Compiled);
     private static readonly Regex MultiLinePattern = new(@"/\*\+ *(.*?) *\*/", RegexOptions.Compiled | RegexOptions.Singleline);

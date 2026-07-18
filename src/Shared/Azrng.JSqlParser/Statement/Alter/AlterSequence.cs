@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// 形式：<c>ALTER SEQUENCE name [RESTART [WITH n]] [INCREMENT BY n] [MINVALUE n] [MAXVALUE n] [CACHE n] [CYCLE|NOCYCLE]</c>。
 /// 复用 <see cref="Schema.Sequence"/> 承载名称与结构化参数。
 /// </summary>
-public class AlterSequence : ASTNodeAccessImpl, Statement
+public class AlterSequence : ASTNodeAccessImpl, IStatement
 {
     public Sequence? Sequence { get; set; }
 

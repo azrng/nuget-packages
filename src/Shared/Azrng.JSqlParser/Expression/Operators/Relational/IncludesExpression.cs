@@ -5,14 +5,14 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Array INCLUDES operator: left INCLUDES right
 /// </summary>
-public class IncludesExpression : ASTNodeAccessImpl, Expression
+public class IncludesExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
 
     public IncludesExpression() { }
 
-    public IncludesExpression(Expression leftExpression, Expression rightExpression)
+    public IncludesExpression(IExpression leftExpression, IExpression rightExpression)
     {
         LeftExpression = leftExpression;
         RightExpression = rightExpression;

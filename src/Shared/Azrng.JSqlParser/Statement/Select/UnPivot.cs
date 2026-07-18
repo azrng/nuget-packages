@@ -20,7 +20,7 @@ public class UnPivot
     public List<Column> UnpivotForClause { get; set; } = new();
 
     /// <summary>IN 值列表。</summary>
-    public List<Expression.Expression> UnpivotInClause { get; set; } = new();
+    public List<Expression.IExpression> UnpivotInClause { get; set; } = new();
 
     /// <summary>别名，可选。</summary>
     public Alias? Alias { get; set; }

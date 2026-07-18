@@ -26,7 +26,7 @@ namespace Azrng.JSqlParser.Statement.Insert;
 /// INSERT FIRST 在命中第一个 WHEN 后停止评估（类似 if/elif/else）。
 /// </para>
 /// </summary>
-public class MultiInsert : ASTNodeAccessImpl, Statement
+public class MultiInsert : ASTNodeAccessImpl, IStatement
 {
     /// <summary>
     /// 多表插入的修饰类型。true 表示 INSERT FIRST（命中即停）；
@@ -69,7 +69,7 @@ public class MultiInsertBranch : ASTNodeAccessImpl, IModel
     /// WHEN 后的条件表达式；为 null 时表示 ELSE 分支。
     /// 与 <see cref="IsElse"/> 互斥（设置其中一个会清空另一个）。
     /// </summary>
-    public Expression.Expression? WhenCondition
+    public Expression.IExpression? WhenCondition
     {
         get => _whenCondition;
         set
@@ -90,7 +90,7 @@ public class MultiInsertBranch : ASTNodeAccessImpl, IModel
         }
     }
 
-    private Expression.Expression? _whenCondition;
+    private Expression.IExpression? _whenCondition;
     private bool _isElse;
 
     /// <summary>该分支下的所有 INTO 目标子句。一个分支可触发多个目标。</summary>

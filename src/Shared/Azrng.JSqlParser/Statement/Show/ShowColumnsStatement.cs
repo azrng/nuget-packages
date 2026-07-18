@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Show;
 /// <summary>
 /// SHOW COLUMNS FROM table 语句，对齐上游 ShowColumnsStatement。
 /// </summary>
-public class ShowColumnsStatement : ASTNodeAccessImpl, Statement
+public class ShowColumnsStatement : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
 

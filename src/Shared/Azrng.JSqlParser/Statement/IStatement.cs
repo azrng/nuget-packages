@@ -3,7 +3,7 @@ namespace Azrng.JSqlParser.Statement;
 /// <summary>
 /// Base interface for all SQL statements in the AST.
 /// </summary>
-public interface Statement : IModel
+public interface IStatement : IModel
 {
     T Accept<T, S>(IStatementVisitor<T> visitor, S context);
 

@@ -1,8 +1,8 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Expression.Operators.Arithmetic;
 using Azrng.JSqlParser.Expression.Operators.Conditional;
 using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Models;
-using JExpression = Azrng.JSqlParser.Expression.Expression;
 using Parenthesis = Azrng.JSqlParser.Expression.Parenthesis;
 
 namespace Azrng.JSqlParser.Util;
@@ -25,14 +25,14 @@ namespace Azrng.JSqlParser.Util;
 internal static class WhereConditionsExtractor
 {
     /// <summary>提取 WHERE 表达式的拍平条件列表。</summary>
-    public static IReadOnlyList<WhereCondition> Extract(JExpression? where)
+    public static IReadOnlyList<WhereCondition> Extract(IExpression? where)
     {
         var result = new List<WhereCondition>();
         Collect(where, result, linkType: string.Empty);
         return result;
     }
 
-    private static void Collect(JExpression? expression, List<WhereCondition> result, string linkType)
+    private static void Collect(IExpression? expression, List<WhereCondition> result, string linkType)
     {
         if (expression == null) return;
 

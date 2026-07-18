@@ -5,9 +5,9 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Represents an EXISTS expression in SQL.
 /// </summary>
-public class ExistsExpression : ASTNodeAccessImpl, Expression
+public class ExistsExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// ALTER VIEW / REPLACE VIEW 语句，对齐上游 AlterView。
 /// 形式：<c>ALTER VIEW v [(cols)] AS SELECT ...</c> / <c>REPLACE VIEW v AS SELECT ...</c>。
 /// </summary>
-public class AlterView : ASTNodeAccessImpl, Statement
+public class AlterView : ASTNodeAccessImpl, IStatement
 {
     public Schema.Table View { get; set; } = null!;
 

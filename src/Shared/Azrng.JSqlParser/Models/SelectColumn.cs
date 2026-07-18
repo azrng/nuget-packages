@@ -1,4 +1,4 @@
-using JExpression = Azrng.JSqlParser.Expression.Expression;
+using Azrng.JSqlParser.Expression;
 
 namespace Azrng.JSqlParser.Models;
 
@@ -32,5 +32,5 @@ public sealed record SelectColumn
     /// 供业务方深挖（如推断 CAST 类型、收集子列）；<see cref="SelectColumnKind.All"/> 与
     /// <see cref="SelectColumnKind.AllTable"/> 时为 null。
     /// </summary>
-    public JExpression? Expression { get; init; }
+    public IExpression? Expression { get; init; }
 }

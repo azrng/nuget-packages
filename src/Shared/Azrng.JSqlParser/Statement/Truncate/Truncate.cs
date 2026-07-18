@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Truncate;
 /// <summary>
 /// Represents a TRUNCATE TABLE statement in SQL.
 /// </summary>
-public class Truncate : ASTNodeAccessImpl, Statement
+public class Truncate : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
 

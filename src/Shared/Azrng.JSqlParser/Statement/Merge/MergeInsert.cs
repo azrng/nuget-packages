@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Merge;
 public class MergeInsert : MergeOperation
 {
     public System.Collections.Generic.List<Column>? Columns { get; set; }
-    public System.Collections.Generic.List<Expression.Expression>? Values { get; set; }
+    public System.Collections.Generic.List<Expression.IExpression>? Values { get; set; }
 
     public override string ToString()
     {

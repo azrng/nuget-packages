@@ -172,8 +172,8 @@ public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
     {
         foreach (var kvp in jsonFunction.KeyValuePairs)
         {
-            if (kvp.Key is Expression ke) ke.Accept(this, context);
-            if (kvp.Value is Expression ve) ve.Accept(this, context);
+            if (kvp.Key is IExpression ke) ke.Accept(this, context);
+            if (kvp.Value is IExpression ve) ve.Accept(this, context);
         }
         foreach (var expr in jsonFunction.Expressions)
         {

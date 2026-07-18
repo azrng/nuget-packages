@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// SQL 标准形式 <c>(start1, end1) OVERLAPS (start2, end2)</c>，当前 Azrng grammar
 /// 两侧均按单元素 ExpressionList 包装（多元素列表形式需后续扩展 grammar）。
 /// </summary>
-public class OverlapsCondition : ASTNodeAccessImpl, Expression
+public class OverlapsCondition : ASTNodeAccessImpl, IExpression
 {
     public ExpressionList LeftExpression { get; set; } = null!;
     public ExpressionList RightExpression { get; set; } = null!;

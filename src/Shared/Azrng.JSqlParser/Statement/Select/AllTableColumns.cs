@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// <summary>
 /// Represents table.* wildcard in SQL (e.g., SELECT t.*).
 /// </summary>
-public class AllTableColumns : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
+public class AllTableColumns : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.IExpression
 {
     public Table Table { get; set; } = null!;
 

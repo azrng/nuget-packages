@@ -3,7 +3,7 @@ using Azrng.JSqlParser.Schema;
 
 namespace Azrng.JSqlParser.Statement;
 
-public class GrantStatement : ASTNodeAccessImpl, Statement
+public class GrantStatement : ASTNodeAccessImpl, IStatement
 {
     public List<string> Privileges { get; set; } = new();
     public Table? Table { get; set; }

@@ -2,9 +2,9 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression;
 
-public class ExpressionList : ASTNodeAccessImpl, Expression
+public class ExpressionList : ASTNodeAccessImpl, IExpression
 {
-    public List<Expression> Expressions { get; set; } = new();
+    public List<IExpression> Expressions { get; set; } = new();
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

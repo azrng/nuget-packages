@@ -45,7 +45,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var statements = new Statements();
         foreach (var stmtCtx in context.statement())
         {
-            var stmt = (Statement.Statement)Visit(stmtCtx);
+            var stmt = (Statement.IStatement)Visit(stmtCtx);
             statements.StatementList.Add(stmt);
         }
         return statements;
@@ -367,7 +367,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             FunctionName = context.identifier().GetText(),
             ReturnType = context.dataType().GetText(),
-            ReturnExpression = (Expression.Expression)Visit(context.expression())
+            ReturnExpression = (Expression.IExpression)Visit(context.expression())
         };
 
         if (context.withFunctionParameterList() != null)
@@ -438,11 +438,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var exprList = new ExpressionList
             {
-                Expressions = new List<Expression.Expression>()
+                Expressions = new List<Expression.IExpression>()
             };
             foreach (var exprCtx in itemCtx.expression())
             {
-                exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                exprList.Expressions.Add((Expression.IExpression)Visit(exprCtx));
             }
             values.Rows.Add(exprList);
         }
@@ -468,7 +468,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (topCtx.OPENING_PAREN() != null)
             {
                 top.HasParenthesis = true;
-                top.Expression = (Expression.Expression)Visit(topCtx.expression());
+                top.Expression = (Expression.IExpression)Visit(topCtx.expression());
             }
             else
             {
@@ -484,13 +484,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var sfc = context.informixSkipFirstClause();
             if (sfc.SKIP_KW() != null && sfc.expression().Length > 0)
-                select.Skip = (Expression.Expression)Visit(sfc.expression(0));
+                select.Skip = (Expression.IExpression)Visit(sfc.expression(0));
             // FIRST 可能在 SKIP 后（expression(1)）或单独（expression(0)）
             if (sfc.FIRST() != null)
             {
                 var firstExpr = sfc.SKIP_KW() != null && sfc.expression().Length > 1
                     ? sfc.expression(1) : sfc.expression(0);
-                select.First = (Expression.Expression)Visit(firstExpr);
+                select.First = (Expression.IExpression)Visit(firstExpr);
             }
         }
 
@@ -550,7 +550,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.whereClause() != null)
         {
-            select.Where = (Expression.Expression)Visit(context.whereClause().expression());
+            select.Where = (Expression.IExpression)Visit(context.whereClause().expression());
         }
 
         if (context.preferringClause() != null)
@@ -577,16 +577,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             if (startBeforeConnect)
             {
                 // START WITH expr CONNECT BY expr
-                hier.StartExpression = (Expression.Expression)Visit(expressions[0]);
-                hier.ConnectExpression = (Expression.Expression)Visit(expressions[1]);
+                hier.StartExpression = (Expression.IExpression)Visit(expressions[0]);
+                hier.ConnectExpression = (Expression.IExpression)Visit(expressions[1]);
             }
             else
             {
                 // CONNECT BY expr [START WITH expr]
                 hier.ConnectFirst = true;
-                hier.ConnectExpression = (Expression.Expression)Visit(expressions[0]);
+                hier.ConnectExpression = (Expression.IExpression)Visit(expressions[0]);
                 if (expressions.Length > 1)
-                    hier.StartExpression = (Expression.Expression)Visit(expressions[1]);
+                    hier.StartExpression = (Expression.IExpression)Visit(expressions[1]);
             }
             if (connectByCtx.NOCYCLE() != null) hier.NoCycle = true;
             select.OracleHierarchical = hier;
@@ -599,7 +599,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.havingClause() != null)
         {
-            select.Having = (Expression.Expression)Visit(context.havingClause().expression());
+            select.Having = (Expression.IExpression)Visit(context.havingClause().expression());
         }
 
         // MySQL INTO OUTFILE/DUMPFILE（前置位置：SELECT ... INTO OUTFILE ... FROM）
@@ -660,7 +660,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // QUALIFY 过滤表达式（Snowflake/Teradata）
         if (context.qualifyClause() is { } qualifyCtx)
         {
-            select.Qualify = (Expression.Expression)Visit(qualifyCtx.expression());
+            select.Qualify = (Expression.IExpression)Visit(qualifyCtx.expression());
         }
 
         return select;
@@ -767,14 +767,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 else if (rollupExprs.Length > 0)
                 {
                     // 普通表达式
-                    gb.GroupByExpressions.Add((Expression.Expression)Visit(rollupExprs[0]));
+                    gb.GroupByExpressions.Add((Expression.IExpression)Visit(rollupExprs[0]));
                 }
             }
             return gb;
         }
 
         // 普通表达式列表
-        gb.GroupByExpressions = ctx.expression().Select(e => (Expression.Expression)Visit(e)).ToList();
+        gb.GroupByExpressions = ctx.expression().Select(e => (Expression.IExpression)Visit(e)).ToList();
         return gb;
     }
 
@@ -882,7 +882,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.expression() != null)
         {
-            fetch.FetchExpression = (Expression.Expression)Visit(context.expression());
+            fetch.FetchExpression = (Expression.IExpression)Visit(context.expression());
         }
 
         if (context.PERCENT() != null)
@@ -918,7 +918,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return new SelectItem(new AllColumns());
         }
 
-        var expr = (Expression.Expression)Visit(context.expression());
+        var expr = (Expression.IExpression)Visit(context.expression());
         var item = new SelectItem(expr);
 
         if (context.alias() != null)
@@ -998,7 +998,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var cond = context.joinCondition();
             if (cond.ON() != null)
             {
-                join.OnExpressions.Add((Expression.Expression)Visit(cond.expression()));
+                join.OnExpressions.Add((Expression.IExpression)Visit(cond.expression()));
             }
             else if (cond.USING() != null)
             {
@@ -1111,7 +1111,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var sample = new TableSample
         {
-            SampleSize = (Expression.Expression)Visit(context.expression())
+            SampleSize = (Expression.IExpression)Visit(context.expression())
         };
         if (context.BERNOULLI() != null) sample.SamplingMethod = "BERNOULLI";
         else if (context.SYSTEM() != null) sample.SamplingMethod = "SYSTEM";
@@ -1132,7 +1132,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.TIMESTAMP() != null) clause.TravelType = "TIMESTAMP";
         else if (context.OFFSET() != null) clause.TravelType = "OFFSET";
         else if (context.STATEMENT() != null) clause.TravelType = "STATEMENT";
-        clause.Expression = (Expression.Expression)Visit(context.expression());
+        clause.Expression = (Expression.IExpression)Visit(context.expression());
         return clause;
     }
 
@@ -1194,7 +1194,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var jsonTable = new JsonTable
         {
-            JsonExpression = (Expression.Expression)Visit(context.expression())
+            JsonExpression = (Expression.IExpression)Visit(context.expression())
         };
 
         // 输入 FORMAT JSON（Oracle）
@@ -1263,7 +1263,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (ctx.DEFAULT() != null)
         {
             return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.DEFAULT,
-                (Expression.Expression)Visit(ctx.expression()));
+                (Expression.IExpression)Visit(ctx.expression()));
         }
         return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.NULL);
     }
@@ -1272,7 +1272,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         return new JsonTablePassingClause
         {
-            ValueExpression = (Expression.Expression)Visit(context.expression()),
+            ValueExpression = (Expression.IExpression)Visit(context.expression()),
             ParameterName = context.identifier().GetText()
         };
     }
@@ -1381,7 +1381,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitOrderByItem(JSqlParserGrammar.OrderByItemContext context)
     {
         var item = new OrderByElement();
-        var expr = (Expression.Expression)Visit(context.expression());
+        var expr = (Expression.IExpression)Visit(context.expression());
 
         // 兼容：当 COLLATE 由 concatenationExpr 解析后，从表达式层提取 Collate 信息
         if (expr is CollateExpression collateExpr)
@@ -1408,13 +1408,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var exprs = context.expression();
         if (exprs.Length == 1)
         {
-            limit.RowCount = (Expression.Expression)Visit(exprs[0]);
+            limit.RowCount = (Expression.IExpression)Visit(exprs[0]);
         }
         else if (exprs.Length == 2)
         {
             // LIMIT offset,rowCount (MySQL syntax) — swap: first is offset, second is rowCount
-            limit.Offset = (Expression.Expression)Visit(exprs[0]);
-            limit.RowCount = (Expression.Expression)Visit(exprs[1]);
+            limit.Offset = (Expression.IExpression)Visit(exprs[0]);
+            limit.RowCount = (Expression.IExpression)Visit(exprs[1]);
         }
         return limit;
     }
@@ -1422,7 +1422,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitOffsetClause(JSqlParserGrammar.OffsetClauseContext context)
     {
         var offset = new Offset();
-        offset.OffsetExpression = (Expression.Expression)Visit(context.expression());
+        offset.OffsetExpression = (Expression.IExpression)Visit(context.expression());
         // L2 修复：保留 ROW/ROWS 修饰符，避免 round-trip 丢失
         if (context.ROW() != null) offset.OffsetParam = "ROW";
         else if (context.ROWS() != null) offset.OffsetParam = "ROWS";
@@ -1467,11 +1467,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 var exprList = new ExpressionList
                 {
-                    Expressions = new List<Expression.Expression>()
+                    Expressions = new List<Expression.IExpression>()
                 };
                 foreach (var exprCtx in itemCtx.expression())
                 {
-                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                    exprList.Expressions.Add((Expression.IExpression)Visit(exprCtx));
                 }
                 insert.ValuesItems.Add(exprList);
             }
@@ -1495,15 +1495,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     {
                         updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
                     }
-                    updateSet.Values = new List<Expression.Expression>();
-                    updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                    updateSet.Values = new List<Expression.IExpression>();
+                    updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
                     insert.DuplicateUpdateSets.Add(updateSet);
                 }
                 // MySQL 8.0.20+ ON DUPLICATE KEY UPDATE ... WHERE
                 if (dupCtx.whereClause() != null)
                 {
                     insert.DuplicateUpdateWhereExpression =
-                        (Expression.Expression)Visit(dupCtx.whereClause().expression());
+                        (Expression.IExpression)Visit(dupCtx.whereClause().expression());
                 }
             }
         }
@@ -1546,7 +1546,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             }
             if (context.whereClause() != null)
             {
-                target.WhereExpression = (Expression.Expression)Visit(context.whereClause().expression());
+                target.WhereExpression = (Expression.IExpression)Visit(context.whereClause().expression());
             }
         }
 
@@ -1574,13 +1574,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 {
                     updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
                 }
-                updateSet.Values = new List<Expression.Expression>();
-                updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                updateSet.Values = new List<Expression.IExpression>();
+                updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
                 action.UpdateSets.Add(updateSet);
             }
             if (context.whereClause() != null)
             {
-                action.WhereExpression = (Expression.Expression)Visit(context.whereClause().expression());
+                action.WhereExpression = (Expression.IExpression)Visit(context.whereClause().expression());
             }
         }
 
@@ -1617,7 +1617,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // WHEN expression THEN / ELSE / 无条件 INTO
         if (context.WHEN() != null && context.expression() != null)
         {
-            branch.WhenCondition = (Expression.Expression)Visit(context.expression());
+            branch.WhenCondition = (Expression.IExpression)Visit(context.expression());
         }
         else if (context.ELSE() != null)
         {
@@ -1658,11 +1658,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 var exprList = new ExpressionList
                 {
-                    Expressions = new List<Expression.Expression>()
+                    Expressions = new List<Expression.IExpression>()
                 };
                 foreach (var exprCtx in itemCtx.expression())
                 {
-                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                    exprList.Expressions.Add((Expression.IExpression)Visit(exprCtx));
                 }
                 clause.ValuesItems.Add(exprList);
             }
@@ -1705,14 +1705,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
             }
-            updateSet.Values = new List<Expression.Expression>();
-            updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+            updateSet.Values = new List<Expression.IExpression>();
+            updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
             update.UpdateSets.Add(updateSet);
         }
 
         if (context.whereClause() != null)
         {
-            update.Where = (Expression.Expression)Visit(context.whereClause().expression());
+            update.Where = (Expression.IExpression)Visit(context.whereClause().expression());
         }
 
         if (context.returningClause() != null)
@@ -1748,7 +1748,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.whereClause() != null)
         {
-            delete.Where = (Expression.Expression)Visit(context.whereClause().expression());
+            delete.Where = (Expression.IExpression)Visit(context.whereClause().expression());
         }
 
         if (context.returningClause() != null)
@@ -1938,7 +1938,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var exclude = new ExcludeConstraint { Name = name };
             if (context.expression() != null)
-                exclude.Expression = (Expression.Expression)Visit(context.expression());
+                exclude.Expression = (Expression.IExpression)Visit(context.expression());
             return exclude;
         }
 
@@ -1947,7 +1947,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var check = new CheckConstraint { Name = name };
             if (context.expression() != null)
-                check.Expression = (Expression.Expression)Visit(context.expression());
+                check.Expression = (Expression.IExpression)Visit(context.expression());
             return check;
         }
 
@@ -2363,7 +2363,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var block = new Block();
         foreach (var stmtCtx in context.statement())
         {
-            block.Statements.StatementList.Add((Azrng.JSqlParser.Statement.Statement)Visit(stmtCtx));
+            block.Statements.StatementList.Add((Azrng.JSqlParser.Statement.IStatement)Visit(stmtCtx));
         }
         return block;
     }
@@ -2383,7 +2383,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 Type = itemCtx.dataType().GetText()
             };
             if (itemCtx.expression() != null)
-                item.DefaultExpression = (Expression.Expression)Visit(itemCtx.expression());
+                item.DefaultExpression = (Expression.IExpression)Visit(itemCtx.expression());
             stmt.TypeDefExprList.Add(item);
         }
         return stmt;
@@ -2393,11 +2393,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var stmt = new IfElseStatement
         {
-            Condition = (Expression.Expression)Visit(context.expression()),
-            IfStatement = (Azrng.JSqlParser.Statement.Statement)Visit(context.statement(0))
+            Condition = (Expression.IExpression)Visit(context.expression()),
+            IfStatement = (Azrng.JSqlParser.Statement.IStatement)Visit(context.statement(0))
         };
         if (context.statement().Length > 1)
-            stmt.ElseStatement = (Azrng.JSqlParser.Statement.Statement)Visit(context.statement(1));
+            stmt.ElseStatement = (Azrng.JSqlParser.Statement.IStatement)Visit(context.statement(1));
         return stmt;
     }
 
@@ -2768,7 +2768,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             def.ValuesLessThan = new ExpressionList
             {
-                Expressions = new() { (Expression.Expression)Visit(ctx.expression()) }
+                Expressions = new() { (Expression.IExpression)Visit(ctx.expression()) }
             };
         }
         else if (ctx.IN() != null && ctx.expressionList() != null)
@@ -2847,7 +2847,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             stmt.Name = context.S_AT_IDENTIFIER().GetText();
         else if (context.SINGLE_AT_IDENTIFIER() != null)
             stmt.Name = context.SINGLE_AT_IDENTIFIER().GetText();
-        stmt.Value = (Expression.Expression)Visit(context.expression());
+        stmt.Value = (Expression.IExpression)Visit(context.expression());
         return stmt;
     }
 
@@ -2893,7 +2893,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var expressions = context.expression();
         if (context.USING() != null && expressions.Length > 0)
         {
-            policy.UsingExpression = (Expression.Expression)Visit(expressions[0]);
+            policy.UsingExpression = (Expression.IExpression)Visit(expressions[0]);
         }
 
         // WITH CHECK ( expression )
@@ -2902,7 +2902,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var checkExprIdx = context.USING() != null ? 1 : 0;
             if (expressions.Length > checkExprIdx)
             {
-                policy.WithCheckExpression = (Expression.Expression)Visit(expressions[checkExprIdx]);
+                policy.WithCheckExpression = (Expression.IExpression)Visit(expressions[checkExprIdx]);
             }
         }
 
@@ -3049,11 +3049,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 var updateSet = new UpdateSet
                 {
                     Columns = new List<Column>(),
-                    Values = new List<Expression.Expression>()
+                    Values = new List<Expression.IExpression>()
                 };
                 foreach (var target in assignment.assignmentTarget())
                     updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
-                updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
                 upsert.SetUpdateSets.Add(updateSet);
             }
         }
@@ -3067,9 +3067,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             upsert.ValuesItems = new List<ExpressionList>();
             foreach (var itemCtx in context.valuesList().valuesItem())
             {
-                var exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+                var exprList = new ExpressionList { Expressions = new List<Expression.IExpression>() };
                 foreach (var exprCtx in itemCtx.expression())
-                    exprList.Expressions.Add((Expression.Expression)Visit(exprCtx));
+                    exprList.Expressions.Add((Expression.IExpression)Visit(exprCtx));
                 upsert.ValuesItems.Add(exprList);
             }
         }
@@ -3089,11 +3089,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     var updateSet = new UpdateSet
                     {
                         Columns = new List<Column>(),
-                        Values = new List<Expression.Expression>()
+                        Values = new List<Expression.IExpression>()
                     };
                     foreach (var target in assignment.assignmentTarget())
                         updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
-                    updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                    updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
                     upsert.DuplicateUpdateSets.Add(updateSet);
                 }
             }
@@ -3132,16 +3132,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             merge.SourceTable = (IFromItem)Visit(context.fromItem());
         }
 
-        merge.OnCondition = (Expression.Expression)Visit(context.expression());
+        merge.OnCondition = (Expression.IExpression)Visit(context.expression());
 
         foreach (var whenCtx in context.mergeWhenClause())
         {
             // WHEN [NOT] MATCHED (AND expression)? THEN ...
             // mergeWhenClause 内 AND 后的 expression（单个，grammar 每分支至多一个）
-            Expression.Expression? whenAndCondition = null;
+            Expression.IExpression? whenAndCondition = null;
             if (whenCtx.AND() != null && whenCtx.expression() != null)
             {
-                whenAndCondition = (Expression.Expression)Visit(whenCtx.expression());
+                whenAndCondition = (Expression.IExpression)Visit(whenCtx.expression());
             }
 
             if (whenCtx.UPDATE() != null)
@@ -3157,8 +3157,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     {
                         updateSet.Columns.Add(new Column { ColumnName = target.GetText() });
                     }
-                    updateSet.Values = new List<Expression.Expression>();
-                    updateSet.Values.Add((Expression.Expression)Visit(assignment.expression()));
+                    updateSet.Values = new List<Expression.IExpression>();
+                    updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
                     op.UpdateSets.Add(updateSet);
                 }
                 merge.Operations.Add(op);
@@ -3186,10 +3186,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 // VALUES valuesItem（grammar 保证 INSERT 分支必现）
                 if (whenCtx.valuesItem() != null)
                 {
-                    op.Values = new List<Expression.Expression>();
+                    op.Values = new List<Expression.IExpression>();
                     foreach (var exprCtx in whenCtx.valuesItem().expression())
                     {
-                        op.Values.Add((Expression.Expression)Visit(exprCtx));
+                        op.Values.Add((Expression.IExpression)Visit(exprCtx));
                     }
                 }
                 merge.Operations.Add(op);
@@ -3425,7 +3425,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitExplainStatement(JSqlParserGrammar.ExplainStatementContext context)
     {
         var explain = new ExplainStatement();
-        explain.Statement = (Statement.Statement)Visit(context.statement());
+        explain.Statement = (Statement.IStatement)Visit(context.statement());
         return explain;
     }
 
@@ -3511,12 +3511,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(andExprs[0]);
         }
 
-        Expression.Expression result = (Expression.Expression)Visit(andExprs[0]);
+        Expression.IExpression result = (Expression.IExpression)Visit(andExprs[0]);
         for (int i = 1; i < andExprs.Length; i++)
         {
             var or = new OrExpression();
             or.LeftExpression = result;
-            or.RightExpression = (Expression.Expression)Visit(andExprs[i]);
+            or.RightExpression = (Expression.IExpression)Visit(andExprs[i]);
             result = or;
         }
         return result;
@@ -3530,12 +3530,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(notExprs[0]);
         }
 
-        Expression.Expression result = (Expression.Expression)Visit(notExprs[0]);
+        Expression.IExpression result = (Expression.IExpression)Visit(notExprs[0]);
         for (int i = 1; i < notExprs.Length; i++)
         {
             var and = new AndExpression();
             and.LeftExpression = result;
-            and.RightExpression = (Expression.Expression)Visit(notExprs[i]);
+            and.RightExpression = (Expression.IExpression)Visit(notExprs[i]);
             result = and;
         }
         return result;
@@ -3546,7 +3546,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.NOT() != null)
         {
             var not = new NotExpression();
-            not.Expression = (Expression.Expression)Visit(context.notExpression());
+            not.Expression = (Expression.IExpression)Visit(context.notExpression());
             return not;
         }
         return Visit(context.predicate());
@@ -3557,11 +3557,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.EXISTS() != null)
         {
             var exists = new ExistsExpression();
-            exists.RightExpression = (Expression.Expression)Visit(context.selectStatement());
+            exists.RightExpression = (Expression.IExpression)Visit(context.selectStatement());
             return exists;
         }
 
-        var concat = (Expression.Expression)Visit(context.concatenationExpr());
+        var concat = (Expression.IExpression)Visit(context.concatenationExpr());
 
         if (context.predicateSuffix() == null)
         {
@@ -3582,7 +3582,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 var select = (Select)Visit(suffix.selectStatement());
                 // 包装成比较运算符 + ANY/ALL/SOME
                 var anyCompare = new AnyComparisonExpression(anyType, select);
-                Expression.Expression result = anyCompare;
+                Expression.IExpression result = anyCompare;
                 if (op.EQUALS() != null) return CreateBinary<EqualsTo>(concat, result);
                 if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)
                     return CreateBinary<NotEqualsTo>(concat, result);
@@ -3593,7 +3593,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 return CreateBinary<EqualsTo>(concat, result);
             }
 
-            Expression.Expression right = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            Expression.IExpression right = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
 
             if (op.GEOMETRY_DISTANCE() != null)
                 return new GeometryDistance("<->") { LeftExpression = concat, RightExpression = right };
@@ -3616,11 +3616,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             inExpr.LeftExpression = concat;
             if (suffix.selectStatement() != null)
             {
-                inExpr.RightExpression = (Expression.Expression)Visit(suffix.selectStatement());
+                inExpr.RightExpression = (Expression.IExpression)Visit(suffix.selectStatement());
             }
             else if (suffix.expressionList() != null)
             {
-                inExpr.RightExpression = (Expression.Expression)Visit(suffix.expressionList());
+                inExpr.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
             }
             if (suffix.NOT() != null) inExpr.Not = true;
             return inExpr;
@@ -3631,8 +3631,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var between = new Between
             {
                 LeftExpression = concat,
-                BetweenExpressionStart = (Expression.Expression)Visit(suffix.concatenationExpr(0)),
-                BetweenExpressionEnd = (Expression.Expression)Visit(suffix.concatenationExpr(1))
+                BetweenExpressionStart = (Expression.IExpression)Visit(suffix.concatenationExpr(0)),
+                BetweenExpressionEnd = (Expression.IExpression)Visit(suffix.concatenationExpr(1))
             };
             if (suffix.NOT() != null) between.Not = true;
             if (suffix.SYMMETRIC() != null) between.UsingSymmetric = true;
@@ -3644,7 +3644,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var regexp = new RegExpMatchOperator();
             regexp.LeftExpression = concat;
-            regexp.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            regexp.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
             regexp.Operator = suffix.REGEXP() != null ? "REGEXP" : suffix.RLIKE() != null ? "RLIKE" : "REGEXP_LIKE";
             if (suffix.NOT() != null) regexp.Not = true;
             return regexp;
@@ -3656,7 +3656,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var like = new LikeExpression();
             like.LeftExpression = concat;
-            like.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            like.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
             if (suffix.NOT() != null) like.Not = true;
             return like;
         }
@@ -3666,7 +3666,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var similar = new SimilarToExpression();
             similar.LeftExpression = concat;
-            similar.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            similar.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
             if (suffix.NOT() != null) similar.Not = true;
             return similar;
         }
@@ -3677,7 +3677,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 var isDistinct = new IsDistinctExpression();
                 isDistinct.LeftExpression = concat;
-                isDistinct.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+                isDistinct.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
                 if (suffix.NOT() != null) isDistinct.Not = true;
                 return isDistinct;
             }
@@ -3733,7 +3733,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var excludes = new ExcludesExpression();
             excludes.LeftExpression = concat;
-            excludes.RightExpression = (Expression.Expression)Visit(suffix.expressionList());
+            excludes.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
             return excludes;
         }
 
@@ -3741,7 +3741,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var includes = new IncludesExpression();
             includes.LeftExpression = concat;
-            includes.RightExpression = (Expression.Expression)Visit(suffix.expressionList());
+            includes.RightExpression = (Expression.IExpression)Visit(suffix.expressionList());
             return includes;
         }
 
@@ -3749,7 +3749,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var memberOf = new MemberOfExpression();
             memberOf.LeftExpression = concat;
-            memberOf.RightExpression = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            memberOf.RightExpression = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
             if (suffix.NOT() != null) memberOf.Not = true;
             return memberOf;
         }
@@ -3758,7 +3758,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             // 左侧：当前 Azrng grammar 不支持括号列表，按单元素 ExpressionList 包装
             var left = new ExpressionList { Expressions = new() { concat } };
-            var right = (Expression.Expression)Visit(suffix.concatenationExpr(0));
+            var right = (Expression.IExpression)Visit(suffix.concatenationExpr(0));
             var rightList = new ExpressionList { Expressions = new() { right } };
             return new OverlapsCondition { LeftExpression = left, RightExpression = rightList };
         }
@@ -3769,19 +3769,19 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitConcatenationExpr(JSqlParserGrammar.ConcatenationExprContext context)
     {
         var additiveExprs = context.additiveExpr();
-        Expression.Expression result;
+        Expression.IExpression result;
         if (additiveExprs.Length == 1)
         {
-            result = (Expression.Expression)Visit(additiveExprs[0]);
+            result = (Expression.IExpression)Visit(additiveExprs[0]);
         }
         else
         {
-            result = (Expression.Expression)Visit(additiveExprs[0]);
+            result = (Expression.IExpression)Visit(additiveExprs[0]);
             for (int i = 1; i < additiveExprs.Length; i++)
             {
                 var concat = new Concat();
                 concat.LeftExpression = result;
-                concat.RightExpression = (Expression.Expression)Visit(additiveExprs[i]);
+                concat.RightExpression = (Expression.IExpression)Visit(additiveExprs[i]);
                 result = concat;
             }
         }
@@ -3804,11 +3804,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(multiplicativeExprs[0]);
         }
 
-        Expression.Expression result = (Expression.Expression)Visit(multiplicativeExprs[0]);
+        Expression.IExpression result = (Expression.IExpression)Visit(multiplicativeExprs[0]);
         for (int i = 1; i < multiplicativeExprs.Length; i++)
         {
             var op = context.GetChild(2 * i - 1);
-            Expression.Expression right = (Expression.Expression)Visit(multiplicativeExprs[i]);
+            Expression.IExpression right = (Expression.IExpression)Visit(multiplicativeExprs[i]);
 
             if (op is ITerminalNode terminal)
             {
@@ -3839,11 +3839,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(unaryExprs[0]);
         }
 
-        Expression.Expression result = (Expression.Expression)Visit(unaryExprs[0]);
+        Expression.IExpression result = (Expression.IExpression)Visit(unaryExprs[0]);
         for (int i = 1; i < unaryExprs.Length; i++)
         {
             var op = context.GetChild(2 * i - 1);
-            Expression.Expression right = (Expression.Expression)Visit(unaryExprs[i]);
+            Expression.IExpression right = (Expression.IExpression)Visit(unaryExprs[i]);
 
             if (op is ITerminalNode terminal)
             {
@@ -3880,7 +3880,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             return Visit(context.postfixExpr());
         }
 
-        var expr = (Expression.Expression)Visit(context.unaryExpr());
+        var expr = (Expression.IExpression)Visit(context.unaryExpr());
         if (context.MINUS() != null)
         {
             var signed = new SignedExpression();
@@ -3894,7 +3894,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitPostfixExpr(JSqlParserGrammar.PostfixExprContext context)
     {
-        var expr = (Expression.Expression)Visit(context.primaryExpr());
+        var expr = (Expression.IExpression)Visit(context.primaryExpr());
 
         // 按出现顺序处理后缀操作符：::colDataType（cast）、.identifier（字段访问）、
         // COLLATE collation、AT TIME ZONE expr。
@@ -3912,7 +3912,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         bool expectingTimeZoneExpr = false;
         bool inBracket = false;
         // 用于范围表达式的临时存储
-        Expression.Expression? pendingStartIndex = null;
+        Expression.IExpression? pendingStartIndex = null;
 
         for (int i = 0; i < context.ChildCount; i++)
         {
@@ -3961,14 +3961,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     expr = new TimezoneExpression
                     {
                         LeftExpression = expr,
-                        TimeZoneExpression = (Expression.Expression)Visit(child)
+                        TimeZoneExpression = (Expression.IExpression)Visit(child)
                     };
                     subExprIdx++;
                     expectingTimeZoneExpr = false;
                 }
                 else if (inBracket && subExprIdx < subExpressions.Length)
                 {
-                    var idxExpr = (Expression.Expression)Visit(child);
+                    var idxExpr = (Expression.IExpression)Visit(child);
                     subExprIdx++;
 
                     // 检查下一个非终结符是否为 COLON（范围表达式）
@@ -4039,7 +4039,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             return new Parenthesis
             {
-                Expression = (Expression.Expression)Visit(context.expression())
+                Expression = (Expression.IExpression)Visit(context.expression())
             };
         }
 
@@ -4048,7 +4048,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitKeyExpression(JSqlParserGrammar.KeyExpressionContext context)
     {
-        var inner = (Expression.Expression)Visit(context.columnRef());
+        var inner = (Expression.IExpression)Visit(context.columnRef());
         return new KeyExpression(inner);
     }
 
@@ -4056,7 +4056,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitNamedFunctionParameter(JSqlParserGrammar.NamedFunctionParameterContext context)
     {
         var name = context.identifier().GetText();
-        var expr = (Expression.Expression)Visit(context.expression());
+        var expr = (Expression.IExpression)Visit(context.expression());
         // ARROW (=>) 为 Oracle 形式，ASSIGN (:=) 为 PostgreSQL 形式
         if (context.ARROW() != null)
         {
@@ -4071,10 +4071,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         ExpressionList? exprList = null;
         if (context.arrayElementList() != null)
         {
-            exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+            exprList = new ExpressionList { Expressions = new List<Expression.IExpression>() };
             foreach (var elem in context.arrayElementList().arrayElement())
             {
-                exprList.Expressions.Add((Expression.Expression)Visit(elem));
+                exprList.Expressions.Add((Expression.IExpression)Visit(elem));
             }
         }
         return new ArrayConstructor(exprList, arrayKeyword: context.ARRAY() != null);
@@ -4082,10 +4082,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitArrayElement(JSqlParserGrammar.ArrayElementContext context)
     {
-        var start = (Expression.Expression)Visit(context.expression(0));
+        var start = (Expression.IExpression)Visit(context.expression(0));
         if (context.COLON() != null)
         {
-            var end = (Expression.Expression)Visit(context.expression(1));
+            var end = (Expression.IExpression)Visit(context.expression(1));
             return new RangeExpression(start, end);
         }
         return start;
@@ -4101,10 +4101,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     // 行构造器：ROW(1, 2, 3)
     public override object VisitRowConstructor(JSqlParserGrammar.RowConstructorContext context)
     {
-        var exprList = new ExpressionList { Expressions = new List<Expression.Expression>() };
+        var exprList = new ExpressionList { Expressions = new List<Expression.IExpression>() };
         foreach (var expr in context.expressionList().expression())
         {
-            exprList.Expressions.Add((Expression.Expression)Visit(expr));
+            exprList.Expressions.Add((Expression.IExpression)Visit(expr));
         }
         return new RowConstructor("ROW", exprList);
     }
@@ -4124,14 +4124,14 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.FROM() != null || context.COMMA() != null)
         {
             // [chars] [FROM|,] str 形式（2 个 expression）
-            if (exprs.Length >= 1) trim.Expression = (Expression.Expression)Visit(exprs[0]);
-            if (exprs.Length >= 2) trim.FromExpression = (Expression.Expression)Visit(exprs[1]);
+            if (exprs.Length >= 1) trim.Expression = (Expression.IExpression)Visit(exprs[0]);
+            if (exprs.Length >= 2) trim.FromExpression = (Expression.IExpression)Visit(exprs[1]);
             trim.UsingFromKeyword = context.FROM() != null;
         }
         else if (exprs.Length >= 1)
         {
             // TRIM(str) 简单形式（1 个 expression）
-            trim.FromExpression = (Expression.Expression)Visit(exprs[0]);
+            trim.FromExpression = (Expression.IExpression)Visit(exprs[0]);
         }
 
         return trim;
@@ -4174,7 +4174,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             fts.Columns.Add(((Column)Visit(colCtx)).GetFullyQualifiedName());
         }
-        fts.MatchExpression = (Expression.Expression)Visit(context.expression());
+        fts.MatchExpression = (Expression.IExpression)Visit(context.expression());
 
         if (context.searchModifier() != null)
         {
@@ -4288,7 +4288,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var switchExprChild = context.GetChild(1) as JSqlParserGrammar.ExpressionContext;
         if (switchExprChild != null)
         {
-            caseExpr.SwitchExpression = (Expression.Expression)Visit(switchExprChild);
+            caseExpr.SwitchExpression = (Expression.IExpression)Visit(switchExprChild);
         }
 
         caseExpr.WhenClauses = new List<WhenClause>();
@@ -4296,15 +4296,15 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         foreach (var whenCtx in context.whenExpr())
         {
             var whenClause = new WhenClause();
-            whenClause.WhenExpression = (Expression.Expression)Visit(whenCtx.expression(0));
-            whenClause.ThenExpression = (Expression.Expression)Visit(whenCtx.expression(1));
+            whenClause.WhenExpression = (Expression.IExpression)Visit(whenCtx.expression(0));
+            whenClause.ThenExpression = (Expression.IExpression)Visit(whenCtx.expression(1));
             caseExpr.WhenClauses.Add(whenClause);
         }
 
         if (context.ELSE() != null)
         {
             var elseExprs = context.expression();
-            caseExpr.ElseExpression = (Expression.Expression)Visit(elseExprs[^1]);
+            caseExpr.ElseExpression = (Expression.IExpression)Visit(elseExprs[^1]);
         }
 
         return caseExpr;
@@ -4313,7 +4313,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitCastExpr(JSqlParserGrammar.CastExprContext context)
     {
         var cast = new CastExpression();
-        cast.Expression = (Expression.Expression)Visit(context.expression());
+        cast.Expression = (Expression.IExpression)Visit(context.expression());
         cast.DataType = context.dataType().GetText();
         // 设置 CAST 关键字：CAST / TRY_CAST / SAFE_CAST
         cast.Keyword = context.SAFE_CAST() != null ? "SAFE_CAST"
@@ -4325,7 +4325,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var extract = new ExtractExpression();
         extract.Name = context.extractField().GetText();
-        extract.Expression = (Expression.Expression)Visit(context.expression());
+        extract.Expression = (Expression.IExpression)Visit(context.expression());
         return extract;
     }
 
@@ -4333,7 +4333,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var interval = new IntervalExpression();
         interval.IntervalKeyword = true;
-        interval.Expression = (Expression.Expression)Visit(context.expression());
+        interval.Expression = (Expression.IExpression)Visit(context.expression());
 
         if (context.YEAR() != null) interval.IntervalType = "YEAR";
         else if (context.MONTH() != null) interval.IntervalType = "MONTH";
@@ -4413,10 +4413,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.expressionList() != null)
         {
             parameters = new ExpressionList();
-            parameters.Expressions = new List<Expression.Expression>();
+            parameters.Expressions = new List<Expression.IExpression>();
             foreach (var expr in context.expressionList().expression())
             {
-                parameters.Expressions.Add((Expression.Expression)Visit(expr));
+                parameters.Expressions.Add((Expression.IExpression)Visit(expr));
             }
         }
 
@@ -4465,10 +4465,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                     var winSpec = overCtx.windowSpecification();
                     if (winSpec.PARTITION() != null)
                     {
-                        analytic.PartitionExpressionList = new List<Expression.Expression>();
+                        analytic.PartitionExpressionList = new List<Expression.IExpression>();
                         foreach (var partExpr in winSpec.expression())
                         {
-                            analytic.PartitionExpressionList.Add((Expression.Expression)Visit(partExpr));
+                            analytic.PartitionExpressionList.Add((Expression.IExpression)Visit(partExpr));
                         }
                     }
                     if (winSpec.orderByClause() != null)
@@ -4520,8 +4520,8 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var named = new NamedExpressionList();
 
         // 首个表达式前缀为空；第二个表达式前缀为 FROM/IN/PLACING（specialStringFunction 中的命名关键字）
-        var firstExpr = (Expression.Expression)Visit(context.expression());
-        var secondExpr = (Expression.Expression)Visit(tail.expression(0));
+        var firstExpr = (Expression.IExpression)Visit(context.expression());
+        var secondExpr = (Expression.IExpression)Visit(tail.expression(0));
         var firstKw = context.FROM() != null ? "FROM" : context.IN() != null ? "IN" : "PLACING";
 
         named.Expressions.Add(firstExpr);
@@ -4532,12 +4532,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         // 可选第三段（FROM/FOR）与第四段（FOR）：OVERLAY(x PLACING y FROM z FOR w)
         if (tail.expression().Length > 1)
         {
-            named.Expressions.Add((Expression.Expression)Visit(tail.expression(1)));
+            named.Expressions.Add((Expression.IExpression)Visit(tail.expression(1)));
             named.Names.Add(tail.FROM() != null ? "FROM" : "FOR");
         }
         if (tail.expression().Length > 2)
         {
-            named.Expressions.Add((Expression.Expression)Visit(tail.expression(2)));
+            named.Expressions.Add((Expression.IExpression)Visit(tail.expression(2)));
             named.Names.Add("FOR");
         }
 
@@ -4564,7 +4564,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var arg = new KeywordArgument { Keyword = keyword };
         if (context.expression() != null)
         {
-            arg.Expression = (Expression.Expression)Visit(context.expression());
+            arg.Expression = (Expression.IExpression)Visit(context.expression());
         }
         return arg;
     }
@@ -4580,7 +4580,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.filterClause() != null)
         {
             function.FilterExpression =
-                (Expression.Expression)Visit(context.filterClause().whereClause().expression());
+                (Expression.IExpression)Visit(context.filterClause().whereClause().expression());
         }
     }
 
@@ -4605,7 +4605,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             IsTranscodeStyle = false,
             ColDataType = context.dataType().GetText(),
-            Expression = (Expression.Expression)Visit(context.expression()),
+            Expression = (Expression.IExpression)Visit(context.expression()),
             TranscodingName = context.LONG_VALUE()?.GetText(),
         };
     }
@@ -4615,7 +4615,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return new TranscodingFunction
         {
             IsTranscodeStyle = true,
-            Expression = (Expression.Expression)Visit(context.expression()),
+            Expression = (Expression.IExpression)Visit(context.expression()),
             TranscodingName = context.transcodingName().GetText(),
         };
     }
@@ -4729,7 +4729,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var elem = new JsonFunctionExpression
             {
-                Expression = (Expression.Expression)Visit(elemCtx.expression())
+                Expression = (Expression.IExpression)Visit(elemCtx.expression())
             };
             if (elemCtx.FORMAT() != null)
             {
@@ -4759,7 +4759,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var input = new JsonFunctionExpression
         {
-            Expression = (Expression.Expression)Visit(context.expression())
+            Expression = (Expression.IExpression)Visit(context.expression())
         };
         if (context.FORMAT() != null)
         {
@@ -4778,7 +4778,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var func = new JsonFunction(JsonFunction.FunctionType.VALUE);
         func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
         // jsonFunctionInput 之后的第一个 expression 即 path
-        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+        func.JsonPathExpression = (Expression.IExpression)Visit(context.expression(0));
         FillJsonReturning(func, context.jsonReturningClause());
 
         // ON EMPTY / ON ERROR：根据 EMPTY_KW clause 是否存在判断 behavior 归属
@@ -4806,7 +4806,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var func = new JsonFunction(JsonFunction.FunctionType.EXISTS);
         func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
-        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+        func.JsonPathExpression = (Expression.IExpression)Visit(context.expression(0));
 
         if (context.jsonExistsBehavior() != null)
         {
@@ -4825,7 +4825,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var func = new JsonFunction(JsonFunction.FunctionType.QUERY);
         func.InputExpression = (JsonFunctionExpression)Visit(context.jsonFunctionInput());
-        func.JsonPathExpression = (Expression.Expression)Visit(context.expression(0));
+        func.JsonPathExpression = (Expression.IExpression)Visit(context.expression(0));
         FillJsonReturning(func, context.jsonReturningClause());
 
         if (context.jsonWrapperClause() != null)
@@ -4867,7 +4867,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             var allExprs = context.expression();
             for (int i = 1; i < allExprs.Length; i++)
             {
-                func.AdditionalQueryPathArguments.Add(((Expression.Expression)Visit(allExprs[i])).ToString());
+                func.AdditionalQueryPathArguments.Add(((Expression.IExpression)Visit(allExprs[i])).ToString());
             }
         }
         return func;
@@ -4879,7 +4879,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             return new JsonFunction.JsonOnResponseBehavior(
                 JsonFunction.OnResponseBehaviorType.DEFAULT,
-                (Expression.Expression)Visit(b.expression()));
+                (Expression.IExpression)Visit(b.expression()));
         }
         if (b.TRUE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.TRUE);
         if (b.FALSE() != null) return new JsonFunction.JsonOnResponseBehavior(JsonFunction.OnResponseBehaviorType.FALSE);
@@ -4923,7 +4923,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         }
 
         // value
-        func.Value = (Expression.Expression)Visit(context.expression());
+        func.Value = (Expression.IExpression)Visit(context.expression());
 
         if (context.FORMAT() != null) func.UsingFormatJson = true;
 
@@ -4951,7 +4951,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             AggregateFunctionType = JsonAggregateFunction.AggregateType.ARRAY,
             Name = "JSON_ARRAYAGG",
-            AggregateExpression = (Expression.Expression)Visit(context.expression())
+            AggregateExpression = (Expression.IExpression)Visit(context.expression())
         };
 
         if (context.FORMAT() != null) func.UsingFormatJson = true;
@@ -4977,7 +4977,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             return new JsonFunction.JsonOnResponseBehavior(
                 JsonFunction.OnResponseBehaviorType.DEFAULT,
-                (Expression.Expression)Visit(b.expression()));
+                (Expression.IExpression)Visit(b.expression()));
         }
         if (b.EMPTY_KW() != null)
         {
@@ -5013,10 +5013,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.expressionList() != null)
         {
-            var parameters = new ExpressionList { Expressions = new List<Expression.Expression>() };
+            var parameters = new ExpressionList { Expressions = new List<Expression.IExpression>() };
             foreach (var expr in context.expressionList().expression())
             {
-                parameters.Expressions.Add((Expression.Expression)Visit(expr));
+                parameters.Expressions.Add((Expression.IExpression)Visit(expr));
             }
             func.Parameters = parameters;
         }
@@ -5028,13 +5028,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
         if (context.SEPARATOR() != null)
         {
-            func.Separator = (Expression.Expression)Visit(context.expression());
+            func.Separator = (Expression.IExpression)Visit(context.expression());
         }
 
         if (context.filterClause() != null)
         {
             func.FilterExpression =
-                (Expression.Expression)Visit(context.filterClause().whereClause().expression());
+                (Expression.IExpression)Visit(context.filterClause().whereClause().expression());
         }
 
         return func;
@@ -5051,17 +5051,17 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.filterClause() != null)
         {
             analytic.FilterExpression =
-                (Expression.Expression)Visit(context.filterClause().whereClause().expression());
+                (Expression.IExpression)Visit(context.filterClause().whereClause().expression());
         }
     }
 
     public override object VisitExpressionList(JSqlParserGrammar.ExpressionListContext context)
     {
         var list = new ExpressionList();
-        list.Expressions = new List<Expression.Expression>();
+        list.Expressions = new List<Expression.IExpression>();
         foreach (var expr in context.expression())
         {
-            list.Expressions.Add((Expression.Expression)Visit(expr));
+            list.Expressions.Add((Expression.IExpression)Visit(expr));
         }
         return list;
     }
@@ -5130,7 +5130,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             lambda.Identifiers.Add(context.identifier().GetText());
         }
 
-        lambda.Expression = (Expression.Expression)Visit(context.expression());
+        lambda.Expression = (Expression.IExpression)Visit(context.expression());
         return lambda;
     }
 
@@ -5146,7 +5146,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             foreach (var argCtx in context.structArgument())
             {
                 var id = argCtx.identifier()?.GetText() ?? argCtx.S_CHAR_LITERAL()?.GetText().Trim('\'');
-                var expr = (Expression.Expression)Visit(argCtx.expression());
+                var expr = (Expression.IExpression)Visit(argCtx.expression());
                 var item = new SelectItem { Expression = expr };
                 if (id != null) item.Alias = new Alias { Name = id };
                 structType.Arguments.Add(item);
@@ -5199,7 +5199,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitPreferringClause(JSqlParserGrammar.PreferringClauseContext context)
     {
         var preferring = new PreferringClause();
-        preferring.Preferring = (Expression.Expression)Visit(context.preferenceTerm());
+        preferring.Preferring = (Expression.IExpression)Visit(context.preferenceTerm());
 
         if (context.expressionList() != null)
         {
@@ -5213,29 +5213,29 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         if (context.HIGH() != null)
         {
-            return new HighExpression((Expression.Expression)Visit(context.expression()));
+            return new HighExpression((Expression.IExpression)Visit(context.expression()));
         }
         if (context.LOW() != null)
         {
-            return new LowExpression((Expression.Expression)Visit(context.expression()));
+            return new LowExpression((Expression.IExpression)Visit(context.expression()));
         }
         if (context.INVERSE_KW() != null)
         {
-            return new Inverse((Expression.Expression)Visit(context.expression()));
+            return new Inverse((Expression.IExpression)Visit(context.expression()));
         }
         if (context.PLUS_KW() != null)
         {
-            var inner = (Expression.Expression)Visit(context.preferenceTerm());
+            var inner = (Expression.IExpression)Visit(context.preferenceTerm());
             return inner; // Plus is a binary operator, but here it's unary prefix
         }
         if (context.PRIOR() != null)
         {
-            var inner = (Expression.Expression)Visit(context.preferenceTerm());
+            var inner = (Expression.IExpression)Visit(context.preferenceTerm());
             return inner; // PriorTo is binary, but here it's unary prefix
         }
         if (context.expression() != null)
         {
-            return (Expression.Expression)Visit(context.expression());
+            return (Expression.IExpression)Visit(context.expression());
         }
 
         return new NullValue();
@@ -5243,12 +5243,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitConnectByPriorOperator(JSqlParserGrammar.ConnectByPriorOperatorContext context)
     {
-        return new ConnectByPriorOperator((Expression.Expression)Visit(context.expression()));
+        return new ConnectByPriorOperator((Expression.IExpression)Visit(context.expression()));
     }
 
     public override object VisitConnectByRootOperator(JSqlParserGrammar.ConnectByRootOperatorContext context)
     {
-        return new ConnectByRootOperator((Expression.Expression)Visit(context.expression()));
+        return new ConnectByRootOperator((Expression.IExpression)Visit(context.expression()));
     }
 
     // ── Helpers ────────────────────────────────
@@ -5292,7 +5292,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitWherePipeOp(JSqlParserGrammar.WherePipeOpContext context)
     {
         var op = new WherePipeOperator();
-        op.Expression = (Expression.Expression)Visit(context.expression());
+        op.Expression = (Expression.IExpression)Visit(context.expression());
         return op;
     }
 
@@ -5308,7 +5308,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var groupByExprs = context.GROUP();
         if (groupByExprs != null)
         {
-            op.GroupBy = new List<Expression.Expression>();
+            op.GroupBy = new List<Expression.IExpression>();
             // GROUP BY expressions are after the GROUP BY keywords
             var expressions = context.expression();
             // L7 修复：删除从未被读取的死变量 groupByCount；
@@ -5317,18 +5317,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 if (context.HAVING() != null && i == expressions.Length - 1)
                     break;
-                op.GroupBy.Add((Expression.Expression)Visit(expressions[i]));
+                op.GroupBy.Add((Expression.IExpression)Visit(expressions[i]));
             }
 
             if (context.HAVING() != null)
             {
-                op.Having = (Expression.Expression)Visit(expressions[expressions.Length - 1]);
+                op.Having = (Expression.IExpression)Visit(expressions[expressions.Length - 1]);
             }
         }
         else if (context.HAVING() != null)
         {
             var expressions = context.expression();
-            op.Having = (Expression.Expression)Visit(expressions[expressions.Length - 1]);
+            op.Having = (Expression.IExpression)Visit(expressions[expressions.Length - 1]);
         }
 
         return op;
@@ -5349,9 +5349,9 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         var op = new LimitPipeOperator();
         var expressions = context.expression();
-        op.Expression = (Expression.Expression)Visit(expressions[0]);
+        op.Expression = (Expression.IExpression)Visit(expressions[0]);
         if (expressions.Length > 1)
-            op.Offset = (Expression.Expression)Visit(expressions[1]);
+            op.Offset = (Expression.IExpression)Visit(expressions[1]);
         return op;
     }
 
@@ -5365,7 +5365,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         {
             var condCtx = context.joinCondition();
             if (condCtx.ON() != null)
-                join.OnExpressions.Add((Expression.Expression)Visit(condCtx.expression()));
+                join.OnExpressions.Add((Expression.IExpression)Visit(condCtx.expression()));
             else if (condCtx.USING() != null)
                 join.UsingColumns = condCtx.identifierList().identifier()
                     .Select(id => new Column { ColumnName = id.GetText() }).ToList();
@@ -5397,7 +5397,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitExtendPipeOp(JSqlParserGrammar.ExtendPipeOpContext context)
     {
         var op = new ExtendPipeOperator();
-        op.Expression = (Expression.Expression)Visit(context.expression());
+        op.Expression = (Expression.IExpression)Visit(context.expression());
         if (context.alias() != null)
             op.Alias = (Alias)Visit(context.alias());
         return op;
@@ -5422,7 +5422,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         foreach (var itemCtx in context.assignmentItem())
         {
             var target = itemCtx.assignmentTarget(0).GetText();
-            var expr = (Expression.Expression)Visit(itemCtx.expression());
+            var expr = (Expression.IExpression)Visit(itemCtx.expression());
             var selectExpr = new EqualsTo
             {
                 LeftExpression = new Column { ColumnName = target },
@@ -5446,11 +5446,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 op.SelectItems.Add((SelectItem)Visit(itemCtx));
         }
 
-        op.InExpressions = new List<Expression.Expression>();
+        op.InExpressions = new List<Expression.IExpression>();
         if (context.expressionList() != null)
         {
             foreach (var exprCtx in context.expressionList().expression())
-                op.InExpressions.Add((Expression.Expression)Visit(exprCtx));
+                op.InExpressions.Add((Expression.IExpression)Visit(exprCtx));
         }
         return op;
     }
@@ -5468,11 +5468,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
                 op.SelectItems.Add((SelectItem)Visit(itemCtx));
         }
 
-        op.InExpressions = new List<Expression.Expression>();
+        op.InExpressions = new List<Expression.IExpression>();
         if (context.expressionList() != null)
         {
             foreach (var exprCtx in context.expressionList().expression())
-                op.InExpressions.Add((Expression.Expression)Visit(exprCtx));
+                op.InExpressions.Add((Expression.IExpression)Visit(exprCtx));
         }
         return op;
     }
@@ -5481,7 +5481,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         return new TableSamplePipeOperator
         {
-            SampleSize = (Expression.Expression)Visit(context.expression())
+            SampleSize = (Expression.IExpression)Visit(context.expression())
         };
     }
 
@@ -5503,7 +5503,7 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         return op;
     }
 
-    private static T CreateBinary<T>(Expression.Expression left, Expression.Expression right) where T : BinaryExpression, new()
+    private static T CreateBinary<T>(Expression.IExpression left, Expression.IExpression right) where T : BinaryExpression, new()
     {
         var expr = new T();
         expr.LeftExpression = left;
@@ -5586,12 +5586,12 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.PRECEDING() != null)
             return new FrameBound(BoundType.Preceding)
             {
-                Offset = (Expression.Expression)Visit(context.expression())
+                Offset = (Expression.IExpression)Visit(context.expression())
             };
         if (context.FOLLOWING() != null)
             return new FrameBound(BoundType.Following)
             {
-                Offset = (Expression.Expression)Visit(context.expression())
+                Offset = (Expression.IExpression)Visit(context.expression())
             };
         return new FrameBound();
     }

@@ -2,7 +2,7 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Statement;
 
-public class DescribeStatement : ASTNodeAccessImpl, Statement
+public class DescribeStatement : ASTNodeAccessImpl, IStatement
 {
     public string Name { get; set; } = "";
 

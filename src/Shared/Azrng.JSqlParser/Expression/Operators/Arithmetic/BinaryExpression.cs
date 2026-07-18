@@ -6,10 +6,10 @@ namespace Azrng.JSqlParser.Expression.Operators.Arithmetic;
 /// <summary>
 /// Base class for binary arithmetic expressions (e.g., a + b, a * b).
 /// </summary>
-public abstract class BinaryExpression : ASTNodeAccessImpl, Expression
+public abstract class BinaryExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
 
     public abstract T Accept<T, S>(IExpressionVisitor<T> visitor, S context);
 

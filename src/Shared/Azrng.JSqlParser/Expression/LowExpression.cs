@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Exasol Skyline LOW expression syntax.
 /// </summary>
-public class LowExpression : ASTNodeAccessImpl, Expression
+public class LowExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public LowExpression() { }
 
-    public LowExpression(Expression expression)
+    public LowExpression(IExpression expression)
     {
         Expression = expression;
     }

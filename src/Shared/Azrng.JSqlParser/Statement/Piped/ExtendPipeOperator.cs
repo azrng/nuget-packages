@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class ExtendPipeOperator : PipeOperator
 {
-    public Expression.Expression Expression { get; set; } = null!;
+    public Expression.IExpression Expression { get; set; } = null!;
     public Alias? Alias { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)

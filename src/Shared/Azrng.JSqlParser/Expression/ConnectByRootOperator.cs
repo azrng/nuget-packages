@@ -7,13 +7,13 @@ namespace Azrng.JSqlParser.Expression;
 /// Oracle CONNECT_BY_ROOT expression for hierarchical queries.
 /// <para>对齐上游 ConnectByRootOperator，操作数为 Expression（commit 624a768b）。</para>
 /// </summary>
-public class ConnectByRootOperator : ASTNodeAccessImpl, Expression
+public class ConnectByRootOperator : ASTNodeAccessImpl, IExpression
 {
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public ConnectByRootOperator() { }
 
-    public ConnectByRootOperator(Expression expression)
+    public ConnectByRootOperator(IExpression expression)
     {
         Expression = expression;
     }

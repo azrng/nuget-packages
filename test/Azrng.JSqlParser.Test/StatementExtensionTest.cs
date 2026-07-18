@@ -169,14 +169,14 @@ public class StatementExtensionTest
     [Fact]
     public void Descendants_OnNullStatement_ShouldThrow()
     {
-        Azrng.JSqlParser.Statement.Statement stmt = null!;
+        Azrng.JSqlParser.Statement.IStatement stmt = null!;
         Assert.Throws<ArgumentNullException>(() => stmt.Descendants<Select>());
     }
 
     [Fact]
     public void GetTableNames_OnNullStatement_ShouldThrow()
     {
-        Azrng.JSqlParser.Statement.Statement stmt = null!;
+        Azrng.JSqlParser.Statement.IStatement stmt = null!;
         Assert.Throws<ArgumentNullException>(() => stmt.GetTableNames());
     }
 }

@@ -6,20 +6,20 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Lambda expression: x -> x + 1 or (x, y) -> x + y
 /// </summary>
-public class LambdaExpression : ASTNodeAccessImpl, Expression
+public class LambdaExpression : ASTNodeAccessImpl, IExpression
 {
     public List<string> Identifiers { get; set; } = new();
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public LambdaExpression() { }
 
-    public LambdaExpression(string identifier, Expression expression)
+    public LambdaExpression(string identifier, IExpression expression)
     {
         Identifiers = new List<string> { identifier };
         Expression = expression;
     }
 
-    public LambdaExpression(List<string> identifiers, Expression expression)
+    public LambdaExpression(List<string> identifiers, IExpression expression)
     {
         Identifiers = identifiers;
         Expression = expression;

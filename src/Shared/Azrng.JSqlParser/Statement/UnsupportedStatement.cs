@@ -2,7 +2,7 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Statement;
 
-public class UnsupportedStatement : ASTNodeAccessImpl, Statement
+public class UnsupportedStatement : ASTNodeAccessImpl, IStatement
 {
     public string Statement { get; set; } = "";
 

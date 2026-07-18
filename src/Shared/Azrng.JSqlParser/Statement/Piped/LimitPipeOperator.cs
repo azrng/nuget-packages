@@ -5,8 +5,8 @@ namespace Azrng.JSqlParser.Statement.Piped;
 
 public class LimitPipeOperator : PipeOperator
 {
-    public Expression.Expression? Expression { get; set; }
-    public Expression.Expression? Offset { get; set; }
+    public Expression.IExpression? Expression { get; set; }
+    public Expression.IExpression? Offset { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)
     {

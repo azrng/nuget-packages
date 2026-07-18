@@ -19,13 +19,13 @@ public class CnfConverterTest
         RightExpression = new LongValue(val)
     };
 
-    private static AndExpression And(Azrng.JSqlParser.Expression.Expression left, Azrng.JSqlParser.Expression.Expression right) => new()
+    private static AndExpression And(Azrng.JSqlParser.Expression.IExpression left, Azrng.JSqlParser.Expression.IExpression right) => new()
     {
         LeftExpression = left,
         RightExpression = right
     };
 
-    private static OrExpression Or(Azrng.JSqlParser.Expression.Expression left, Azrng.JSqlParser.Expression.Expression right) => new()
+    private static OrExpression Or(Azrng.JSqlParser.Expression.IExpression left, Azrng.JSqlParser.Expression.IExpression right) => new()
     {
         LeftExpression = left,
         RightExpression = right

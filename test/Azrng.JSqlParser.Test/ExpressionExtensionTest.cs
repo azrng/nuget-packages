@@ -5,7 +5,6 @@ using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Schema;
 using PlainSelect = Azrng.JSqlParser.Statement.Select.PlainSelect;
-using JExpression = Azrng.JSqlParser.Expression.Expression;
 
 namespace Azrng.JSqlParser.Test;
 
@@ -17,7 +16,7 @@ namespace Azrng.JSqlParser.Test;
 public class ExpressionExtensionTest
 {
     /// <summary>解析 WHERE 表达式。用 SELECT 包裹再取 Where，避免顶层表达式解析的歧义。</summary>
-    private static JExpression ParseWhere(string sql)
+    private static IExpression ParseWhere(string sql)
     {
         var stmt = (PlainSelect)SqlParser.Parse(sql)!;
         return stmt.Where!;
@@ -138,7 +137,7 @@ public class ExpressionExtensionTest
     [Fact]
     public void Descendants_OnNullExpression_ShouldThrow()
     {
-        JExpression expr = null!;
+        IExpression expr = null!;
         Assert.Throws<ArgumentNullException>(() => expr.Descendants<Column>());
     }
 

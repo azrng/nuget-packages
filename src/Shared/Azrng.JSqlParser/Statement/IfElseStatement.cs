@@ -10,16 +10,16 @@ namespace Azrng.JSqlParser.Statement;
 /// 形式：<c>IF condition statement [ELSE statement]</c>。
 /// 注意：上游不支持 PL/SQL 的 THEN/ELSIF/END IF，仅 T-SQL/Postgres 风格。
 /// </summary>
-public class IfElseStatement : ASTNodeAccessImpl, Statement
+public class IfElseStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>IF 条件。</summary>
-    public Expression.Expression Condition { get; set; } = null!;
+    public Expression.IExpression Condition { get; set; } = null!;
 
     /// <summary>IF 分支语句。</summary>
-    public Statement IfStatement { get; set; } = null!;
+    public IStatement IfStatement { get; set; } = null!;
 
     /// <summary>ELSE 分支语句，可选。</summary>
-    public Statement? ElseStatement { get; set; }
+    public IStatement? ElseStatement { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

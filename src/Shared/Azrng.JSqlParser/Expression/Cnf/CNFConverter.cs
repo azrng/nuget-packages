@@ -12,7 +12,7 @@ public static class CNFConverter
     /// <summary>
     /// Convert an expression to CNF.
     /// </summary>
-    public static Expression ConvertToCNF(Expression expression)
+    public static IExpression ConvertToCNF(IExpression expression)
     {
         // Step 1: Push NOT down to leaves
         var pushed = PushNotDown(expression);
@@ -28,7 +28,7 @@ public static class CNFConverter
     /// NOT (A OR B) → (NOT A) AND (NOT B)
     /// NOT NOT A → A
     /// </summary>
-    private static Expression PushNotDown(Expression expr)
+    private static IExpression PushNotDown(IExpression expr)
     {
         if (expr is NotExpression notExpr)
         {
@@ -80,7 +80,7 @@ public static class CNFConverter
     /// A OR (B AND C) → (A OR B) AND (A OR C)
     /// (B AND C) OR A → (B OR A) AND (C OR A)
     /// </summary>
-    private static Expression DistributeOrOverAnd(Expression expr)
+    private static IExpression DistributeOrOverAnd(IExpression expr)
     {
         if (expr is OrExpression orExpr)
         {
@@ -123,7 +123,7 @@ public static class CNFConverter
     /// <summary>
     /// Flatten nested AND expressions into MultiAndExpression.
     /// </summary>
-    private static Expression Flatten(Expression expr)
+    private static IExpression Flatten(IExpression expr)
     {
         if (expr is AndExpression andExpr)
         {
@@ -138,7 +138,7 @@ public static class CNFConverter
         return expr;
     }
 
-    private static void CollectAndTerms(Expression expr, List<Expression> terms)
+    private static void CollectAndTerms(IExpression expr, List<IExpression> terms)
     {
         if (expr is MultiAndExpression multiAnd)
         {

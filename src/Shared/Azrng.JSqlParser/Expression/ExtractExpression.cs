@@ -5,10 +5,10 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents an EXTRACT expression (e.g., EXTRACT(YEAR FROM date_col)).
 /// </summary>
-public class ExtractExpression : ASTNodeAccessImpl, Expression
+public class ExtractExpression : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

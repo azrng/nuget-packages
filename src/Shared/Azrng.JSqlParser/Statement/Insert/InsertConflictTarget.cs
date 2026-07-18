@@ -20,10 +20,10 @@ public class InsertConflictTarget : ASTNodeAccessImpl, IModel
     public List<string> IndexColumnNames { get; set; } = new();
 
     /// <summary>索引表达式（与 IndexColumnNames 互斥）。当前文法未接入表达式形式。</summary>
-    public Expression.Expression? IndexExpression { get; set; }
+    public Expression.IExpression? IndexExpression { get; set; }
 
     /// <summary>可选的 WHERE 索引谓词。</summary>
-    public Expression.Expression? WhereExpression { get; set; }
+    public Expression.IExpression? WhereExpression { get; set; }
 
     /// <summary>ON CONSTRAINT 指定的约束名（与 IndexColumnNames/IndexExpression 互斥）。</summary>
     public string? ConstraintName { get; set; }

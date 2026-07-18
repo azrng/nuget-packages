@@ -2,7 +2,7 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Statement;
 
-public class RollbackStatement : ASTNodeAccessImpl, Statement
+public class RollbackStatement : ASTNodeAccessImpl, IStatement
 {
     public string? Savepoint { get; set; }
 

@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement;
 /// DECLARE 语句，对齐上游 DeclareStatement。
 /// 形式：<c>DECLARE @var TYPE = expr</c>（多变量）。
 /// </summary>
-public class DeclareStatement : ASTNodeAccessImpl, Statement
+public class DeclareStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>声明类型（TYPE / AS / TABLE），对齐上游 DeclareType，默认按变量声明处理。</summary>
     public DeclareType DeclareType { get; set; } = DeclareType.Variable;
@@ -39,7 +39,7 @@ public class TypeDefExpr
     public string Type { get; set; } = "";
 
     /// <summary>默认值表达式，可选。</summary>
-    public Expression.Expression? DefaultExpression { get; set; }
+    public Expression.IExpression? DefaultExpression { get; set; }
 
     public override string ToString()
     {

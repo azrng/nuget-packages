@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class NamedExpressionList : ASTNodeAccessImpl
 {
-    public List<Expression> Expressions { get; set; } = new();
+    public List<IExpression> Expressions { get; set; } = new();
 
     /// <summary>每段表达式的前缀关键字（""/FROM/IN/PLACING/FOR），与 Expressions 等长。</summary>
     public List<string> Names { get; set; } = new();

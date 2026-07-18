@@ -7,20 +7,20 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents an analytic/window function expression (e.g., ROW_NUMBER() OVER (...)).
 /// </summary>
-public class AnalyticExpression : ASTNodeAccessImpl, Expression
+public class AnalyticExpression : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
-    public Expression? Expression { get; set; }
-    public Expression? Offset { get; set; }
-    public Expression? DefaultValue { get; set; }
+    public IExpression? Expression { get; set; }
+    public IExpression? Offset { get; set; }
+    public IExpression? DefaultValue { get; set; }
     public bool AllColumns { get; set; }
     public bool Distinct { get; set; }
     public bool IgnoreNulls { get; set; }
     public List<OrderByElement>? OrderByElements { get; set; }
-    public List<Expression>? PartitionExpressionList { get; set; }
+    public List<IExpression>? PartitionExpressionList { get; set; }
     public string? WindowName { get; set; }
     public List<OrderByElement>? WithinGroupOrderByElements { get; set; }
-    public Expression? FilterExpression { get; set; }
+    public IExpression? FilterExpression { get; set; }
 
     /// <summary>
     /// 分析函数类型，决定 ToString 输出形态（OVER/WITHIN_GROUP/WITHIN_GROUP_OVER/FILTER_ONLY），对齐上游 AnalyticType。

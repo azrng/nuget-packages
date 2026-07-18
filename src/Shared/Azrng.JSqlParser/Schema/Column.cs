@@ -23,7 +23,7 @@ public enum OracleJoinSyntax
 /// <summary>
 /// Represents a column reference in SQL.
 /// </summary>
-public class Column : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.Expression
+public class Column : ASTNodeAccessImpl, Azrng.JSqlParser.Expression.IExpression
 {
     public Table? Table { get; set; }
     public string ColumnName { get; set; } = "";

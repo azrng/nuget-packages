@@ -297,7 +297,7 @@ public class AlterExpression : ASTNodeAccessImpl
     public class ColumnSetDefault
     {
         public string ColumnName { get; set; } = "";
-        public Expression.Expression? DefaultExpression { get; set; }
+        public Expression.IExpression? DefaultExpression { get; set; }
 
         public override string ToString() => $"{ColumnName} SET DEFAULT {DefaultExpression}";
     }

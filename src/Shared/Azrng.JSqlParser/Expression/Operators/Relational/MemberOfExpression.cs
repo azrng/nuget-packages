@@ -2,10 +2,10 @@ using Azrng.JSqlParser.Parser;
 
 namespace Azrng.JSqlParser.Expression.Operators.Relational;
 
-public class MemberOfExpression : ASTNodeAccessImpl, Expression
+public class MemberOfExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
 
     /// <summary>是否为 NOT MEMBER OF（对齐上游 isNot 字段）。</summary>
     public bool Not { get; set; }

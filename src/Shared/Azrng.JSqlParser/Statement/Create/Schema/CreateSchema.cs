@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Create.Schema;
 /// 移植自上游 JSqlParser 的 CreateSchema（commit ac46c434 含 catalog 支持）。
 /// 简化版不含 schemaPath 和内嵌 statements。
 /// </summary>
-public class CreateSchema : ASTNodeAccessImpl, Statement
+public class CreateSchema : ASTNodeAccessImpl, IStatement
 {
     /// <summary>IF NOT EXISTS 修饰符。</summary>
     public bool IfNotExists { get; set; }

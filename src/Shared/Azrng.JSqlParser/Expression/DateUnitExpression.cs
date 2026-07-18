@@ -14,7 +14,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </list>
 /// </para>
 /// </summary>
-public class DateUnitExpression : ASTNodeAccessImpl, Expression
+public class DateUnitExpression : ASTNodeAccessImpl, IExpression
 {
     public DateUnit Unit { get; set; }
 

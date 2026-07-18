@@ -65,7 +65,7 @@ public class ClickHouseJoinModifierTest
         Assert.True(join.Left);
     }
 
-    private static Join ExtractFirstJoin(Azrng.JSqlParser.Statement.Statement stmt)
+    private static Join ExtractFirstJoin(Azrng.JSqlParser.Statement.IStatement stmt)
     {
         var plain = Assert.IsType<PlainSelect>(stmt);
         Assert.NotEmpty(plain.Joins);

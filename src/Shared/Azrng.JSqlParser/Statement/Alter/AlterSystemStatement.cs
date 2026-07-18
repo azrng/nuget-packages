@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// ALTER SYSTEM 语句（Oracle），对齐上游 AlterSystemStatement。
 /// 形式：<c>ALTER SYSTEM SET param = value</c> / <c>ALTER SYSTEM CHECKPOINT</c> 等。
 /// </summary>
-public class AlterSystemStatement : ASTNodeAccessImpl, Statement
+public class AlterSystemStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>操作类型字符串（如 SET、CHECKPOINT、SWITCH LOGFILE）。</summary>
     public string Operation { get; set; } = "";

@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class Fetch
 {
-    public Expression.Expression? FetchExpression { get; set; }
+    public Expression.IExpression? FetchExpression { get; set; }
     public bool FetchFirst { get; set; }
     public bool RowOrRows { get; set; } // true = ROWS, false = ROW
     public bool Percent { get; set; }

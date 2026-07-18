@@ -8,11 +8,11 @@ namespace Azrng.JSqlParser.Statement.Update;
 public class UpdateSet
 {
     public System.Collections.Generic.List<Column> Columns { get; set; } = new();
-    public System.Collections.Generic.List<Azrng.JSqlParser.Expression.Expression> Values { get; set; } = new();
+    public System.Collections.Generic.List<Azrng.JSqlParser.Expression.IExpression> Values { get; set; } = new();
 
     public UpdateSet() { }
 
-    public UpdateSet(Column column, Azrng.JSqlParser.Expression.Expression value)
+    public UpdateSet(Column column, Azrng.JSqlParser.Expression.IExpression value)
     {
         Columns.Add(column);
         Values.Add(value);

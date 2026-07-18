@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Analyze;
 /// ANALYZE 语句，对齐上游 Analyze。
 /// 形式：<c>ANALYZE &lt;table&gt;</c>（收集表统计信息）。
 /// </summary>
-public class Analyze : ASTNodeAccessImpl, Statement
+public class Analyze : ASTNodeAccessImpl, IStatement
 {
     public Table Table { get; set; } = null!;
 

@@ -17,14 +17,14 @@ namespace Azrng.JSqlParser.Util;
 internal static class TableReferencesExtractor
 {
     /// <summary>提取 SELECT 语句（含 UNION 多分支、CTE、子查询）中引用的全部表。</summary>
-    public static IReadOnlyList<TableReference> Extract(Statement.Statement statement)
+    public static IReadOnlyList<TableReference> Extract(Statement.IStatement statement)
     {
         var result = new List<TableReference>();
         CollectFromStatement(statement, result);
         return result;
     }
 
-    private static void CollectFromStatement(Statement.Statement statement, List<TableReference> result)
+    private static void CollectFromStatement(Statement.IStatement statement, List<TableReference> result)
     {
         // 仅 SELECT 语句有 FROM 子句；其余语句（INSERT/UPDATE/DELETE/MERGE）的表引用
         // 业务方通常需要 target/source 区分，不应混在一起，故这里只处理 SELECT。

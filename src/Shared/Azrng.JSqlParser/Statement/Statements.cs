@@ -5,9 +5,9 @@ namespace Azrng.JSqlParser.Statement;
 /// <summary>
 /// Represents a list of SQL statements.
 /// </summary>
-public class Statements : ASTNodeAccessImpl, Statement
+public class Statements : ASTNodeAccessImpl, IStatement
 {
-    public System.Collections.Generic.List<Statement> StatementList { get; set; } = new();
+    public System.Collections.Generic.List<IStatement> StatementList { get; set; } = new();
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

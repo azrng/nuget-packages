@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Delete;
 /// <summary>
 /// Represents a DELETE statement in SQL.
 /// </summary>
-public class Delete : ASTNodeAccessImpl, Statement
+public class Delete : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
 
@@ -17,7 +17,7 @@ public class Delete : ASTNodeAccessImpl, Statement
     /// </summary>
     public List<IFromItem>? UsingItems { get; set; }
 
-    public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
+    public Azrng.JSqlParser.Expression.IExpression? Where { get; set; }
 
     /// <summary>MySQL LOW_PRIORITY 修饰符。</summary>
     public bool ModifierLowPriority { get; set; }

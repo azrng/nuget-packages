@@ -11,7 +11,7 @@ public class OrderByElement
         NULLS_LAST
     }
 
-    public Expression.Expression Expression { get; set; } = null!;
+    public Expression.IExpression Expression { get; set; } = null!;
     public bool Asc { get; set; } = true;
     public bool AscDescPresent { get; set; }
     public NullOrdering? NullOrder { get; set; }

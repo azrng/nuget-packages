@@ -5,9 +5,9 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// IS UNKNOWN expression (SQL standard).
 /// </summary>
-public class IsUnknownExpression : ASTNodeAccessImpl, Expression
+public class IsUnknownExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

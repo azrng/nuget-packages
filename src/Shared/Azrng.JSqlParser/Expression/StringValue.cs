@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 表示 SQL 字符串字面量。支持单引号、PostgreSQL dollar-quoted、带前缀（N'/E'/U'/R'/B'/RB'/_utf8'）
 /// 以及 Oracle q'...{...}...' 自定义分隔引号形式。
 /// </summary>
-public sealed class StringValue : ASTNodeAccessImpl, Expression
+public sealed class StringValue : ASTNodeAccessImpl, IExpression
 {
     /// <summary>
     /// 允许的字符串前缀列表（与上游对齐）。N=国家字符集、E=EString、U=Unicode、R=Raw、B/RB=Bit，

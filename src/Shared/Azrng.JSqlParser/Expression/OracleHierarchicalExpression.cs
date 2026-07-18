@@ -10,10 +10,10 @@ namespace Azrng.JSqlParser.Expression;
 public class OracleHierarchicalExpression : ASTNodeAccessImpl
 {
     /// <summary>START WITH 表达式（起点条件），未指定时为 null。</summary>
-    public Expression? StartExpression { get; set; }
+    public IExpression? StartExpression { get; set; }
 
     /// <summary>CONNECT BY 表达式（连接条件）。</summary>
-    public Expression? ConnectExpression { get; set; }
+    public IExpression? ConnectExpression { get; set; }
 
     /// <summary>是否 NOCYCLE。</summary>
     public bool NoCycle { get; set; }

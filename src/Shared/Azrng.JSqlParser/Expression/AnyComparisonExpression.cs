@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Expression;
 /// ANY 和 SOME 等价；ALL 表示所有。
 /// </para>
 /// </summary>
-public class AnyComparisonExpression : ASTNodeAccessImpl, Expression
+public class AnyComparisonExpression : ASTNodeAccessImpl, IExpression
 {
     public AnyType AnyType { get; set; }
 

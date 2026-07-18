@@ -12,7 +12,7 @@ namespace Azrng.JSqlParser.Expression;
 /// </list>
 /// </para>
 /// </summary>
-public class NextValExpression : ASTNodeAccessImpl, Expression
+public class NextValExpression : ASTNodeAccessImpl, IExpression
 {
     /// <summary>序列名分段列表（如 schema.seq -> ["schema", "seq"]）。</summary>
     public List<string> NameList { get; set; } = new();

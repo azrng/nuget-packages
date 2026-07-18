@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Exasol Skyline HIGH expression syntax.
 /// </summary>
-public class HighExpression : ASTNodeAccessImpl, Expression
+public class HighExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public HighExpression() { }
 
-    public HighExpression(Expression expression)
+    public HighExpression(IExpression expression)
     {
         Expression = expression;
     }

@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 数组构造器：<c>ARRAY[1, 2, 3]</c> 或 <c>[1, 2, 3]</c>（PostgreSQL/HSQLDB/ClickHouse）。
 /// 与上游 ArrayConstructor 对齐。
 /// </summary>
-public class ArrayConstructor : ASTNodeAccessImpl, Expression
+public class ArrayConstructor : ASTNodeAccessImpl, IExpression
 {
     /// <summary>数组元素表达式列表。</summary>
     public ExpressionList? Expressions { get; set; }
@@ -37,29 +37,29 @@ public class ArrayConstructor : ASTNodeAccessImpl, Expression
 /// 数组下标访问表达式：<c>arr[index]</c> 或范围 <c>arr[start:end]</c>。
 /// 与上游 ArrayExpression 对齐。
 /// </summary>
-public class ArrayExpression : ASTNodeAccessImpl, Expression
+public class ArrayExpression : ASTNodeAccessImpl, IExpression
 {
     /// <summary>被索引的对象表达式（数组/JSON）。</summary>
-    public Expression? ObjExpression { get; set; }
+    public IExpression? ObjExpression { get; set; }
 
     /// <summary>单下标索引表达式（与范围互斥）。</summary>
-    public Expression? IndexExpression { get; set; }
+    public IExpression? IndexExpression { get; set; }
 
     /// <summary>范围起始索引（与 IndexExpression 互斥）。</summary>
-    public Expression? StartIndexExpression { get; set; }
+    public IExpression? StartIndexExpression { get; set; }
 
     /// <summary>范围结束索引（与 IndexExpression 互斥）。</summary>
-    public Expression? StopIndexExpression { get; set; }
+    public IExpression? StopIndexExpression { get; set; }
 
     public ArrayExpression() { }
 
-    public ArrayExpression(Expression? objExpression, Expression? indexExpression)
+    public ArrayExpression(IExpression? objExpression, IExpression? indexExpression)
     {
         ObjExpression = objExpression;
         IndexExpression = indexExpression;
     }
 
-    public ArrayExpression(Expression? objExpression, Expression? startIndexExpression, Expression? stopIndexExpression)
+    public ArrayExpression(IExpression? objExpression, IExpression? startIndexExpression, IExpression? stopIndexExpression)
     {
         ObjExpression = objExpression;
         StartIndexExpression = startIndexExpression;

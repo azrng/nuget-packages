@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.CreateView;
 /// <summary>
 /// Represents a CREATE VIEW statement in SQL.
 /// </summary>
-public class CreateView : ASTNodeAccessImpl, Statement
+public class CreateView : ASTNodeAccessImpl, IStatement
 {
     public Table? View { get; set; }
     public Select.Select? Select { get; set; }

@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Create.Synonym;
 /// CREATE SYNONYM 语句（Oracle），对齐上游 CreateSynonym。
 /// 形式：<c>CREATE [OR REPLACE] [PUBLIC] SYNONYM name FOR target</c>。
 /// </summary>
-public class CreateSynonym : ASTNodeAccessImpl, Statement
+public class CreateSynonym : ASTNodeAccessImpl, IStatement
 {
     /// <summary>同义词名。</summary>
     public string Name { get; set; } = "";

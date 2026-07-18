@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Oracle PRIOR column expression for CONNECT BY.
 /// </summary>
-public class ConnectByPriorOperator : ASTNodeAccessImpl, Expression
+public class ConnectByPriorOperator : ASTNodeAccessImpl, IExpression
 {
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public ConnectByPriorOperator() { }
 
-    public ConnectByPriorOperator(Expression expression)
+    public ConnectByPriorOperator(IExpression expression)
     {
         Expression = expression;
     }

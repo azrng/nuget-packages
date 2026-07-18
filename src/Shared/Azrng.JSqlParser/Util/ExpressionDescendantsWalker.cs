@@ -6,8 +6,6 @@ using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Schema;
 using Azrng.JSqlParser.Statement.Select;
 
-using JExpression = Azrng.JSqlParser.Expression.Expression;
-
 namespace Azrng.JSqlParser.Util;
 
 /// <summary>
@@ -26,15 +24,15 @@ namespace Azrng.JSqlParser.Util;
 /// </remarks>
 internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
 {
-    private readonly Action<JExpression> _onVisit;
+    private readonly Action<IExpression> _onVisit;
 
-    private ExpressionDescendantsWalker(Action<JExpression> onVisit)
+    private ExpressionDescendantsWalker(Action<IExpression> onVisit)
     {
         _onVisit = onVisit;
     }
 
     /// <summary>从根表达式出发，按深度优先顺序回调每一个被访问到的表达式节点。</summary>
-    public static void Walk(JExpression root, Action<JExpression> onVisit)
+    public static void Walk(IExpression root, Action<IExpression> onVisit)
     {
         var walker = new ExpressionDescendantsWalker(onVisit);
         root.Accept(walker);
@@ -233,8 +231,8 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
         _onVisit(jsonFunction);
         foreach (var kvp in jsonFunction.KeyValuePairs)
         {
-            if (kvp.Key is Expression.Expression ke) ke.Accept(this, context);
-            if (kvp.Value is Expression.Expression ve) ve.Accept(this, context);
+            if (kvp.Key is Expression.IExpression ke) ke.Accept(this, context);
+            if (kvp.Value is Expression.IExpression ve) ve.Accept(this, context);
         }
         foreach (var expr in jsonFunction.Expressions) expr.Expression?.Accept(this, context);
         foreach (var expr in jsonFunction.PassingExpressions) expr.Accept(this, context);

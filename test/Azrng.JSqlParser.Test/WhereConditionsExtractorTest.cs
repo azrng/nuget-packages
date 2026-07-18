@@ -1,6 +1,6 @@
+using Azrng.JSqlParser.Expression;
 using Azrng.JSqlParser.Parser;
 using Azrng.JSqlParser.Models;
-using JExpression = Azrng.JSqlParser.Expression.Expression;
 using PlainSelect = Azrng.JSqlParser.Statement.Select.PlainSelect;
 
 namespace Azrng.JSqlParser.Test;
@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Test;
 /// </summary>
 public class WhereConditionsExtractorTest
 {
-    private static JExpression ParseWhere(string sql) => ((PlainSelect)SqlParser.Parse(sql)!).Where!;
+    private static IExpression ParseWhere(string sql) => ((PlainSelect)SqlParser.Parse(sql)!).Where!;
 
     [Fact]
     public void GetWhereConditions_SingleComparison_ShouldHaveEmptyLinkType()
@@ -127,7 +127,7 @@ public class WhereConditionsExtractorTest
     [Fact]
     public void GetWhereConditions_NullExpression_ShouldReturnEmpty()
     {
-        JExpression expr = null!;
+        IExpression expr = null!;
         Assert.Empty(expr.GetWhereConditions());
     }
 

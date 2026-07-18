@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 注意：与 <see cref="DateValue"/>/<see cref="TimeValue"/>/<see cref="TimestampValue"/> 设计不同——
 /// 后者将值解析为强类型 <c>System.DateTime</c>，本类保留字符串原值与类型枚举，对齐上游序列化行为。
 /// </summary>
-public class DateTimeLiteralExpression : ASTNodeAccessImpl, Expression
+public class DateTimeLiteralExpression : ASTNodeAccessImpl, IExpression
 {
     public string Value { get; set; } = string.Empty;
 

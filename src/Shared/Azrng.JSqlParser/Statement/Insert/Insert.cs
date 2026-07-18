@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Insert;
 /// <summary>
 /// Represents an INSERT statement in SQL.
 /// </summary>
-public class Insert : ASTNodeAccessImpl, Statement
+public class Insert : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
     public System.Collections.Generic.List<Column>? Columns { get; set; }
@@ -15,7 +15,7 @@ public class Insert : ASTNodeAccessImpl, Statement
     public System.Collections.Generic.List<Update.UpdateSet>? DuplicateUpdateSets { get; set; }
 
     /// <summary>MySQL 8.0.20+ ON DUPLICATE KEY UPDATE ... WHERE 的条件表达式，未指定时为 null。</summary>
-    public Expression.Expression? DuplicateUpdateWhereExpression { get; set; }
+    public Expression.IExpression? DuplicateUpdateWhereExpression { get; set; }
     public System.Collections.Generic.List<Update.UpdateSet>? SetUpdateSets { get; set; }
     public bool UseValues { get; set; } = true;
 

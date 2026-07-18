@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a NULL value in SQL.
 /// </summary>
-public sealed class NullValue : ASTNodeAccessImpl, Expression
+public sealed class NullValue : ASTNodeAccessImpl, IExpression
 {
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

@@ -78,7 +78,7 @@ public class Validation
         }
     }
 
-    private void ValidateStatement(Statement.Statement statement)
+    private void ValidateStatement(Statement.IStatement statement)
     {
         switch (statement)
         {
@@ -146,7 +146,7 @@ public class Validation
         }
     }
 
-    private void ValidateSubquery(Expression.Expression? expression)
+    private void ValidateSubquery(Expression.IExpression? expression)
     {
         if (expression == null) return;
         // 子查询检测：通过 ToString 文本启发式判断是否含 SELECT 子查询。

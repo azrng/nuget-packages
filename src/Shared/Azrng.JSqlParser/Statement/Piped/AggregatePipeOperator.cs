@@ -7,8 +7,8 @@ namespace Azrng.JSqlParser.Statement.Piped;
 public class AggregatePipeOperator : PipeOperator
 {
     public List<SelectItem> SelectItems { get; set; } = new();
-    public Expression.Expression? Having { get; set; }
-    public List<Expression.Expression>? GroupBy { get; set; }
+    public Expression.IExpression? Having { get; set; }
+    public List<Expression.IExpression>? GroupBy { get; set; }
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)
     {

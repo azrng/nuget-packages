@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Piped;
 public class PivotPipeOperator : PipeOperator
 {
     public string? FunctionName { get; set; }
-    public List<Expression.Expression> InExpressions { get; set; } = new();
+    public List<Expression.IExpression> InExpressions { get; set; } = new();
     public List<SelectItem> SelectItems { get; set; } = new();
 
     public override T Accept<T, S>(PipeOperatorVisitor<T, S> visitor, S context)

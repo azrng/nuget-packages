@@ -5,10 +5,10 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Represents an IN expression in SQL.
 /// </summary>
-public class InExpression : ASTNodeAccessImpl, Expression
+public class InExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

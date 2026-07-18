@@ -5,14 +5,14 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Array EXCLUDES operator: left EXCLUDES right
 /// </summary>
-public class ExcludesExpression : ASTNodeAccessImpl, Expression
+public class ExcludesExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
-    public Expression RightExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
+    public IExpression RightExpression { get; set; } = null!;
 
     public ExcludesExpression() { }
 
-    public ExcludesExpression(Expression leftExpression, Expression rightExpression)
+    public ExcludesExpression(IExpression leftExpression, IExpression rightExpression)
     {
         LeftExpression = leftExpression;
         RightExpression = rightExpression;

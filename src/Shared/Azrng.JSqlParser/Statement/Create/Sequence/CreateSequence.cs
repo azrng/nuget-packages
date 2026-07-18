@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Create.Sequence;
 /// <para>语法：CREATE SEQUENCE [schema.]name [参数...]</para>
 /// 移植自上游 JSqlParser 5.4 的 CreateSequence + Sequence。
 /// </summary>
-public class CreateSequence : ASTNodeAccessImpl, Statement
+public class CreateSequence : ASTNodeAccessImpl, IStatement
 {
     public Azrng.JSqlParser.Schema.Sequence? Sequence { get; set; }
 

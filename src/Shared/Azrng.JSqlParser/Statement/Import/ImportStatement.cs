@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Import;
 /// 语法：<c>IMPORT [INTO table (cols)] FROM &lt;source&gt;</c>
 /// source 为透传文本（LOCAL CSV FILE '...' / JDBC DRIVER ... / EXA ... 等），保 round-trip。
 /// </summary>
-public class ImportStatement : ASTNodeAccessImpl, Statement
+public class ImportStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>导入目标表（可选，IMPORT FROM ... 可无 INTO）。</summary>
     public Table? Table { get; set; }

@@ -6,15 +6,15 @@ namespace Azrng.JSqlParser.Expression;
 /// 范围表达式 <c>start : end</c>，主要用于 ClickHouse 数组初始化（如 <c>[1:10]</c>）。
 /// 与上游 RangeExpression 对齐。
 /// </summary>
-public class RangeExpression : ASTNodeAccessImpl, Expression
+public class RangeExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression? StartExpression { get; set; }
+    public IExpression? StartExpression { get; set; }
 
-    public Expression? EndExpression { get; set; }
+    public IExpression? EndExpression { get; set; }
 
     public RangeExpression() { }
 
-    public RangeExpression(Expression? startExpression, Expression? endExpression)
+    public RangeExpression(IExpression? startExpression, IExpression? endExpression)
     {
         StartExpression = startExpression;
         EndExpression = endExpression;

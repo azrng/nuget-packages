@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// </summary>
 public class GroupByElement
 {
-    public List<Expression.Expression> GroupByExpressions { get; set; } = new();
+    public List<Expression.IExpression> GroupByExpressions { get; set; } = new();
     public bool MySqlWithRollup { get; set; }
 
     /// <summary>GROUPING SETS 分组集合（每组为表达式列表的原始文本，保 round-trip）。对齐上游 groupingSets。</summary>

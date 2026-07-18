@@ -5,11 +5,11 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a CASE expression in SQL.
 /// </summary>
-public class CaseExpression : ASTNodeAccessImpl, Expression
+public class CaseExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression? SwitchExpression { get; set; }
+    public IExpression? SwitchExpression { get; set; }
     public System.Collections.Generic.List<WhenClause> WhenClauses { get; set; } = new();
-    public Expression? ElseExpression { get; set; }
+    public IExpression? ElseExpression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

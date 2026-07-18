@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Merge;
 /// <summary>
 /// Represents a MERGE statement in SQL.
 /// </summary>
-public class Merge : ASTNodeAccessImpl, Statement
+public class Merge : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
 
@@ -17,7 +17,7 @@ public class Merge : ASTNodeAccessImpl, Statement
     /// <summary>USING 源（表/子查询），对应 MERGE ... USING fromItem。未指定时为 null。</summary>
     public IFromItem? SourceTable { get; set; }
 
-    public Azrng.JSqlParser.Expression.Expression? OnCondition { get; set; }
+    public Azrng.JSqlParser.Expression.IExpression? OnCondition { get; set; }
     public System.Collections.Generic.List<MergeOperation> Operations { get; set; } = new();
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);

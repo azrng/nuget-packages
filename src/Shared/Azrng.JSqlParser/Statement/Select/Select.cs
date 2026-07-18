@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Select;
 /// Abstract base class for SELECT statements.
 /// Implements both Statement and Expression interfaces.
 /// </summary>
-public abstract class Select : ASTNodeAccessImpl, Statement, Expression.Expression
+public abstract class Select : ASTNodeAccessImpl, IStatement, Expression.IExpression
 {
     public List<WithItem>? WithItemsList { get; set; }
     public Limit? Limit { get; set; }

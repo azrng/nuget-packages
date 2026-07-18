@@ -10,11 +10,11 @@ public class Partition : ASTNodeAccessImpl
 {
     public string Name { get; set; } = "";
     public Column? Column { get; set; }
-    public Expression.Expression? Value { get; set; }
+    public Expression.IExpression? Value { get; set; }
 
     public Partition() { }
 
-    public Partition(Column column, Expression.Expression value)
+    public Partition(Column column, Expression.IExpression value)
     {
         Column = column;
         Value = value;

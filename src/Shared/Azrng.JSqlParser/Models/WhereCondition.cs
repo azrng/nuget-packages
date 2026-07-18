@@ -1,4 +1,4 @@
-using JExpression = Azrng.JSqlParser.Expression.Expression;
+using Azrng.JSqlParser.Expression;
 
 namespace Azrng.JSqlParser.Models;
 
@@ -18,13 +18,13 @@ public sealed record WhereCondition
     public string LinkType { get; init; } = string.Empty;
 
     /// <summary>左侧表达式（通常是列引用）。</summary>
-    public JExpression LeftExpression { get; init; } = null!;
+    public IExpression LeftExpression { get; init; } = null!;
 
     /// <summary>
     /// 右侧表达式（通常是值/参数/列引用）。
     /// 单目运算符（IS NULL/EXISTS 等，经兜底提取）时为 null。
     /// </summary>
-    public JExpression? RightExpression { get; init; }
+    public IExpression? RightExpression { get; init; }
 
     /// <summary>运算符文本：<c>=</c>、<c>&gt;</c>、<c>IN</c>、<c>NOT IN</c>、<c>BETWEEN</c> 等。</summary>
     public string Operator { get; init; } = string.Empty;

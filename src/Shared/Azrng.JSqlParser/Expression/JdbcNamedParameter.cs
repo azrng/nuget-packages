@@ -5,7 +5,7 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a named JDBC parameter (:name or @name) in SQL.
 /// </summary>
-public class JdbcNamedParameter : ASTNodeAccessImpl, Expression
+public class JdbcNamedParameter : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
     public string Prefix { get; set; } = ":";

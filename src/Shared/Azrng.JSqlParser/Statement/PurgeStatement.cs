@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement;
 /// PURGE 语句（Oracle），对齐上游 PurgeStatement。
 /// 形式：<c>PURGE TABLE t</c> / <c>PURGE INDEX i</c> / <c>PURGE RECYCLEBIN</c> / <c>PURGE DBA_RECYCLEBIN</c> / <c>PURGE TABLESPACE ts [USER u]</c>。
 /// </summary>
-public class PurgeStatement : ASTNodeAccessImpl, Statement
+public class PurgeStatement : ASTNodeAccessImpl, IStatement
 {
     public PurgeObjectType PurgeObjectType { get; set; }
 

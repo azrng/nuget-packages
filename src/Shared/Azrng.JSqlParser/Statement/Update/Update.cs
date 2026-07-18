@@ -7,11 +7,11 @@ namespace Azrng.JSqlParser.Statement.Update;
 /// <summary>
 /// Represents an UPDATE statement in SQL.
 /// </summary>
-public class Update : ASTNodeAccessImpl, Statement
+public class Update : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
     public List<Join>? Joins { get; set; }
-    public Azrng.JSqlParser.Expression.Expression? Where { get; set; }
+    public Azrng.JSqlParser.Expression.IExpression? Where { get; set; }
     public System.Collections.Generic.List<UpdateSet> UpdateSets { get; set; } = new();
 
     /// <summary>MySQL LOW_PRIORITY 修饰符。</summary>

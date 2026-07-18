@@ -20,7 +20,7 @@ public class WithFunctionDeclaration
     public string? ReturnType { get; set; }
 
     /// <summary>返回值表达式。</summary>
-    public Expression.Expression? ReturnExpression { get; set; }
+    public Expression.IExpression? ReturnExpression { get; set; }
 
     public override string ToString()
     {

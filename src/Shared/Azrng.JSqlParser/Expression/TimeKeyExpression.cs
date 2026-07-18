@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 时间关键字表达式，如 <c>CURRENT_DATE</c>、<c>CURRENT_TIMESTAMP</c>、<c>LOCALTIME</c> 等。
 /// 与上游 TimeKeyExpression 对齐。
 /// </summary>
-public class TimeKeyExpression : ASTNodeAccessImpl, Expression
+public class TimeKeyExpression : ASTNodeAccessImpl, IExpression
 {
     public string StringValue { get; set; } = "";
 

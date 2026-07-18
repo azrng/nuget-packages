@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Exasol Skyline INVERSE(expression) syntax.
 /// </summary>
-public class Inverse : ASTNodeAccessImpl, Expression
+public class Inverse : ASTNodeAccessImpl, IExpression
 {
-    public Expression Expression { get; set; } = null!;
+    public IExpression Expression { get; set; } = null!;
 
     public Inverse() { }
 
-    public Inverse(Expression expression)
+    public Inverse(IExpression expression)
     {
         Expression = expression;
     }

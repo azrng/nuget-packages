@@ -9,7 +9,7 @@ namespace Azrng.JSqlParser.Statement.Create.Function;
 /// 上游对 body 采用"原始 token 列表"容器式处理（captureFunctionBody），
 /// 不递归解析为 AST，仅原样保留 token 字符串列表。
 /// </summary>
-public abstract class CreateFunctionalStatement : ASTNodeAccessImpl, Statement
+public abstract class CreateFunctionalStatement : ASTNodeAccessImpl, IStatement
 {
     /// <summary>FUNCTION 或 PROCEDURE。</summary>
     public string Kind { get; set; }

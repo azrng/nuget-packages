@@ -6,13 +6,13 @@ namespace Azrng.JSqlParser.Expression;
 /// 方言相关的 KEY 前缀表达式，如 MySQL 的 <c>KEY chain.entity</c>。
 /// 移植自上游 JSqlParser commit bfcb8b75 的 KeyExpression。
 /// </summary>
-public class KeyExpression : ASTNodeAccessImpl, Expression
+public class KeyExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public KeyExpression() { }
 
-    public KeyExpression(Expression expression)
+    public KeyExpression(IExpression expression)
     {
         Expression = expression ?? throw new ArgumentNullException(nameof(expression));
     }

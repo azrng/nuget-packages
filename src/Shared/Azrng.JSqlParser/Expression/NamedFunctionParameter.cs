@@ -7,14 +7,14 @@ namespace Azrng.JSqlParser.Expression;
 /// 例如：<c>FUNC(arg1 =&gt; value1, arg2 =&gt; value2)</c>。
 /// 对应上游 OracleNamedFunctionParameter。
 /// </summary>
-public class OracleNamedFunctionParameter : ASTNodeAccessImpl, Expression
+public class OracleNamedFunctionParameter : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public OracleNamedFunctionParameter() { }
 
-    public OracleNamedFunctionParameter(string name, Expression? expression)
+    public OracleNamedFunctionParameter(string name, IExpression? expression)
     {
         Name = name;
         Expression = expression;
@@ -30,14 +30,14 @@ public class OracleNamedFunctionParameter : ASTNodeAccessImpl, Expression
 /// 例如：<c>FUNC(arg1 := value1, arg2 := value2)</c>。
 /// 对应上游 PostgresNamedFunctionParameter。
 /// </summary>
-public class PostgresNamedFunctionParameter : ASTNodeAccessImpl, Expression
+public class PostgresNamedFunctionParameter : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public PostgresNamedFunctionParameter() { }
 
-    public PostgresNamedFunctionParameter(string name, Expression? expression)
+    public PostgresNamedFunctionParameter(string name, IExpression? expression)
     {
         Name = name;
         Expression = expression;

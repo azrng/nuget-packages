@@ -60,7 +60,7 @@ public class FrameBound : ASTNodeAccessImpl, IModel
     /// 当 Kind 为 Preceding 或 Following 且带数值偏移时，存放偏移表达式；
     /// UNBOUNDED 或 CURRENT ROW 时为 null。
     /// </summary>
-    public Expression? Offset { get; set; }
+    public IExpression? Offset { get; set; }
 
     public FrameBound() { }
 

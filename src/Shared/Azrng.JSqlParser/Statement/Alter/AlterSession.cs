@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Alter;
 /// ALTER SESSION 语句（Oracle），对齐上游 AlterSession。
 /// 形式：<c>ALTER SESSION SET param = value</c> / <c>ALTER SESSION CLOSE DATABASE LINK link</c> 等。
 /// </summary>
-public class AlterSession : ASTNodeAccessImpl, Statement
+public class AlterSession : ASTNodeAccessImpl, IStatement
 {
     /// <summary>操作类型字符串（如 SET、CLOSE）。</summary>
     public string Operation { get; set; } = "";

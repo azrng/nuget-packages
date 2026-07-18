@@ -10,7 +10,7 @@ public class Plus : BinaryExpression
 {
     public Plus() { }
 
-    public Plus(Expression leftExpression, Expression rightExpression)
+    public Plus(IExpression leftExpression, IExpression rightExpression)
     {
         LeftExpression = leftExpression;
         RightExpression = rightExpression;

@@ -7,7 +7,7 @@ namespace Azrng.JSqlParser.Statement.Show;
 /// <summary>
 /// SHOW INDEX FROM table 语句，对齐上游 ShowIndexStatement。
 /// </summary>
-public class ShowIndexStatement : ASTNodeAccessImpl, Statement
+public class ShowIndexStatement : ASTNodeAccessImpl, IStatement
 {
     public Table? Table { get; set; }
 

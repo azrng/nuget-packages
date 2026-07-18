@@ -5,12 +5,12 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents an INTERVAL expression (e.g., INTERVAL '7' DAY).
 /// </summary>
-public class IntervalExpression : ASTNodeAccessImpl, Expression
+public class IntervalExpression : ASTNodeAccessImpl, IExpression
 {
     public string? Parameter { get; set; }
     public string? IntervalType { get; set; }
     public bool IntervalKeyword { get; set; } = true;
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

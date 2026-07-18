@@ -5,9 +5,9 @@ namespace Azrng.JSqlParser.Expression.Operators.Relational;
 /// <summary>
 /// Represents an IS NULL / IS NOT NULL expression in SQL.
 /// </summary>
-public class IsNullExpression : ASTNodeAccessImpl, Expression
+public class IsNullExpression : ASTNodeAccessImpl, IExpression
 {
-    public Expression LeftExpression { get; set; } = null!;
+    public IExpression LeftExpression { get; set; } = null!;
     public bool Not { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);

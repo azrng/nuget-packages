@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Test.Util;
 /// </summary>
 public class TablesNamesFinderTest
 {
-    private HashSet<string> GetTables(Azrng.JSqlParser.Statement.Statement stmt)
+    private HashSet<string> GetTables(Azrng.JSqlParser.Statement.IStatement stmt)
     {
         var finder = new TablesNamesFinder();
         return finder.GetTables(stmt);

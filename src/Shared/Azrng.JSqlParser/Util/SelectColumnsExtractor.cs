@@ -1,7 +1,6 @@
 using Azrng.JSqlParser.Models;
 using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Schema;
-using JExpression = Azrng.JSqlParser.Expression.Expression;
 
 namespace Azrng.JSqlParser.Util;
 

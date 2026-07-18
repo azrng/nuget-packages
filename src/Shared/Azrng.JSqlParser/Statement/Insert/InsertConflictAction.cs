@@ -16,7 +16,7 @@ public class InsertConflictAction : ASTNodeAccessImpl, IModel
     public List<UpdateSet>? UpdateSets { get; set; }
 
     /// <summary>DO UPDATE SET 后的可选 WHERE 条件。</summary>
-    public Expression.Expression? WhereExpression { get; set; }
+    public Expression.IExpression? WhereExpression { get; set; }
 
     public override string ToString()
     {

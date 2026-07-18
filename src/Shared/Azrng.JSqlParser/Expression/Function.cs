@@ -7,13 +7,13 @@ namespace Azrng.JSqlParser.Expression;
 /// <summary>
 /// Represents a SQL function call.
 /// </summary>
-public class Function : ASTNodeAccessImpl, Expression
+public class Function : ASTNodeAccessImpl, IExpression
 {
     public string Name { get; set; } = "";
-    public Expression? Parameters { get; set; }
+    public IExpression? Parameters { get; set; }
     public bool AllColumns { get; set; }
     public List<OrderByElement>? WithinGroupOrderByElements { get; set; }
-    public Expression? FilterExpression { get; set; }
+    public IExpression? FilterExpression { get; set; }
 
     /// <summary>
     /// GROUP_CONCAT 内部的 DISTINCT 标志。MySQL 专用：<code>GROUP_CONCAT(DISTINCT col SEPARATOR ',')</code>
@@ -30,7 +30,7 @@ public class Function : ASTNodeAccessImpl, Expression
     /// GROUP_CONCAT 的 SEPARATOR 表达式。MySQL 专用：<code>GROUP_CONCAT(col SEPARATOR ', ')</code>
     /// 未指定时 MySQL 默认逗号分隔。
     /// </summary>
-    public Expression? Separator { get; set; }
+    public IExpression? Separator { get; set; }
 
     /// <summary>
     /// 通用关键字参数列表（如 <code>func(expr SEPARATOR ',')</code> 中的 SEPARATOR 部分，
@@ -115,11 +115,11 @@ public class KeywordArgument : ASTNodeAccessImpl, IModel
     public string Keyword { get; set; } = "";
 
     /// <summary>关键字后的表达式。</summary>
-    public Expression? Expression { get; set; }
+    public IExpression? Expression { get; set; }
 
     public KeywordArgument() { }
 
-    public KeywordArgument(string keyword, Expression? expression)
+    public KeywordArgument(string keyword, IExpression? expression)
     {
         Keyword = keyword;
         Expression = expression;

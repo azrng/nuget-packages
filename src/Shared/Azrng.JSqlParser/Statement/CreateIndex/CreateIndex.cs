@@ -6,7 +6,7 @@ namespace Azrng.JSqlParser.Statement.CreateIndex;
 /// <summary>
 /// Represents a CREATE INDEX statement in SQL.
 /// </summary>
-public class CreateIndex : ASTNodeAccessImpl, Statement
+public class CreateIndex : ASTNodeAccessImpl, IStatement
 {
     public Azrng.JSqlParser.Schema.Index? Index { get; set; }
     public Table? Table { get; set; }

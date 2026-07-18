@@ -10,7 +10,7 @@ namespace Azrng.JSqlParser.Expression;
 /// 示例：<c>MAX(salary) KEEP (DENSE_RANK FIRST ORDER BY hire_date) OVER (PARTITION BY dept)</c>
 /// </para>
 /// </summary>
-public class KeepExpression : ASTNodeAccessImpl, Expression
+public class KeepExpression : ASTNodeAccessImpl, IExpression
 {
     /// <summary>排名函数名（通常是 DENSE_RANK）。</summary>
     public string Name { get; set; } = "";

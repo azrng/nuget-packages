@@ -108,6 +108,6 @@ public class TableReferenceExtractorTest
     public void GetTableReferences_OnNull_ShouldThrow()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            ((Azrng.JSqlParser.Statement.Statement)null!).GetTableReferences());
+            ((Azrng.JSqlParser.Statement.IStatement)null!).GetTableReferences());
     }
 }

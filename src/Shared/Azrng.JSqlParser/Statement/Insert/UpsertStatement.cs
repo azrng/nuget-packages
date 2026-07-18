@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Statement.Insert;
 /// UPSERT / REPLACE / INSERT OR REPLACE 语句，对齐上游 Upsert。
 /// 支持 Firebird/CockroachDB UPSERT、MySQL REPLACE INTO、SQLite INSERT OR REPLACE。
 /// </summary>
-public class UpsertStatement : ASTNodeAccessImpl, Statement
+public class UpsertStatement : ASTNodeAccessImpl, IStatement
 {
     public UpsertType UpsertType { get; set; } = UpsertType.Upsert;
 

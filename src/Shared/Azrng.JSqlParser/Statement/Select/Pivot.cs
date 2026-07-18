@@ -21,7 +21,7 @@ public class Pivot
     public List<Column> ForColumns { get; set; } = new();
 
     /// <summary>IN 值列表（如 IN ('A', 'B')）。</summary>
-    public List<Expression.Expression> InItems { get; set; } = new();
+    public List<Expression.IExpression> InItems { get; set; } = new();
 
     /// <summary>别名，可选。</summary>
     public Alias? Alias { get; set; }
