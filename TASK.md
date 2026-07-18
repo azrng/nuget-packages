@@ -14,7 +14,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
-| T110 | Azrng.JSqlParser C# 风格化迁移（按 MIGRATION.md 第十五章批次表逐批改造，每批一提交） | 全部 10 批完成（批 7 枚举 PascalCase、批 9 接口 I 前缀、批 10 SqlParser 改名为破坏性变更；批 8 null! 治理分两增量完成：增量 1 Between/Parenthesis，增量 2 BinaryExpression 基类 + 28 个 AST 字段 + WhereCondition DTO 全改 required，visitor/CNFConverter 分步赋值改对象初始化器，4 个带参构造加 SetsRequiredMembers，删 CreateBinary<T> 辅助方法内联 14 调用点）。全量 1436 项通过 | DONE | 2026-07-18 |
+| T110 | Azrng.JSqlParser C# 风格化迁移（按 MIGRATION.md 批次表逐批改造，每批一提交） | 全部 10 批完成（批 7 枚举 PascalCase、批 9 接口 I 前缀、批 10 SqlParser 改名为破坏性变更；批 8 null! 治理分两增量完成：增量 1 Between/Parenthesis，增量 2 BinaryExpression 基类 + 28 个 AST 字段 + WhereCondition DTO 全改 required，visitor/CNFConverter 分步赋值改对象初始化器，4 个带参构造加 SetsRequiredMembers，删 CreateBinary<T> 辅助方法内联 14 调用点）。MIGRATION.md 收口为纯对照表（删改造基线/治理专项/执行清单/改动日志 4 章 + 表格列重组为「上游 Java | Azrng C# | 说明」三列 + 填代码真实现状，462→356 行）。全量 1436 项通过 | DONE | 2026-07-18 |
 | T106 | Azrng.AspNetCore.Authorization.Default 审查问题修复（Requirement 保留 string[] 公开 API 并补防御性拷贝、路径规范化、setter/constructor null 校验，处理器使用内部规范化集合，README/ARCHITECTURE/IPermissionVerifyService 示例改用 StartsWithSegments，测试 20→26 项） | DONE | 2026-07-13 |
 | T105 | JwtBearer 版本号修正（包版本与 README 最新版本说明从 1.5.1 改回 1.5.0，并验证 nupkg 产物版本为 1.5.0） | DONE | 2026-07-13 |
 | T104 | JwtBearer 当前未提交改动审查与提交（修正 UseJwtBearerDefaultResponses 命名一致性、README/ARCHITECTURE/测试同步，示例保留 AddMyAuthentication 的 Basic+Bearer 分发并显式启用预置响应，纯 JWT helper 设置 Bearer 默认方案） | DONE | 2026-07-13 |
