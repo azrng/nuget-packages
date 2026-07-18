@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Azrng.JSqlParser.Parser;
 
@@ -8,10 +9,9 @@ namespace Azrng.JSqlParser.Expression;
 /// </summary>
 public class ConnectByPriorOperator : ASTNodeAccessImpl, IExpression
 {
-    public IExpression Expression { get; set; } = null!;
+    public required IExpression Expression { get; set; }
 
-    public ConnectByPriorOperator() { }
-
+    [SetsRequiredMembers]
     public ConnectByPriorOperator(IExpression expression)
     {
         Expression = expression;

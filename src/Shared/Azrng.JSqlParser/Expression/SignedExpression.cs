@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Expression;
 public class SignedExpression : ASTNodeAccessImpl, IExpression
 {
     public char Sign { get; set; }
-    public IExpression Expression { get; set; } = null!;
+    public required IExpression Expression { get; set; }
 
     public T Accept<T, S>(IExpressionVisitor<T> visitor, S context) => visitor.Visit(this, context);
 

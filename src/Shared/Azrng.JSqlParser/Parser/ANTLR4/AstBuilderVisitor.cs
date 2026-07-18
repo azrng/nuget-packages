@@ -3545,9 +3545,10 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     {
         if (context.NOT() != null)
         {
-            var not = new NotExpression();
-            not.Expression = (Expression.IExpression)Visit(context.notExpression());
-            return not;
+            return new NotExpression
+            {
+                Expression = (Expression.IExpression)Visit(context.notExpression())
+            };
         }
         return Visit(context.predicate());
     }
@@ -3883,10 +3884,11 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         var expr = (Expression.IExpression)Visit(context.unaryExpr());
         if (context.MINUS() != null)
         {
-            var signed = new SignedExpression();
-            signed.Sign = '-';
-            signed.Expression = expr;
-            return signed;
+            return new SignedExpression
+            {
+                Sign = '-',
+                Expression = expr
+            };
         }
 
         return expr;
@@ -3921,12 +3923,13 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
             {
                 if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOUBLE_COLON && colDataTypeIdx < colDataTypes.Length)
                 {
-                    var cast = new CastExpression();
-                    cast.Expression = expr;
-                    cast.DataType = colDataTypes[colDataTypeIdx].GetText();
-                    cast.UseCastKeyword = false;
+                    expr = new CastExpression
+                    {
+                        Expression = expr,
+                        DataType = colDataTypes[colDataTypeIdx].GetText(),
+                        UseCastKeyword = false
+                    };
                     colDataTypeIdx++;
-                    expr = cast;
                 }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.DOT && identifierIdx < identifiers.Length)
                 {
@@ -4312,21 +4315,23 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitCastExpr(JSqlParserGrammar.CastExprContext context)
     {
-        var cast = new CastExpression();
-        cast.Expression = (Expression.IExpression)Visit(context.expression());
-        cast.DataType = context.dataType().GetText();
-        // 设置 CAST 关键字：CAST / TRY_CAST / SAFE_CAST
-        cast.Keyword = context.SAFE_CAST() != null ? "SAFE_CAST"
-            : context.TRY_CAST() != null ? "TRY_CAST" : "CAST";
-        return cast;
+        return new CastExpression
+        {
+            Expression = (Expression.IExpression)Visit(context.expression()),
+            DataType = context.dataType().GetText(),
+            // 设置 CAST 关键字：CAST / TRY_CAST / SAFE_CAST
+            Keyword = context.SAFE_CAST() != null ? "SAFE_CAST"
+                : context.TRY_CAST() != null ? "TRY_CAST" : "CAST"
+        };
     }
 
     public override object VisitExtractExpr(JSqlParserGrammar.ExtractExprContext context)
     {
-        var extract = new ExtractExpression();
-        extract.Name = context.extractField().GetText();
-        extract.Expression = (Expression.IExpression)Visit(context.expression());
-        return extract;
+        return new ExtractExpression
+        {
+            Name = context.extractField().GetText(),
+            Expression = (Expression.IExpression)Visit(context.expression())
+        };
     }
 
     public override object VisitIntervalExpr(JSqlParserGrammar.IntervalExprContext context)
@@ -5118,20 +5123,18 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitLambdaExpression(JSqlParserGrammar.LambdaExpressionContext context)
     {
-        var lambda = new LambdaExpression();
-
+        var identifiers = new List<string>();
         if (context.identifierList() != null)
         {
             foreach (var id in context.identifierList().identifier())
-                lambda.Identifiers.Add(id.GetText());
+                identifiers.Add(id.GetText());
         }
         else if (context.identifier() != null)
         {
-            lambda.Identifiers.Add(context.identifier().GetText());
+            identifiers.Add(context.identifier().GetText());
         }
 
-        lambda.Expression = (Expression.IExpression)Visit(context.expression());
-        return lambda;
+        return new LambdaExpression(identifiers, (Expression.IExpression)Visit(context.expression()));
     }
 
     public override object VisitStructType(JSqlParserGrammar.StructTypeContext context)

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Azrng.JSqlParser.Parser;
 
@@ -9,16 +10,16 @@ namespace Azrng.JSqlParser.Expression;
 public class LambdaExpression : ASTNodeAccessImpl, IExpression
 {
     public List<string> Identifiers { get; set; } = new();
-    public IExpression Expression { get; set; } = null!;
+    public required IExpression Expression { get; set; }
 
-    public LambdaExpression() { }
-
+    [SetsRequiredMembers]
     public LambdaExpression(string identifier, IExpression expression)
     {
         Identifiers = new List<string> { identifier };
         Expression = expression;
     }
 
+    [SetsRequiredMembers]
     public LambdaExpression(List<string> identifiers, IExpression expression)
     {
         Identifiers = identifiers;

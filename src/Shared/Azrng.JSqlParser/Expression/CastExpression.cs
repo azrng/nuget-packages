@@ -8,7 +8,7 @@ namespace Azrng.JSqlParser.Expression;
 public class CastExpression : ASTNodeAccessImpl, IExpression
 {
     public string Keyword { get; set; } = "CAST";
-    public IExpression Expression { get; set; } = null!;
+    public required IExpression Expression { get; set; }
     public string DataType { get; set; } = "";
     public bool UseCastKeyword { get; set; } = true;
 
