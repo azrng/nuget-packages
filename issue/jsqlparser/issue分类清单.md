@@ -42,6 +42,10 @@
 ### ① DDL 解析：CREATE / ALTER / DROP / INDEX / CONSTRAINT  [20 条]
 
 > 跨方言，最大批；模式重复，适合集中清。子主题：(a) 约束/索引 #1570 #1893 #1589 #823 #538 #1060 #652 #1927 #1295；(b) ALTER IF 系列 #2112 #1875 #599 #2039；(c) 分区/视图/库 #1668 #1735 #2070 #2353；(d) 整体失败 #1567 #2020
+>
+> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1589（实为 PRIMARY KEY NONCLUSTERED 缺失，已修）
+> - ⛔ 复现且未修复：#1570 #1893 #823 #538 #1295（MySQL 索引细节，后续批次）
 
 | # | 类型 | 标题 | 要点 |
 |---:|:--:|---|---|
@@ -85,16 +89,20 @@
 ### ③ 词法 / Token / 字面量 / 类型 / 查询子句  [7 条]
 
 > 多为词法规则补丁，独立、风险低，适合先做。ClickHouse #2442/.N 与 #2436/?: 是词法歧义，可一起做
+>
+> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1169 #1314
+> - ⛔ 复现且未修复：#2435 #2359（后续批次评估）
 
-| # | 类型 | 标题 | 要点 |
-|---:|:--:|---|---|
-| [#2442](https://github.com/JSQLParser/JSqlParser/issues/2442) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Tuple positional access via .N not supported in SELECT | .N tuple 位置访问，.2 被当浮点 (ClickHouse) |
-| [#2441](https://github.com/JSQLParser/JSqlParser/issues/2441) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Parametric type Nullable(Decimal(p, s)) not supported as CAST target | Nullable(Decimal(p,s)) 参数化类型作 CAST 目标 (ClickHouse) |
-| [#2436](https://github.com/JSQLParser/JSqlParser/issues/2436) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : C-style ternary operator (? :) not supported in SELECT | C 风格三元运算符 ?: (ClickHouse) |
-| [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) |
-| [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 |
-| [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 |
-| [#1169](https://github.com/JSQLParser/JSqlParser/issues/1169) | [B] | net.sf.jsqlparser.JSQLParserException: Encountered unexpected token: "desc" "DESC" | desc / DESC token 意外 |
+| # | 类型 | 标题 | 要点 | Azrng 状态 |
+|---:|:--:|---|---|---|
+| [#2442](https://github.com/JSQLParser/JSqlParser/issues/2442) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Tuple positional access via .N not supported in SELECT | .N tuple 位置访问，.2 被当浮点 (ClickHouse) | — |
+| [#2441](https://github.com/JSQLParser/JSqlParser/issues/2441) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Parametric type Nullable(Decimal(p, s)) not supported as CAST target | Nullable(Decimal(p,s)) 参数化类型作 CAST 目标 (ClickHouse) | — |
+| [#2436](https://github.com/JSQLParser/JSqlParser/issues/2436) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : C-style ternary operator (? :) not supported in SELECT | C 风格三元运算符 ?: (ClickHouse) | — |
+| [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) | ⛔ 复现（探针记录） |
+| [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 | ⛔ 复现（探针记录） |
+| [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 | 🔧 已修复（insertStatement 加 SET 形式 + insertRowAlias 子句 + Insert.UseSet/AliasName/ColumnAlias 字段） |
+| [#1169](https://github.com/JSQLParser/JSqlParser/issues/1169) | [B] | net.sf.jsqlparser.JSQLParserException: Encountered unexpected token: "desc" "DESC" | desc / DESC token 意外 | 🔧 已修复（groupByColumn 子规则 + GroupByColumnReference 模型） |
 
 ### ④ PostgreSQL 专项  [12 条]
 
@@ -136,27 +144,35 @@
 ### ⑥ SQL Server / T-SQL 专项  [6 条]
 
 > 含全文搜索、FOR XML、hints 等独有语法
+>
+> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#911 #161
+> - ⛔ 复现且未修复：#2033 #397（后续批次评估）
 
-| # | 类型 | 标题 | 要点 |
-|---:|:--:|---|---|
-| [#2033](https://github.com/JSQLParser/JSqlParser/issues/2033) | [B] | [BUG] JSQLParser Version : 4.7 : sqlserver insert bulk  sql failed! | insert bulk (SQL Server) |
-| [#1563](https://github.com/JSQLParser/JSqlParser/issues/1563) | [B] | TSQL/MS SQL Server statements/syntax not supported. | TSQL 语法不支持 |
-| [#911](https://github.com/JSQLParser/JSqlParser/issues/911) | [B] | SQL Server table variables not supported \| SELECT columnName FROM @table | 表变量 @table |
-| [#397](https://github.com/JSQLParser/JSqlParser/issues/397) | [B] | SqlServer full text search %% | 全文搜索 %% |
-| [#386](https://github.com/JSQLParser/JSqlParser/issues/386) | [B] | Support for TSQL "STUFF" and "FOR XML PATH" instructions | STUFF / FOR XML PATH |
-| [#161](https://github.com/JSQLParser/JSqlParser/issues/161) | [B] | add support for SQL Server Query Hints | Query Hints |
+| # | 类型 | 标题 | 要点 | Azrng 状态 |
+|---:|:--:|---|---|---|
+| [#2033](https://github.com/JSQLParser/JSqlParser/issues/2033) | [B] | [BUG] JSQLParser Version : 4.7 : sqlserver insert bulk  sql failed! | insert bulk (SQL Server) | ⛔ 复现（探针记录） |
+| [#1563](https://github.com/JSQLParser/JSqlParser/issues/1563) | [B] | TSQL/MS SQL Server statements/syntax not supported. | TSQL 语法不支持 | — |
+| [#911](https://github.com/JSQLParser/JSqlParser/issues/911) | [B] | SQL Server table variables not supported \| SELECT columnName FROM @table | 表变量 @table | 🔧 已修复（table 规则加 SINGLE_AT_IDENTIFIER/S_AT_IDENTIFIER 分支，@name 整段保留到 Table.Name） |
+| [#397](https://github.com/JSQLParser/JSqlParser/issues/397) | [B] | SqlServer full text search %% | 全文搜索 %% | ⛔ 复现（探针记录） |
+| [#386](https://github.com/JSQLParser/JSqlParser/issues/386) | [B] | Support for TSQL "STUFF" and "FOR XML PATH" instructions | STUFF / FOR XML PATH | ✅ 已支持（ForXmlPath 字段） |
+| [#161](https://github.com/JSQLParser/JSqlParser/issues/161) | [B] | add support for SQL Server Query Hints | Query Hints | 🔧 已修复（plainSelect 末尾加 optionClause?，PlainSelect.OptionHints 透传文本） |
 
 ### ⑦ MySQL 专项  [5 条]
 
 > #2427 与 #2006 是同一特性（_utf8mb4 introducer），可合并修
+>
+> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#2428 #2427 #2006 #2298 #854
+> - ⛔ 复现且未修复：无
 
-| # | 类型 | 标题 | 要点 |
-|---:|:--:|---|---|
-| [#2428](https://github.com/JSQLParser/JSqlParser/issues/2428) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : PROCEDURE ANALYSE() not supported in SELECT statements | PROCEDURE ANALYSE() |
-| [#2427](https://github.com/JSQLParser/JSqlParser/issues/2427) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : charset introducer (_utf8mb4) with COLLATE not supported | _utf8mb4 introducer + COLLATE |
-| [#2298](https://github.com/JSQLParser/JSqlParser/issues/2298) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : Failed to parse CAST as CHAR with CHARACTER SET | CAST as CHAR with CHARACTER SET |
-| [#2006](https://github.com/JSQLParser/JSqlParser/issues/2006) | [B] | [BUG] JSQLParser 4.8 : MYSQL : not able to parse _utf8mb4 dialects | _utf8mb4 方言解析 |
-| [#854](https://github.com/JSQLParser/JSqlParser/issues/854) | [B] | Cannot use MySQL user variables after INTO clause | INTO 后用户变量 |
+| # | 类型 | 标题 | 要点 | Azrng 状态 |
+|---:|:--:|---|---|---|
+| [#2428](https://github.com/JSQLParser/JSqlParser/issues/2428) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : PROCEDURE ANALYSE() not supported in SELECT statements | PROCEDURE ANALYSE() | 🔧 已修复（plainSelect 加 mySqlProcedureClause?，PlainSelect.MySqlProcedure 字段） |
+| [#2427](https://github.com/JSQLParser/JSqlParser/issues/2427) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : charset introducer (_utf8mb4) with COLLATE not supported | _utf8mb4 introducer + COLLATE | 🔧 已修复（StringPrefix 扩展为 '_' [a-zA-Z0-9]+，S_CHAR_LITERAL 加 introducer+空格分支，StringValue 支持 _xxx 前缀） |
+| [#2298](https://github.com/JSQLParser/JSqlParser/issues/2298) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : Failed to parse CAST as CHAR with CHARACTER SET | CAST as CHAR with CHARACTER SET | 🔧 已修复（castExpr 加 castCharacterSetClause，CastExpression.CharacterSet/Collation 字段） |
+| [#2006](https://github.com/JSQLParser/JSqlParser/issues/2006) | [B] | [BUG] JSQLParser 4.8 : MYSQL : not able to parse _utf8mb4 dialects | _utf8mb4 方言解析 | 🔧 已修复（与 #2427 同源修复，覆盖 _utf8mb4 'text' 带空格形式） |
+| [#854](https://github.com/JSQLParser/JSqlParser/issues/854) | [B] | Cannot use MySQL user variables after INTO clause | INTO 后用户变量 | 🔧 已修复（intoClause 加 INTO parameter 分支前置，PlainSelect.IntoVariables 字段） |
 
 ### ⑧ 其他方言 + 跨方言特性  [17 条]
 

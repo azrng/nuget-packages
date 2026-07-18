@@ -461,4 +461,41 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 ---
 
+## 十四、T114 上游 issue 修复对照（非 PG，beta10）
+
+> 本节记录 T114 批次修复的 10 条上游 JSqlParser open issue（PG 专项已在 T113 处理，本批覆盖通用 + SQL Server + MySQL）。
+> 探针定位 → grammar/lexer/visitor/model 改动 → round-trip 测试，3 批 commit 已落库。
+
+### 14.1 已修复对照表
+
+| Issue | 方言 | 上游缺陷 | Azrng C#（修复后） | 修复 commit |
+|------|------|---------|------------------|------------|
+| #1169 | 通用 | `GROUP BY c DESC` 解析失败 | `groupByColumn: expression (ASC\|DESC)?` + `GroupByElement.GroupByColumnReferences`（含 `GroupByColumnReference.IsAsc`） | `0aacffc` |
+| #911 | SQL Server | `FROM @table_variable` 解析失败 | `table` 规则加 `SINGLE_AT_IDENTIFIER`/`S_AT_IDENTIFIER` 分支，`Table.Name` 直接保留 `@name` | `0aacffc` |
+| #1589 | SQL Server | `PRIMARY KEY NONCLUSTERED` 解析失败 | lexer 新增 `NONCLUSTERED`/`CLUSTERED` token（按顺序），`columnConstraint`/`tableConstraint` 加可选 `clusterKind`，`Constraint.ClusterKind` 字段 | `0aacffc` |
+| #161 | SQL Server | `OPTION (MAXRECURSION 2)` 解析失败 | `plainSelect` 末尾加 `optionClause?`，新增 `optionClause`/`optionHint` 规则透传 hint 文本，`PlainSelect.OptionHints` 字段 | `0aacffc` |
+| #854 | MySQL | `SELECT ... INTO @var` 解析失败 | `intoClause` 加 `INTO parameter (COMMA parameter)*` 分支（前置避免被 @table 抢匹配），`PlainSelect.IntoVariables` 字段 | `d65c275` |
+| #1314 | MySQL | `INSERT INTO t SET a=1 AS new(m,n,p)` 解析失败 | `insertStatement` 加 `SET assignmentItem` 形式 + `insertRowAlias` 子句，`Insert.UseSet`/`AliasName`/`ColumnAlias` 字段 | `d65c275` |
+| #2298 | MySQL | `CAST(x AS CHAR CHARACTER SET utf8)` 解析失败 | `castExpr` 加可选 `castCharacterSetClause`，`CastExpression.CharacterSet`/`Collation` 字段 | `d65c275` |
+| #2427 + #2006 | MySQL | `_utf8mb4'...' [COLLATE ...]` / `_utf8mb4 '...'` 解析失败 | lexer `StringPrefix` 扩展为 `'_' [a-zA-Z0-9]+`，`S_CHAR_LITERAL` 加 introducer+空格分支，`StringValue` 构造支持任意 `_xxx` 前缀 | `d65c275` |
+| #2428 | MySQL | `SELECT ... PROCEDURE ANALYSE(...)` 解析失败 | `plainSelect` 加 `mySqlProcedureClause?`（复用 `functionExpr`），`PlainSelect.MySqlProcedure` 字段 | `0aacffc`（grammar）+ `d65c275`（探针转绿） |
+
+### 14.2 探针未修（本批次跳过）
+
+| Issue | 跳过原因 |
+|------|---------|
+| #2421 BigQuery MERGE BY TARGET/SOURCE | 小众语言，本批次不做 |
+| #2435/#2359/#1295/#1927/#1893/#823/#538/#1570 等 MySQL 索引细节 | 留作后续批次 |
+| #397/#2033/#672/#2039 等 SQL Server/Oracle 专项 | 留作后续批次 |
+| #2440/#1170 等 AST 正确性 | 留作后续批次 |
+| #467/#2403/#2438 工程类 | 不在本批次 |
+
+### 14.3 测试规模
+
+- T113 修复后（基线）：1599 项
+- T114 修复后：1642 项 active（+28 round-trip）+ 16 探针 Skip 记录现状
+- 新增测试文件 2 个：`NonPgIssuesProbeTest`（26 探针）+ `NonPgFixRoundTripTest`（28 round-trip）
+
+---
+
 文件结束。
