@@ -412,4 +412,53 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 ---
 
+## 十三、T111 对齐审计修复对照（beta10）
+
+> 本节记录 T111 系统对比上游 JSqlParser 5.4 发现的迁移走样，及修复后的字段/行为对照。
+> 9 批 commit 已落库，覆盖 17 处高危 + 9 处中危。下表用于下游业务方迁移参考。
+
+### 13.1 已修复对照表
+
+| 类 / 子句 | 上游 Java | Azrng C#（修复后） | 修复 commit |
+|----------|-----------|------------------|------------|
+| ORDER BY NULLS FIRST/LAST | `OrderByElement.nullOrdering` | `NullOrdering? NullOrder` | 批次1 `a003064` |
+| WITH RECURSIVE | `WithItem.recursive` | `bool Recursive`（任一为 true 则整体输出） | 批次1 `a003064` |
+| JOIN 多 ON | `Join.onExpressions` | `List<IExpression> OnExpressions`（grammar 真支持多 ON） | 批次1 `a003064` |
+| Contains 符号 | `&>` | `OperatorSymbol = "&>"`（继承 ComparisonOperator） | 批次2 `f4d21c9` |
+| ContainedBy 符号 | `<&` | `OperatorSymbol = "<&"`（继承 ComparisonOperator） | 批次2 `f4d21c9` |
+| JsonOperator 参数化 | `JsonOperator(String op)` | `string Operator { get; set; }`（默认 `->`） | 批次2 `f4d21c9` |
+| ExpressionVisitorAdapter 空 Visit | `visitBinaryExpression` | 5 处空 Visit 改为 `VisitBinary`（IsBoolean/IsDistinct/JsonOperator/Contains/ContainedBy） | 批次3 `1fe7410` |
+| ExpressionDescendantsWalker 空 Visit | `visitBinaryExpression` | 7 处空 Visit 改为下钻（含 Matches/RegExpMatchOperator 残留修复） | 批次3 `1fe7410` |
+| VisitPredicate 默认兜底 | 抛异常 | 默认分支改抛 `JSqlParserException`（防未来静默误归类） | 批次4 `9f6e4a1` |
+| IsNullExpression PG 简写 | `useIsNull` / `useNotNull` | `UseIsNull` / `UseNotNull`（输出 `x ISNULL` / `x NOTNULL`） | 批次5 `a0fb192` |
+| InExpression GLOBAL | `global` | `bool Global`（grammar 支持 `GLOBAL [NOT] IN`） | 批次5 `a0fb192` |
+| LikeExpression REGEXP_LIKE 下划线 | `likeKeyWord.toString()` | `OperatorSymbol` switch 显式映射（保留下划线/空格） | 批次6 `dc852e0` |
+| LikeExpression MySQL BINARY | `useBinary` | `bool UseBinary`（grammar 在 LIKE 后加 `BINARY?`） | 批次6 `dc852e0` |
+| FullTextSearch 列类型 | `ExpressionList<Column>` | `List<Column> MatchColumns` | 批次7 `267e0bb` |
+| Pivot 多聚合 | `List<SelectItem<Function>>` | `List<Function> Functions`（保留 `Function` 单值兼容 API） | 批次7 `267e0bb` |
+| SELECT INTO | `intoTables` / `intoTempTable` | `List<Table>? IntoTables` / `Table? IntoTempTable` | 批次8 `02ef2e9` |
+| DISTINCT ON | `Distinct.onSelectItems` | `List<SelectItem>? OnSelectItems`（grammar 新增 `distinctOnClause`） | 批次8 `02ef2e9` |
+| LIMIT BY（ClickHouse） | `Limit.byExpressions` | `List<IExpression>? ByExpressions`（grammar `LIMIT ... (BY expressionList)?`） | 批次8 `02ef2e9` |
+| ORDER BY WITH ROLLUP | `OrderByElement.mysqlWithRollup` | `bool MysqlWithRollup`（grammar 末尾 `WITH ROLLUP?`） | 批次9 `41af1a4` |
+| MySQL INDEX FOR | `MySQLIndexHint.forClause` | `string? ForClause`（FOR JOIN/ORDER BY/GROUP BY） | 批次9 `41af1a4` |
+
+### 13.2 跳过项 TODO（后续批次评估）
+
+下列问题本轮识别但未实施，需后续单独评估，原因和影响如下：
+
+| 跳过项 | 原因 | 影响 |
+|-------|------|------|
+| `ComparisonOperator` / `InExpression` / `Matches` / `CosineSimilarity` / `GeometryDistance` 的 `oldOracleJoinSyntax` / `oraclePriorPosition` | 涉及 9+ 类，需引入 `SupportsOldOracleJoinSyntax` 接口设计，且 Oracle 老式 `a = b(+)` 外连接现代写法是 JOIN 语法 | Oracle 老式外连接与 `PRIOR` 表达式方位信息无法承载，round-trip 丢 `(+)`/`PRIOR` |
+| `ParenthesedSelect : Select`（上游继承关系） | 改基类破坏现有 `Select.Select` 内嵌设计，影响 visitor 接线与所有子查询处理路径 | 外部消费者按 `Select` 接口拿 sub-select 属性需特殊处理 |
+| `GROUP BY` 普通表达式 + `GROUPING SETS`/`ROLLUP`/`CUBE` 混用 | grammar 当前三选一互斥（`g4:432-436`），改造需重写 groupByClause 结构 | `GROUP BY a, GROUPING SETS ((b))` 混用形式无法解析 |
+| `SqlServerHints` 完整 12+ hint 关键字 | `HOLDLOCK`/`SERIALIZABLE`/`READCOMMITTED` 等是 SQL 保留字，与 lexer 现有关键字冲突，需谨慎梳理 | `WITH (TABLOCK, HOLDLOCK)` 等多 hint 不支持（当前仅 INDEX/NOLOCK） |
+
+### 13.3 测试规模
+
+- 修复前：1465 项
+- 修复后：1567 项（+102，3 TFM × 1567 全通过）
+- 新增测试文件 8 个，覆盖每批改动的语法/语义/round-trip
+
+---
+
 文件结束。
