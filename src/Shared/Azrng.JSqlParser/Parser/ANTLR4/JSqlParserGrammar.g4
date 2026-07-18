@@ -292,7 +292,7 @@ timeTravelClause
 
 // PIVOT / UNPIVOT 子句（FROM 子句行列转换）
 pivotClause
-    : PIVOT XML? OPENING_PAREN functionExpr FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
+    : PIVOT XML? OPENING_PAREN functionExpr (COMMA functionExpr)* FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
     | UNPIVOT (INCLUDE NULLS)? OPENING_PAREN columnList FOR columnList IN OPENING_PAREN expressionList CLOSING_PAREN CLOSING_PAREN alias?
     ;
 

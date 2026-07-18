@@ -1165,12 +1165,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     /// <summary>构建 PIVOT/UNPIVOT 子句并挂到 Table。</summary>
     private void BuildPivotClause(Table table, JSqlParserGrammar.PivotClauseContext context)
     {
-        // PIVOT [XML] (func FOR cols IN (vals)) [AS alias]
+        // PIVOT [XML] (func1, func2, ... FOR cols IN (vals)) [AS alias]
         if (context.PIVOT() != null)
         {
+            // 多聚合函数：对齐上游 functionItems，多函数 PIVOT (SUM(a), COUNT(b)) 全部收集
+            var functions = context.functionExpr()
+                .Select(f => (Function)Visit(f))
+                .ToList();
             var pivot = new Pivot
             {
-                Function = (Function)Visit(context.functionExpr()),
+                Functions = functions,
                 IsXml = context.XML() != null,
                 ForColumns = context.columnList(0).identifier()
                     .Select(i => new Column { ColumnName = i.GetText() }).ToList(),
@@ -4225,15 +4229,16 @@ public class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
 
     public override object VisitFullTextSearch(JSqlParserGrammar.FullTextSearchContext context)
     {
-        var columns = new List<string>();
+        // 列改为结构化 Column（对齐上游 ExpressionList<Column>），保留表名前缀等元信息
+        var columns = new List<Column>();
         foreach (var colCtx in context.columnRef())
         {
-            columns.Add(((Column)Visit(colCtx)).GetFullyQualifiedName());
+            columns.Add((Column)Visit(colCtx));
         }
 
         var fts = new FullTextSearch
         {
-            Columns = columns,
+            MatchColumns = columns,
             MatchExpression = (Expression.IExpression)Visit(context.expression())
         };
 
