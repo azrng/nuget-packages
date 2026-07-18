@@ -9,6 +9,12 @@ public class GroupByElement
     public List<Expression.IExpression> GroupByExpressions { get; set; } = new();
     public bool MySqlWithRollup { get; set; }
 
+    /// <summary>
+    /// GROUP BY 单项（表达式 + 可选 ASC/DESC），对齐上游 GroupByColumnReference + usingOrders。
+    /// 仅当 GROUP BY 出现 ASC/DESC 时填充；为 null 表示所有项均无方向，沿用 <see cref="GroupByExpressions"/>。
+    /// </summary>
+    public List<GroupByColumnReference>? GroupByColumnReferences { get; set; }
+
     /// <summary>GROUPING SETS 分组集合（每组为表达式列表的原始文本，保 round-trip）。对齐上游 groupingSets。</summary>
     public List<string>? GroupingSets { get; set; }
 
@@ -24,9 +30,13 @@ public class GroupByElement
     {
         var sb = new System.Text.StringBuilder("GROUP BY ");
 
-        // 普通分组表达式
+        // 普通分组表达式（无 ASC/DESC 时使用）
         if (GroupByExpressions is { Count: > 0 })
             sb.Append(string.Join(", ", GroupByExpressions));
+
+        // 带方向的分组表达式（MySQL/SQL Server GROUP BY a ASC, b DESC）
+        if (GroupByColumnReferences is { Count: > 0 })
+            sb.Append(string.Join(", ", GroupByColumnReferences));
 
         // GROUPING SETS ((a, b), (c))
         if (GroupingSets is { Count: > 0 })

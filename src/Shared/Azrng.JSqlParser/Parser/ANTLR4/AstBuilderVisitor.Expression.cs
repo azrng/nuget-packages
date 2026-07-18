@@ -973,6 +973,12 @@ public partial class AstBuilderVisitor
 
     public override object VisitTable(JSqlParserGrammar.TableContext context)
     {
+        // SQL Server 表变量：@table_variable / @@spid 等，整段作为表名（对齐 #911）
+        if (context.SINGLE_AT_IDENTIFIER() is { } singleAt)
+            return new Table { Name = singleAt.GetText() };
+        if (context.S_AT_IDENTIFIER() is { } doubleAt)
+            return new Table { Name = doubleAt.GetText() };
+
         var identifiers = context.identifier();
         // 支持 1-4 段命名：name / schema.name / db.schema.name / server.db.schema.name
         return identifiers.Length switch

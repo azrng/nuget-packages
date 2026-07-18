@@ -288,6 +288,9 @@ XOR             : [Xx][Oo][Rr] ;
 CASCADE         : [Cc][Aa][Ss][Cc][Aa][Dd][Ee] ;
 CASCADED        : [Cc][Aa][Ss][Cc][Aa][Dd][Ee][Dd] ;
 CASCADE_RESTRICT: [Rr][Ee][Ss][Tt][Rr][Ii][Cc][Tt] ;
+// SQL Server 索引聚集属性：NONCLUSTERED 必须在 CLUSTERED 之前定义（ANTLR4 按定义顺序优先匹配长前缀）
+NONCLUSTERED    : [Nn][Oo][Nn][Cc][Ll][Uu][Ss][Tt][Ee][Rr][Ee][Dd] ;
+CLUSTERED       : [Cc][Ll][Uu][Ss][Tt][Ee][Rr][Ee][Dd] ;
 EXCLUDES        : [Ee][Xx][Cc][Ll][Uu][Dd][Ee][Ss] ;
 INCLUDES        : [Ii][Nn][Cc][Ll][Uu][Dd][Ee][Ss] ;
 MEMBER          : [Mm][Ee][Mm][Bb][Ee][Rr] ;

@@ -204,6 +204,24 @@ plainSelect
       qualifyClause?
       (INTO OUTFILE S_CHAR_LITERAL outfileTail? | INTO DUMPFILE S_CHAR_LITERAL)?
       optimizeForClause?
+      mySqlProcedureClause?
+      optionClause?
+    ;
+
+// SQL Server 查询级 OPTION 提示：OPTION (MAXRECURSION 2, HASH JOIN, ...)
+// 提示内容方言差异大，整体透传文本保 round-trip
+optionClause
+    : OPTION OPENING_PAREN optionHint (COMMA optionHint)* CLOSING_PAREN
+    ;
+
+optionHint
+    : ~(COMMA | CLOSING_PAREN | SEMICOLON)+
+    ;
+
+// MySQL SELECT ... PROCEDURE function(...)（5.7 弃用、8.0 移除，仍保留兼容老 SQL）
+// 整体透传，复用 functionExpr 解析函数调用
+mySqlProcedureClause
+    : PROCEDURE functionExpr
     ;
 
 // PostgreSQL DISTINCT ON (cols)
@@ -465,9 +483,14 @@ connectByClause
     ;
 
 groupByClause
-    : GROUP BY expression (COMMA expression)* (WITH ROLLUP)?
+    : GROUP BY groupByColumn (COMMA groupByColumn)* (WITH ROLLUP)?
     | GROUP BY GROUPING identifier OPENING_PAREN groupingSetItem (COMMA groupingSetItem)* CLOSING_PAREN
     | GROUP BY groupByRollupCubeList
+    ;
+
+// GROUP BY 单项：表达式 + 可选 ASC/DESC（MySQL/SQL Server 扩展）
+groupByColumn
+    : expression (ASC | DESC)?
     ;
 
 // ROLLUP(a,b)/CUBE(a,b) 列表，可与普通表达式混用
@@ -797,8 +820,8 @@ columnConstraint
     : (CONSTRAINT identifier)? (
         NOT NULL
       | NULL
-      | PRIMARY KEY
-      | UNIQUE
+      | PRIMARY KEY clusterKind?
+      | UNIQUE clusterKind?
       | CHECK OPENING_PAREN expression CLOSING_PAREN
       | DEFAULT expression
       | REFERENCES table (OPENING_PAREN identifier CLOSING_PAREN)?
@@ -806,6 +829,12 @@ columnConstraint
       | AUTO_INCREMENT
       | GENERATED (ALWAYS | BY DEFAULT) AS IDENTITY
       )
+    ;
+
+// SQL Server 索引聚集属性（PRIMARY KEY / UNIQUE 后可选）：CLUSTERED / NONCLUSTERED
+clusterKind
+    : NONCLUSTERED
+    | CLUSTERED
     ;
 
 // 列规格兜底透传（COMMENT '...' / MATERIALIZED expr / STORED / AS expr 等未结构化的方言选项）
@@ -842,8 +871,8 @@ referentialAction
 
 tableConstraint
     : (CONSTRAINT identifier)? (
-        PRIMARY KEY OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
-      | UNIQUE OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
+        PRIMARY KEY clusterKind? OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
+      | UNIQUE clusterKind? OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
       | CHECK OPENING_PAREN expression CLOSING_PAREN
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?
@@ -1756,6 +1785,9 @@ comparisonOperator
 
 table
     : identifier (DOT identifier)*
+    // SQL Server / T-SQL 表变量：@table_variable / @@spid 等，整段作为表名
+    | SINGLE_AT_IDENTIFIER
+    | S_AT_IDENTIFIER
     ;
 
 alias

@@ -32,6 +32,12 @@ public class Constraint : ASTNodeAccessImpl
     /// </summary>
     public System.Collections.Generic.List<string>? IndexOptions { get; set; }
 
+    /// <summary>
+    /// SQL Server 索引聚集属性（CLUSTERED / NONCLUSTERED），PRIMARY KEY / UNIQUE 后可选。
+    /// 未指定时为 null。对齐 #1589。
+    /// </summary>
+    public string? ClusterKind { get; set; }
+
     public override string ToString()
     {
         var name = Name != null ? $"{Name} " : "";
@@ -41,10 +47,12 @@ public class Constraint : ASTNodeAccessImpl
             : "";
         // MySQL 索引尾选项（USING BTREE/HASH、COMMENT 等），空格连接追加
         var indexOpts = IndexOptions is { Count: > 0 } ? " " + string.Join(" ", IndexOptions) : "";
+        // SQL Server 聚集属性（CLUSTERED/NONCLUSTERED），紧跟在 PRIMARY KEY / UNIQUE 之后
+        var clusterSuffix = string.IsNullOrEmpty(ClusterKind) ? "" : $" {ClusterKind}";
         // 简单约束（PRIMARY KEY/UNIQUE/CHECK/FOREIGN KEY）输出 CONSTRAINT 前缀
         if (Type is "PRIMARY KEY" or "UNIQUE" or "CHECK" or "FOREIGN KEY")
         {
-            return $"{constraintPrefix}{Type} ({string.Join(", ", Columns)}){usingIndex}{indexOpts}";
+            return $"{constraintPrefix}{Type}{clusterSuffix} ({string.Join(", ", Columns)}){usingIndex}{indexOpts}";
         }
         // MySQL 索引（KEY/INDEX/UNIQUE KEY 等）输出索引名，优先用 IndexColumnParams（含 ASC/DESC）
         var indexCols = IndexColumnParams ?? Columns;

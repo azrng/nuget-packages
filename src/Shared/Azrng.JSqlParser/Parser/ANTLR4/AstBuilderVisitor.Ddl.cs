@@ -245,6 +245,8 @@ public partial class AstBuilderVisitor
         {
             constraint.Type = "PRIMARY KEY";
             constraint.Columns = ExtractIdentifierList(firstList);
+            // SQL Server CLUSTERED / NONCLUSTERED 后缀（对齐 #1589）
+            constraint.ClusterKind = context.clusterKind()?.GetText();
             FillUsingIndex(constraint, context);
             CollectIndexOptions(constraint, context);
         }
@@ -252,6 +254,8 @@ public partial class AstBuilderVisitor
         {
             constraint.Type = "UNIQUE";
             constraint.Columns = ExtractIdentifierList(firstList);
+            // SQL Server CLUSTERED / NONCLUSTERED 后缀（对齐 #1589）
+            constraint.ClusterKind = context.clusterKind()?.GetText();
             FillUsingIndex(constraint, context);
             CollectIndexOptions(constraint, context);
         }
