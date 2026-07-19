@@ -40,15 +40,16 @@ public class NonPgFixRoundTripTest
     }
 
     [Fact]
-    public void GroupByDesc_StructuredField()
+    public void GroupByDesc_TransportedAsOriginalText()
     {
+        // 方向不结构化为 IsAsc/IsDesc（避免鼓励已弃用语义），但保留原文供 round-trip
         var sql = "SELECT a FROM b GROUP BY c DESC";
         var stmt = SqlParser.Parse(sql) as PlainSelectType;
         Assert.NotNull(stmt);
         Assert.NotNull(stmt!.GroupBy);
         Assert.NotNull(stmt.GroupBy!.GroupByColumnReferences);
         Assert.Single(stmt.GroupBy.GroupByColumnReferences!);
-        Assert.True(stmt.GroupBy.GroupByColumnReferences![0].IsDesc);
+        Assert.Equal("c DESC", stmt.GroupBy.GroupByColumnReferences![0].OriginalText);
     }
 
     [Fact]
@@ -225,28 +226,24 @@ public class NonPgFixRoundTripTest
     }
 
     [Fact]
-    public void InsertSetWithAsAlias_RoundTrips()
+    public void InsertSetWithOnDuplicate_RoundTrips()
     {
-        var sql = "INSERT INTO t1 SET a = 1, b = 2, c = 3 AS new(m, n, p) ON DUPLICATE KEY UPDATE c = m + n";
+        // MySQL 手册明文的 INSERT SET + ON DUPLICATE 主体；AS new(m,n,p) 行别名极冷门不在本批支持
+        var sql = "INSERT INTO t1 SET a = 1, b = 2, c = 3 ON DUPLICATE KEY UPDATE c = m + n";
         var stmt = SqlParser.Parse(sql);
         Assert.NotNull(stmt);
         var output = stmt!.ToString();
         Assert.Contains("SET a = 1, b = 2, c = 3", output);
-        Assert.Contains("AS new", output);
-        Assert.Contains("m, n, p", output);
         Assert.Contains("ON DUPLICATE KEY UPDATE", output);
         SqlParser.Parse(output);
     }
 
     [Fact]
-    public void InsertSetAsAlias_StructuredFields()
+    public void InsertSet_StructuredField()
     {
-        var stmt = SqlParser.Parse("INSERT INTO t SET a = 1 AS new(m, n)") as Azrng.JSqlParser.Statement.Insert.Insert;
+        var stmt = SqlParser.Parse("INSERT INTO t SET a = 1") as Azrng.JSqlParser.Statement.Insert.Insert;
         Assert.NotNull(stmt);
         Assert.True(stmt!.UseSet);
-        Assert.Equal("new", stmt.AliasName);
-        Assert.NotNull(stmt.ColumnAlias);
-        Assert.Equal(new[] { "m", "n" }, stmt.ColumnAlias!);
     }
 
     #endregion
@@ -322,42 +319,6 @@ public class NonPgFixRoundTripTest
         var output = stmt!.ToString();
         Assert.Contains("_latin1", output);
         SqlParser.Parse(output);
-    }
-
-    #endregion
-
-    #region #2428 PROCEDURE ANALYSE
-
-    [Fact]
-    public void ProcedureAnalyse_RoundTrips()
-    {
-        var sql = "SELECT col1, col2 FROM heavy_table PROCEDURE ANALYSE(10, 256)";
-        var stmt = SqlParser.Parse(sql);
-        Assert.NotNull(stmt);
-        var output = stmt!.ToString();
-        Assert.Contains("PROCEDURE", output);
-        Assert.Contains("ANALYSE", output);
-        SqlParser.Parse(output);
-    }
-
-    [Fact]
-    public void ProcedureAnalyseNoArgs_RoundTrips()
-    {
-        var sql = "SELECT * FROM t PROCEDURE ANALYSE()";
-        var stmt = SqlParser.Parse(sql);
-        Assert.NotNull(stmt);
-        var output = stmt!.ToString();
-        Assert.Contains("PROCEDURE ANALYSE", output);
-        SqlParser.Parse(output);
-    }
-
-    [Fact]
-    public void ProcedureAnalyse_StructuredField()
-    {
-        var stmt = SqlParser.Parse("SELECT * FROM t PROCEDURE ANALYSE(10, 256)") as PlainSelectType;
-        Assert.NotNull(stmt);
-        Assert.NotNull(stmt!.MySqlProcedure);
-        Assert.Contains("ANALYSE", stmt.MySqlProcedure!);
     }
 
     #endregion

@@ -559,12 +559,6 @@ public partial class AstBuilderVisitor
             select.OptimizeFor = ParseLong(context.optimizeForClause().LONG_VALUE().GetText());
         }
 
-        // MySQL SELECT ... PROCEDURE function(...)（5.7 弃用、8.0 移除，仍保留兼容）
-        if (context.mySqlProcedureClause() is { } procCtx)
-        {
-            select.MySqlProcedure = GetOriginalText(procCtx.functionExpr());
-        }
-
         // SQL Server 查询级 OPTION 提示：透传括号内文本
         if (context.optionClause() is { } optionCtx)
         {
@@ -700,18 +694,18 @@ public partial class AstBuilderVisitor
             return gb;
         }
 
-        // 普通表达式列表（支持可选 ASC/DESC，对齐 #1169 MySQL/SQL Server GROUP BY a ASC, b DESC）
+        // 普通表达式列表（#1169 GROUP BY a ASC, b DESC 透传方向，不结构化方向字段避免鼓励已弃用语义）
         var columns = ctx.groupByColumn();
         if (columns != null && columns.Length > 0)
         {
-            // 任一项带 ASC/DESC → 走结构化 GroupByColumnReferences；否则沿用旧 GroupByExpressions 保持兼容
+            // 任一项带 ASC/DESC → 走 GroupByColumnReferences 整体透传原文保 round-trip；否则沿用 GroupByExpressions
             var hasDirection = columns.Any(c => c.ASC() != null || c.DESC() != null);
             if (hasDirection)
             {
                 gb.GroupByColumnReferences = columns.Select(c => new GroupByColumnReference
                 {
                     Expression = (Expression.IExpression)Visit(c.expression()),
-                    IsAsc = c.ASC() != null ? true : (c.DESC() != null ? false : (bool?)null)
+                    OriginalText = GetOriginalText(c)
                 }).ToList();
             }
             else

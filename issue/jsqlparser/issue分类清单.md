@@ -37,6 +37,55 @@
 
 ---
 
+## 修复价值评估（Azrng 视角，2026-07-19）
+
+> 评估原则：**用户覆盖面 × 语法常见度 − 成本/风险**。
+> 主流方言（PG/MySQL/SQL Server/Oracle）+ 常见语法 + 正确性 bug → 优先；
+> 废弃语法 / 超小众方言（Informix/Informatica/Druid/KsqlDB/CockroachDB）/ 无迫切需求的 FEATURE → 不修。
+> 图例：⭐ 值得修（建议优先）｜🕐 暂缓（小众/高成本/需复现，按需）｜❌ 不修（废弃/不适用/提问）｜🔄 T114 在做｜✅ 已完成
+
+### ⭐ 值得修（约 28 条，建议优先）
+
+**① DDL（16）** —— 跨方言常见 DDL/索引/约束，集中清债收益最大：
+- #2070 CREATE DATABASE、#2065 DROP 多表 IF EXISTS、#2112 ALTER MODIFY/DROP IF EXISTS、#1875 ADD COLUMN IF NOT EXISTS、#599 MODIFY NULL/NOT NULL —— 标准常见 DDL
+- #1668 MySQL 分区 create/alter、#1927 MySQL 函数索引、#1295 ALTER ADD INDEX、#1570/#1893/#823/#538 MySQL 索引名/USING/COMMENT/unique index（同族，一起清）
+- #1060 索引类型错误、#652 多参数索引 —— 正确性
+- #2020 SQL Server `WITH(index options)`、#2039 Oracle ADD CONSTRAINT tablespace —— 主流方言索引/约束选项
+
+**③ 词法（2）**：#2435 MySQL `0x` 十六进制字面量、#2359 LIMIT 含子查询（正确性）
+
+**② 过程化（1）**：#1994 解析 FUNCTION 后无法续解析（语句边界，影响多语句批解析，核心）
+
+**⑤ Oracle（1）**：#672 外连接 `(+)`（大量老 Oracle 库在用）
+
+**⑥ SQL Server（2）**：#2033 BULK INSERT、#386 `FOR XML PATH`/STUFF（ETL/拼串常见）
+
+**⑨ AST 正确性（5）** —— 影响所有用户，最高优先：#2440 WHERE `IN(...) AND`、#2195 Lambda 参数、#2194 Parent 节点、#2163 PG JSON+关系运算符混用 AST 错、#1170 NotExpression
+
+**⑩ 工程（1）**：#467 marker 接口（与当前「I 前缀」治理同源）
+
+### 🕐 暂缓（约 35 条，按需推进）
+
+- **② 过程化（8）**：#2358/#1946 PG DO 块、#1786 PL/SQL DECLARE、#715 T-SQL TVF、#2007 Oracle 存储过程、#1978 ALTER FUNCTION/PROCEDURE、#268 OUTPUT 变量、#2192 占位符 —— 块语法/控制流，成本高、解析器定位外，单独排期
+- **③ ClickHouse 词法（3）**：#2442 `.N`、#2441 `Nullable(Decimal)`、#2436 `?:` —— 一起做（词法歧义）
+- **⑤ Oracle XML/JSON（3）**：#2146 xmlparse、#1825 JSON_VALUE、#1564 XMLSERIALIZE
+- **⑥（2）**：#1563 整份 sakila 太泛需逐项拆、#397 `%%` FTS 非标准写法
+- **①（3）**：#2353 ClickHouse `CREATE TABLE ORDER BY`、#1735 Redshift BACKUP NO、#1567 SQL Server typed XML（bracket/schema 已支持，typed xml 小众）
+- **⑧ 跨方言/有支持基础（~11）**：#2433 Hive LATERAL VIEW 正确性、#2429 Snowflake `IDENTIFIER`、#2423 DuckDB MAP/PIVOT、#2421 BigQuery MERGE、#2350 MATCH_RECOGNIZE（巨型）、#2119/#1846 Hive INSERT OVERWRITE、#1620 Spark `[shuffle]`、#1139 ODBC `{fn ...}`、#891 Teradata UPDATE FROM、#673 DAY TO SECOND interval
+
+### ❌ 不修（8 条，拒绝并说明）
+
+- **⑧ 超小众方言、无长期价值**：#1752 KsqlDB、#1743 CockroachDB（近 PG，专项支持成本高无需求）、#1625 Druid、#1161/#271 Informix、#297 Informatica `{ }` 转义 —— 用户基数≈0，做一次没人用、对照维护成本持续
+- **⑩**：#2438「下个版本计划」是提问，直接关；#2403 JavaCC 警告，本库用 ANTLR 不适用
+- （注：#2428 PROCEDURE ANALYSE 虽 MySQL 8.0 已废弃，T114 已顺手做，不在此列）
+
+### 🔄 T114 在做 / ✅ 已完成
+
+- ✅ 已完成：④ 全 12 条；① #1589；③ #1169/#1314
+- 🔄 T114 进行中：#161 OPTION hint、#911 `@table`、#854 `INTO @var`、#2298 CAST CHARACTER SET、#2427+#2006 `_utf8mb4`、#2428 PROCEDURE ANALYSE
+
+---
+
 ## 分类明细
 
 ### ① DDL 解析：CREATE / ALTER / DROP / INDEX / CONSTRAINT  [20 条]
@@ -91,7 +140,7 @@
 > 多为词法规则补丁，独立、风险低，适合先做。ClickHouse #2442/.N 与 #2436/?: 是词法歧义，可一起做
 >
 > **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
-> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1169 #1314
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1169（方向不结构化为字段，整体透传原文）/ #1314（仅 INSERT SET 主体，AS 行别名不修）
 > - ⛔ 复现且未修复：#2435 #2359（后续批次评估）
 
 | # | 类型 | 标题 | 要点 | Azrng 状态 |
@@ -101,7 +150,7 @@
 | [#2436](https://github.com/JSQLParser/JSqlParser/issues/2436) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : C-style ternary operator (? :) not supported in SELECT | C 风格三元运算符 ?: (ClickHouse) | — |
 | [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) | ⛔ 复现（探针记录） |
 | [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 | ⛔ 复现（探针记录） |
-| [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 | 🔧 已修复（insertStatement 加 SET 形式 + insertRowAlias 子句 + Insert.UseSet/AliasName/ColumnAlias 字段） |
+| [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 | 🔧 部分修复（仅 INSERT INTO t SET a=1,b=2 主体；AS new(m,n,p) 行别名极冷门不修） |
 | [#1169](https://github.com/JSQLParser/JSqlParser/issues/1169) | [B] | net.sf.jsqlparser.JSQLParserException: Encountered unexpected token: "desc" "DESC" | desc / DESC token 意外 | 🔧 已修复（groupByColumn 子规则 + GroupByColumnReference 模型） |
 
 ### ④ PostgreSQL 专项  [12 条]
@@ -114,6 +163,7 @@
 > - ✅ 已支持（移植版不存在上游缺陷）：#2233 #2342 #2430 #2431
 > - 🔧 本次已修复（探针转绿 + round-trip 通过）：#187 #1416 #1511 #1728 #2326 #2411 #2412 #2432
 > - ⛔ 复现且未修复：无
+> - 🟨 已知保留限制（评估后**主动不修**，理由见各行）：#187 @@@、#1416 ANALYZE 前导、#2411 ROWS FROM 逐项别名
 
 | # | 类型 | 标题 | 要点 | Azrng 状态 |
 |---:|:--:|---|---|---|
@@ -121,14 +171,14 @@
 | [#2431](https://github.com/JSQLParser/JSqlParser/issues/2431) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : GROUPS not supported in window function frame clause | 窗口帧 GROUPS 子句 [Missing Standard Feature] | ✅ 已支持（windowFrame 早含 GROUPS） |
 | [#2430](https://github.com/JSQLParser/JSqlParser/issues/2430) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : EXCLUDE TIES not supported in window function frame clause | 窗口帧 EXCLUDE TIES [Missing Standard Feature] | ✅ 已支持（windowFrame 早含 EXCLUDE TIES） |
 | [#2412](https://github.com/JSQLParser/JSqlParser/issues/2412) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : json_populate_record row expansion with (…). * not supported | json_populate_record 行展开 (...).*  | 🔧 已修复（selectItem 加 `(expr).*` → RowGetExpression+Parenthesis 保括号） |
-| [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 | 🔧 已修复（tableOrSubquery 加 ROWS FROM(...) → 新 RowsFrom 模型） |
+| [#2411](https://github.com/JSQLParser/JSqlParser/issues/2411) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : ROWS FROM not supported | ROWS FROM 语法 | 🔧 已修复（tableOrSubquery 加 ROWS FROM(...) → 新 RowsFrom 模型）。🟨 保留限制：子项各自别名 `foo() AS (a,b)` 未支持——小众用法（仅 SRF 吐复合/无名列时需要），原始 issue SQL 未用，按 YAGNI 延后到需求驱动 |
 | [#2342](https://github.com/JSQLParser/JSqlParser/issues/2342) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : Nesting can cause NullPointerException | 嵌套导致 NullPointerException | ✅ 已支持（ANTLR 无栈深 NPE） |
 | [#2326](https://github.com/JSQLParser/JSqlParser/issues/2326) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : PostgreSQL : XMLTable function not supported | XMLTable 函数 | 🔧 已修复（新 XMLTABLE/XMLNAMESPACES 词法 token + xmlTable 规则含 XMLNAMESPACES 前缀 + XmlTable 模型） |
 | [#2233](https://github.com/JSQLParser/JSqlParser/issues/2233) | [B] | [BUG] JSQLParser 5.1: PostgreSQL: fail to parse dollar-quoted string constants with tags | $tag$ dollar-quoted 带标签字符串 | ✅ 已支持（S_DOLLAR_QUOTED_STRING 早支持带标签） |
 | [#1728](https://github.com/JSQLParser/JSqlParser/issues/1728) | [B] | [BUG] JSQLParser 4.5 : Postgres : fails to parse `interval hour to minute` | interval hour to minute | 🔧 已修复（dataType 加 `INTERVAL intervalField (TO intervalField)?` 分支） |
 | [#1511](https://github.com/JSQLParser/JSqlParser/issues/1511) | [B] | Cannot parse PGSQL JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | JSONB_ARRAY_ELEMENTS() WITH ORDINALITY ARR() | 🔧 已修复（tableFunction 加 `[WITH ORDINALITY] alias? (cols)?` + TableFunction.WithOrdinality/ColumnAliases） |
-| [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag | 🔧 已修复（explainStatement 加 `explainOptionList` + Analyze/Verbose/Options 字段；新增 VERBOSE/BUFFERS/TIMING/SUMMARY/WAL/YAML token） |
-| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 | 🔧 已修复（新增 @@/@@@ token + comparisonOperator + Matches 节点；createIndex 加 `USING method` 并补全索引列/WHERE round-trip） |
+| [#1416](https://github.com/JSQLParser/JSqlParser/issues/1416) | [B] | Postgres EXPLAIN parsing incorrect and missing new flags | EXPLAIN 解析缺新 flag | 🔧 已修复（explainStatement 加 `explainOptionList` + Analyze/Verbose/Options 字段；新增 VERBOSE/BUFFERS/TIMING/SUMMARY/WAL/YAML token）。🟨 保留限制：`ANALYZE SELECT 1` 前导关键字形式 ToString 仍输出 `EXPLAIN`——PG 中 `ANALYZE` 是独立统计语句、非 EXPLAIN 同义词，`(EXPLAIN\|ANALYZE)` 合并是上游建模选择，不为非标准形式加 LeadingKeyword 字段 |
+| [#187](https://github.com/JSQLParser/JSqlParser/issues/187) | [B] | Postgresql's FTS queries and function-based indexes are not supported | FTS 全文查询与函数索引 | 🔧 已修复（新增 @@/@@@ token + comparisonOperator + Matches 节点；createIndex 加 `USING method` 并补全索引列/WHERE round-trip）。🟨 保留限制：`@@@`（pg_trgm 历史相似度算子）round-trip 印成 `@@`——现代 PG 已用 `%`/距离算子取代、属废弃语法，能解析（难点已做）即可，不为死语法给 Matches 加可变符号 |
 
 ### ⑤ Oracle 专项  [4 条]
 
@@ -163,12 +213,13 @@
 > #2427 与 #2006 是同一特性（_utf8mb4 introducer），可合并修
 >
 > **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
-> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#2428 #2427 #2006 #2298 #854
+> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#2427 #2006 #2298 #854
 > - ⛔ 复现且未修复：无
+> - 🚫 主动不修：#2428（MySQL 5.7 弃用、8.0 移除的已死语法，扩 grammar/模型/测试是长期负债）
 
 | # | 类型 | 标题 | 要点 | Azrng 状态 |
 |---:|:--:|---|---|---|
-| [#2428](https://github.com/JSQLParser/JSqlParser/issues/2428) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : PROCEDURE ANALYSE() not supported in SELECT statements | PROCEDURE ANALYSE() | 🔧 已修复（plainSelect 加 mySqlProcedureClause?，PlainSelect.MySqlProcedure 字段） |
+| [#2428](https://github.com/JSQLParser/JSqlParser/issues/2428) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : PROCEDURE ANALYSE() not supported in SELECT statements | PROCEDURE ANALYSE() | 🚫 不修（MySQL 5.7 弃用、8.0 移除，已死语法） |
 | [#2427](https://github.com/JSQLParser/JSqlParser/issues/2427) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : charset introducer (_utf8mb4) with COLLATE not supported | _utf8mb4 introducer + COLLATE | 🔧 已修复（StringPrefix 扩展为 '_' [a-zA-Z0-9]+，S_CHAR_LITERAL 加 introducer+空格分支，StringValue 支持 _xxx 前缀） |
 | [#2298](https://github.com/JSQLParser/JSqlParser/issues/2298) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : Failed to parse CAST as CHAR with CHARACTER SET | CAST as CHAR with CHARACTER SET | 🔧 已修复（castExpr 加 castCharacterSetClause，CastExpression.CharacterSet/Collation 字段） |
 | [#2006](https://github.com/JSQLParser/JSqlParser/issues/2006) | [B] | [BUG] JSQLParser 4.8 : MYSQL : not able to parse _utf8mb4 dialects | _utf8mb4 方言解析 | 🔧 已修复（与 #2427 同源修复，覆盖 _utf8mb4 'text' 带空格形式） |

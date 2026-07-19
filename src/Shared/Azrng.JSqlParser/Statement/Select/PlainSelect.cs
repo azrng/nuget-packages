@@ -94,12 +94,6 @@ public class PlainSelect : Select
     /// </summary>
     public string? OptionHints { get; set; }
 
-    /// <summary>
-    /// MySQL <c>SELECT ... PROCEDURE function(...)</c> 子句（5.7 弃用、8.0 移除，仍保留兼容老 SQL）。
-    /// 透传 PROCEDURE 关键字之后的完整文本，未指定时为 null。
-    /// </summary>
-    public string? MySqlProcedure { get; set; }
-
     public override T Accept<T, S>(ISelectVisitor<T> selectVisitor, S context)
     {
         return selectVisitor.Visit(this, context);
@@ -171,9 +165,6 @@ public class PlainSelect : Select
 
         // DB2 OPTIMIZE FOR n ROWS
         if (OptimizeFor.HasValue) builder.Append(" OPTIMIZE FOR ").Append(OptimizeFor.Value).Append(" ROWS");
-
-        // MySQL SELECT ... PROCEDURE function(...)（OPTIMIZE FOR 之后、OPTION 之前）
-        if (MySqlProcedure != null) builder.Append(" PROCEDURE ").Append(MySqlProcedure);
 
         // SQL Server OPTION (...)
         if (OptionHints != null) builder.Append(" OPTION (").Append(OptionHints).Append(')');

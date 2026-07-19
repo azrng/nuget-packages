@@ -204,7 +204,6 @@ plainSelect
       qualifyClause?
       (INTO OUTFILE S_CHAR_LITERAL outfileTail? | INTO DUMPFILE S_CHAR_LITERAL)?
       optimizeForClause?
-      mySqlProcedureClause?
       optionClause?
     ;
 
@@ -216,12 +215,6 @@ optionClause
 
 optionHint
     : ~(COMMA | CLOSING_PAREN | SEMICOLON)+
-    ;
-
-// MySQL SELECT ... PROCEDURE function(...)（5.7 弃用、8.0 移除，仍保留兼容老 SQL）
-// 整体透传，复用 functionExpr 解析函数调用
-mySqlProcedureClause
-    : PROCEDURE functionExpr
     ;
 
 // PostgreSQL DISTINCT ON (cols)
@@ -625,16 +618,9 @@ insertStatement
       | selectStatement
       | DEFAULT VALUES
       )
-      // MySQL 8.0 行别名：AS new(m,n,p) 出现在 INSERT 体之后、ON DUPLICATE 之前，用于 ON DUPLICATE 引用新行
-      insertRowAlias?
       onDuplicateKey?
       onConflictClause?
       returningClause?
-    ;
-
-// MySQL 8.0 行别名：AS new(m,n,p)，给 INSERT 新行命名以供 ON DUPLICATE KEY UPDATE 引用（对齐 #1314）
-insertRowAlias
-    : AS identifier OPENING_PAREN identifierList CLOSING_PAREN
     ;
 
 // MSSQL OUTPUT 子句：OUTPUT selectItems [INTO @var | table [(cols)]]，透传保 round-trip
