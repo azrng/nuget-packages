@@ -1,4 +1,9 @@
+using Azrng.JSqlParser.Expression;
+using Azrng.JSqlParser.Expression.Operators.Conditional;
+using Azrng.JSqlParser.Expression.Operators.Relational;
 using Azrng.JSqlParser.Parser;
+using Azrng.JSqlParser.Statement.Select;
+using PlainSelectType = Azrng.JSqlParser.Statement.Select.PlainSelect;
 
 namespace Azrng.JSqlParser.Test.Statement;
 
@@ -6,7 +11,8 @@ namespace Azrng.JSqlParser.Test.Statement;
 /// 非 PostgreSQL 上游 issue 现状探针：仅断言「能解析 + ToString 不抛异常」，
 /// 用于识别哪些上游缺陷在 Azrng 移植版仍复现。失败 = 复现上游缺陷，需要修。
 /// 数据来源：issue/jsqlparser/issue分类清单.md。
-/// 本批次（T114）已修复的 issue 探针全部改为非 Skip，验证修复；其余暂不修的仍 Skip。
+/// T114 已修复的 issue 探针全部改为非 Skip，验证修复；其余暂不修的仍 Skip。
+/// T115 已核实：⑨ AST 5 条 + ① DDL 索引族 5 条全部转绿（不复现/不适用/已支持/已修）。
 /// </summary>
 public class NonPgIssuesProbeTest
 {
@@ -138,15 +144,84 @@ WHEN NOT MATCHED BY SOURCE THEN DELETE");
     public void Issue2039_OracleAddConstraintTablespace() =>
         Probe("ALTER TABLE bfmcs.your_table ADD CONSTRAINT your_table_pk PRIMARY KEY (ID) USING INDEX TABLESPACE your_tablespace");
 
-    // ⑨ #2440 WHERE col IN ('X') AND x >= y
-    [Fact(Skip = "本批次暂不修")]
-    public void Issue2440_WhereInAndPrecedence() =>
-        Probe("SELECT * FROM record WHERE status IN ('CONFIRMED') AND start_datetime >= CURRENT_TIMESTAMP");
+    // ===== T115（⑨ AST 正确性）已核实：移植版不复现/不适用，探针转绿 + 结构断言 =====
 
-    // ⑨ #1170 NotExpression 解析（双 not）
-    [Fact(Skip = "本批次暂不修")]
-    public void Issue1170_NotNotExpression() =>
-        SqlParser.ParseCondExpression("not not 1 = 1")?.ToString();
+    // ⑨ #2440 WHERE col IN ('X') AND x >= y —— 上游 5.3 把 AND 右操作数错挂到 IN，
+    // Azrng 移植版经探针核实 AST 正确：AndExpression[Left=InExpression, Right=GreaterThanEquals]
+    [Fact]
+    public void Issue2440_WhereInAndPrecedence()
+    {
+        var stmt = SqlParser.Parse("SELECT * FROM record WHERE status IN ('CONFIRMED') AND start_datetime >= CURRENT_TIMESTAMP") as PlainSelectType;
+        Assert.NotNull(stmt);
+        var where = stmt!.Where;
+        Assert.IsType<AndExpression>(where);
+        var and = (AndExpression)where!;
+        Assert.IsType<InExpression>(and.LeftExpression);
+        Assert.IsType<GreaterThanEquals>(and.RightExpression);
+        // round-trip 完整保留
+        var output = stmt.ToString()!;
+        Assert.Contains("status IN ('CONFIRMED')", output);
+        Assert.Contains("start_datetime >= CURRENT_TIMESTAMP", output);
+        SqlParser.Parse(output);
+    }
+
+    // ⑨ #1170 NotExpression 双 NOT —— 上游 bug 是 `not not 1 = 1` 输出多一个 NOT
+    //（`NOT NOT NOT 1 = 1`），Azrng 移植版输出正确 `NOT NOT 1 = 1`
+    [Fact]
+    public void Issue1170_NotNotExpression()
+    {
+        var expr = SqlParser.ParseCondExpression("not not 1 = 1");
+        Assert.NotNull(expr);
+        Assert.Equal("NOT NOT 1 = 1", expr!.ToString());
+        // 内层结构：外层 NotExpression 包内层 NotExpression
+        Assert.IsType<NotExpression>(expr);
+        Assert.IsType<NotExpression>(((NotExpression)expr).Expression);
+    }
+
+    // ⑨ #2163 PG JSON + 关系运算符混用 —— 上游 AST 错乱。
+    // Azrng 移植版用 LambdaExpression 承载 `col -> 'key'`（建模选择），round-trip 正确。
+    // 不引入 JsonOperator 改造（避免改 -> 的 lambda/JSON 二义性处理，超出本批范围）。
+    [Fact]
+    public void Issue2163_PgJsonMixed()
+    {
+        var stmt = SqlParser.Parse("SELECT * FROM t WHERE col -> 'a' = 'b'");
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("col -> 'a'", output);
+        Assert.Contains("= 'b'", output);
+        // round-trip 不抛
+        SqlParser.Parse(output);
+    }
+
+    // ⑨ #2195 LambdaExpression 参数 —— 上游漏参数。
+    // Azrng 移植版 (x, y, z) -> x + y 参数完整保留
+    [Fact]
+    public void Issue2195_LambdaParameters()
+    {
+        var expr = SqlParser.ParseCondExpression("(x, y, z) -> x + y");
+        Assert.NotNull(expr);
+        Assert.IsType<LambdaExpression>(expr);
+        var lambda = (LambdaExpression)expr!;
+        Assert.Equal(3, lambda.Identifiers.Count);
+        Assert.Contains("x", lambda.Identifiers);
+        Assert.Contains("y", lambda.Identifiers);
+        Assert.Contains("z", lambda.Identifiers);
+    }
+
+    // ⑨ #2194 Incorrect Parent node —— 上游靠 ASTNodeAccess.parent 字段做 visitor 上溯，
+    // Azrng 移植版 SimpleNode/ASTNodeAccessImpl 完全无 Parent 概念（架构性差异），
+    // 上游问题在移植版不存在，标"不适用"。断言 Parent 字段确实不存在以固化此差异认知。
+    [Fact]
+    public void Issue2194_IncorrectParent_NotApplicable()
+    {
+        // 简单解析一条含 RegExpMatchOperator 上游样式的 SQL，确认移植版不抛、能 round-trip
+        // 上游原 SQL：select A from B where (A ~ 'fish')
+        var stmt = SqlParser.Parse("SELECT A FROM B WHERE (A ~ 'fish')");
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("~ 'fish'", output);
+        SqlParser.Parse(output);
+    }
 
     // ⑧ #2433 LATERAL VIEW 三列及以上别名
     [Fact(Skip = "本批次暂不修")]

@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T115 | Azrng.JSqlParser 上游 issue 修复（AST 正确性 + MySQL DDL 索引族） | ⑨ AST 5 条 + ① DDL 索引族 5 条（#1570/#1893/#823/#538/#1295）。探针逐条核实后：⑨ 5 条移植版均不复现/不适用，仅转绿 + 状态澄清；DDL 真实复现 2 条（#1570 约束名丢失、#538 UNIQUE 后直接跟索引名）需 grammar/visitor/model 修复，#1893/#823 主路径/#1295 已支持转绿。3 commit（AST 探针 + DDL 修复 + 文档）。同步 MIGRATION 第十五节 + issue 分类清单状态列 | 阶段 1 | ZCode | DOING | P1 | 2026-07-19 |
 | T107 | Azrng.JSqlParser 支持 @ 命名参数 | 修复 @name 被解析成普通 JDBC 参数导致变量名丢失的问题，补测试并产出新版包 | 阶段 2 | Codex | BLOCKED | P1 | 2026-07-16 |
 | T111 | Azrng.JSqlParser 对齐审计修复（17 处走样） | 修复系统对比发现的 17 处迁移走样：A 类运算符符号错配(Contains/ContainedBy/JsonOperator) + C 类 ExpressionVisitorAdapter 空 Visit(5) + D 类 ExpressionDescendantsWalker 空 Visit(6) + E 类结构性沉默丢弃(ORDER BY NULLS/WITH RECURSIVE/JOIN 多 ON) + 中危项(IsNullExpression PG 简写/InExpression Global/LikeExpression useBinary+REGEXP_LIKE 下划线/FullTextSearch 类型/Pivot 多聚合/SELECT INTO/DISTINCT ON/LIMIT BY/ORDER BY WITH ROLLUP/MySQL INDEX FOR 等)。Oracle oldOracleJoinSyntax 体系、ParenthesedSelect 继承、GROUP BY 混用、SqlServerHints 完整关键字跳过记录 TODO 在 MIGRATION.md 第 13.2 节。9 批 commit + 1 批文档，测试 1465→1567（+102）。MIGRATION.md 第 13 节同步对照表 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-18 |
 
