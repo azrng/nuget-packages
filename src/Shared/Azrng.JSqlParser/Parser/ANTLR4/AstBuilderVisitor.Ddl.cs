@@ -250,7 +250,8 @@ public partial class AstBuilderVisitor
             FillUsingIndex(constraint, context);
             CollectIndexOptions(constraint, context);
         }
-        else if (context.UNIQUE() != null && context.KEY() == null && context.INDEX() == null)
+        else if (context.UNIQUE() != null && context.KEY() == null && context.INDEX() == null
+                 && context.indexColumnList() == null)
         {
             constraint.Type = "UNIQUE";
             constraint.Columns = ExtractIdentifierList(firstList);
@@ -258,6 +259,75 @@ public partial class AstBuilderVisitor
             constraint.ClusterKind = context.clusterKind()?.GetText();
             FillUsingIndex(constraint, context);
             CollectIndexOptions(constraint, context);
+        }
+        else if (context.UNIQUE() != null && context.KEY() == null && context.INDEX() == null
+                 && context.indexColumnList() != null)
+        {
+            // MySQL：UNIQUE [idx_name] [USING ...] (cols [ASC|DESC]) [index_option ...] —— 无 KEY/INDEX 关键字，
+            // 直接 UNIQUE 后跟索引名（#538）。MySQL 8 允许 USING BTREE 出现在列前或列后。
+            // 注意：列前 USING 后的 method 名（BTREE/HASH）也是 identifier，会一起进 identifiers 数组，
+            // 需按 token 位置区分"索引名"与"index method"。
+            constraint.Type = "UNIQUE";
+            constraint.ClusterKind = context.clusterKind()?.GetText();
+            // 索引名：列前第一个 identifier（在 OPENING_PAREN 之前、且不在 USING 之后）
+            var openingParen = context.OPENING_PAREN();
+            int parenStartIdx = openingParen != null && openingParen.Length > 0
+                ? openingParen[0].Symbol.TokenIndex : int.MaxValue;
+            string? indexName = null;
+            var preUsingOptions = new List<string>();
+            // 遍历 children 找列前 USING->identifier 配对（identifier 是 IdentifierContext），
+            // 跳过这些 identifier 不当索引名
+            var usingMethodTokenIndices = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < context.ChildCount - 1; i++)
+            {
+                if (context.GetChild(i) is Antlr4.Runtime.Tree.ITerminalNode term
+                    && term.Symbol.Type == JSqlParserGrammar.USING
+                    && term.Symbol.TokenIndex < parenStartIdx
+                    && context.GetChild(i + 1) is JSqlParserGrammar.IdentifierContext methodCtx)
+                {
+                    preUsingOptions.Add($"USING {methodCtx.GetText()}");
+                    usingMethodTokenIndices.Add(methodCtx.Start.TokenIndex);
+                }
+            }
+            // 索引名 = 列前首个 identifier（非 USING 后的 method）
+            foreach (var id in identifiers)
+            {
+                if (id.Start.TokenIndex < parenStartIdx
+                    && !usingMethodTokenIndices.Contains(id.Start.TokenIndex))
+                {
+                    indexName = id.GetText();
+                    break;
+                }
+            }
+            // CONSTRAINT c UNIQUE idx (cols)：identifiers[0]=CONSTRAINT 名（已在方法开头入 Name）
+            // 单独 UNIQUE idx (cols)：identifiers[0]=索引名
+            // 双名场景（CONSTRAINT + 索引名）：跳过 CONSTRAINT 名
+            if (context.CONSTRAINT() != null && indexName != null && name != null && indexName == name)
+            {
+                // identifiers[0] 是 CONSTRAINT 名，找下一个非 USING method 的 identifier 作索引名
+                bool skippedFirst = false;
+                foreach (var id in identifiers)
+                {
+                    if (id.Start.TokenIndex < parenStartIdx
+                        && !usingMethodTokenIndices.Contains(id.Start.TokenIndex))
+                    {
+                        if (!skippedFirst) { skippedFirst = true; continue; }
+                        indexName = id.GetText();
+                        break;
+                    }
+                }
+            }
+            constraint.IndexName = indexName;
+            var (colParams, colNames) = ExtractIndexColumnList(context.indexColumnList());
+            constraint.IndexColumnParams = colParams;
+            constraint.Columns = colNames;
+            CollectIndexOptions(constraint, context);
+            // 列前 USING 合并到 IndexOptions 前部（输出顺序对齐 MySQL：UNIQUE idx USING BTREE (cols) opts）
+            if (preUsingOptions.Count > 0)
+            {
+                var existing = constraint.IndexOptions ?? new List<string>();
+                constraint.IndexOptions = preUsingOptions.Concat(existing).ToList();
+            }
         }
         else if (context.KEY() != null || context.INDEX() != null)
         {
@@ -267,9 +337,21 @@ public partial class AstBuilderVisitor
                 : context.SPATIAL() != null ? "SPATIAL" : "";
             var kw = context.INDEX() != null ? "INDEX" : "KEY";
             constraint.Type = string.IsNullOrEmpty(prefix) ? kw : $"{prefix} {kw}";
-            int nameIdx = context.CONSTRAINT() != null ? 1 : 0;
-            if (identifiers.Length > nameIdx)
-                constraint.Name = identifiers[nameIdx].GetText();
+            // CONSTRAINT c UNIQUE KEY idx (cols)：identifiers[0]=CONSTRAINT 名 c，identifiers[1]=索引名 idx
+            //   —— 双名场景，分别入 Name / IndexName（对齐 #1570）
+            // UNIQUE KEY idx (cols)：identifiers[0]=索引名 idx —— 单名场景，入 Name 保持兼容
+            //   （不设 IndexName，ToString 走单名分支，输出与历史一致）
+            if (context.CONSTRAINT() != null && identifiers.Length > 1)
+            {
+                // Name 已在方法开头由 CONSTRAINT 分支设置（identifiers[0]），此处补索引名
+                constraint.IndexName = identifiers[1].GetText();
+            }
+            else
+            {
+                int nameIdx = context.CONSTRAINT() != null ? 1 : 0;
+                if (identifiers.Length > nameIdx)
+                    constraint.Name = identifiers[nameIdx].GetText();
+            }
             var (colParams, colNames) = ExtractIndexColumnList(context.indexColumnList());
             constraint.IndexColumnParams = colParams;
             constraint.Columns = colNames;

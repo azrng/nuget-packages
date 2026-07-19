@@ -322,4 +322,138 @@ public class NonPgFixRoundTripTest
     }
 
     #endregion
+
+    // ===== Commit 3：MySQL DDL 索引族（T115） =====
+
+    #region #1570 CONSTRAINT name UNIQUE KEY index_name (cols) 双名
+
+    [Fact]
+    public void ConstraintUniqueKey_DoubleName_RoundTrips()
+    {
+        // 上游 #1570：CONSTRAINT 约束名 + UNIQUE KEY 索引名 —— 历史版本吞掉约束名
+        var sql = "CREATE TABLE table1 (col1 INT, col2 INT, CONSTRAINT my_constraint UNIQUE KEY index_name (col1))";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("CONSTRAINT my_constraint", output);
+        Assert.Contains("UNIQUE KEY index_name", output);
+        Assert.Contains("(col1)", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void ConstraintUniqueKey_DoubleName_StructuredFields()
+    {
+        var stmt = SqlParser.Parse("CREATE TABLE table1 (col1 INT, CONSTRAINT c UNIQUE KEY idx (col1))") as Azrng.JSqlParser.Statement.CreateTable.CreateTable;
+        Assert.NotNull(stmt);
+        Assert.NotNull(stmt!.Constraints);
+        var cons = stmt.Constraints![0];
+        // 约束名与索引名分别落字段
+        Assert.Equal("c", cons.Name);
+        Assert.Equal("idx", cons.IndexName);
+        Assert.Equal("UNIQUE KEY", cons.Type);
+        Assert.Single(cons.Columns);
+        Assert.Equal("col1", cons.Columns[0]);
+    }
+
+    [Fact]
+    public void ConstraintUniqueKey_SingleName_KeepsLegacyField()
+    {
+        // 无 CONSTRAINT 前缀的单名场景：Name=索引名，IndexName=null（保持历史行为）
+        var stmt = SqlParser.Parse("CREATE TABLE t (id INT, UNIQUE KEY idx (id))") as Azrng.JSqlParser.Statement.CreateTable.CreateTable;
+        Assert.NotNull(stmt);
+        var cons = stmt!.Constraints![0];
+        Assert.Equal("idx", cons.Name);
+        Assert.Null(cons.IndexName);
+    }
+
+    #endregion
+
+    #region #538 UNIQUE name USING BTREE (cols) COMMENT '...'
+
+    [Fact]
+    public void UniqueWithIndexNameAndUsing_RoundTrips()
+    {
+        // 上游 #538：UNIQUE 后直接跟索引名（无 KEY/INDEX 关键字）+ USING BTREE + COMMENT
+        var sql = "CREATE TABLE `t` (`id` int NOT NULL AUTO_INCREMENT, PRIMARY KEY (`id`), UNIQUE `uniq` USING BTREE (`id`) COMMENT 'unique')";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("UNIQUE `uniq`", output);
+        Assert.Contains("USING BTREE", output);
+        Assert.Contains("(`id`)", output);
+        Assert.Contains("COMMENT 'unique'", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void UniqueWithIndexName_StructuredFields()
+    {
+        var stmt = SqlParser.Parse("CREATE TABLE t (id INT, UNIQUE uniq (id))") as Azrng.JSqlParser.Statement.CreateTable.CreateTable;
+        Assert.NotNull(stmt);
+        var cons = stmt!.Constraints![0];
+        Assert.Equal("UNIQUE", cons.Type);
+        Assert.Equal("uniq", cons.IndexName);
+        Assert.Null(cons.Name); // 无 CONSTRAINT 前缀，Name 为 null
+    }
+
+    [Fact]
+    public void UniquePlain_NoIndexName_StillWorks()
+    {
+        // 普通 UNIQUE (cols) 无索引名 —— 保持历史行为，走简单约束分支
+        var stmt = SqlParser.Parse("CREATE TABLE t (id INT, UNIQUE (id))") as Azrng.JSqlParser.Statement.CreateTable.CreateTable;
+        Assert.NotNull(stmt);
+        var cons = stmt!.Constraints![0];
+        Assert.Equal("UNIQUE", cons.Type);
+        Assert.Null(cons.IndexName);
+        var output = stmt!.ToString()!;
+        Assert.Contains("UNIQUE (id)", output);
+    }
+
+    #endregion
+
+    #region #1893/#823/#1295 已支持回归
+
+    [Fact]
+    public void UniqueIndexWithUsingComment_RoundTrips()
+    {
+        // #1893: UNIQUE INDEX name (cols) USING BTREE COMMENT '...' —— 移植版已支持
+        var sql = "CREATE TABLE `sys_user` (`id` bigint NOT NULL, UNIQUE INDEX `ina_index` (`id`,`name`) USING BTREE COMMENT 'Unique')";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("UNIQUE INDEX `ina_index`", output);
+        Assert.Contains("USING BTREE", output);
+        Assert.Contains("COMMENT 'Unique'", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void UniqueIndexInCreateTable_RoundTrips()
+    {
+        // #823: 建表 DDL 内 UNIQUE INDEX（注：原始 SQL 含 bigint unsigned 数据类型修饰符，
+        // 属独立数据类型问题不在本批；此处用 core 形式验证 UNIQUE INDEX 部分）
+        var sql = "CREATE TABLE `test3` (`NAME` varchar(255) NOT NULL, `ID` bigint NOT NULL, PRIMARY KEY (`NAME`), UNIQUE INDEX idx(`id`))";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("UNIQUE INDEX idx", output);
+        Assert.Contains("(`id`)", output);
+        SqlParser.Parse(output);
+    }
+
+    [Fact]
+    public void AlterAddIndex_RoundTrips()
+    {
+        // #1295: ALTER TABLE t ADD INDEX (col) —— 移植版已支持
+        var sql = "ALTER TABLE table_name8 ADD INDEX (column_1)";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("ADD INDEX", output);
+        Assert.Contains("(column_1)", output);
+        SqlParser.Parse(output);
+    }
+
+    #endregion
 }

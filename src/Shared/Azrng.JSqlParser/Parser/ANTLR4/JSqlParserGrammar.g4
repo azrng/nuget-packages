@@ -868,6 +868,8 @@ tableConstraint
     : (CONSTRAINT identifier)? (
         PRIMARY KEY clusterKind? OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
       | UNIQUE clusterKind? OPENING_PAREN identifierList CLOSING_PAREN usingIndexClause? indexOption*
+      | UNIQUE identifier? clusterKind? USING identifier? OPENING_PAREN indexColumnList CLOSING_PAREN indexOption*
+      | UNIQUE identifier? clusterKind? OPENING_PAREN indexColumnList CLOSING_PAREN indexOption*
       | CHECK OPENING_PAREN expression CLOSING_PAREN
       | FOREIGN KEY OPENING_PAREN identifierList CLOSING_PAREN
         REFERENCES table (OPENING_PAREN identifierList CLOSING_PAREN)?

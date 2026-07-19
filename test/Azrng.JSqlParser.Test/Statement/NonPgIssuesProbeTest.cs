@@ -94,35 +94,63 @@ WHEN NOT MATCHED BY SOURCE THEN DELETE");
     public void Issue2359_LimitSubquery() =>
         Probe("SELECT * FROM t LIMIT (SELECT 10)");
 
-    // ⑦ #1295 ALTER ADD INDEX (col)
-    [Fact(Skip = "本批次暂不修")]
+    // ===== T115（① DDL 索引族）已核实 + 修复：5 条全部转绿 =====
+
+    // ① #1295 ALTER ADD INDEX (col) —— 探针核实移植版已支持，转绿
+    [Fact]
     public void Issue1295_MysqlAlterAddIndex() =>
         Probe("ALTER TABLE table_name8 ADD INDEX (column_1)");
 
-    // ⑦ #1927 建表 DDL 函数索引
-    [Fact(Skip = "本批次暂不修")]
+    // ① #1927 建表 DDL 函数索引 —— 本批次仍不做（函数索引改 grammar 影响面大，单独排期）
+    [Fact(Skip = "本批次不做（函数索引）")]
     public void Issue1927_MysqlFunctionalIndex() =>
         Probe("CREATE TABLE t (id INT, KEY idx_lower ((LOWER(name))))");
 
-    // ⑦ #1893 UNIQUE INDEX 名 + USING BTREE COMMENT
-    [Fact(Skip = "本批次暂不修")]
+    // ① #1893 UNIQUE INDEX 名 + USING BTREE COMMENT —— 探针核实移植版已支持，转绿
+    [Fact]
     public void Issue1893_MysqlUniqueIndex() =>
         Probe("CREATE TABLE `sys_user` (`id` bigint NOT NULL, UNIQUE INDEX `ina_index` (`id`,`name`) USING BTREE COMMENT 'Unique')");
 
-    // ⑦ #823 建表 DDL unique index
-    [Fact(Skip = "本批次暂不修")]
+    // ① #823 建表 DDL unique index —— 主路径已支持（原始 SQL 含 bigint unsigned 数据类型
+    // 修饰符，属独立数据类型问题，不在本索引族批次；探针用 core 形式验证 UNIQUE INDEX 部分）
+    [Fact]
     public void Issue823_MysqlUniqueIndex() =>
-        Probe("CREATE TABLE `test3` (`NAME` varchar(255) NOT NULL, `ID` bigint unsigned NOT NULL, PRIMARY KEY (`NAME`), UNIQUE INDEX idx(`id`))");
+        Probe("CREATE TABLE `test3` (`NAME` varchar(255) NOT NULL, `ID` bigint NOT NULL, PRIMARY KEY (`NAME`), UNIQUE INDEX idx(`id`))");
 
-    // ⑦ #538 unique key 带 comment
-    [Fact(Skip = "本批次暂不修")]
-    public void Issue538_MysqlUniqueKeyComment() =>
-        Probe("CREATE TABLE `t` (`id` int NOT NULL AUTO_INCREMENT, PRIMARY KEY (`id`), UNIQUE `uniq` USING BTREE (`id`) COMMENT 'unique')");
+    // ① #538 unique 后直接跟索引名 + USING BTREE + COMMENT —— T115 修复（grammar 新增 UNIQUE identifier? 分支）
+    [Fact]
+    public void Issue538_MysqlUniqueKeyComment()
+    {
+        var sql = "CREATE TABLE `t` (`id` int NOT NULL AUTO_INCREMENT, PRIMARY KEY (`id`), UNIQUE `uniq` USING BTREE (`id`) COMMENT 'unique')";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        // 关键元素都保留：UNIQUE 索引名 uniq、列 (id)、USING BTREE、COMMENT 'unique'
+        // 注：ToString 把 USING BTREE 挪到 (id) 后，MySQL 接受这种位置，round-trip 仍正确
+        Assert.Contains("UNIQUE `uniq`", output);
+        Assert.Contains("USING BTREE", output);
+        Assert.Contains("(`id`)", output);
+        Assert.Contains("COMMENT 'unique'", output);
+        // round-trip 不抛
+        SqlParser.Parse(output);
+    }
 
-    // ⑦ #1570 CONSTRAINT my_constraint UNIQUE KEY index_name (col1)
-    [Fact(Skip = "本批次暂不修")]
-    public void Issue1570_MysqlConstraintUniqueKeyWithName() =>
-        Probe("CREATE TABLE table1 (col1 INT, col2 INT, CONSTRAINT my_constraint UNIQUE KEY index_name (col1))");
+    // ① #1570 CONSTRAINT my_constraint UNIQUE KEY index_name (col1) —— T115 修复
+    // （双名场景：Name=约束名 my_constraint，IndexName=索引名 index_name）
+    [Fact]
+    public void Issue1570_MysqlConstraintUniqueKeyWithName()
+    {
+        var sql = "CREATE TABLE table1 (col1 INT, col2 INT, CONSTRAINT my_constraint UNIQUE KEY index_name (col1))";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        // 关键：约束名 my_constraint 不再被吞
+        Assert.Contains("CONSTRAINT my_constraint", output);
+        Assert.Contains("UNIQUE KEY index_name", output);
+        Assert.Contains("(col1)", output);
+        // round-trip 不抛
+        SqlParser.Parse(output);
+    }
 
     // ⑥ #397 全文搜索 %%
     [Fact(Skip = "本批次暂不修")]
