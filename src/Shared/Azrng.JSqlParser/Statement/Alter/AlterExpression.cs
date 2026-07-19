@@ -212,7 +212,12 @@ public class AlterExpression : ASTNodeAccessImpl
         if (PkColumns != null && PkColumns.Count > 0)
             sb2.Append(" (").Append(string.Join(", ", PkColumns)).Append(')');
         if (UkColumns != null && UkColumns.Count > 0)
+        {
+            // MySQL UNIQUE idx (cols) 形式：索引名在列前（#538 ALTER 变体）
+            if (!string.IsNullOrEmpty(UkName))
+                sb2.Append(' ').Append(UkName);
             sb2.Append(" (").Append(string.Join(", ", UkColumns)).Append(')');
+        }
         if (HasUsingIndex)
         {
             sb2.Append(" USING INDEX");

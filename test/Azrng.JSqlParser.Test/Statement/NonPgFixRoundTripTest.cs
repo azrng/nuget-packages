@@ -455,5 +455,18 @@ public class NonPgFixRoundTripTest
         SqlParser.Parse(output);
     }
 
+    [Fact]
+    public void AlterAddUniqueWithIndexName_RoundTrips()
+    {
+        // #538 ALTER 变体：ALTER TABLE t ADD UNIQUE idx (col) —— 索引名不能丢
+        var sql = "ALTER TABLE t ADD UNIQUE idx (col)";
+        var stmt = SqlParser.Parse(sql);
+        Assert.NotNull(stmt);
+        var output = stmt!.ToString()!;
+        Assert.Contains("UNIQUE idx", output);
+        Assert.Contains("(col)", output);
+        SqlParser.Parse(output);
+    }
+
     #endregion
 }

@@ -788,7 +788,13 @@ public partial class AstBuilderVisitor
                 if (constraint.Type == "PRIMARY KEY" && constraint.Columns.Count > 0)
                     expr.PkColumns = constraint.Columns;
                 else if (constraint.Type == "UNIQUE" && constraint.Columns.Count > 0)
+                {
                     expr.UkColumns = constraint.Columns;
+                    // MySQL UNIQUE idx (cols) 形式的索引名（#538 ALTER 变体），
+                    // 对齐 AlterExpression.UkName 字段（此前为死字段）
+                    if (!string.IsNullOrEmpty(constraint.IndexName))
+                        expr.UkName = constraint.IndexName;
+                }
                 else if (!string.IsNullOrEmpty(constraint.Type))
                 {
                     // KEY/INDEX 等 MySQL 索引约束：用 Constraint.ToString 作为可选说明符输出
