@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
 
 namespace Azrng.AspNetCore.Core.Filter;
 
@@ -15,9 +16,10 @@ public class ModelVerifyFilter : ActionFilterAttribute
     /// <summary>
     /// 模型校验过滤器
     /// </summary>
-    public ModelVerifyFilter(CommonMvcConfig? config = null)
+    public ModelVerifyFilter(IOptions<CommonMvcConfig>? config = null)
     {
-        _config = config ?? new CommonMvcConfig();
+        // 通过 IOptions 注入，使 Configure<CommonMvcConfig> 设置的选项真正生效
+        _config = config?.Value ?? new CommonMvcConfig();
     }
 
     public override void OnActionExecuting(ActionExecutingContext context)

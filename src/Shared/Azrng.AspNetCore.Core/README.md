@@ -649,12 +649,19 @@ ParameterException
 // 400 业务逻辑错误
 LogicBusinessException
 
-//401 身份验证失败
+//403 禁止访问（已认证但无权限）
 ForbiddenException
 ```
 
 ### 版本更新记录
 
+* 1.4.0
+  * **破坏性变更**：`ForbiddenException` 由 HTTP 401 改为 403，与 HTTP 语义对齐；前端/网关若按 401 判断鉴权需同步调整
+  * 修复 `CommonMvcConfig`（`UseHttpStateCode` 等）通过 `Configure<CommonMvcConfig>` 配置后在异常中间件、模型校验过滤器中不生效的问题，改为 `IOptions` 注入
+  * 移除异常中间件 `HasStarted` 判断，避免上游已启动响应时整条管道被跳过
+  * 审计中间件 `EndTime`/`ElapsedMilliseconds` 统一在响应完成回调内计算，消除与 `finally` 的赋值竞态；回调内日志写入补异常保护
+  * 异常中间件 `JsonSerializerOptions` 改为静态实例复用，避免每次请求重建
+  * 移除 `IsAotCompatible=true` 与 `IL2026`/`IL3050` 警告抑制，库内含反射扫描、泛型序列化等 trim 不安全路径，暂不支持 Native AOT
 * 1.3.1
   * 测试项目覆盖 `net6.0`、`net8.0`、`net9.0`、`net10.0`，增强多目标框架回归验证
   * CORS 注册方法增加空策略名、空来源参数校验

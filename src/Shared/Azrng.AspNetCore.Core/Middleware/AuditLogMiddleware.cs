@@ -56,7 +56,6 @@ public class AuditLogMiddleware
 
         var stopwatch = Stopwatch.StartNew();
         var startTime = DateTime.Now;
-        var endTime = startTime;
         var respBody = string.Empty;
 
         var reqHeaders = request.Headers
@@ -64,40 +63,50 @@ public class AuditLogMiddleware
 
         var reqBody = await GetRequestBodyAsync(request);
 
+        // 响应完成回调内统一计算 EndTime/Elapsed，避免与 finally 的赋值顺序产生竞态
         context.Response.OnCompleted(() =>
         {
             stopwatch.Stop();
-            var serviceName = configuration.GetValue<string>("ServiceName") ?? "CommonService";
+            var endTime = DateTime.Now;
 
-            // 获取日志服务
-            var loggerService = context.RequestServices.GetService<ILoggerService>();
-            if (loggerService == null)
+            try
             {
-                var loggerFactory = context.RequestServices.GetService<ILoggerFactory>();
-                var jsonSerializer = context.RequestServices.GetService<IJsonSerializer>();
-                loggerService = new DefaultLoggerService(loggerFactory, jsonSerializer);
+                var serviceName = configuration.GetValue<string>("ServiceName") ?? "CommonService";
+
+                // 获取日志服务
+                var loggerService = context.RequestServices.GetService<ILoggerService>();
+                if (loggerService == null)
+                {
+                    var loggerFactory = context.RequestServices.GetService<ILoggerFactory>();
+                    var jsonSerializer = context.RequestServices.GetService<IJsonSerializer>();
+                    loggerService = new DefaultLoggerService(loggerFactory, jsonSerializer);
+                }
+
+                loggerService.Write(new AuditLogInfo
+                {
+                    ServiceName = serviceName,
+                    TraceId = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier,
+                    ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    LogLevel = context.Response.StatusCode == 200 ? LogLevel.Information : LogLevel.Error,
+                    Route = request.Path,
+                    HttpMethod = request.Method,
+                    RequestBody = reqBody,
+                    ResponseBody = respBody,
+                    RawData = JsonSerializer.Serialize(reqHeaders),
+                    StatusCode = context.Response.StatusCode,
+                    UserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                    UserName = context.User.FindFirst(ClaimTypes.Name)?.Value,
+                    UserAgent = request.Headers["User-Agent"],
+                    IpAddress = request.Headers["X-Real-IP"],
+                    AliasName = "AuditLog"
+                });
             }
-
-            loggerService.Write(new AuditLogInfo
+            catch (Exception)
             {
-                ServiceName = serviceName,
-                TraceId = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier,
-                ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
-                StartTime = startTime,
-                EndTime = endTime,
-                LogLevel = context.Response.StatusCode == 200 ? LogLevel.Information : LogLevel.Error,
-                Route = request.Path,
-                HttpMethod = request.Method,
-                RequestBody = reqBody,
-                ResponseBody = respBody,
-                RawData = JsonSerializer.Serialize(reqHeaders),
-                StatusCode = context.Response.StatusCode,
-                UserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-                UserName = context.User.FindFirst(ClaimTypes.Name)?.Value,
-                UserAgent = request.Headers["User-Agent"],
-                IpAddress = request.Headers["X-Real-IP"],
-                AliasName = "AuditLog"
-            });
+                // 兜底：日志写入失败不应影响已完成的响应连接
+            }
             return Task.CompletedTask;
         });
 
@@ -114,7 +123,6 @@ public class AuditLogMiddleware
         }
         finally
         {
-            endTime = DateTime.Now;
             context.Response.Body = originalBodyStream;
         }
 

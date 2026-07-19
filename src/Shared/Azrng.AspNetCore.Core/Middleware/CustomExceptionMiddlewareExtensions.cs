@@ -1,8 +1,9 @@
-﻿using Azrng.AspNetCore.Core.Extension;
+using Azrng.AspNetCore.Core.Extension;
 using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Net;
 using System.Text.Encodings.Web;
@@ -20,13 +21,27 @@ namespace Azrng.AspNetCore.Core.Middleware
         private readonly ILogger<CustomExceptionMiddleware> _logger;
         private readonly CommonMvcConfig _config;
 
+        /// <summary>
+        /// 异常响应序列化选项，复用同一个实例避免每次请求重新构建缓存
+        /// </summary>
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // 关闭默认转义
+            ReferenceHandler = ReferenceHandler.IgnoreCycles, // 忽略循环引用
+            ReadCommentHandling = JsonCommentHandling.Skip, //跳过注释
+            AllowTrailingCommas = true, // 允许尾随逗号
+        };
+
         public CustomExceptionMiddleware(RequestDelegate next,
                                          ILogger<CustomExceptionMiddleware> logger,
-                                         CommonMvcConfig? config = null)
+                                         IOptions<CommonMvcConfig>? config = null)
         {
             _next = next;
             _logger = logger;
-            _config = config ?? new CommonMvcConfig();
+            // 通过 IOptions 注入，使 Configure<CommonMvcConfig> 设置的选项真正生效
+            _config = config?.Value ?? new CommonMvcConfig();
         }
 
         public async Task Invoke(HttpContext context)
@@ -35,17 +50,25 @@ namespace Azrng.AspNetCore.Core.Middleware
             {
                 _logger.LogInformation("{UrlAddress} request", context.Request.GetUrl());
 
-                if (!context.Response.HasStarted) //先判断context.Response.HasStarted
-                {
-                    await _next.Invoke(context);
-                }
+                await _next.Invoke(context);
 
                 _logger.LogInformation("{UrlAddress} response with status code {Code}",
                     context.Request.GetUrl(), context.Response.StatusCode);
             }
             catch (Exception ex)
             {
-                await HandleExceptionAsync(context, ex);
+                // 异常处理本身可能再次抛出（如序列化失败、响应已开始写入），二次异常单独记录避免污染原始错误
+                try
+                {
+                    await HandleExceptionAsync(context, ex);
+                }
+                catch (Exception secondary)
+                {
+                    var traceId = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier;
+                    _logger.LogError(secondary,
+                        "异常处理过程中发生二次异常-{Url} xRequestId:{TraceId} time:{Time}",
+                        context.Request.GetUrl(), traceId, DateTime.Now);
+                }
             }
         }
 
@@ -69,8 +92,9 @@ namespace Azrng.AspNetCore.Core.Middleware
             switch (exception)
             {
                 case ForbiddenException ua:
-                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    result.Code = ua.ErrorCode;
+                    // ForbiddenException 语义为禁止访问（已认证但无权限），对应 HTTP 403
+                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    result.Code = ((int)HttpStatusCode.Forbidden).ToString();
                     result.Message = ua.Message;
                     break;
 
@@ -115,16 +139,7 @@ namespace Azrng.AspNetCore.Core.Middleware
 
             context.Response.ContentType = "application/json; charset=utf-8";
 
-            var setting = new JsonSerializerOptions
-                          {
-                              PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
-                              DictionaryKeyPolicy = JsonNamingPolicy.CamelCase, // 启用驼峰格式
-                              Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // 关闭默认转义
-                              ReferenceHandler = ReferenceHandler.IgnoreCycles, // 忽略循环引用
-                              ReadCommentHandling = JsonCommentHandling.Skip, //跳过注释
-                              AllowTrailingCommas = true, // 允许尾随逗号
-                          };
-            await context.Response.WriteAsync(JsonSerializer.Serialize(result, setting));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(result, _jsonSerializerOptions));
         }
     }
 }

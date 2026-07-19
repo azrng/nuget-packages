@@ -320,6 +320,29 @@ public class CoreFeatureTests
     }
 
     [Fact]
+    public async Task AuditLogMiddleware_SwallowsLoggerExceptionsInCompletedCallback()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        services.AddSingleton<ILoggerService>(new ThrowingLoggerService());
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        var middleware = new AuditLogMiddleware(_ => Task.CompletedTask);
+
+        await middleware.Invoke(context);
+
+        // 响应完成回调内日志服务抛异常时，不应冒泡到调用方影响连接
+        var completed = () => responseFeature.InvokeCompletedAsync();
+        await completed.Should().NotThrowAsync();
+    }
+
+    [Fact]
     public void RegisterBusinessServices_RegistersConcreteTypeWhenOnlyLifetimeMarkerIsImplemented()
     {
         var services = new ServiceCollection();
@@ -346,7 +369,7 @@ public class CoreFeatureTests
     }
 
     [Theory]
-    [InlineData("Forbidden", StatusCodes.Status401Unauthorized, "401")]
+    [InlineData("Forbidden", StatusCodes.Status403Forbidden, "403")]
     [InlineData("NotFound", StatusCodes.Status404NotFound, "404")]
     [InlineData("Parameter", StatusCodes.Status400BadRequest, "400")]
     [InlineData("LogicBusiness", StatusCodes.Status400BadRequest, "400")]
@@ -368,6 +391,22 @@ public class CoreFeatureTests
         payload.Should().NotBeNull();
         payload!.IsSuccess.Should().BeFalse();
         payload.Code.Should().Be(expectedCode);
+    }
+
+    [Fact]
+    public async Task CustomExceptionMiddleware_RespectsUseHttpStateCodeFromOptions()
+    {
+        var context = CreateExceptionHttpContext();
+        var config = Options.Create(new CommonMvcConfig { UseHttpStateCode = false });
+        var middleware = new CustomExceptionMiddleware(
+            _ => throw new ParameterException("参数错误"),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<CustomExceptionMiddleware>.Instance,
+            config);
+
+        await middleware.Invoke(context);
+
+        // UseHttpStateCode=false 时，即便发生异常，HTTP 状态码也应被覆盖为 200，错误信息放在 body
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }
 
     [Fact]
@@ -513,6 +552,13 @@ internal class CapturingLoggerService : ILoggerService
         Log = log;
         return Task.CompletedTask;
     }
+}
+
+internal class ThrowingLoggerService : ILoggerService
+{
+    public void Write(AuditLogInfo log) => throw new InvalidOperationException("logger boom");
+
+    public Task WriteAsync(AuditLogInfo log) => throw new InvalidOperationException("logger boom");
 }
 
 internal class CapturingResponseFeature : IHttpResponseFeature
