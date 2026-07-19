@@ -649,6 +649,9 @@ ParameterException
 // 400 业务逻辑错误
 LogicBusinessException
 
+//401 未认证（未登录或凭证无效）
+UnauthorizedException
+
 //403 禁止访问（已认证但无权限）
 ForbiddenException
 ```
@@ -656,6 +659,7 @@ ForbiddenException
 ### 版本更新记录
 
 * 1.4.0
+  * 新增 `UnauthorizedException`（401）异常映射，补齐未认证语义，与 `ForbiddenException`（403）区分；`Azrng.Core` 依赖改为本地项目引用（最新版）
   * **破坏性变更**：`ForbiddenException` 由 HTTP 401 改为 403，与 HTTP 语义对齐；前端/网关若按 401 判断鉴权需同步调整
   * 修复 `CommonMvcConfig`（`UseHttpStateCode` 等）通过 `Configure<CommonMvcConfig>` 配置后在异常中间件、模型校验过滤器中不生效的问题，改为 `IOptions` 注入
   * 移除异常中间件 `HasStarted` 判断，避免上游已启动响应时整条管道被跳过

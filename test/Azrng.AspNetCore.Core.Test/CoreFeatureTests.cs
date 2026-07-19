@@ -369,6 +369,7 @@ public class CoreFeatureTests
     }
 
     [Theory]
+    [InlineData("Unauthorized", StatusCodes.Status401Unauthorized, "401")]
     [InlineData("Forbidden", StatusCodes.Status403Forbidden, "403")]
     [InlineData("NotFound", StatusCodes.Status404NotFound, "404")]
     [InlineData("Parameter", StatusCodes.Status400BadRequest, "400")]
@@ -472,6 +473,7 @@ public class CoreFeatureTests
     {
         return exceptionType switch
         {
+            "Unauthorized" => new UnauthorizedException("未认证"),
             "Forbidden" => new ForbiddenException("权限不通过"),
             "NotFound" => new NotFoundException("未找到对象"),
             "Parameter" => new ParameterException("参数错误"),

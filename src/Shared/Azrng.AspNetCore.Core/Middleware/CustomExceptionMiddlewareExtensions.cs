@@ -91,6 +91,13 @@ namespace Azrng.AspNetCore.Core.Middleware
             //状态码
             switch (exception)
             {
+                case UnauthorizedException ua:
+                    // UnauthorizedException 语义为未认证（未登录或凭证无效），对应 HTTP 401
+                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    result.Code = ua.ErrorCode;
+                    result.Message = ua.Message;
+                    break;
+
                 case ForbiddenException ua:
                     // ForbiddenException 语义为禁止访问（已认证但无权限），对应 HTTP 403
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;

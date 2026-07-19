@@ -193,6 +193,7 @@ Azrng.AspNetCore.Core/
 
 | 异常类型 | HTTP 状态码 | 说明 |
 |---------|------------|------|
+| `UnauthorizedException` | 401 | 未认证（未登录或凭证无效） |
 | `ForbiddenException` | 403 | 禁止访问（已认证但无权限） |
 | `NotFoundException` | 404 | 资源未找到 |
 | `ParameterException` | 400 | 参数错误 |
@@ -635,7 +636,7 @@ app.Run();
 
 | 版本 | 主要变更 |
 |------|----------|
-| 1.4.0 | **审查问题修复（P0+P1）**：`CommonMvcConfig` 改为 `IOptions` 注入使配置真正生效；移除异常中间件 `HasStarted` 有害判断；审计中间件 `EndTime`/`Elapsed` 统一在响应完成回调内计算并补异常保护；`ForbiddenException` 状态码 401→403（破坏性）；移除 `IsAotCompatible` 声明与 trim 警告抑制；异常中间件 `JsonSerializerOptions` 改为静态复用 |
+| 1.4.0 | **审查问题修复（P0+P1）**：`CommonMvcConfig` 改为 `IOptions` 注入使配置真正生效；移除异常中间件 `HasStarted` 有害判断；审计中间件 `EndTime`/`Elapsed` 统一在响应完成回调内计算并补异常保护；`ForbiddenException` 状态码 401→403（破坏性）；移除 `IsAotCompatible` 声明与 trim 警告抑制；异常中间件 `JsonSerializerOptions` 改为静态复用；新增 `UnauthorizedException`→401 映射；`Azrng.Core` 改为本地项目引用 |
 | 1.3.1 | **扩展前基础加固**：测试覆盖 `net6.0`/`net8.0`/`net9.0`/`net10.0`；CORS 注册增加参数校验；审计日志默认序列化增加 `System.Text.Json` 兜底；补充关键行为回归测试 |
 | 1.3.0 | **CORS 配置重构**：简化为 3 个方法（`AddAnyCors`、`AddCorsByOrigins`、`AddCorsPolicy`）；移除复杂的配置类；新增 `UseCorsPolicy` 中间件方法；改进易用性和安全性 |
 | 1.2.1 | 更新异常中间件 |

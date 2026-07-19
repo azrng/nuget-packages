@@ -22,6 +22,6 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-        <PackageReference Include="Azrng.Core" Version="1.8.4"/>
+        <ProjectReference Include="..\Azrng.Core\Azrng.Core.csproj"/>
     </ItemGroup>
 </Project>

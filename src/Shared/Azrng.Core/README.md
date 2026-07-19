@@ -963,6 +963,9 @@ public IResultModel<bool> Save()
 
 ## 📝 版本更新记录
 
+### 1.20.0
+- 新增 `UnauthorizedException`（ErrorCode 401），表示未认证（未登录或凭证无效），与 `ForbiddenException`（403，已认证但无权限）区分
+
 ### 1.18.0
 
 - `ResultModel` / `ResultModel<T>` 新增成功消息重载，支持业务消息保真

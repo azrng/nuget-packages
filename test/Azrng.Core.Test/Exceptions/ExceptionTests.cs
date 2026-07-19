@@ -54,4 +54,22 @@ public class ExceptionTests
         exception.InnerException.Should().BeSameAs(inner);
         exception.ErrorCode.Should().Be("500");
     }
+
+    [Fact]
+    public void UnauthorizedException_Default_ShouldUse401CodeAndMessage()
+    {
+        var exception = new UnauthorizedException();
+
+        exception.ErrorCode.Should().Be("401");
+        exception.Message.Should().Be("未认证");
+    }
+
+    [Fact]
+    public void UnauthorizedException_WithMessage_ShouldPreserveCodeAndMessage()
+    {
+        var exception = new UnauthorizedException("token 已过期");
+
+        exception.ErrorCode.Should().Be("401");
+        exception.Message.Should().Be("token 已过期");
+    }
 }
