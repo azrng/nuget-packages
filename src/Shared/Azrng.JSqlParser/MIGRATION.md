@@ -486,9 +486,9 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 |------|---------|
 | #2421 BigQuery MERGE BY TARGET/SOURCE | 小众语言，本批次不做 |
 | **#2428 MySQL PROCEDURE ANALYSE()** | **MySQL 5.7 弃用、8.0 移除的已死语法，扩 grammar/模型/测试是长期负债，不修**（探针 Skip 记录） |
-| #2435/#2359/#1295/#1927/#1893/#823/#538/#1570 等 MySQL 索引细节 | 留作后续批次 |
+| #2435/#2359/#1927 等 MySQL 词法/索引细节 | 留作后续批次（#1295/#1893/#823/#538/#1570 已在 T115 处理） |
 | #397/#2033/#672/#2039 等 SQL Server/Oracle 专项 | 留作后续批次 |
-| #2440/#1170 等 AST 正确性 | 留作后续批次 |
+| #2440/#1170/#2163/#2195/#2194 等 AST 正确性 | 已在 T115 核实并转绿（见第十五节） |
 | #467/#2403/#2438 工程类 | 不在本批次 |
 
 ### 14.3 测试规模
@@ -496,6 +496,48 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 - T113 修复后（基线）：1599 项
 - T114 修复后：1635 项 active + 17 探针 Skip 记录现状
 - 新增测试文件 2 个：`NonPgIssuesProbeTest`（26 探针，9 active + 17 Skip）+ `NonPgFixRoundTripTest`（25 round-trip）
+
+---
+
+## 十五、T115 上游 issue 修复对照（AST 正确性 + MySQL DDL 索引族，beta10）
+
+> 本节记录 T115 批次对「⑨ AST 正确性 5 条 + ① DDL 索引族 5 条」的探针核实结果。
+> **核心结论**：10 条上游 issue 中，仅 2 条（#1570/#538）在 Azrng 移植版真实复现需修，其余 8 条移植版不复现、已支持或不适用。
+> 清单原标注「⛔ 复现且未修复」与实际探针结果有显著出入，本节固化修正后的状态判断。
+
+### 15.1 已修复对照表（2 条真实复现）
+
+| Issue | 方言 | 上游缺陷 | Azrng C#（修复后） | 修复 commit |
+|------|------|---------|------------------|------------|
+| #1570 | MySQL | `CONSTRAINT c UNIQUE KEY idx (cols)` 双名场景吞掉约束名 c | `VisitTableConstraint` KEY/INDEX 分支按 token 位置分离：CONSTRAINT 名入 `Constraint.Name`、索引名入新增字段 `Constraint.IndexName`；`ToString` 双名输出 `CONSTRAINT c UNIQUE KEY idx (cols)` | `85d3dd7` |
+| #538 | MySQL | `UNIQUE idx USING BTREE (cols) COMMENT '...'`（UNIQUE 后直接跟索引名，无 KEY/INDEX 关键字）grammar 不支持 | grammar `tableConstraint` 新增 `UNIQUE identifier? clusterKind? [USING identifier]? (indexColumnList) indexOption*` 分支；visitor 按 token 位置区分索引名与列前 USING method（BTREE/HASH） | `85d3dd7` |
+
+### 15.2 探针转绿/不适用对照表（8 条）
+
+| Issue | 方言 | 清单原标注 | 实际状态 | 处理 |
+|------|------|----------|---------|------|
+| #2440 | 通用 | ⛔ 复现 | **不复现** | 探针转绿 + AST 结构断言（AndExpression[InExpression, GreaterThanEquals]） |
+| #1170 | 通用 | ⛔ 复现 | **不复现** | 探针转绿 + 输出断言（`NOT NOT 1 = 1`，上游 bug 是多输出一个 NOT） |
+| #2163 | PG | ⛔ 复现 | **建模不同但 round-trip 正确** | 探针转绿；移植版用 `LambdaExpression` 承载 `col -> 'key'`（非 `JsonOperator`），输出正确。不引入 JsonOperator 改造（避免 `->` 的 lambda/JSON 二义性处理） |
+| #2195 | 通用 | ⛔ 复现 | **不复现** | 探针转绿 + 参数断言（`(x,y,z) -> x+y` 三个 identifier 完整保留） |
+| #2194 | 通用 | ⛔ 复现 | **不适用** | 探针转绿 + 注释说明；移植版 `SimpleNode`/`ASTNodeAccessImpl` 完全无 `Parent` 字段（架构差异），上游问题不存在 |
+| #1893 | MySQL | ⛔ 复现 | **已支持** | 探针转绿 + round-trip 断言（`UNIQUE INDEX name (cols) USING BTREE COMMENT '...'` 完整保留） |
+| #823 | MySQL | ⛔ 复现 | **主路径已支持** | 探针转绿 + 注释；原始 SQL 失败是 `bigint unsigned` 数据类型修饰符（独立问题，不属索引族，留待数据类型专项） |
+| #1295 | MySQL | ⛔ 复现 | **已支持** | 探针转绿 + round-trip 断言（`ALTER TABLE t ADD INDEX (col)`） |
+
+### 15.3 测试规模
+
+- T114 修复后（基线）：1635 项 active + 17 探针 Skip
+- T115 修复后：1654 项 active + 10 探针 Skip（探针转绿 8 条：⑨ AST 5 条 + ① DDL 3 条，#1927 函数索引仍 Skip）
+- 新增测试：探针转 active 8 条 + AST 结构断言加强 5 条 + round-trip 新增 9 条
+
+### 15.4 保留限制（评估后主动不修）
+
+| 项目 | 不修理由 |
+|------|---------|
+| #2194 Parent 字段 | 移植版架构无 Parent 概念，引入需改 `SimpleNode`/`ASTNodeAccessImpl`/`IASTNodeAccess` 并在所有 visitor Visit 中传播，属架构性大改，超出 issue 修复范围 |
+| #2163 JsonOperator 改造 | 移植版用 LambdaExpression 承载 `->` round-trip 正确；改建成 JsonOperator 需处理 `->` 在 SELECT 项（JSON 访问）vs lambda 上下文（`x -> x+1`）的二义性，改造面大且无 round-trip 缺陷驱动 |
+| #823 原始 SQL 的 `bigint unsigned` | MySQL 数据类型修饰符（unsigned/signed/zerofill）独立问题，与索引族无关，留待数据类型专项批次 |
 
 ---
 

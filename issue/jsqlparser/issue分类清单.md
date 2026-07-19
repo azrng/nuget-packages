@@ -28,8 +28,8 @@
 
 1. **#467**（marker 接口）—— 与 `Azrng.JSqlParser` 当前「接口加 I 前缀」治理同源，顺手做
 2. **③ 词法**（7 条）—— 独立、风险低、见效快
-3. **① DDL**（20 条，按 4 个子主题分批）—— 量大利好清债
-4. **⑨ AST 正确性**（5 条）—— 影响面广
+3. **① DDL**（剩 11 条，按 4 个子主题分批）—— 量大利好清债（T115 已清索引族 5 条）
+4. ~~**⑨ AST 正确性**（5 条）~~ —— T115 已核实全部不复现/不适用，无需修复
 5. **④→⑥→⑦→⑤ 方言专项** —— PG 最值得先做（条数多、参考实现全）
 6. **② 过程化**（9 条）—— 难度高，单独排期
 7. **⑧ 小众方言**（17 条）—— 按需，多数可暂缓
@@ -46,11 +46,11 @@
 
 ### ⭐ 值得修（约 28 条，建议优先）
 
-**① DDL（16）** —— 跨方言常见 DDL/索引/约束，集中清债收益最大：
+**① DDL（11）** —— 跨方言常见 DDL/索引/约束，集中清债收益最大：
 - #2070 CREATE DATABASE、#2065 DROP 多表 IF EXISTS、#2112 ALTER MODIFY/DROP IF EXISTS、#1875 ADD COLUMN IF NOT EXISTS、#599 MODIFY NULL/NOT NULL —— 标准常见 DDL
-- #1668 MySQL 分区 create/alter、#1927 MySQL 函数索引、#1295 ALTER ADD INDEX、#1570/#1893/#823/#538 MySQL 索引名/USING/COMMENT/unique index（同族，一起清）
-- #1060 索引类型错误、#652 多参数索引 —— 正确性
+- #1668 MySQL 分区 create/alter、#1927 MySQL 函数索引、#1060 索引类型错误、#652 多参数索引 —— 正确性
 - #2020 SQL Server `WITH(index options)`、#2039 Oracle ADD CONSTRAINT tablespace —— 主流方言索引/约束选项
+- ✅ T115 已清：#1570/#1893/#823/#538/#1295（MySQL 索引名/USING/COMMENT/unique index 同族）
 
 **③ 词法（2）**：#2435 MySQL `0x` 十六进制字面量、#2359 LIMIT 含子查询（正确性）
 
@@ -60,7 +60,7 @@
 
 **⑥ SQL Server（2）**：#2033 BULK INSERT、#386 `FOR XML PATH`/STUFF（ETL/拼串常见）
 
-**⑨ AST 正确性（5）** —— 影响所有用户，最高优先：#2440 WHERE `IN(...) AND`、#2195 Lambda 参数、#2194 Parent 节点、#2163 PG JSON+关系运算符混用 AST 错、#1170 NotExpression
+**⑨ AST 正确性** —— T115 已核实 5 条全部不复现/不适用（详见 ⑨ 节状态块），无需修复
 
 **⑩ 工程（1）**：#467 marker 接口（与当前「I 前缀」治理同源）
 
@@ -81,8 +81,8 @@
 
 ### 🔄 T114 在做 / ✅ 已完成
 
-- ✅ 已完成：④ 全 12 条；① #1589；③ #1169/#1314
-- 🔄 T114 进行中：#161 OPTION hint、#911 `@table`、#854 `INTO @var`、#2298 CAST CHARACTER SET、#2427+#2006 `_utf8mb4`、#2428 PROCEDURE ANALYSE
+- ✅ 已完成：④ 全 12 条；① #1589（T114）/ #1570 #538 #1893 #823 #1295（T115）；③ #1169/#1314；⑨ AST 5 条（T115 核实不复现/不适用）
+- ✅ T114 完成：#161 OPTION hint、#911 `@table`、#854 `INTO @var`、#2298 CAST CHARACTER SET、#2427+#2006 `_utf8mb4`、#2428 PROCEDURE ANALYSE（拒绝）
 
 ---
 
@@ -92,9 +92,10 @@
 
 > 跨方言，最大批；模式重复，适合集中清。子主题：(a) 约束/索引 #1570 #1893 #1589 #823 #538 #1060 #652 #1927 #1295；(b) ALTER IF 系列 #2112 #1875 #599 #2039；(c) 分区/视图/库 #1668 #1735 #2070 #2353；(d) 整体失败 #1567 #2020
 >
-> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
-> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1589（实为 PRIMARY KEY NONCLUSTERED 缺失，已修）
-> - ⛔ 复现且未修复：#1570 #1893 #823 #538 #1295（MySQL 索引细节，后续批次）
+> **Azrng 移植版验证状态**（2026-07-19，T114 + T115 探针 + round-trip）：
+> - 🔧 已修复：#1589（T114，PRIMARY KEY NONCLUSTERED）、#1570（T115，CONSTRAINT 双名场景约束名丢失）、#538（T115，UNIQUE 后直接跟索引名 grammar 不支持）
+> - ✅ 已支持（移植版不存在上游缺陷）：#1893（UNIQUE INDEX + USING + COMMENT）、#823（UNIQUE INDEX in CREATE TABLE 主路径；原始 SQL 含 bigint unsigned 数据类型修饰符属独立问题）、#1295（ALTER ADD INDEX）
+> - ⛔ 复现且未修复：#1060 #652 #1927（函数索引/多参数索引，单独排期）
 
 | # | 类型 | 标题 | 要点 |
 |---:|:--:|---|---|
@@ -252,6 +253,11 @@
 ### ⑨ AST 语义正确性：能解析但树错 / NPE / 父节点错  [5 条]
 
 > 影响所有用户，正确性问题，建议中等优先
+>
+> **Azrng 移植版验证状态**（2026-07-19，T115 探针 + AST 结构断言）：
+> - ✅ 已支持（移植版不复现）：#2440（WHERE IN(...) AND，AST 结构正确 AndExpression[InExpression, GreaterThanEquals]）、#1170（NotExpression 双 NOT，输出 `NOT NOT 1 = 1` 正确，上游 bug 是多一个 NOT）、#2195（LambdaExpression 参数完整保留）
+> - 🟨 建模不同但 round-trip 正确：#2163（PG JSON `->`，移植版用 LambdaExpression 承载，输出正确；不引入 JsonOperator 改造，避免 `->` 的 lambda/JSON 二义性）
+> - 🟨 不适用：#2194（Parent 节点错，移植版 SimpleNode/ASTNodeAccessImpl 无 Parent 字段，架构差异，上游问题不存在）
 
 | # | 类型 | 标题 | 要点 |
 |---:|:--:|---|---|
