@@ -12,7 +12,6 @@ namespace Azrng.JSqlParser.Test.Helpers.NativeSqlParse;
 /// 探针：从 SQL 装配 <see cref="NativeSqlParseResult"/>。
 /// </summary>
 /// <remarks>
-/// 逻辑与 <c>C:\Work\temp-tools\SynyiTools\Service\NativeSqlParserService.cs</c> 的 ParseSelect 一致，
 /// 仅做两点最小适配：JExpression -> IExpression、IsNotNullOrWhiteSpace -> !string.IsNullOrWhiteSpace。
 /// 供测试项目作为"上层消费者"样板，验证 Azrng.JSqlParser 类库的结构化提取能力。
 /// </remarks>
