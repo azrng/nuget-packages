@@ -18,57 +18,57 @@ public class ProbeExtractTest
 {
     /// <summary>SQL1：多表 JOIN + CASE WHEN + 复杂 WHERE（IN / 正则 ~ / !~ / DATE_TRUNC）。</summary>
     private const string MultiJoinAndComplexWhereSql = """
-        SELECT a.org_code,
-               a.hos_area,
-               b.org_alias,
-               a.source_case_diagnose_id   AS ID,
-               c.source_patient_id         AS HZID,
-               c.source_inpatient_visit_id AS ZYID,
-               c.source_inpatient_case_id  AS CASEID,
-               a.diag_class_name_orig      AS yszdlb,
-               a.diag_class_name           AS ptzdlb,
-               a.is_main_flag              AS ptzzd,
-               CASE
-                   WHEN a.org_code IN ('JNZQ_010', 'FKZY_013') THEN a.happen_no
-                   ELSE a.happen_no - 1
-                   END                     AS XH,
-               a.diag_name_orig            AS JBMC
-        FROM cases.inpatient_case_info c
-                 INNER JOIN cases.inpatient_case_diagnose a
-                            ON a.source_inpatient_case_id = c.source_inpatient_case_id
-                                AND a.org_code = c.org_code
-                                AND a.hos_area = c.hos_area
-                                AND a.source_app = c.source_app
-                                AND a.is_valid = '1'
-                 INNER JOIN mdm.organization b
-                            ON a.org_code = b.zuhao
-                                AND a.hos_area = b.hos_area
-                                AND b.zuhao != 'HDYY_020'
-                                AND b.note = '1'
-        WHERE c.is_valid = '1'
-          AND c.org_code IN ('NKYY_015')
-            AND ( c.record_type_name IN ('会诊记录', '会诊其他记录')
-            OR  c.record_title ~ '危急值|医患沟通'
-            OR ( c.record_title ~ '多学科' AND  c.record_title !~ '申请|同意')
-            )
-          AND c.out_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 month')
-          AND c.out_time < DATE_TRUNC('month', CURRENT_DATE - INTERVAL '4 month')
-        """;
+                                                       SELECT a.org_code,
+                                                              a.hos_area,
+                                                              b.org_alias,
+                                                              a.source_case_diagnose_id   AS ID,
+                                                              c.source_patient_id         AS HZID,
+                                                              c.source_inpatient_visit_id AS ZYID,
+                                                              c.source_inpatient_case_id  AS CASEID,
+                                                              a.diag_class_name_orig      AS yszdlb,
+                                                              a.diag_class_name           AS ptzdlb,
+                                                              a.is_main_flag              AS ptzzd,
+                                                              CASE
+                                                                  WHEN a.org_code IN ('JNZQ_010', 'FKZY_013') THEN a.happen_no
+                                                                  ELSE a.happen_no - 1
+                                                                  END                     AS XH,
+                                                              a.diag_name_orig            AS JBMC
+                                                       FROM cases.inpatient_case_info c
+                                                                INNER JOIN cases.inpatient_case_diagnose a
+                                                                           ON a.source_inpatient_case_id = c.source_inpatient_case_id
+                                                                               AND a.org_code = c.org_code
+                                                                               AND a.hos_area = c.hos_area
+                                                                               AND a.source_app = c.source_app
+                                                                               AND a.is_valid = '1'
+                                                                INNER JOIN mdm.organization b
+                                                                           ON a.org_code = b.zuhao
+                                                                               AND a.hos_area = b.hos_area
+                                                                               AND b.zuhao != 'HDYY_020'
+                                                                               AND b.note = '1'
+                                                       WHERE c.is_valid = '1'
+                                                         AND c.org_code IN ('NKYY_015')
+                                                           AND ( c.record_type_name IN ('会诊记录', '会诊其他记录')
+                                                           OR  c.record_title ~ '危急值|医患沟通'
+                                                           OR ( c.record_title ~ '多学科' AND  c.record_title !~ '申请|同意')
+                                                           )
+                                                         AND c.out_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 month')
+                                                         AND c.out_time < DATE_TRUNC('month', CURRENT_DATE - INTERVAL '4 month')
+                                                       """;
 
     /// <summary>SQL2：SELECT 列表中嵌入 EXISTS 相关子查询。</summary>
     private const string ExistsSubQuerySql = """
-        SELECT a.inpatient_case_id,
-               CASE
-                   WHEN EXISTS(SELECT 1
-                               FROM cases.inpatient_case_operation o
-                               WHERE o.is_valid = 1
-                                 AND o.group_operation_class = '手术'
-                                 AND a.source_inpatient_case_id = o.source_inpatient_case_id
-                                 AND a.org_code = o.org_code
-                                 AND a.source_app = o.source_app) THEN 1
-                   ELSE 2 END AS is_operation_flag
-        FROM cases.inpatient_case_info a
-        """;
+                                             SELECT a.inpatient_case_id,
+                                                    CASE
+                                                        WHEN EXISTS(SELECT 1
+                                                                    FROM cases.inpatient_case_operation o
+                                                                    WHERE o.is_valid = 1
+                                                                      AND o.group_operation_class = '手术'
+                                                                      AND a.source_inpatient_case_id = o.source_inpatient_case_id
+                                                                      AND a.org_code = o.org_code
+                                                                      AND a.source_app = o.source_app) THEN 1
+                                                        ELSE 2 END AS is_operation_flag
+                                             FROM cases.inpatient_case_info a
+                                             """;
 
     [Fact]
     public void MultiJoinAndComplexWhere_Parse_ShouldExtractTablesColumnsAndOperators()
@@ -103,6 +103,7 @@ public class ProbeExtractTest
         Assert.Contains("c.is_valid = '1'", plain.Where!.ToString());
         Assert.Contains("c.org_code IN ('NKYY_015')", plain.Where.ToString());
         Assert.Contains("c.out_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 month')", plain.Where.ToString());
+
         // PostgreSQL 正则运算符 ~ / !~ 不再被误解析为 =（visitor TILDE 分支修复后）
         Assert.Contains("c.record_title ~ '危急值|医患沟通'", plain.Where.ToString());
         Assert.Contains("c.record_title !~ '申请|同意'", plain.Where.ToString());
@@ -251,8 +252,7 @@ public class ProbeExtractTest
     [Fact]
     public void JoinOnCondition_ShouldBeCollectedIntoWhereList()
     {
-        var result = NativeSqlParserService.Parse(
-            "SELECT a.id FROM users a JOIN orders b ON a.id = b.uid WHERE b.is_valid = :v");
+        var result = NativeSqlParserService.Parse("SELECT a.id FROM users a JOIN orders b ON a.id = b.uid WHERE b.is_valid = :v");
 
         // ON a.id = b.uid 右侧是列（非命名参数），按 AddOperator 设计不产出记录；
         // 仅 WHERE 的 b.is_valid = :v 产出一条。
@@ -267,11 +267,48 @@ public class ProbeExtractTest
     [Fact]
     public void JoinOnCondition_WithNamedParameter_ShouldBeCollected()
     {
-        var result = NativeSqlParserService.Parse(
-            "SELECT a.id FROM users a JOIN orders b ON a.id = :uid WHERE b.is_valid = :v");
+        var result = NativeSqlParserService.Parse("SELECT a.id FROM users a JOIN orders b ON a.id = :uid WHERE b.is_valid = :v");
 
         Assert.Equal(2, result.WhereList.Count);
         Assert.Contains(result.WhereList, w => w.LeftExpression!.ColumnName == "id" && w.RightExpression!.Name == "uid");
         Assert.Contains(result.WhereList, w => w.LeftExpression!.ColumnName == "is_valid" && w.RightExpression!.Name == "v");
+    }
+
+    [Fact]
+    public void WithTableWhere_Test()
+    {
+        var sql = """
+                  WITH base_cases AS (SELECT c.org_code                  as org_code,
+                                             c.hos_area                  as hos_area,
+                                             c.source_patient_id         as source_patient_id,
+                                             c.source_inpatient_visit_id as source_inpatient_visit_id,
+                                             c.source_inpat_no           as source_inpat_no
+                                      FROM cases.inpatient_case_info c
+                                      WHERE c.is_valid = '1'
+                                        AND c.org_code IN (@org_code)
+                                        AND c.out_time >= @begin_time
+                                        AND c.out_time < @end_time)
+                  SELECT t1.org_code                  AS org_code,
+                         t1.hos_area                  AS hos_area,
+                         a.begin_time                 AS yzkssj,
+                         CASE
+                             WHEN a.order_type_code = '2' THEN a.begin_time
+                             ELSE a.end_time
+                             END                      AS yzjssj,
+                         '0' || a.order_type_code     AS yzlb,
+                         a.order_class_code           AS yzxmflbm,
+                         a.specs                      AS ypgg,
+                         NULL                         AS yfdw,
+                         a.once_dose                  AS yl
+                                      FROM base_cases t1
+                                          INNER JOIN orders.inpat_undrug_order a
+                                      ON t1.source_inpatient_visit_id = a.source_order_id
+                                          AND t1.org_code = a.org_code
+                                          AND a.source_app != '019_DH_HIS_015'
+                                          AND a.is_valid = '1'
+
+                  """;
+        var result = NativeSqlParserService.Parse(sql);
+        Assert.True(result.WhereList.Count > 0);
     }
 }
