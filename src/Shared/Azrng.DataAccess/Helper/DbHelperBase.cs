@@ -79,10 +79,10 @@ namespace Azrng.DataAccess.Helper
             return await conn.ExecuteAsync(sql, parameter);
         }
 
-        public async Task<List<T>> QueryAsync<T>(string sql, object? parameter = null)
+        public async Task<List<T>> QueryAsync<T>(string sql, object? parameter = null, int? commandTimeout = null)
         {
             await using var conn = GetConnection();
-            return (await conn.QueryAsync<T>(sql, parameter)).ToList();
+            return (await conn.QueryAsync<T>(sql, parameter, commandTimeout: commandTimeout)).ToList();
         }
 
         public virtual async Task<int> GetDataCountAsync(string sourceSql, object? param = null)
@@ -101,10 +101,11 @@ namespace Azrng.DataAccess.Helper
             int pageSize,
             object? param = null,
             string? orderColumn = null,
-            string? orderDirection = null)
+            string? orderDirection = null,
+            int? commandTimeout = null)
         {
             var dataSql = BuildSplitPageSql(sourceSql, pageIndex, pageSize, orderColumn, orderDirection);
-            return await QueryAsync<T>(dataSql, param);
+            return await QueryAsync<T>(dataSql, param, commandTimeout);
         }
 
         public virtual string BuildSplitPageSql(

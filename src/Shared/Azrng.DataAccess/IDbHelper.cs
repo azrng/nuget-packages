@@ -56,9 +56,10 @@ namespace Azrng.DataAccess
         /// </summary>
         /// <param name="sql"></param>
         /// <param name="parameter">参数</param>
+        /// <param name="commandTimeout">命令超时秒数</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        Task<List<T>> QueryAsync<T>(string sql, object? parameter = null);
+        Task<List<T>> QueryAsync<T>(string sql, object? parameter = null, int? commandTimeout = null);
 
         /// <summary>
         /// 执行操作
@@ -93,10 +94,12 @@ namespace Azrng.DataAccess
         /// <param name="param"></param>
         /// <param name="orderColumn"></param>
         /// <param name="orderDirection"></param>
+        /// <param name="commandTimeout">命令超时秒数</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task<IEnumerable<T>> GetSplitPageDataAsync<T>(string sourceSql, int pageIndex, int pageSize,
-                                                      object? param = null, string? orderColumn = null, string? orderDirection = null);
+                                                      object? param = null, string? orderColumn = null, string? orderDirection = null,
+                                                      int? commandTimeout = null);
 
         /// <summary>
         /// 构建分页sql
