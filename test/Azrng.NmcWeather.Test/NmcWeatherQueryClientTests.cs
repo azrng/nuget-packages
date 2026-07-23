@@ -60,6 +60,42 @@ public class NmcWeatherQueryClientTests
         Assert.Same(expected, weather);
     }
 
+    [Fact]
+    public async Task GetWeatherByCityNameAsync_ShouldReturnNullWhenCodeCannotBeResolved()
+    {
+        var locationClient = new Mock<INmcLocationClient>(MockBehavior.Strict);
+        var weatherClient = new Mock<INmcWeatherClient>(MockBehavior.Strict);
+
+        locationClient.Setup(client => client.GetCityCodeByNameAsync("不存在", null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var queryClient = new NmcWeatherQueryClient(locationClient.Object, weatherClient.Object);
+
+        var weather = await queryClient.GetWeatherByCityNameAsync("不存在");
+
+        Assert.Null(weather);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowWhenLocationClientIsNull()
+    {
+        var weatherClient = new Mock<INmcWeatherClient>(MockBehavior.Strict);
+
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcWeatherQueryClient(null!, weatherClient.Object));
+
+        Assert.Equal("locationClient", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowWhenWeatherClientIsNull()
+    {
+        var locationClient = new Mock<INmcLocationClient>(MockBehavior.Strict);
+
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcWeatherQueryClient(locationClient.Object, null!));
+
+        Assert.Equal("weatherClient", exception.ParamName);
+    }
+
     private static NmcWeatherEnvelope CreateWeatherEnvelope()
     {
         return new NmcWeatherEnvelope

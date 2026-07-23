@@ -336,6 +336,79 @@ public class NmcLocationClientTests
         Assert.Equal("provinceName", exception.ParamName);
     }
 
+    [Fact]
+    public void Constructor_ShouldThrowWhenHttpHelperIsNull()
+    {
+        var options = Options.Create(new NmcWeatherOptions { BaseUrl = BaseUrl });
+
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcLocationClient(null!, options));
+
+        Assert.Equal("httpHelper", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowWhenOptionsIsNull()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcLocationClient(new Mock<IHttpHelper>().Object, null!));
+
+        Assert.Equal("options", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task GetProvinceCodeMapAsync_ShouldKeepFirstCodeWhenProvinceNameDuplicated()
+    {
+        var client = CreateClient(mock =>
+        {
+            mock.SetupGetProvinces(
+            [
+                CreateProvince("ABJ", "北京市"),
+                CreateProvince("ABJ2", "北京市")
+            ]);
+        });
+
+        var provinceCodeMap = await client.GetProvinceCodeMapAsync();
+
+        Assert.Single(provinceCodeMap);
+        Assert.Equal("ABJ", provinceCodeMap["北京市"]);
+    }
+
+    [Fact]
+    public async Task GetCityCodeMapByProvinceCodeAsync_ShouldKeepFirstCodeWhenCityNameDuplicated()
+    {
+        var client = CreateClient(mock =>
+        {
+            mock.SetupGetCities("ABJ",
+            [
+                CreateCity("54433", city: "朝阳"),
+                CreateCity("54399", city: "朝阳")
+            ]);
+        });
+
+        var cityCodeMap = await client.GetCityCodeMapByProvinceCodeAsync("ABJ");
+
+        Assert.Single(cityCodeMap);
+        Assert.Equal("54433", cityCodeMap["朝阳"]);
+    }
+
+    [Theory]
+    [InlineData("shanghai")]
+    [InlineData("Wqsps-1")]
+    [InlineData("abc")]
+    public async Task GetCityAsync_ShouldTreatPinyinAsNameNotCode(string input)
+    {
+        // 收紧后：拼音/非5位/含分隔符的输入不应被当作编码，直接走名称查找路径
+        var client = CreateClient(mock =>
+        {
+            mock.SetupGetProvinces([CreateProvince()]);
+            mock.SetupGetCities("ABJ", [CreateCity("Wqsps", city: "上海")]);
+        });
+
+        var city = await client.GetCityAsync(input, provinceCode: "ABJ");
+
+        // 名称不匹配时返回 null，证明没有走编码全量遍历回退路径
+        Assert.Null(city);
+    }
+
     private static NmcLocationClient CreateClient(Action<Mock<IHttpHelper>> setup)
     {
         var mock = new Mock<IHttpHelper>(MockBehavior.Strict);

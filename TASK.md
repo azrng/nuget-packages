@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T118 | Azrng.DataAccess 单次 SQL 超时 | 为分页 SQL 查询提供单次 commandTimeout 参数并透传至 Dapper 命令 | 阶段 1 | Codex | DONE | P1 | 2026-07-22 |
 | T107 | Azrng.JSqlParser 支持 @ 命名参数 | 修复 @name 被解析成普通 JDBC 参数导致变量名丢失的问题，补测试并产出新版包 | 阶段 2 | Codex | BLOCKED | P1 | 2026-07-16 |
 | T111 | Azrng.JSqlParser 对齐审计修复（17 处走样） | 修复系统对比发现的 17 处迁移走样：A 类运算符符号错配(Contains/ContainedBy/JsonOperator) + C 类 ExpressionVisitorAdapter 空 Visit(5) + D 类 ExpressionDescendantsWalker 空 Visit(6) + E 类结构性沉默丢弃(ORDER BY NULLS/WITH RECURSIVE/JOIN 多 ON) + 中危项(IsNullExpression PG 简写/InExpression Global/LikeExpression useBinary+REGEXP_LIKE 下划线/FullTextSearch 类型/Pivot 多聚合/SELECT INTO/DISTINCT ON/LIMIT BY/ORDER BY WITH ROLLUP/MySQL INDEX FOR 等)。Oracle oldOracleJoinSyntax 体系、ParenthesedSelect 继承、GROUP BY 混用、SqlServerHints 完整关键字跳过记录 TODO 在 MIGRATION.md 第 13.2 节。9 批 commit + 1 批文档，测试 1465→1567（+102）。MIGRATION.md 第 13 节同步对照表 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-18 |

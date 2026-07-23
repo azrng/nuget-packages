@@ -1,6 +1,7 @@
 using Common.HttpClients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Azrng.NmcWeather;
 
@@ -31,6 +32,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.Configure(configure);
+        services.TryAddSingleton<IValidateOptions<NmcWeatherOptions>, NmcWeatherOptionsValidator>();
         services.TryAddTransient<INmcLocationClient, NmcLocationClient>();
         services.TryAddTransient<INmcWeatherClient, NmcWeatherClient>();
         services.TryAddTransient<INmcWeatherQueryClient, NmcWeatherQueryClient>();

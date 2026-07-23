@@ -60,6 +60,42 @@ public class NmcWeatherClientTests
         Assert.Equal("cityCode", exception.ParamName);
     }
 
+    [Fact]
+    public async Task GetWeatherByCityCodeAsync_ShouldReturnNullWhenApiReturnsNull()
+    {
+        var client = CreateClient(mock =>
+        {
+            mock.Setup(helper => helper.GetAsync<NmcWeatherEnvelope>(
+                    $"{BaseUrl}/rest/weather?stationid=54433",
+                    string.Empty,
+                    null,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((NmcWeatherEnvelope?)null);
+        });
+
+        var weather = await client.GetWeatherByCityCodeAsync("54433");
+
+        Assert.Null(weather);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowWhenHttpHelperIsNull()
+    {
+        var options = Options.Create(new NmcWeatherOptions { BaseUrl = BaseUrl });
+
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcWeatherClient(null!, options));
+
+        Assert.Equal("httpHelper", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_ShouldThrowWhenOptionsIsNull()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() => new NmcWeatherClient(new Mock<IHttpHelper>().Object, null!));
+
+        Assert.Equal("options", exception.ParamName);
+    }
+
     private static NmcWeatherClient CreateClient(Action<Mock<IHttpHelper>> setup)
     {
         var mock = new Mock<IHttpHelper>(MockBehavior.Strict);
