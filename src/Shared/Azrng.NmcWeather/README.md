@@ -119,6 +119,11 @@ public class WeatherAppService
 
 ## 版本更新记录
 
+### 1.1.0
+
+*   **收紧城市编码启发式（破坏性）**：`GetCityAsync` / `GetCityCodeAsync` 等自动判定输入类型的逻辑，由旧规则「长度≥4 且允许字母数字/连字符/下划线」收紧为「长度为 5 且纯 base62（`[A-Za-z0-9]`）」，精确匹配中央气象台站点编码格式。拼音（如 `shanghai`）、英文短词、含连字符/下划线的字符串不再被误判为编码，避免触发全量省份遍历（约 8 秒级）后才回退名称查找
+*   **新增配置校验**：`AddNmcWeather` 注册 `NmcWeatherOptionsValidator`，校验 `BaseUrl` / `ProvincePath` / `WeatherPath` 非空白；调用方可通过 `services.AddOptions<NmcWeatherOptions>().ValidateOnStart(...)` 在应用启动期尽早暴露配置错误
+
 ### 1.0.0
 
 *   首次发布
