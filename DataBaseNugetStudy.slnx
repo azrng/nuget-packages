@@ -2,13 +2,17 @@
   <Folder Name="/Services/" />
   <Folder Name="/Shared/" />
   <Folder Name="/Shared/Db/">
-    <Project Path="src/Shared/Azrng.DuckDB.Quack/Azrng.DuckDB.Quack.csproj" />
     <Project Path="src/Shared/Azrng.JSqlParser/Azrng.JSqlParser.csproj" />
     <Project Path="src/Shared/Azrng.NMaxCompute/Azrng.NMaxCompute.csproj" />
     <Project Path="src\Shared\Azrng.Core.Json\Azrng.Core.Json.csproj" />
     <Project Path="src\Shared\Azrng.Core\Azrng.Core.csproj" />
     <Project Path="src\Shared\Azrng.DataAccess\Azrng.DataAccess.csproj" />
     <Project Path="src\Shared\Common.Dapper\Common.Dapper.csproj" />
+  </Folder>
+  <Folder Name="/Shared/DuckDb/">
+    <Project Path="src/Shared/Azrng.DuckDB.Data.Quack/Azrng.DuckDB.Data.Quack.csproj" />
+    <Project Path="src/Shared/Azrng.DuckDB.Flight/Azrng.DuckDB.Flight.csproj" />
+    <Project Path="src/Shared/Azrng.DuckDB.Quack/Azrng.DuckDB.Quack.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="test/Azrng.Dapper.Test/Azrng.Dapper.Test.csproj" />
