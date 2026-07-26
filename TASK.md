@@ -6,7 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
-| T120 | Azrng.DistributeLock 审查问题修复 | 修复评审必须处理项：续期失败可感知（LockLostToken）、移除终结器、InMemory 实现过期语义、升级 Npgsql 修复 CVE-2024-32655、PG 改用数据库时钟；顺带修复日志泄漏连接串、配置校验、默认过期时间不一致、短过期续期空窗。Core/InMemory/Redis 0.3.0→0.4.0，PG 0.2.0→0.3.0；InMemory 测试 13 项全过，Redis/PG 测试仅编译验证（需真实服务） | 阶段 1 | ZCode | DONE | P1 | 2026-07-26 |
+| T120 | Azrng.DistributeLock 审查问题修复 | 修复评审必须处理项：续期失败可感知（LockLostToken）、移除终结器、InMemory 实现过期语义、升级 Npgsql 修复 CVE-2024-32655、PG 改用数据库时钟；顺带修复日志泄漏连接串、配置校验、默认过期时间不一致、短过期续期空窗。Core/InMemory/Redis 0.3.0→0.4.0，PG 0.2.0→0.3.0；InMemory 测试 13 项全过；用户提供真实服务后 PG 9 项、Redis 12 项全过（测试 Startup 改为优先读 AZRNG_LOCK_PG_CONN / AZRNG_LOCK_REDIS_CONN 环境变量，避免真实连接信息入库），测试后锁表清理为空 | 阶段 1 | ZCode | DONE | P1 | 2026-07-26 |
 | T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T118 | Azrng.DataAccess 单次 SQL 超时 | 为分页 SQL 查询提供单次 commandTimeout 参数并透传至 Dapper 命令 | 阶段 1 | Codex | DONE | P1 | 2026-07-22 |
 | T107 | Azrng.JSqlParser 支持 @ 命名参数 | 修复 @name 被解析成普通 JDBC 参数导致变量名丢失的问题，补测试并产出新版包 | 阶段 2 | Codex | BLOCKED | P1 | 2026-07-16 |

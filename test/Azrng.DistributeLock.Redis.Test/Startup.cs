@@ -10,8 +10,9 @@ namespace Azrng.DistributeLock.Redis.Test
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var conn = "localhost:6379,abortConnect=false";
-            // conn = "172.16.127.101:36379,defaultDatabase=0,connectTimeout=100000,syncTimeout=100000,connectRetry=50";
+            // 优先读环境变量，避免真实连接信息硬编码进仓库
+            var conn = Environment.GetEnvironmentVariable("AZRNG_LOCK_REDIS_CONN")
+                       ?? "localhost:6379,abortConnect=false";
             services.AddRedisLockProvider(conn);
             services.AddLogging(x => x.AddXunitOutput());
         }

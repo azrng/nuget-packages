@@ -11,7 +11,9 @@ namespace Azrng.DistributeLock.Pgsql.Test
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var conn = "Host=localhost;Username=postgres;Password=123456;Database=zyp-test";
+            // 优先读环境变量，避免真实连接信息硬编码进仓库
+            var conn = Environment.GetEnvironmentVariable("AZRNG_LOCK_PG_CONN")
+                       ?? "Host=localhost;Username=postgres;Password=123456;Database=zyp-test";
             services.AddDbLockProvider(conn);
             services.AddLogging(x => x.AddXunitOutput());
         }
