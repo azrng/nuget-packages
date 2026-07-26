@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T121 | DistributeLock 补充测试 | 补齐本次修复核心路径的真实服务测试：Redis/PG 锁丢失通知端到端（外部删 key/行）、PG 续期仅未过期可续的新条件、Redis/PG 过期接管后旧实例误释放防护、注册参数校验。真实服务回归：PG 14 项、Redis 16 项全过 | 阶段 1 | ZCode | DONE | P2 | 2026-07-26 |
 | T120 | Azrng.DistributeLock 审查问题修复 | 修复评审必须处理项：续期失败可感知（LockLostToken）、移除终结器、InMemory 实现过期语义、升级 Npgsql 修复 CVE-2024-32655、PG 改用数据库时钟；顺带修复日志泄漏连接串、配置校验、默认过期时间不一致、短过期续期空窗。Core/InMemory/Redis 0.3.0→0.4.0，PG 0.2.0→0.3.0；InMemory 测试 13 项全过；用户提供真实服务后 PG 9 项、Redis 12 项全过（测试 Startup 改为优先读 AZRNG_LOCK_PG_CONN / AZRNG_LOCK_REDIS_CONN 环境变量，避免真实连接信息入库），测试后锁表清理为空 | 阶段 1 | ZCode | DONE | P1 | 2026-07-26 |
 | T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T118 | Azrng.DataAccess 单次 SQL 超时 | 为分页 SQL 查询提供单次 commandTimeout 参数并透传至 Dapper 命令 | 阶段 1 | Codex | DONE | P1 | 2026-07-22 |
