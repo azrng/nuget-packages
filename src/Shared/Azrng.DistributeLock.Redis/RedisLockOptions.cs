@@ -9,11 +9,11 @@
         /// Redis连接字符串
         /// 示例：127.0.0.1:6379,defaultDatabase=1,connectTimeout=100000,syncTimeout=100000,connectRetry=50
         /// </summary>
-        public string ConnectionString { get; set; }
+        public string ConnectionString { get; set; } = string.Empty;
 
         /// <summary>
         /// 默认的锁超时时间
         /// </summary>
-        public TimeSpan DefaultExpireTime { get; set; }
+        public TimeSpan DefaultExpireTime { get; set; } = TimeSpan.FromSeconds(5);
     }
 }

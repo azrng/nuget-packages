@@ -28,12 +28,13 @@ namespace Azrng.DistributeLock.Redis
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Redis分布式锁初始化失败。options:{_options.ConnectionString}");
+                // 不输出连接字符串，避免泄漏密码
+                _logger.LogError(ex, "Redis分布式锁初始化失败");
                 throw;
             }
         }
 
-        public async Task<IAsyncDisposable?> LockAsync(string lockKey, TimeSpan? expire = null,
+        public async Task<LockInstance?> LockAsync(string lockKey, TimeSpan? expire = null,
             TimeSpan? getLockTimeOut = null, bool autoExtend = true)
         {
             var lockValue = Guid.NewGuid().ToString();

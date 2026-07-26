@@ -4,10 +4,10 @@
         <TargetFrameworks>net6.0;net7.0;net8.0;net10.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.2.0</Version>
+        <Version>0.3.0</Version>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <Description>基本的分布式锁核心类库</Description>
+        <Description>基本的PostgreSQL分布式锁库</Description>
         <PackageId>Azrng.DistributeLock.PostgreSql</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <LangVersion>latest</LangVersion>
@@ -29,19 +29,19 @@
     <ItemGroup Condition="'$(TargetFramework)'=='net6.0'">
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0"/>
-        <PackageReference Include="Npgsql" Version="6.0.0"/>
+        <PackageReference Include="Npgsql" Version="6.0.11"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)'=='net7.0'">
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.0"/>
-        <PackageReference Include="Npgsql" Version="7.0.0"/>
+        <PackageReference Include="Npgsql" Version="7.0.7"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)'=='net8.0'">
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0"/>
-        <PackageReference Include="Npgsql" Version="8.0.0"/>
+        <PackageReference Include="Npgsql" Version="8.0.5"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)'=='net10.0'">

@@ -6,6 +6,7 @@
 
 - 抽象的分布式锁接口设计
 - 支持自动续期机制
+- 支持锁丢失通知（续期连续失败时通过 `LockLostToken` 通知业务）
 - 支持可配置的锁过期时间和获取锁超时时间
 - 基于异步 disposable 模式的安全资源释放
 - 支持多框架：.NET 6.0 / 7.0 / 8.0 / 10.0
@@ -48,6 +49,20 @@ dotnet add package Azrng.DistributeLock.Core
 
 [LockInstance]() 是锁的实例实现，实现了 `IAsyncDisposable` 接口，通过 using 语句可以自动释放锁资源。
 
+`LockAsync` 直接返回 `LockInstance?`，可以访问以下成员：
+- `LockLostToken`: 锁丢失通知令牌。自动续期连续失败 3 次后，锁可能已被其他持有者接管，此令牌会被取消；长耗时业务应监听该令牌并及时中止，避免互斥性失效
+- `ExtendFailureCount`: 当前连续续期失败次数
+- `IsDisposed` / `LockKey` / `ExpireTime` / `IsAutoExtendEnabled`
+
+```csharp
+await using var lockInstance = await _lockProvider.LockAsync("my_lock_key");
+if (lockInstance != null)
+{
+    // 把 LockLostToken 传给业务逻辑，锁丢失时及时中止
+    await DoLongRunningWorkAsync(lockInstance.LockLostToken);
+}
+```
+
 ## 使用方法
 
 ### 基本使用
@@ -89,11 +104,17 @@ if (lockInstance != null)
 ## 实现示例
 
 * 内存锁：Azrng.DistributeLock.InMemory
-* 数据库分布式锁：Azrng.DistributeLock.Redis
+* Redis分布式锁：Azrng.DistributeLock.Redis
 * pg数据库分布式锁：Azrng.DistributeLock.PostgreSql
 
 ## 版本更新记录
 
+* 0.4.0
+  * `LockAsync` 返回类型由 `IAsyncDisposable?` 调整为 `LockInstance?`（`await using` 用法不受影响；将返回值赋给 `Task<IAsyncDisposable?>` 委托时需改为 `async/await` 包装）
+  * 新增 `LockLostToken`：续期连续失败导致锁可能丢失时通知业务
+  * 移除终结器：终结器在 finalizer 线程同步阻塞异步且并不真正释放锁，存在误导；未释放的锁交由各实现的过期机制回收
+  * 续期间隔下限由 1 秒调整为 100 毫秒，避免短过期时间的锁在首次续期前就过期
+  * `LockAsync` 对非法的 `expire` / `getLockTimeOut` 参数抛出异常
 * 0.2.0
   * 更新LockInstance
 * 0.1.1

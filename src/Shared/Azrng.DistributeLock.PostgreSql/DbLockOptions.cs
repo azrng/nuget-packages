@@ -8,17 +8,17 @@ public class DbLockOptions
     /// <summary>
     /// 数据库连接字符串
     /// </summary>
-    public string ConnectionString { get; set; }
+    public string ConnectionString { get; set; } = string.Empty;
 
     /// <summary>
     /// 锁定表所在的表空间
     /// </summary>
-    public string Schema { get; set; }
+    public string Schema { get; set; } = "public";
 
     /// <summary>
     /// 锁定的表名
     /// </summary>
-    public string Table { get; set; }
+    public string Table { get; set; } = "distribute_lock";
 
     /// <summary>
     /// 默认的锁超时时间

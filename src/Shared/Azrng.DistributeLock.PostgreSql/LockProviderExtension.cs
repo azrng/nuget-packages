@@ -20,6 +20,13 @@ namespace Azrng.DistributeLock.PostgreSql
             string schema = "public",
             string table = "distribute_lock")
         {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("数据库连接字符串不能为空", nameof(connectionString));
+            if (string.IsNullOrWhiteSpace(schema))
+                throw new ArgumentException("schema 不能为空", nameof(schema));
+            if (string.IsNullOrWhiteSpace(table))
+                throw new ArgumentException("table 不能为空", nameof(table));
+
             services.AddSingleton<ILockProvider, DbLockProvider>();
             services.AddOptions().Configure<DbLockOptions>(x =>
             {

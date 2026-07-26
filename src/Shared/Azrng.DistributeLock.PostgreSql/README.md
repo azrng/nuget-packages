@@ -113,9 +113,9 @@ public class MyService
 PostgreSQL 分布式锁基于数据库表实现，通过以下方式保证分布式锁的正确性：
 
 1. 使用 PostgreSQL 的 `ON CONFLICT DO NOTHING` 语法实现原子性加锁
-2. 在获取锁之前清理过期的锁记录
-3. 使用数据库事务保证操作的原子性
-4. 锁会在 using 语句结束时通过 DELETE 语句自动释放
+2. 在获取锁之前清理当前 key 已过期的锁记录
+3. 过期判断统一使用数据库时钟（`now() AT TIME ZONE 'utc'`），不受各应用服务器时钟偏移影响
+4. 锁会在 using 语句结束时通过 DELETE 语句自动释放（按 key + value 匹配，不会误删他人的锁）
 
 创建的表结构如下：
 
@@ -142,6 +142,12 @@ CREATE TABLE distribute_lock (
 
 ## 版本更新记录
 
+* 0.3.0
+  * 过期判断改用数据库时钟（原实现使用客户端硬编码 UTC+8 时间，多机时钟偏移会影响锁正确性；升级后存量未过期锁的 expire_time 若为东八区时间，短时间内可能被视为未过期，锁本身生命周期短，影响一般可忽略）
+  * 升级 Npgsql 至含 CVE-2024-32655 修复的版本（6.0.11 / 7.0.7 / 8.0.5）
+  * 注册时校验连接字符串、schema、table 参数
+  * 初始化失败日志不再输出连接字符串，避免泄漏密码
+  * 跟随 Core 0.4.0：`LockAsync` 返回 `LockInstance?`，支持 `LockLostToken` 锁丢失通知
 * 0.2.0
   * 更新README.md
 * 0.1.1

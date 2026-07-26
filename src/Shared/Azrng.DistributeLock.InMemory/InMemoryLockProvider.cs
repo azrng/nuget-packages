@@ -14,11 +14,11 @@ namespace Azrng.DistributeLock.InMemory
             _inMemoryLockDataSourceProvider = new InMemoryLockDataSourceProvider();
         }
 
-        public async Task<IAsyncDisposable?> LockAsync(string lockKey, TimeSpan? expire = null, TimeSpan? getLockTimeOut = null,
-                                                       bool autoExtend = true)
+        public async Task<LockInstance?> LockAsync(string lockKey, TimeSpan? expire = null, TimeSpan? getLockTimeOut = null,
+                                                   bool autoExtend = true)
         {
             var lockValue = Guid.NewGuid().ToString();
-            expire ??= TimeSpan.FromSeconds(30);
+            expire ??= TimeSpan.FromSeconds(5);
             getLockTimeOut ??= TimeSpan.FromSeconds(5);
 
             var lockData = new LockInstance(_inMemoryLockDataSourceProvider, lockKey, lockValue, _logger,

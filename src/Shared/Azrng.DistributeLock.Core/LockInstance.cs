@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Azrng.DistributeLock.Core;
 
@@ -28,9 +28,9 @@ public sealed class LockInstance : IAsyncDisposable
     private readonly ILogger _logger;
 
     /// <summary>
-    /// 是否已经释放（使用 volatile 确保多线程可见性）
+    /// 释放标记：0 未释放，1 已释放（Interlocked 保证并发 Dispose 只执行一次）
     /// </summary>
-    private volatile bool _isDisposed;
+    private int _disposedFlag;
 
     /// <summary>
     /// 是否获取到锁
@@ -56,6 +56,11 @@ public sealed class LockInstance : IAsyncDisposable
     /// 自动续期任务
     /// </summary>
     private Task? _autoExtendTask;
+
+    /// <summary>
+    /// 锁丢失通知源：续期连续失败导致锁可能已被他人获取时触发
+    /// </summary>
+    private readonly CancellationTokenSource _lockLostCts = new CancellationTokenSource();
 
     /// <summary>
     /// 续期失败计数器
@@ -99,7 +104,7 @@ public sealed class LockInstance : IAsyncDisposable
     /// <summary>
     /// 获取锁是否已释放
     /// </summary>
-    public bool IsDisposed => _isDisposed;
+    public bool IsDisposed => Volatile.Read(ref _disposedFlag) == 1;
 
     /// <summary>
     /// 获取是否启用自动续期
@@ -117,13 +122,10 @@ public sealed class LockInstance : IAsyncDisposable
     public int ExtendFailureCount => _extendFailureCount;
 
     /// <summary>
-    /// 释放锁
+    /// 锁丢失通知令牌：自动续期连续失败、锁可能已被其他持有者获取时该令牌会被取消。
+    /// 长耗时业务应监听该令牌并及时中止，避免互斥性失效
     /// </summary>
-    public async ValueTask DisposeAsync()
-    {
-        await DisposeAsync(true);
-        GC.SuppressFinalize(this);
-    }
+    public CancellationToken LockLostToken => _lockLostCts.Token;
 
     /// <summary>
     /// 获取锁
@@ -133,6 +135,11 @@ public sealed class LockInstance : IAsyncDisposable
     /// <returns>获取成功返回 true，否则返回 false</returns>
     public async Task<bool> LockAsync(TimeSpan expire, TimeSpan getLockTimeOut)
     {
+        if (expire <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(expire), "锁的过期时间必须大于0");
+        if (getLockTimeOut < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(getLockTimeOut), "获取锁的超时时间不能小于0");
+
         try
         {
             var flag = await _lockDataSourceProvider.TakeLockAsync(_lockKey, _lockValue, expire, getLockTimeOut);
@@ -151,7 +158,7 @@ public sealed class LockInstance : IAsyncDisposable
 
             return true;
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
             // 操作被取消（正常行为，不记录错误）
             return false;
@@ -170,10 +177,11 @@ public sealed class LockInstance : IAsyncDisposable
     /// <param name="cancellationToken">取消令牌</param>
     private async Task AutoExtendStart(CancellationToken cancellationToken)
     {
-        // 续期间隔：使用过期时间的1/3，至少1秒，最多10秒
-        var extendInterval = TimeSpan.FromSeconds(Math.Max(1, Math.Min(10, _expireTime.TotalSeconds / 3)));
+        // 续期间隔：过期时间的1/3，下限100毫秒保证短过期时间也能在过期前续上，上限10秒
+        var extendInterval =
+            TimeSpan.FromMilliseconds(Math.Max(100, Math.Min(10_000, _expireTime.TotalMilliseconds / 3)));
 
-        while (!cancellationToken.IsCancellationRequested && !_isDisposed)
+        while (!cancellationToken.IsCancellationRequested && !IsDisposed)
         {
             try
             {
@@ -194,8 +202,7 @@ public sealed class LockInstance : IAsyncDisposable
 
                     if (_extendFailureCount >= MaxExtendFailureCount)
                     {
-                        _logger.LogError("分布式锁续期连续失败{MaxCount}次，停止续期：Key:{LockKey}, Value:{LockValue}",
-                            MaxExtendFailureCount, _lockKey, _lockValue);
+                        NotifyLockLost();
                         break;
                     }
                 }
@@ -214,8 +221,7 @@ public sealed class LockInstance : IAsyncDisposable
 
                 if (_extendFailureCount >= MaxExtendFailureCount)
                 {
-                    _logger.LogError("分布式锁续期异常连续失败{MaxCount}次，停止续期：Key:{LockKey}, Value:{LockValue}",
-                        MaxExtendFailureCount, _lockKey, _lockValue);
+                    NotifyLockLost();
                     break;
                 }
 
@@ -233,18 +239,32 @@ public sealed class LockInstance : IAsyncDisposable
     }
 
     /// <summary>
+    /// 续期连续失败达到上限：停止续期并通过 <see cref="LockLostToken"/> 通知业务锁可能已丢失
+    /// </summary>
+    private void NotifyLockLost()
+    {
+        _logger.LogError("分布式锁续期连续失败{MaxCount}次，停止续期并通知锁丢失：Key:{LockKey}, Value:{LockValue}",
+            MaxExtendFailureCount, _lockKey, _lockValue);
+
+        try
+        {
+            _lockLostCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 实例已释放，无需再通知
+        }
+    }
+
+    /// <summary>
     /// 释放锁
     /// </summary>
-    /// <param name="disposing"></param>
-    private async Task DisposeAsync(bool disposing)
+    public async ValueTask DisposeAsync()
     {
-        if (_isDisposed)
+        if (Interlocked.Exchange(ref _disposedFlag, 1) == 1)
         {
             return;
         }
-
-        // 标记为已释放
-        _isDisposed = true;
 
         // 取消自动续期任务
         if (_cancellationTokenSource != null)
@@ -277,7 +297,7 @@ public sealed class LockInstance : IAsyncDisposable
             _autoExtendTask = null;
         }
 
-        if (disposing && _lockTook)
+        if (_lockTook)
         {
             try
             {
@@ -285,16 +305,10 @@ public sealed class LockInstance : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"释放分布式锁崩溃：Key:{_lockKey},value:{_lockValue}");
+                _logger.LogError(ex, "释放分布式锁崩溃：Key:{LockKey}, Value:{LockValue}", _lockKey, _lockValue);
             }
         }
-    }
 
-    /// <summary>
-    /// 终结器，避免使用者忘记释放资源
-    /// </summary>
-    ~LockInstance()
-    {
-        DisposeAsync(false).GetAwaiter().GetResult();
+        _lockLostCts.Dispose();
     }
 }

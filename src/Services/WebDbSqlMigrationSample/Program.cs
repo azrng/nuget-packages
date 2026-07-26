@@ -22,7 +22,7 @@ builder.Services.AddSqlMigrationService("default", config =>
            config.VersionPrefix = string.Empty;
            config.SqlRootPath = Path.Combine(builder.Environment.WebRootPath, "MigrationSql");
            config.ConnectionBuilder = (sp) => new NpgsqlConnection(conn);
-           config.LockProvider = x => x.GetRequiredService<ILockProvider>().LockAsync("project_init", TimeSpan.FromMinutes(1));
+           config.LockProvider = async x => await x.GetRequiredService<ILockProvider>().LockAsync("project_init", TimeSpan.FromMinutes(1));
        })
        .AddAutoMigration();
 

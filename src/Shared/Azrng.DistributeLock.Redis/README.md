@@ -66,20 +66,8 @@ dotnet add package Azrng.DistributeLock.Redis
 // 添加 Redis 分布式锁服务
 services.AddRedisLockProvider(
     connectionString: "127.0.0.1:6379,defaultDatabase=1,connectTimeout=100000,syncTimeout=100000,connectRetry=50",
-    defaultExpireTime: TimeSpan.FromSeconds(30) // 可选，默认为30秒
+    defaultExpireTime: TimeSpan.FromSeconds(30) // 可选，默认为5秒
 );
-```
-
-或使用选项模式：
-
-```csharp
-services.Configure<RedisLockOptions>(options =>
-{
-    options.ConnectionString = "127.0.0.1:6379,defaultDatabase=1";
-    options.DefaultExpireTime = TimeSpan.FromSeconds(30);
-});
-
-services.AddRedisLockProvider();
 ```
 
 ### 在服务中使用
@@ -155,7 +143,7 @@ public class MyService
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `ConnectionString` | string | 无 | Redis 连接字符串（必需） |
-| `DefaultExpireTime` | TimeSpan | 30秒 | 默认的锁过期时间 |
+| `DefaultExpireTime` | TimeSpan | 5秒 | 默认的锁过期时间 |
 
 ### LockAsync 方法参数
 
@@ -199,9 +187,11 @@ end
 
 当启用 `autoExtend: true` 时，后台任务会定期（默认为过期时间的 1/3）续期锁：
 
-1. 续期间隔：`expireTime / 3`，最少 1 秒，最多 10 秒
-2. 续期失败计数：连续失败 3 次后停止续期
+1. 续期间隔：`expireTime / 3`，最少 100 毫秒，最多 10 秒
+2. 续期失败计数：连续失败 3 次后停止续期，并取消 `LockInstance.LockLostToken` 通知业务锁可能已丢失
 3. 自动停止：锁被释放或任务完成时自动停止续期
+
+> **建议**：长耗时任务把 `LockLostToken` 传入业务逻辑，令牌被取消时及时中止，避免锁丢失后互斥性失效。
 
 ## 适用场景
 
@@ -230,7 +220,13 @@ end
 
 ## 版本更新记录
 
-### 0.3.0 (最新)
+### 0.4.0 (最新)
+  * ✨ 新增：`LockAsync` 返回 `LockInstance?`，支持 `LockLostToken` 锁丢失通知
+  * ✅ 改进：注册时校验连接字符串与默认过期时间
+  * ✅ 改进：初始化失败日志不再输出连接字符串，避免泄漏密码
+  * ✅ 改进：短过期时间的锁续期间隔下限调整为 100 毫秒，避免首次续期前过期
+
+### 0.3.0
   * ✨ 新增：支持 .NET 9.0
   * ✅ 改进：完善单元测试，添加锁延期、高并发等测试场景
   * ✅ 改进：更新文档，添加分布式锁设计原则说明

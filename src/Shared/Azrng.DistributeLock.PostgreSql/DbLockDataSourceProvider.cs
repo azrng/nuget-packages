@@ -46,9 +46,10 @@ internal class DbLockDataSourceProvider : ILockDataSourceProvider
         using var tokenSource = new CancellationTokenSource(getLockTimeOut);
         var cancellationToken = tokenSource.Token;
 
-        // 使用参数化查询防止SQL注入
-        var insertSql = $"INSERT INTO {_schema}.{_table}(key, value, expire_time) VALUES (@lockKey, @lockValue, @expireTime) ON CONFLICT (key) DO NOTHING;";
-        var deleteExpiredSql = $"DELETE FROM {_schema}.{_table} WHERE expire_time < @currentTime;";
+        // 过期判断统一使用数据库时钟，避免多客户端时钟偏移导致误删活锁或过期锁清不掉
+        var insertSql =
+            $"INSERT INTO {_schema}.{_table}(key, value, expire_time) VALUES (@lockKey, @lockValue, (now() AT TIME ZONE 'utc') + make_interval(secs => @expireSeconds)) ON CONFLICT (key) DO NOTHING;";
+        var deleteExpiredSql = $"DELETE FROM {_schema}.{_table} WHERE key = @lockKey AND expire_time < (now() AT TIME ZONE 'utc');";
 
         while (true)
         {
@@ -59,14 +60,14 @@ internal class DbLockDataSourceProvider : ILockDataSourceProvider
                 {
                     lockKey,
                     lockValue,
-                    expireTime = SystemDateTime.Now().Add(expireTime)
+                    expireSeconds = expireTime.TotalSeconds
                 }).ConfigureAwait(false);
 
             if (num == 0)
             {
                 await connection.ExecuteAsync(
                     deleteExpiredSql,
-                    new { currentTime = SystemDateTime.Now() }).ConfigureAwait(false);
+                    new { lockKey }).ConfigureAwait(false);
                 await Task.Delay(10, cancellationToken).ConfigureAwait(false);
                 continue;
             }
@@ -107,15 +108,16 @@ internal class DbLockDataSourceProvider : ILockDataSourceProvider
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync().ConfigureAwait(false);
 
-        // 使用参数化查询防止SQL注入
-        var updateSql = $"UPDATE {_schema}.{_table} SET expire_time = @newExpireTime WHERE key = @lockKey AND value = @lockValue;";
+        // 续期同样基于数据库时钟，且只对未过期的自持锁生效
+        var updateSql =
+            $"UPDATE {_schema}.{_table} SET expire_time = (now() AT TIME ZONE 'utc') + make_interval(secs => @extendSeconds) WHERE key = @lockKey AND value = @lockValue AND expire_time >= (now() AT TIME ZONE 'utc');";
         var affectedRows = await connection.ExecuteAsync(
             updateSql,
             new
             {
                 lockKey,
                 lockValue,
-                newExpireTime = SystemDateTime.Now().Add(extendTime)
+                extendSeconds = extendTime.TotalSeconds
             }).ConfigureAwait(false);
 
         return affectedRows > 0;

@@ -20,6 +20,11 @@ namespace Azrng.DistributeLock.Redis
         public static IServiceCollection AddRedisLockProvider(this IServiceCollection services, string connectionString,
             TimeSpan? defaultExpireTime = null)
         {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("Redis连接字符串不能为空", nameof(connectionString));
+            if (defaultExpireTime.HasValue && defaultExpireTime.Value <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(defaultExpireTime), "默认锁过期时间必须大于0");
+
             // 注册 RedisLockOptions
             services.AddOptions().Configure<RedisLockOptions>(x =>
             {
