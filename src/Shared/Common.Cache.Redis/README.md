@@ -111,6 +111,32 @@ await _cacheProvider.RemoveMatchKeyAsync("user_*");
 `RemoveMatchKeyAsync` 会自动复用 `KeyPrefix` 配置。  
 例如配置 `KeyPrefix = "myapp"` 时，`RemoveMatchKeyAsync("user_*")` 会匹配 `myapp:user_*`。
 
+> 注意：`RemoveMatchKeyAsync` 基于 `SCAN` + 多 key `DEL` 实现，适用于单机 / 主从部署；Redis Cluster 下多 key 跨 slot 操作会失败，不支持该方法。
+
+### 原子计数器
+
+`IncrementAsync` / `DecrementAsync` 基于 Redis 服务端 `INCRBY` 实现，多实例并发下计数依然准确，适合限流、序号生成、访问计数等场景：
+
+```csharp
+// key 不存在时从 0 开始
+var current = await _cacheProvider.IncrementAsync("visit:count");        // 1
+current = await _cacheProvider.IncrementAsync("visit:count", 10);        // 11
+current = await _cacheProvider.DecrementAsync("visit:count", 1);         // 10
+
+// 需要过期时间时配合 ExpireAsync（例如限流窗口）
+if (await _cacheProvider.IncrementAsync("rate:user1") == 1)
+{
+    await _cacheProvider.ExpireAsync("rate:user1", TimeSpan.FromMinutes(1));
+}
+```
+
+行为说明：
+
+- key 不存在时从 0 开始累加；已有值不是整数（如普通 JSON 字符串）时抛出异常
+- 新建计数器不设置过期时间（与 Redis `INCR` 语义一致），需要过期请显式调用 `ExpireAsync`
+- **计数错误不可降级**：该方法失败时始终抛出异常，不受 `FailThrowException` 配置影响（返回假计数会破坏限流等场景的正确性）
+- 计数器 key 与其他缓存 key 一样自动应用 `KeyPrefix`
+
 ### 发布订阅功能
 
 Common.Cache.Redis 提供了完整的 Redis 发布订阅功能支持，支持频道订阅和模式订阅。
@@ -367,6 +393,13 @@ public class MyService
 
 ## 版本更新记录
 
+* 3.1.0
+  * **新增**：`IncrementAsync` / `DecrementAsync` 原子计数器（跟随 `Azrng.Cache.Core` 1.1.0），基于服务端 `INCRBY`，分布式安全；失败始终抛出异常，不受 `FailThrowException` 影响
+  * **修复**：连接退避窗口对排队中的连接任务生效——此前 Redis 故障时并发请求会在内部信号量上排队并逐个发起完整连接尝试（各自吃满连接超时），现在窗口内的排队任务直接快速失败
+  * **修复**：订阅数减到 0 触发的自动清理与并发新增订阅之间的竞态——此前极小概率出现"订阅成功但收不到消息"的静默失效
+  * **修复**：关闭订阅改为按 handler 精确退订，不再误伤同频道上并发新建订阅的处理器
+  * 优化：缓存未命中、发布成功日志从 Information 降为 Debug，减少热路径日志噪音
+  * 依赖升级：`Newtonsoft.Json` 13.0.1 → 13.0.3，`Azrng.Cache.Core` 1.0.0 → 1.1.0
 * 3.0.0
   * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
   * **重命名（破坏性）**：`RedisConfig` 重命名为 `RedisCacheOptions`，与 `Common.Cache.MemoryCache` 的 `MemoryCacheOptions` 命名风格统一

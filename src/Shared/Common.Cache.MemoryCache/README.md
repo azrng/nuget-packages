@@ -95,6 +95,27 @@ var user = await _cacheProvider.GetOrCreateAsync(
     TimeSpan.FromMinutes(10));
 ```
 
+### 原子计数器
+
+`IncrementAsync` / `DecrementAsync` 提供进程内原子计数（内部基于 `Interlocked`），与 `Common.Cache.Redis` 的同名方法共享 `ICacheProvider` 契约，业务代码可在两种实现间无缝切换：
+
+```csharp
+var current = await _cacheProvider.IncrementAsync("visit:count");        // 1
+current = await _cacheProvider.IncrementAsync("visit:count", 10);        // 11
+current = await _cacheProvider.DecrementAsync("visit:count", 1);         // 10
+
+// 需要过期时间时配合 ExpireAsync
+await _cacheProvider.ExpireAsync("visit:count", TimeSpan.FromMinutes(1));
+```
+
+行为说明：
+
+- key 不存在时从 0 开始累加；已有值不是整数时抛出异常
+- 新建计数器**不设置过期时间**（不套用 `DefaultExpiry`，与 Redis `INCR` 语义对齐），需要过期请显式调用 `ExpireAsync`
+- 自增/自减不会重建缓存条目，已通过 `ExpireAsync` 设置的过期时间保持不变
+- 内存实现只保证**单节点**内的原子性；多实例部署请使用 `Common.Cache.Redis` 的分布式计数
+- 计数器可通过 `GetAsync` / `GetAsync<long>` / `ExistAsync` / `RemoveAsync` 正常读取和删除
+
 ### 批量操作
 
 ```csharp
@@ -142,7 +163,7 @@ var value = await _cacheProvider.GetAsync<bool>("bool:false"); // false
 从 `2.1.0` 开始，可通过 `FailThrowException` 配置控制缓存操作失败时的行为：
 
 - `true`（默认）：记录日志并抛出异常，避免把真实故障误判成”缓存未命中”
-- `false`：记录日志并返回默认值，不抛出异常，提供更灵活的错误处理策略
+- `false`：记录日志后降级处理。从 `3.1.0` 起，`GetOrCreateAsync` 缓存读失败时按"未命中"处理，回源执行工厂方法返回真实数据；缓存写失败时不影响已取得的数据返回（3.1.0 之前的版本会直接返回 `default`，可能把缓存故障放大为业务拿到假数据）
 
 `FailThrowException` 只控制缓存读取、写入等缓存组件自身异常。`GetOrCreateAsync` 的工厂方法用于加载业务数据，工厂方法抛出的异常会始终原样透出，避免把数据库、远程服务或业务加载失败误判为缓存未命中。
 
@@ -222,6 +243,12 @@ public class MyService
 
 ## 版本更新记录
 
+* 3.1.0
+  * **新增**：`IncrementAsync` / `DecrementAsync` 原子计数器（跟随 `Azrng.Cache.Core` 1.1.0），进程内 `Interlocked` 原子累加，仅单节点安全；失败始终抛出异常，不受 `FailThrowException` 影响
+  * **行为变更**：`FailThrowException = false` 时缓存读失败的降级行为由"返回 `default`"改为"回源执行工厂方法返回真实数据"（与 `Common.Cache.Redis` 对齐）。2.1.1 引入的"返回 default"会把缓存故障放大为业务拿到假数据，本次修正；缓存写失败时也不再丢弃已取得的数据
+  * **行为变更**：`MemoryCacheProvider` / `IMemoryCacheProvider` / `ICacheProvider` 注册生命周期由 Scoped 改为 Singleton（Provider 无实例状态，与 Redis 实现一致，单例服务可直接注入）
+  * 优化：`RemoveMatchKeyAsync` 的通配符正则增加 1 秒匹配超时；`[` 未闭合等非法模式抛出带原始模式信息的 `ArgumentException`
+  * 依赖升级：`Azrng.Cache.Core` 1.0.0 → 1.1.0
 * 3.0.0
   * **破坏性更新**：跟随 `Azrng.Cache.Core` 1.0.0，`GetAsync(string)` 返回 `Task<string?>`、`GetAsync<T>` 返回 `Task<T?>`，如实表达未命中返回 `null` 的语义
   * 移除因旧接口非 null 契约而添加的 `!`（null-forgiving）

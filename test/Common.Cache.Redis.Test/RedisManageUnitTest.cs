@@ -316,6 +316,64 @@ namespace Common.Cache.Redis.Test
             Assert.Equal(1, connectedConnection.DisposeCallCount);
         }
 
+        // 验证防惊群修复：连接任务在 semaphore 排队期间，若前一个任务失败并刷新了退避窗口，
+        // 排队任务拿到锁后应直接抛"redis连接不可用"，不再发起真实连接（不再调用工厂）。
+        // 时序：初始连接失败(工厂第1次) → 窗口过期 → 重连A进入工厂阻塞(第2次,持锁) →
+        // B 通过 EnsureConnected 预检后其连接任务排队 → A 失败刷新窗口 → B 被窗口拦截。
+        [Fact]
+        public async Task QueuedReconnect_AfterFailureRefreshesRetryWindow_DoesNotAttemptConnection()
+        {
+            var blockedReconnect = new TaskCompletionSource<IRedisConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var reconnectEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var initialFailure = true;
+
+            var connectionFactory = new BlockingRedisConnectionFactory(_ =>
+            {
+                if (initialFailure)
+                {
+                    initialFailure = false;
+                    return Task.FromException<IRedisConnection>(new InvalidOperationException("connect failed"));
+                }
+
+                reconnectEntered.TrySetResult(true);
+                return blockedReconnect.Task;
+            });
+
+            var redisManage = new RedisManage(
+                NullLogger<RedisManage>.Instance,
+                Options.Create(new RedisCacheOptions
+                {
+                    ConnectionString = "localhost:6379,DefaultDatabase=0",
+                    InitErrorIntervalSecond = 1
+                }),
+                connectionFactory);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => redisManage.GetDatabaseAsync());
+
+            // 等退避窗口过期
+            await Task.Delay(1100);
+
+            // A：重连进入工厂并阻塞（持有 semaphore）
+            var reconnectA = redisManage.GetDatabaseAsync();
+            await reconnectEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // B：此时窗口仍是过期状态，可通过预检；其连接任务在 semaphore 上排队
+            var reconnectB = redisManage.GetDatabaseAsync();
+            await Task.Delay(100);
+
+            // A 失败：记录失败并刷新退避窗口
+            blockedReconnect.SetException(new InvalidOperationException("reconnect failed"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => reconnectA);
+            var thrownB = await Assert.ThrowsAsync<InvalidOperationException>(() => reconnectB);
+            Assert.Equal("redis连接不可用", thrownB.Message);
+
+            // 工厂只被调用 2 次（初始 + A）；B 被退避窗口拦截，未发起真实连接
+            Assert.Equal(2, connectionFactory.ConnectCallCount);
+
+            redisManage.Dispose();
+        }
+
         private sealed class BlockingRedisConnectionFactory : IRedisConnectionFactory
         {
             private readonly Func<ConfigurationOptions, Task<IRedisConnection>> _connect;

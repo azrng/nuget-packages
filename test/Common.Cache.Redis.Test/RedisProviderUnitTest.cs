@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Common.Cache.Redis.Test
 {
@@ -101,6 +102,42 @@ namespace Common.Cache.Redis.Test
             var removed = await provider.RemoveMatchKeyAsync("user_*");
 
             Assert.False(removed);
+        }
+
+        [Fact]
+        public async Task IncrementAsync_CreatesFromZero_AndAppliesPrefixedKey()
+        {
+            var provider = CreateProvider(out var database, out _);
+
+            var first = await provider.IncrementAsync("counter:incr");
+            var second = await provider.IncrementAsync("counter:incr", 5);
+            var third = await provider.DecrementAsync("counter:incr", 2);
+
+            Assert.Equal(1, first);
+            Assert.Equal(6, second);
+            Assert.Equal(4, third);
+
+            // 计数器 key 与其他缓存 key 一样走 KeyPrefix
+            var raw = await database.StringGetAsync((RedisKey)"default:counter:incr");
+            Assert.Equal("4", raw.ToString());
+        }
+
+        [Fact]
+        public async Task IncrementAsync_OnNonIntegerValue_ThrowsEvenWhenFailThrowExceptionDisabled()
+        {
+            var provider = CreateProvider(out _, out _, new RedisCacheOptions
+            {
+                ConnectionString = "localhost:6379,DefaultDatabase=0",
+                KeyPrefix = "default",
+                CacheEmptyCollections = false,
+                InitErrorIntervalSecond = 0,
+                FailThrowException = false
+            });
+
+            await provider.SetAsync("counter:bad", "not-a-number");
+
+            // 计数错误不可降级：即使 FailThrowException=false 也应抛出
+            await Assert.ThrowsAsync<RedisServerException>(() => provider.IncrementAsync("counter:bad"));
         }
 
         [Fact]

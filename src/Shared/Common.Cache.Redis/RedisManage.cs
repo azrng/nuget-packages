@@ -165,6 +165,7 @@ namespace Common.Cache.Redis
         {
             await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
             IRedisConnection? createdConnection = null;
+            var connectAttempted = false;
 
             try
             {
@@ -175,6 +176,14 @@ namespace Common.Cache.Redis
                     return;
                 }
 
+                // 排队等锁期间，前面的连接任务可能已失败并设置了退避窗口。
+                // 窗口内不再发起真实连接，避免故障期并发请求逐个吃满连接超时（惊群）。
+                if (DateTimeOffset.UtcNow < _nextRetryAt)
+                {
+                    throw CreateUnavailableException();
+                }
+
+                connectAttempted = true;
                 _logger.LogInformation("redis开始初始化连接");
                 var configurationOptions = ConfigurationOptions.Parse(_redisConfig.ConnectionString);
                 createdConnection = await _connectionFactory.ConnectAsync(configurationOptions).ConfigureAwait(false);
@@ -204,7 +213,11 @@ namespace Common.Cache.Redis
             }
             catch (Exception ex)
             {
-                MarkConnectionFailure(ex);
+                // 仅真实连接尝试的失败才记录并刷新退避窗口；退避拒绝、已释放等前置检查失败不延长窗口。
+                if (connectAttempted)
+                {
+                    MarkConnectionFailure(ex);
+                }
                 createdConnection?.Dispose();
                 throw;
             }

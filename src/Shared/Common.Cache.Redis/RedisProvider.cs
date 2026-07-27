@@ -117,7 +117,7 @@ namespace Common.Cache.Redis
                 return await getData();
             }
 
-            _logger.LogInformation("redis读取为空，开始执行查询操作：key:{Key}", key);
+            _logger.LogDebug("redis读取为空，开始执行查询操作：key:{Key}", key);
             var value = await getData();
 
             try
@@ -311,6 +311,28 @@ namespace Common.Cache.Redis
             }
         }
 
+        public async Task<long> IncrementAsync(string key, long value = 1)
+        {
+            EnsureKey(key);
+
+            try
+            {
+                var database = await _redisManage.GetDatabaseAsync();
+                return await database.StringIncrementAsync(GetKey(key), value);
+            }
+            catch (Exception ex)
+            {
+                // 计数错误不可降级：返回假值会破坏限流、序号等依赖计数正确性的场景，故不受 FailThrowException 影响，始终抛出。
+                _logger.LogError(ex, "redis自增失败 key:{Key} value:{Value} message:{Message}", key, value, ex.GetExceptionAndStack());
+                throw;
+            }
+        }
+
+        public Task<long> DecrementAsync(string key, long value = 1)
+        {
+            return IncrementAsync(key, -value);
+        }
+
         private async Task<RedisKey[]> SearchRedisKeys(string prefixMatchStr)
         {
             var keys = new HashSet<RedisKey>();
@@ -479,7 +501,7 @@ namespace Common.Cache.Redis
                 }
 
                 var result = await (await _redisManage.GetSubscriberAsync()).PublishAsync(RedisChannel.Literal(channel), jsonMessage);
-                _logger.LogInformation("发布消息成功，频道：{Channel}，订阅者数量：{SubscriberCount}", channel, result);
+                _logger.LogDebug("发布消息成功，频道：{Channel}，订阅者数量：{SubscriberCount}", channel, result);
                 return result;
             }
             catch (Exception ex)
@@ -614,7 +636,9 @@ namespace Common.Cache.Redis
                 {
                     if (existingSubscription.IsClosing)
                     {
-                        _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                        // 按键值对移除，避免误删并发新建的同名订阅
+                        _activeSubscriptions.TryRemove(
+                            new KeyValuePair<string, ChannelSubscription>(subscriptionKey, existingSubscription));
                         continue;
                     }
 
@@ -634,7 +658,7 @@ namespace Common.Cache.Redis
                 try
                 {
                     var subscriber = await _redisManage.GetSubscriberAsync();
-                    subscriber.Subscribe(redisChannel, (channel, value) =>
+                    Action<RedisChannel, RedisValue> redisHandler = (channel, value) =>
                     {
                         if (createdSubscription.IsClosing || createdSubscription.CancellationTokenSource.IsCancellationRequested)
                         {
@@ -642,7 +666,10 @@ namespace Common.Cache.Redis
                         }
 
                         createdSubscription.Broadcast(channel, value, _logger);
-                    });
+                    };
+
+                    createdSubscription.RedisHandler = redisHandler;
+                    subscriber.Subscribe(redisChannel, redisHandler);
 
                     createdSubscription.CompleteInitialization();
                     _logger.LogInformation("创建新订阅，频道：{Channel}", subscriptionKey);
@@ -651,7 +678,8 @@ namespace Common.Cache.Redis
                 catch (Exception ex)
                 {
                     createdSubscription.FailInitialization(ex);
-                    _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                    _activeSubscriptions.TryRemove(
+                        new KeyValuePair<string, ChannelSubscription>(subscriptionKey, createdSubscription));
                     createdSubscription.TryBeginClose();
                     createdSubscription.CancellationTokenSource.Cancel();
                     createdSubscription.Dispose();
@@ -684,7 +712,8 @@ namespace Common.Cache.Redis
                 _logger.LogInformation("移除订阅者，频道：{Channel}，订阅者ID：{SubscriberId}，剩余订阅者数量：{Count}",
                     subscriptionKey, subscriberId, remainingCount);
 
-                if (remainingCount == 0)
+                // TryBeginCloseIfEmpty 与 TryAddSubscriber 互斥：若此刻有并发新增成功，这里拿不到关闭权，订阅继续存活。
+                if (remainingCount == 0 && subscription.TryBeginCloseIfEmpty())
                 {
                     await CloseSubscriptionAsync(subscriptionKey, redisChannel, subscription);
                 }
@@ -705,8 +734,14 @@ namespace Common.Cache.Redis
         {
             try
             {
-                if (!_activeSubscriptions.TryRemove(subscriptionKey, out var subscription))
+                if (!_activeSubscriptions.TryGetValue(subscriptionKey, out var subscription))
                 {
+                    return;
+                }
+
+                if (!subscription.TryBeginClose())
+                {
+                    // 已有其他线程在关闭该订阅
                     return;
                 }
 
@@ -725,16 +760,16 @@ namespace Common.Cache.Redis
             }
         }
 
+        /// <summary>
+        /// 关闭订阅并释放资源。调用方必须先通过 TryBeginClose/TryBeginCloseIfEmpty 取得关闭权。
+        /// </summary>
         private async Task CloseSubscriptionAsync(string subscriptionKey, RedisChannel redisChannel, ChannelSubscription subscription)
         {
-            if (!subscription.TryBeginClose())
-            {
-                return;
-            }
-
             try
             {
-                _activeSubscriptions.TryRemove(subscriptionKey, out _);
+                // 按键值对移除，避免误删并发新建的同名订阅
+                _activeSubscriptions.TryRemove(
+                    new KeyValuePair<string, ChannelSubscription>(subscriptionKey, subscription));
 
                 foreach (var subscriber in subscription.RemoveAllSubscribers())
                 {
@@ -743,7 +778,8 @@ namespace Common.Cache.Redis
 
                 subscription.CancellationTokenSource.Cancel();
                 var redisSubscriber = await _redisManage.GetSubscriberAsync();
-                redisSubscriber.Unsubscribe(redisChannel);
+                // 按 handler 精确退订：同频道若已有新建订阅，其处理器不受影响
+                redisSubscriber.Unsubscribe(redisChannel, subscription.RedisHandler);
                 _logger.LogInformation("频道 {Channel} 没有订阅者了，已取消 Redis 订阅", subscriptionKey);
             }
             finally

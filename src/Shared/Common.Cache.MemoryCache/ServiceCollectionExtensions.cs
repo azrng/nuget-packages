@@ -20,9 +20,11 @@ namespace Azrng.Cache.MemoryCache
             services.Configure(action ?? (config => { }));
             services.AddMemoryCache();
             services.TryAddSingleton<MemoryCacheKeyManager>();
-            services.TryAddScoped<MemoryCacheProvider>();
-            services.TryAddScoped<IMemoryCacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
-            services.TryAddScoped<ICacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
+            // Provider 无实例状态（状态在单例的 IMemoryCache/KeyManager 中），
+            // 注册为 Singleton 与 Redis 实现保持一致，单例服务也能直接注入 ICacheProvider。
+            services.TryAddSingleton<MemoryCacheProvider>();
+            services.TryAddSingleton<IMemoryCacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
+            services.TryAddSingleton<ICacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
 
             return services;
         }
@@ -36,17 +38,9 @@ namespace Azrng.Cache.MemoryCache
         public static IServiceCollection AddMemoryCacheExtension(this IServiceCollection services,
                                                                  Action<MemoryCacheOptions> action)
         {
-            ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(action);
 
-            services.Configure(action);
-            services.AddMemoryCache();
-            services.TryAddSingleton<MemoryCacheKeyManager>();
-            services.TryAddScoped<MemoryCacheProvider>();
-            services.TryAddScoped<IMemoryCacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
-            services.TryAddScoped<ICacheProvider>(sp => sp.GetRequiredService<MemoryCacheProvider>());
-
-            return services;
+            return services.AddMemoryCacheStore(action);
         }
     }
 }

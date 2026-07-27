@@ -96,5 +96,24 @@ namespace Azrng.Cache.Core
         /// <param name="key">缓存Key</param>
         /// <returns></returns>
         Task<bool> ExistAsync(string key);
+
+        /// <summary>
+        /// 原子自增。key 不存在时从 0 开始累加；已有值不是整数时抛出异常。
+        /// Redis 实现基于服务端 INCRBY，多实例分布式安全；内存实现基于进程内原子累加，仅单节点安全。
+        /// 新建的计数器不设置过期时间，如需过期请配合 <see cref="ExpireAsync"/> 使用。
+        /// 计数错误不可降级：本方法失败时始终抛出异常，不受 FailThrowException 配置影响。
+        /// </summary>
+        /// <param name="key">缓存Key</param>
+        /// <param name="value">增量，默认为 1</param>
+        /// <returns>自增后的最新值</returns>
+        Task<long> IncrementAsync(string key, long value = 1);
+
+        /// <summary>
+        /// 原子自减，语义与 <see cref="IncrementAsync"/> 一致（等价于增量为负数的自增）。
+        /// </summary>
+        /// <param name="key">缓存Key</param>
+        /// <param name="value">减量，默认为 1</param>
+        /// <returns>自减后的最新值</returns>
+        Task<long> DecrementAsync(string key, long value = 1);
     }
 }

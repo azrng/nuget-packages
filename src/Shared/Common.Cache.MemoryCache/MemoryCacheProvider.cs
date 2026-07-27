@@ -4,9 +4,11 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Azrng.Cache.MemoryCache
@@ -35,12 +37,27 @@ namespace Azrng.Cache.MemoryCache
         public Task<string?> GetAsync(string key)
         {
             EnsureKey(key);
+
+            if (_cache.TryGetValue(key, out var raw) && raw is CounterBox box)
+            {
+                return Task.FromResult<string?>(
+                    Interlocked.Read(ref box.Value).ToString(CultureInfo.InvariantCulture));
+            }
+
             return Task.FromResult<string?>(_cache.Get<string>(key));
         }
 
         public Task<T?> GetAsync<T>(string key)
         {
             EnsureKey(key);
+
+            if (_cache.TryGetValue(key, out var raw) && raw is CounterBox box)
+            {
+                var counter = Interlocked.Read(ref box.Value);
+                var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+                return Task.FromResult((T?)Convert.ChangeType(counter, targetType, CultureInfo.InvariantCulture));
+            }
+
             return Task.FromResult<T?>(_cache.Get<T>(key));
         }
 
@@ -163,6 +180,73 @@ namespace Azrng.Cache.MemoryCache
             return Task.FromResult(_cache.TryGetValue(key, out _));
         }
 
+        public Task<long> IncrementAsync(string key, long value = 1)
+        {
+            return IncrementCoreAsync(key, value);
+        }
+
+        public Task<long> DecrementAsync(string key, long value = 1)
+        {
+            return IncrementCoreAsync(key, -value);
+        }
+
+        private async Task<long> IncrementCoreAsync(string key, long delta)
+        {
+            EnsureKey(key);
+
+            // 快路径：计数器已存在时直接原子累加，不重建缓存条目，已设置的过期时间保持不变。
+            if (_cache.TryGetValue(key, out var existing) && existing is CounterBox fastBox)
+            {
+                return Interlocked.Add(ref fastBox.Value, delta);
+            }
+
+            // 慢路径：首次创建或从已有整数值迁移，按 key 加锁保证计数器只创建一次。
+            return await _keyManager.ExecuteSynchronizedAsync(key, () =>
+            {
+                if (_cache.TryGetValue(key, out var current) && current is CounterBox lockedBox)
+                {
+                    return Task.FromResult(Interlocked.Add(ref lockedBox.Value, delta));
+                }
+
+                long initial = 0;
+                if (current is not null && !TryConvertToInt64(current, out initial))
+                {
+                    throw new InvalidOperationException($"缓存值不是整数，无法执行自增/自减，key:{key}");
+                }
+
+                // 与 Redis INCR 语义对齐：新建计数器不设置过期时间，如需过期请调用 ExpireAsync。
+                // 注意：从已有非计数器条目迁移为计数器时，原条目的剩余过期时间无法读取，会被清除。
+                var box = new CounterBox { Value = initial + delta };
+                SetCore(key, box, expiry: null);
+                return Task.FromResult(box.Value);
+            });
+        }
+
+        private static bool TryConvertToInt64(object value, out long result)
+        {
+            switch (value)
+            {
+                case long longValue:
+                    result = longValue;
+                    return true;
+                case int intValue:
+                    result = intValue;
+                    return true;
+                case short shortValue:
+                    result = shortValue;
+                    return true;
+                case byte byteValue:
+                    result = byteValue;
+                    return true;
+                case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed):
+                    result = parsed;
+                    return true;
+                default:
+                    result = 0;
+                    return false;
+            }
+        }
+
         public Task<Dictionary<string, object>> GetAllAsync(IEnumerable<string> keys)
         {
             ArgumentNullException.ThrowIfNull(keys);
@@ -172,7 +256,7 @@ namespace Azrng.Cache.MemoryCache
             {
                 if (!string.IsNullOrWhiteSpace(item) && _cache.TryGetValue(item, out var value))
                 {
-                    dict[item] = value!;
+                    dict[item] = value is CounterBox box ? Interlocked.Read(ref box.Value) : value!;
                 }
             }
 
@@ -206,38 +290,65 @@ namespace Azrng.Cache.MemoryCache
                 {
                     return cachedValue!;
                 }
+            }
+            catch (CacheProviderException ex)
+            {
+                _logger.LogError(ex, "内存缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                if (_memoryConfig.FailThrowException)
+                {
+                    throw;
+                }
 
-                var effectiveExpiry = expiry ?? _memoryConfig.DefaultExpiry;
-                return (await _keyManager.ExecuteSynchronizedAsync(key, async () =>
+                // 缓存读失败降级为未命中：直接回源返回真实数据，不再尝试写缓存。
+                return await getData();
+            }
+
+            var effectiveExpiry = expiry ?? _memoryConfig.DefaultExpiry;
+            return (await _keyManager.ExecuteSynchronizedAsync(key, async () =>
+            {
+                try
                 {
                     if (TryGetCachedValue(key, out T? lockedCachedValue))
                     {
                         return lockedCachedValue!;
                     }
-
-                    var value = await getData();
-                    if (ShouldCacheValue(value))
-                    {
-                        TrySetCore(key, value, effectiveExpiry);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
-                    }
-
-                    return value!;
-                }))!;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "内存缓存执行失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
-                if (ex is not CacheProviderException || _memoryConfig.FailThrowException)
+                }
+                catch (CacheProviderException ex)
                 {
-                    throw;
+                    _logger.LogError(ex, "内存缓存读取失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                    if (_memoryConfig.FailThrowException)
+                    {
+                        throw;
+                    }
+
+                    return await getData();
                 }
 
-                return default!;
-            }
+                var value = await getData();
+                if (ShouldCacheValue(value))
+                {
+                    try
+                    {
+                        SetCore(key, value, effectiveExpiry);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "内存缓存写入失败 key:{Key} message:{Message}", key, ex.GetExceptionAndStack());
+                        if (_memoryConfig.FailThrowException)
+                        {
+                            throw new CacheProviderException("内存缓存写入失败", ex);
+                        }
+
+                        // 写失败时已取得真实数据，降级为不缓存，仍返回数据。
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("{Reason}，不写入内存缓存，key:{Key}", GetSkipCacheReason(value), key);
+                }
+
+                return value!;
+            }))!;
         }
 
         private bool TryGetCachedValue<T>(string key, out T? value)
@@ -252,31 +363,20 @@ namespace Azrng.Cache.MemoryCache
             }
         }
 
-        private void TrySetCore<T>(string key, T value, TimeSpan expiry)
-        {
-            try
-            {
-                SetCore(key, value, expiry);
-            }
-            catch (Exception ex)
-            {
-                throw new CacheProviderException("内存缓存写入失败", ex);
-            }
-        }
-
-        private void SetCore<T>(string key, T value, TimeSpan expiry)
+        private void SetCore<T>(string key, T value, TimeSpan? expiry)
         {
             var entryOptions = CreateEntryOptions(key, expiry);
             _cache.Set(key, value, entryOptions);
             _keyManager.TrackKey(key);
         }
 
-        private MemoryCacheEntryOptions CreateEntryOptions(string key, TimeSpan expiry)
+        private MemoryCacheEntryOptions CreateEntryOptions(string key, TimeSpan? expiry)
         {
-            var options = new MemoryCacheEntryOptions
+            var options = new MemoryCacheEntryOptions();
+            if (expiry.HasValue)
             {
-                AbsoluteExpirationRelativeToNow = expiry
-            };
+                options.AbsoluteExpirationRelativeToNow = expiry;
+            }
 
             options.RegisterPostEvictionCallback(static (_, _, _, state) =>
             {
@@ -359,7 +459,17 @@ namespace Azrng.Cache.MemoryCache
             }
 
             builder.Append('$');
-            return new Regex(builder.ToString(), RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+            try
+            {
+                // 匹配删除是低频操作，无需 Compiled；加超时防御异常模式导致的回溯放大
+                return new Regex(builder.ToString(), RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+            }
+            catch (ArgumentException ex)
+            {
+                // 典型场景：[ 未闭合导致生成的正则非法
+                throw new ArgumentException($"通配符模式不合法：{pattern}", nameof(pattern), ex);
+            }
         }
 
         private static bool IsCollectionType(Type type)
@@ -424,6 +534,15 @@ namespace Azrng.Cache.MemoryCache
         }
 
         private sealed record CacheEntryRegistration(string Key, IMemoryCache Cache, MemoryCacheKeyManager KeyManager);
+
+        /// <summary>
+        /// 计数器容器：Value 通过 Interlocked 原子累加，条目本身在自增时不重建，从而保留过期时间。
+        /// 使用字段而非属性，Interlocked 需要 ref 访问。
+        /// </summary>
+        private sealed class CounterBox
+        {
+            public long Value;
+        }
 
         private sealed class CacheProviderException : Exception
         {

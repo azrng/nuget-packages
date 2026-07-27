@@ -14,6 +14,11 @@ namespace Common.Cache.Redis
     internal sealed class ChannelSubscription : IDisposable
     {
         private readonly ConcurrentDictionary<Guid, SubscriberInfo> _subscribers = new();
+
+        // 保护"添加订阅者"与"进入关闭状态"两个决策的互斥：
+        // 若不互斥，订阅者数减到 0 后、关闭开始前，并发新增的订阅者会被关闭流程一并清掉，
+        // 调用方却拿到了看似有效的订阅 ID（消息静默丢失）。
+        private readonly object _stateLock = new();
         private int _isClosing;
         private int _disposed;
 
@@ -25,6 +30,12 @@ namespace Common.Cache.Redis
         public string Channel { get; }
 
         public CancellationTokenSource CancellationTokenSource { get; }
+
+        /// <summary>
+        /// 注册到底层 Redis 的消息处理器。关闭时用它做精确退订，
+        /// 避免 Unsubscribe(channel) 把同频道上新建订阅的处理器一并移除。
+        /// </summary>
+        public Action<RedisChannel, RedisValue>? RedisHandler { get; set; }
 
         public int SubscriberCount => _subscribers.Count;
 
@@ -58,19 +69,25 @@ namespace Common.Cache.Redis
                 throw new ArgumentNullException(nameof(subscriber));
             }
 
-            if (IsClosing)
+            lock (_stateLock)
             {
-                return false;
-            }
+                if (IsClosing)
+                {
+                    return false;
+                }
 
-            return _subscribers.TryAdd(subscriber.Id, subscriber);
+                return _subscribers.TryAdd(subscriber.Id, subscriber);
+            }
         }
 
         public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo? subscriber, out int remainingCount)
         {
-            var removed = _subscribers.TryRemove(subscriberId, out subscriber);
-            remainingCount = _subscribers.Count;
-            return removed;
+            lock (_stateLock)
+            {
+                var removed = _subscribers.TryRemove(subscriberId, out subscriber);
+                remainingCount = _subscribers.Count;
+                return removed;
+            }
         }
 
         public SubscriberInfo[] RemoveAllSubscribers()
@@ -82,7 +99,35 @@ namespace Common.Cache.Redis
 
         public bool TryBeginClose()
         {
-            return Interlocked.CompareExchange(ref _isClosing, 1, 0) == 0;
+            lock (_stateLock)
+            {
+                if (IsClosing)
+                {
+                    return false;
+                }
+
+                Volatile.Write(ref _isClosing, 1);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// 仅当当前没有任何订阅者时才进入关闭状态。
+        /// 与 TryAddSubscriber 在同一把锁下互斥：要么新增先成功（本方法返回 false，不关闭），
+        /// 要么关闭先开始（后续新增返回 false，调用方重建订阅）。
+        /// </summary>
+        public bool TryBeginCloseIfEmpty()
+        {
+            lock (_stateLock)
+            {
+                if (IsClosing || _subscribers.Count > 0)
+                {
+                    return false;
+                }
+
+                Volatile.Write(ref _isClosing, 1);
+                return true;
+            }
         }
 
         public void Broadcast(RedisChannel channel, RedisValue value, ILogger logger)

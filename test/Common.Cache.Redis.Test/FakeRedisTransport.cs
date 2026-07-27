@@ -139,6 +139,33 @@ namespace Common.Cache.Redis.Test
             return Task.FromResult(_values.ContainsKey(key.ToString()));
         }
 
+        private readonly object _incrementLock = new();
+
+        public Task<long> StringIncrementAsync(RedisKey key, long value)
+        {
+            var actualKey = key.ToString();
+            lock (_incrementLock)
+            {
+                long current = 0;
+                if (_values.TryGetValue(actualKey, out var existing) && existing.HasValue)
+                {
+                    if (!long.TryParse(existing.ToString(), out current))
+                    {
+                        throw new RedisServerException("ERR value is not an integer or out of range");
+                    }
+                }
+
+                var next = current + value;
+                _values[actualKey] = next;
+                if (!_expirations.ContainsKey(actualKey))
+                {
+                    _expirations[actualKey] = null;
+                }
+
+                return Task.FromResult(next);
+            }
+        }
+
         public Task<RedisScanResult> ScanAsync(ulong cursor, string pattern, int count)
         {
             if (ScanException != null)
@@ -169,10 +196,12 @@ namespace Common.Cache.Redis.Test
 
     internal sealed class FakeRedisSubscriber : IRedisSubscriber
     {
-        private readonly ConcurrentDictionary<string, ConcurrentBag<Action<RedisChannel, RedisValue>>> _literalHandlers =
+        private readonly object _lock = new();
+
+        private readonly Dictionary<string, List<Action<RedisChannel, RedisValue>>> _literalHandlers =
             new(StringComparer.Ordinal);
 
-        private readonly ConcurrentDictionary<string, ConcurrentBag<Action<RedisChannel, RedisValue>>> _patternHandlers =
+        private readonly Dictionary<string, List<Action<RedisChannel, RedisValue>>> _patternHandlers =
             new(StringComparer.Ordinal);
 
         public ConcurrentBag<string> UnsubscribedChannels { get; } = new();
@@ -182,16 +211,19 @@ namespace Common.Cache.Redis.Test
             var channelName = channel.ToString();
             var handlers = new List<Action<RedisChannel, RedisValue>>();
 
-            if (_literalHandlers.TryGetValue(channelName, out var literalHandlers))
+            lock (_lock)
             {
-                handlers.AddRange(literalHandlers);
-            }
-
-            foreach (var patternHandler in _patternHandlers)
-            {
-                if (PatternMatches(channelName, patternHandler.Key))
+                if (_literalHandlers.TryGetValue(channelName, out var literalHandlers))
                 {
-                    handlers.AddRange(patternHandler.Value);
+                    handlers.AddRange(literalHandlers);
+                }
+
+                foreach (var patternHandler in _patternHandlers)
+                {
+                    if (PatternMatches(channelName, patternHandler.Key))
+                    {
+                        handlers.AddRange(patternHandler.Value);
+                    }
                 }
             }
 
@@ -206,17 +238,44 @@ namespace Common.Cache.Redis.Test
         public void Subscribe(RedisChannel channel, Action<RedisChannel, RedisValue> handler)
         {
             var key = channel.ToString();
-            var store = IsPattern(key) ? _patternHandlers : _literalHandlers;
-            var handlers = store.GetOrAdd(key, _ => new ConcurrentBag<Action<RedisChannel, RedisValue>>());
-            handlers.Add(handler);
+            lock (_lock)
+            {
+                var store = IsPattern(key) ? _patternHandlers : _literalHandlers;
+                if (!store.TryGetValue(key, out var handlers))
+                {
+                    handlers = new List<Action<RedisChannel, RedisValue>>();
+                    store[key] = handlers;
+                }
+
+                handlers.Add(handler);
+            }
         }
 
-        public void Unsubscribe(RedisChannel channel)
+        public void Unsubscribe(RedisChannel channel, Action<RedisChannel, RedisValue>? handler)
         {
             var key = channel.ToString();
             UnsubscribedChannels.Add(key);
-            _literalHandlers.TryRemove(key, out _);
-            _patternHandlers.TryRemove(key, out _);
+
+            lock (_lock)
+            {
+                var store = IsPattern(key) ? _patternHandlers : _literalHandlers;
+                if (!store.TryGetValue(key, out var handlers))
+                {
+                    return;
+                }
+
+                if (handler == null)
+                {
+                    store.Remove(key);
+                    return;
+                }
+
+                handlers.Remove(handler);
+                if (handlers.Count == 0)
+                {
+                    store.Remove(key);
+                }
+            }
         }
 
         private static bool IsPattern(string value)

@@ -261,15 +261,18 @@ graph TB
 internal sealed class ChannelSubscription
 {
     private readonly ConcurrentDictionary<Guid, SubscriberInfo> _subscribers = new();
+    private readonly object _stateLock = new();   // "添加订阅者"与"进入关闭状态"互斥
     private int _isClosing;
 
     public string Channel { get; }
     public CancellationTokenSource CancellationTokenSource { get; }
+    public Action<RedisChannel, RedisValue>? RedisHandler { get; set; }  // 用于关闭时按 handler 精确退订
     public int SubscriberCount => _subscribers.Count;
 
     public bool TryAddSubscriber(SubscriberInfo subscriber) { ... }
     public bool RemoveSubscriber(Guid subscriberId, out SubscriberInfo subscriber, out int remainingCount) { ... }
     public bool TryBeginClose() { ... }
+    public bool TryBeginCloseIfEmpty() { ... }    // 仅订阅者为 0 时取得关闭权，防止清掉并发新增的订阅者
     public void Broadcast(RedisChannel channel, RedisValue value, ILogger logger) { ... }
 }
 ```
