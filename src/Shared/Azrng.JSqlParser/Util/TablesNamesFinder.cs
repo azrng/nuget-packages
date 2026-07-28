@@ -57,6 +57,7 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     public object? Visit<S>(DoubleValue doubleValue, S context) => null;
     public object? Visit<S>(StringValue stringValue, S context) => null;
     public object? Visit<S>(HexValue hexValue, S context) => null;
+    public object? Visit<S>(PassthroughExpression passthroughExpression, S context) => null;
     public object? Visit<S>(JdbcParameter jdbcParameter, S context) => null;
     public object? Visit<S>(JdbcNamedParameter jdbcNamedParameter, S context) => null;
 
@@ -720,7 +721,15 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
 
     public object? Visit<S>(Statement.Drop.Drop drop, S context)
     {
-        AddTable(drop.Name);
+        if (drop.NameList is { Count: > 0 })
+        {
+            foreach (var t in drop.NameList) AddTable(t);
+        }
+        else
+        {
+            AddTable(drop.Name);
+        }
+        if (drop.On != null) AddTable(drop.On);
         return null;
     }
 
@@ -780,6 +789,8 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     public object? Visit<S>(Statement.Create.Sequence.CreateSequence createSequence, S context) => null;
 
     public object? Visit<S>(Statement.Create.Schema.CreateSchema createSchema, S context) => null;
+
+    public object? Visit<S>(Statement.Create.Database.CreateDatabase createDatabase, S context) => null;
 
     public object? Visit<S>(Statement.Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context)
     {

@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta9" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta11" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta9`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta11`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -100,7 +100,7 @@ if (stmt == null)
 |------|------|
 | 查询 | `SELECT`（JOIN、CTE、UNION/INTERSECT/EXCEPT、子查询、窗口函数） |
 | DML | `INSERT`、`UPDATE`、`DELETE`、`MERGE` |
-| DDL | `CREATE TABLE/VIEW/INDEX`、`ALTER TABLE`、`DROP TABLE/VIEW/INDEX`、`TRUNCATE` |
+| DDL | `CREATE TABLE/VIEW/INDEX/DATABASE/SCHEMA`、`ALTER TABLE`、`DROP TABLE/VIEW/INDEX`（多对象）、`TRUNCATE` |
 | 事务 | `COMMIT`、`ROLLBACK`、`SAVEPOINT` |
 | 会话 | `SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE` |
 | 管道查询 | BigQuery 风格 `\|>` 管道操作符（SELECT、WHERE、AGGREGATE、JOIN 等 17 种） |
@@ -212,25 +212,83 @@ Console.WriteLine(stmt.ToString());
 - 字面量：整数、浮点数、字符串、十六进制、布尔值、null
 - 运算符：算术（`+`、`-`、`*`、`/`、`%`）、比较（`=`、`<>`、`>`、`<`、`>=`、`<=`）、逻辑（`AND`、`OR`、`NOT`、`XOR`）、字符串（`||`、`CONCAT`）、位运算
 - 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`REGEXP_LIKE`、`SIMILAR TO`、PostgreSQL 正则符号（`~`、`~*`、`!~`、`!~*`）、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
-- 高级：`CASE WHEN`、`CAST`、`EXTRACT`、`INTERVAL`、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
-- 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数
+- 高级：`CASE WHEN`、`CAST`、`EXTRACT`（含 `DAY TO SECOND` 限定）、`INTERVAL`（含 `DAY TO SECOND`）、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
+- 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数；Oracle `XMLPARSE` / `XMLSERIALIZE`；ODBC `{fn ...}` / `{d|t|ts '...'}`
 - 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 返回不含前缀的名称，`Prefix` 字段保留原始前缀 `:`/`@`）
 
 ### 语句
 
 - `SELECT` — DISTINCT/ALL、TOP（PERCENT/WITH TIES）、JOIN（INNER/LEFT/RIGHT/FULL/CROSS/NATURAL/SEMI）、CTE（WITH RECURSIVE，支持 DML）、UNION/INTERSECT/EXCEPT、子查询、GROUP BY、HAVING、WINDOW、PREFERRING（Exasol Skyline）、ORDER BY、LIMIT/OFFSET、FETCH、FOR UPDATE/SHARE（OF 多表、WAIT/NOWAIT/SKIP LOCKED）、`OVERLAPS`、`MEMBER OF`
 - 管道查询 — `FROM table |> WHERE ... |> SELECT ...`（BigQuery 风格，17 种操作符）
-- `INSERT` — 列列表、VALUES、INSERT...SELECT、INSERT OVERWRITE、PARTITION、ON DUPLICATE KEY、RETURNING
+- `INSERT` — 列列表、VALUES、INSERT...SELECT、`INSERT OVERWRITE [TABLE]`（Hive #1846）、PARTITION、ON DUPLICATE KEY、RETURNING、SQL Server `INSERT BULK`（#2033）
 - `UPDATE` — SET、JOIN、FROM、WHERE、RETURNING
 - `DELETE` — FROM、别名（DELETE u FROM ...）、USING、WHERE、RETURNING
 - `MERGE` — WHEN MATCHED/NOT MATCHED、UPDATE/INSERT/DELETE
-- `CREATE TABLE` — 列、约束、外键、LIKE、AS SELECT
-- `CREATE VIEW/INDEX` — 带选项
-- `ALTER TABLE` — ADD/DROP/MODIFY/CHANGE/RENAME COLUMN、ADD/DROP/TRUNCATE/COALESCE/REORGANIZE/EXCHANGE PARTITION、ADD CONSTRAINT、ENGINE/LOCK/ALGORITHM 选项
-- `DROP TABLE/VIEW/INDEX` — IF EXISTS、CASCADE/RESTRICT
+- `CREATE TABLE` — 列、约束、外键、LIKE、AS SELECT、前缀索引 `col(n)`、函数索引、`unsigned`/`IDENTITY`、`PARTITION BY ... (PARTITION ...)`（#1668）、SQL Server `ON PRIMARY`
+- `CREATE VIEW/INDEX` — 带选项；SQL Server `WITH (index_option=...)`（#2020）
+- `CREATE [OR REPLACE|OR ALTER] FUNCTION/PROCEDURE`（#1978）
+- `CREATE DATABASE` — `IF NOT EXISTS`（#2070）
+- `CREATE SCHEMA` — `IF NOT EXISTS`、catalog.schema、AUTHORIZATION
+- `ALTER TABLE` — ADD/DROP/MODIFY/CHANGE/RENAME COLUMN、ADD CONSTRAINT（含 `DEFAULT ... FOR col`、Oracle `USING INDEX TABLESPACE`）、分区操作、ENGINE/LOCK/ALGORITHM
+- `DROP TABLE/VIEW/INDEX/FUNCTION/PROCEDURE` — 多对象、IF EXISTS、CASCADE/RESTRICT
+- `EXECUTE`/`EXEC`/`CALL` — 括号或无括号参数、`OUTPUT`（#268）
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta11
+
+上游 issue 高价值清仓收口（T123–T126）+ 单元测试补全。**无破坏性 API 变更**（仅新增字段/类型与文法能力；相对 beta9 的公共面扩展均向后兼容）。
+
+**相对 beta9 累计能力**（详见下列 beta10 条目与 `MIGRATION.md` 第十六～十九节）：
+- 常见 DDL：`CREATE DATABASE`、多表 DROP、`ADD/DROP/MODIFY IF [NOT] EXISTS`、`MODIFY NULL/NOT NULL`、MySQL 分区定义列表
+- SQL Server：`INSERT BULK`、`CREATE INDEX WITH`、`ON PRIMARY`、`IDENTITY`、`DEFAULT ... FOR`、`EXEC ... OUTPUT`、`CREATE OR ALTER`
+- Oracle：`USING INDEX TABLESPACE`、`XMLPARSE`/`XMLSERIALIZE`、`DAY TO SECOND`
+- 其他：ODBC `{fn}/{d|t|ts}`、Hive `INSERT OVERWRITE`、`unsigned`/`zerofill`、前缀索引、`[quoted]` 词法修复
+- 测试：全量 **1750** 通过 / 3 Skip；补齐探针 + round-trip + `CALL()` 空括号回归
+
+### 1.0.0-beta10
+
+上游 issue 常见 DDL / SQL Server·Oracle 专项修复（T123 + T124）+ 探针核实。**无破坏性 API 变更**（仅新增字段/类型与文法能力）。
+
+**新增 / 修复能力（T123 常见 DDL）**：
+- `CREATE DATABASE [IF NOT EXISTS] name`（#2070）— 新语句类型 `CreateDatabase`
+- `DROP TABLE/VIEW` 多对象列表完整 round-trip（#2065）— `Drop.NameList` / `DropBehavior` / `On`
+- `ALTER TABLE ... ADD [COLUMN] IF NOT EXISTS ...`（#1875）
+- `ALTER TABLE ... DROP/MODIFY [COLUMN] IF EXISTS ...`（#2112）
+- `ALTER TABLE ... MODIFY col NULL | NOT NULL`（#599，仅改可空性）
+- `ALTER` 列定义保留类型后规格（如 `MODIFY c VARCHAR(10) NOT NULL`）
+
+**新增 / 修复能力（T124 方言专项）**：
+- SQL Server `INSERT BULK table[(col type,...)] [WITH(...)]`（#2033）— `Insert.Bulk` / `BulkColumnDefinitions` / `BulkWithOptions`
+- Oracle `USING INDEX [name] TABLESPACE ts`（#2039）— `UsingIndexTablespace`
+- SQL Server `CREATE INDEX ... WITH (PAD_INDEX=OFF, ...)`（#2020）— `CreateIndex.WithOptions`
+- MySQL 前缀索引 `KEY idx (col(10))`
+- 词法修复：SQL Server `[quoted]` 标识符不再吞掉中间 `]`（修复 `[a] int,[b] tinyint` 被并成一个 token）
+
+**探针核实已支持（零源码改动）**：
+- MySQL `0xFF` 十六进制字面量（#2435）
+- `LIMIT (SELECT ...)` 子查询（#2359）
+- Oracle 外连接 `(+)`（#672）
+- MySQL 函数索引 `KEY idx ((LOWER(name)))`（#1927）
+- `FOR XML PATH` / STUFF（#386）
+
+**新增 / 修复能力（T125 分区 / interval / filegroup）**：
+- MySQL `PARTITION BY RANGE/HASH/... (PARTITION ...)` 完整分区定义列表（#1668）
+- `ALTER TABLE ... ADD PARTITION` 多分区一次添加（#1668）
+- `INTERVAL expr DAY TO SECOND` / `EXTRACT(... FROM expr DAY TO SECOND)`（#673）
+- SQL Server `CREATE TABLE ... ON PRIMARY` / `ON [filegroup]`（#2020 剩余）
+- Hive/Spark `LATERAL VIEW ... AS c1,c2,c3,...` 多列别名（#2433，核实已支持）
+
+**新增 / 修复能力（T126 高价值清仓）**：
+- ODBC `{fn ...}` / `{d|t|ts '...'}`（#1139）
+- MySQL `unsigned` / `signed` / `zerofill` 类型修饰
+- SQL Server `IDENTITY(seed,inc)`、`ADD CONSTRAINT ... DEFAULT ... FOR col`、`EXEC ... @out OUTPUT`（#268）
+- `CREATE OR ALTER FUNCTION/PROCEDURE`（#1978）、`DROP FUNCTION/PROCEDURE`
+- Hive `INSERT OVERWRITE TABLE ... PARTITION (...)`（#1846/#2119）
+- Oracle `XMLPARSE` / `XMLSERIALIZE`（#2146/#1564）
+
+**测试**：`DdlUpstream/Batch2/3` + `HighValueCleanupRoundTripTest`；相关探针与回归通过。
 
 ### 1.0.0-beta9
 

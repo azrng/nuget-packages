@@ -327,8 +327,11 @@ public class DdlStatementTest
     [Fact]
     public void DropTable_Multiple_ShouldParse()
     {
-        var stmt = SqlParser.Parse("DROP TABLE users, orders, products");
-        Assert.NotNull(stmt);
+        var stmt = Assert.IsType<Azrng.JSqlParser.Statement.Drop.Drop>(
+            SqlParser.Parse("DROP TABLE users, orders, products"));
+        Assert.NotNull(stmt.NameList);
+        Assert.Equal(3, stmt.NameList!.Count);
+        Assert.Equal("DROP TABLE users, orders, products", stmt.ToString());
     }
 
     #endregion

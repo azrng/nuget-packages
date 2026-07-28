@@ -607,6 +607,9 @@ public partial class AstBuilderVisitor
         if (context.castExpr() != null) return Visit(context.castExpr());
         if (context.extractExpr() != null) return Visit(context.extractExpr());
         if (context.intervalExpr() != null) return Visit(context.intervalExpr());
+        if (context.odbcEscapeExpr() != null) return Visit(context.odbcEscapeExpr());
+        if (context.xmlParseExpr() != null) return Visit(context.xmlParseExpr());
+        if (context.xmlSerializeExpr() != null) return Visit(context.xmlSerializeExpr());
         if (context.functionExpr() != null) return Visit(context.functionExpr());
         if (context.subSelect() != null) return Visit(context.subSelect());
         if (context.structType() != null) return Visit(context.structType());
@@ -918,13 +921,31 @@ public partial class AstBuilderVisitor
         return cast;
     }
 
+    public override object VisitOdbcEscapeExpr(JSqlParserGrammar.OdbcEscapeExprContext context)
+        => new PassthroughExpression { Text = GetOriginalText(context) };
+
+    public override object VisitXmlParseExpr(JSqlParserGrammar.XmlParseExprContext context)
+        => new PassthroughExpression { Text = GetOriginalText(context) };
+
+    public override object VisitXmlSerializeExpr(JSqlParserGrammar.XmlSerializeExprContext context)
+        => new PassthroughExpression { Text = GetOriginalText(context) };
+
     public override object VisitExtractExpr(JSqlParserGrammar.ExtractExprContext context)
     {
-        return new ExtractExpression
+        var extract = new ExtractExpression
         {
             Name = context.extractField().GetText(),
             Expression = (Expression.IExpression)Visit(context.expression())
         };
+        // #673 EXTRACT(... FROM expr DAY TO SECOND)
+        var units = context.intervalUnit();
+        if (units is { Length: > 0 })
+        {
+            extract.IntervalQualifier = units.Length == 1
+                ? GetOriginalText(units[0])
+                : $"{GetOriginalText(units[0])} TO {GetOriginalText(units[1])}";
+        }
+        return extract;
     }
 
     public override object VisitIntervalExpr(JSqlParserGrammar.IntervalExprContext context)
@@ -933,12 +954,12 @@ public partial class AstBuilderVisitor
         interval.IntervalKeyword = true;
         interval.Expression = (Expression.IExpression)Visit(context.expression());
 
-        if (context.YEAR() != null) interval.IntervalType = "YEAR";
-        else if (context.MONTH() != null) interval.IntervalType = "MONTH";
-        else if (context.DAY() != null) interval.IntervalType = "DAY";
-        else if (context.HOUR() != null) interval.IntervalType = "HOUR";
-        else if (context.MINUTE() != null) interval.IntervalType = "MINUTE";
-        else if (context.SECOND() != null) interval.IntervalType = "SECOND";
+        // #673 INTERVAL expr DAY TO SECOND
+        var units = context.intervalUnit();
+        if (units is { Length: 1 })
+            interval.IntervalType = GetOriginalText(units[0]);
+        else if (units is { Length: >= 2 })
+            interval.IntervalType = $"{GetOriginalText(units[0])} TO {GetOriginalText(units[1])}";
 
         return interval;
     }

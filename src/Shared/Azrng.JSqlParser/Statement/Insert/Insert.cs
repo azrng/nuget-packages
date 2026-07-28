@@ -69,11 +69,37 @@ public class Insert : ASTNodeAccessImpl, IStatement
     /// <summary>MSSQL OUTPUT 子句（OUTPUT inserted.col [INTO ...]），透传原始文本保 round-trip。未指定时为 null。</summary>
     public string? OutputClause { get; set; }
 
+    /// <summary>SQL Server INSERT BULK 标志（#2033）。</summary>
+    public bool Bulk { get; set; }
+
+    /// <summary>
+    /// INSERT BULK 列定义原始文本列表（如 <c>[ol_o_id] int</c>、<c>col char(24) collate Chinese_PRC_CI_AS</c>）。
+    /// 仅 <see cref="Bulk"/> 时有意义。
+    /// </summary>
+    public List<string>? BulkColumnDefinitions { get; set; }
+
+    /// <summary>
+    /// INSERT BULK WITH 选项原始文本列表（如 <c>ROWS_PER_BATCH=500000</c>）。
+    /// 仅 <see cref="Bulk"/> 时有意义。
+    /// </summary>
+    public List<string>? BulkWithOptions { get; set; }
+
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
+        // #2033 SQL Server INSERT BULK
+        if (Bulk)
+        {
+            sb.Append("INSERT BULK ").Append(Table);
+            if (BulkColumnDefinitions is { Count: > 0 })
+                sb.Append('(').Append(string.Join(",", BulkColumnDefinitions)).Append(')');
+            if (BulkWithOptions is { Count: > 0 })
+                sb.Append(" WITH(").Append(string.Join(",", BulkWithOptions)).Append(')');
+            return sb.ToString();
+        }
+
         sb.Append("INSERT ");
         // 输出 MySQL 修饰符（LOW_PRIORITY/DELAYED/HIGH_PRIORITY/IGNORE）
         if (ModifierPriority != InsertModifierPriority.None)

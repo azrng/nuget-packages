@@ -70,8 +70,27 @@ public partial class AstBuilderVisitor
             }
         }
 
-        // 表级选项（ENGINE/CHARSET/PARTITION BY/ORDER BY/SAMPLE BY 等），createParameter 透传为字符串
+        // 表级选项（ENGINE/CHARSET/ORDER BY/SAMPLE BY 等），createParameter 透传为字符串
         create.TableOptions = CollectCreateParameters(context.createParameter());
+
+        // #1668 表分区子句：整体透传保 round-trip
+        if (context.tablePartitionClause() is { } partCtx)
+        {
+            create.TableOptions ??= new List<string>();
+            create.TableOptions.Add(GetOriginalText(partCtx));
+        }
+
+        // #2020 SQL Server ON PRIMARY / ON [filegroup]
+        if (context.ON() != null)
+        {
+            create.TableOptions ??= new List<string>();
+            if (context.PRIMARY() != null)
+                create.TableOptions.Add("ON PRIMARY");
+            else if (context.QUOTED_IDENTIFIER() != null)
+                create.TableOptions.Add("ON " + context.QUOTED_IDENTIFIER().GetText());
+            else if (context.identifier() != null)
+                create.TableOptions.Add("ON " + context.identifier().GetText());
+        }
 
         // Oracle ROW MOVEMENT
         if (context.rowMovementClause() is { } rmCtx)
@@ -112,12 +131,10 @@ public partial class AstBuilderVisitor
         var colDef = new ColumnDefinition();
         colDef.ColumnName = context.identifier().GetText();
         colDef.ColDataType = BuildColDataType(context.colDataType());
-        // 列规格透传为字符串（NOT NULL / DEFAULT expr / MATERIALIZED / COMMENT '...' 等），对齐上游 columnSpecs
-        // 结构化 columnConstraint + 兜底 createParameter 均收集原始文本，保 round-trip
+        // 列规格：columnConstraint / UNSIGNED|SIGNED|ZEROFILL / createParameter，按出现顺序透传
         var specs = new List<string>();
-        foreach (var cc in context.columnConstraint())
-            specs.Add(GetOriginalText(cc));
-        specs.AddRange(CollectCreateParameters(context.createParameter()));
+        foreach (var spec in context.columnSpecItem())
+            specs.Add(GetOriginalText(spec));
         colDef.ColumnSpecs = specs;
         return colDef;
     }
@@ -421,17 +438,31 @@ public partial class AstBuilderVisitor
     }
 
     /// <summary>
-    /// 解析约束的 USING INDEX [name] 子句（Oracle/DB2，commit c7b3bdbd）。
+    /// 解析约束的 USING INDEX [name] [TABLESPACE ts] 子句（Oracle/DB2 + #2039）。
     /// </summary>
     private static void FillUsingIndex(Constraint constraint, JSqlParserGrammar.TableConstraintContext context)
     {
         var usingCtx = context.usingIndexClause();
         if (usingCtx == null) return;
         constraint.HasUsingIndex = true;
-        var nameId = usingCtx.identifier();
-        if (nameId != null)
+        var ids = usingCtx.identifier();
+        if (usingCtx.TABLESPACE() != null)
         {
-            constraint.UsingIndex = nameId.GetText();
+            // USING INDEX TABLESPACE ts  → 仅 tablespace
+            // USING INDEX idx TABLESPACE ts → 索引名 + tablespace
+            if (ids.Length == 1)
+            {
+                constraint.UsingIndexTablespace = ids[0].GetText();
+            }
+            else if (ids.Length >= 2)
+            {
+                constraint.UsingIndex = ids[0].GetText();
+                constraint.UsingIndexTablespace = ids[1].GetText();
+            }
+        }
+        else if (ids.Length > 0)
+        {
+            constraint.UsingIndex = ids[0].GetText();
         }
     }
 
@@ -470,9 +501,14 @@ public partial class AstBuilderVisitor
         foreach (var col in list.indexColumn())
         {
             // 普通列名或表达式索引 (expr)：identifier 为 null 时取表达式原始文本并补括号
+            // MySQL 前缀索引 col(n)：identifier + (LONG_VALUE)
             string name;
             if (col.identifier() != null)
+            {
                 name = col.identifier().GetText();
+                if (col.LONG_VALUE() != null)
+                    name = $"{name}({col.LONG_VALUE().GetText()})";
+            }
             else if (col.expression() != null)
                 name = $"({GetOriginalText(col.expression())})";
             else
@@ -550,11 +586,28 @@ public partial class AstBuilderVisitor
     {
         var execType = context.CALL() != null ? ExecType.CALL
             : context.EXEC() != null ? ExecType.EXEC : ExecType.EXECUTE;
-        var exec = new Execute { ExecType = execType, Name = context.identifier().GetText() };
-        if (context.expressionList() != null)
+        var exec = new Execute
         {
-            var list = (ExpressionList)Visit(context.expressionList());
-            exec.ExprList = list;
+            ExecType = execType,
+            // 支持 schema.proc
+            Name = context.table() != null ? ((Table)Visit(context.table())).ToString()! : ""
+        };
+        // 有括号（含空括号 CALL p()）与无括号参数形式
+        exec.HasParentheses = context.OPENING_PAREN() != null;
+        var args = context.executeArg();
+        if (args is { Length: > 0 })
+        {
+            // 透传参数原文（含 @p=1、OUTPUT），保 #268 round-trip
+            exec.PlainArguments = args.Select(GetOriginalText).ToList();
+            // 同时尽量填 ExprList（无 OUTPUT / 无命名赋值的纯表达式），兼容旧消费者
+            var exprs = new List<Expression.IExpression>();
+            foreach (var a in args)
+            {
+                if (a.OUTPUT() == null && a.expression() != null && a.EQUALS() == null && a.ASSIGN() == null)
+                    exprs.Add((Expression.IExpression)Visit(a.expression()));
+            }
+            if (exprs.Count > 0)
+                exec.ExprList = new ExpressionList { Expressions = exprs };
         }
         return exec;
     }
@@ -749,15 +802,19 @@ public partial class AstBuilderVisitor
     public override object VisitCreateFunctionStatement(JSqlParserGrammar.CreateFunctionStatementContext context)
     {
         var orReplace = context.OR() != null && context.REPLACE() != null;
-        // 收集 functionBodyTokens 的原始文本（对齐上游 captureFunctionBody 容器式行为）
-        var parts = new List<string> { context.identifier().GetText() };
+        var orAlter = context.OR() != null && context.ALTER() != null;
+        // 名称支持 schema.func（table 产生式）；body 原文透传
+        var name = context.table() != null
+            ? ((Table)Visit(context.table())).ToString()!
+            : "";
+        var parts = new List<string> { name };
         parts.AddRange(context.functionBodyTokens().GetText().Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
         if (context.FUNCTION() != null)
         {
-            return new CreateFunction(parts) { OrReplace = orReplace };
+            return new CreateFunction(parts) { OrReplace = orReplace, OrAlter = orAlter };
         }
-        return new CreateProcedure(parts) { OrReplace = orReplace };
+        return new CreateProcedure(parts) { OrReplace = orReplace, OrAlter = orAlter };
     }
 
     /// <summary>
@@ -775,10 +832,25 @@ public partial class AstBuilderVisitor
             return expr;
         }
 
-        // ADD COLUMN? columnDefinition | ADD tableConstraint
+        // ADD COLUMN? (IF NOT EXISTS)? columnDefinition | ADD CONSTRAINT ... DEFAULT ... FOR | ADD tableConstraint
         if (context.ADD() != null)
         {
             expr.Operation = AlterOperation.Add;
+            expr.UseColumnKeyword = context.COLUMN() != null;
+            // #1875：ADD 文法仅允许 IF NOT EXISTS，有 IF 即视为 IfNotExists
+            expr.IfNotExists = context.IF() != null;
+
+            // SQL Server：ADD CONSTRAINT name DEFAULT expr FOR col
+            if (context.CONSTRAINT() != null && context.DEFAULT() != null && context.FOR() != null)
+            {
+                // 整段透传到 OptionalSpecifier，ToString 输出 ADD + OptionalSpecifier
+                var raw = GetOriginalText(context);
+                expr.OptionalSpecifier = raw.StartsWith("ADD ", StringComparison.OrdinalIgnoreCase)
+                    ? raw[4..].TrimStart()
+                    : raw;
+                return expr;
+            }
+
             if (context.tableConstraint() != null)
             {
                 // ADD 约束：约束类型/列/USING INDEX 写入结构化字段
@@ -802,16 +874,16 @@ public partial class AstBuilderVisitor
                     // 清空 ConstraintType 避免 ToString 重复输出约束关键字
                     expr.ConstraintType = null;
                 }
-                // USING INDEX 子句
+                // USING INDEX 子句（含 #2039 TABLESPACE）
                 expr.HasUsingIndex = constraint.HasUsingIndex;
                 expr.UsingIndex = constraint.UsingIndex;
+                expr.UsingIndexTablespace = constraint.UsingIndexTablespace;
             }
             else if (context.columnDefinition() != null)
             {
-                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
+                    BuildAlterColumnDataType((ColumnDefinition)Visit(context.columnDefinition()))
                 };
             }
             return expr;
@@ -843,23 +915,36 @@ public partial class AstBuilderVisitor
             else
             {
                 expr.Operation = AlterOperation.Drop;
+                expr.UseColumnKeyword = context.COLUMN() != null;
+                // #2112：DROP 列文法仅允许 IF EXISTS
+                expr.IfExists = context.IF() != null;
                 if (identifiers.Length > 0)
                     expr.ColumnName = identifiers[0].GetText();
             }
             return expr;
         }
 
-        // MODIFY COLUMN? columnDefinition
+        // MODIFY COLUMN? (IF EXISTS)? columnDefinition
+        // 或 MODIFY COLUMN? (IF EXISTS)? identifier (NOT NULL | NULL)（#599）
         if (context.MODIFY() != null)
         {
             expr.Operation = AlterOperation.Modify;
+            expr.UseColumnKeyword = context.COLUMN() != null;
+            // #2112：MODIFY 文法仅允许 IF EXISTS（与 #599 的 NOT NULL 无关，勿用 NOT 判定）
+            expr.IfExists = context.IF() != null;
             if (context.columnDefinition() != null)
             {
-                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
+                    BuildAlterColumnDataType((ColumnDefinition)Visit(context.columnDefinition()))
                 };
+            }
+            else if (identifiers.Length > 0)
+            {
+                // #599 仅改可空性：MODIFY col NULL / NOT NULL
+                expr.ColumnName = identifiers[0].GetText();
+                if (context.NULL() != null)
+                    expr.OptionalSpecifier = context.NOT() != null ? "NOT NULL" : "NULL";
             }
             return expr;
         }
@@ -868,14 +953,14 @@ public partial class AstBuilderVisitor
         if (context.CHANGE() != null)
         {
             expr.Operation = AlterOperation.Change;
+            expr.UseColumnKeyword = context.COLUMN() != null;
             if (identifiers.Length > 0)
                 expr.ColumnOldName = identifiers[0].GetText();
             if (context.columnDefinition() != null)
             {
-                var colDef = (ColumnDefinition)Visit(context.columnDefinition());
                 expr.ColDataTypeList = new List<AlterExpression.ColumnDataType>
                 {
-                    new() { ColumnName = colDef.ColumnName, DataType = colDef.ColDataType.ToString() }
+                    BuildAlterColumnDataType((ColumnDefinition)Visit(context.columnDefinition()))
                 };
             }
             return expr;
@@ -1143,11 +1228,60 @@ public partial class AstBuilderVisitor
     public override object VisitDropStatement(JSqlParserGrammar.DropStatementContext context)
     {
         var drop = new Drop();
-        drop.Name = (Table)Visit(context.table(0));
         drop.Type = context.TABLE() != null ? "TABLE" :
-                    context.VIEW() != null ? "VIEW" : "INDEX";
+                    context.VIEW() != null ? "VIEW" :
+                    context.FUNCTION() != null ? "FUNCTION" :
+                    context.PROCEDURE() != null ? "PROCEDURE" : "INDEX";
         drop.IfExists = context.IF() != null;
+
+        // #2065 多表 DROP：收集全部 table 引用
+        // DROP INDEX name ON table 时：table(0)=索引名，table(1)=ON 表
+        var tables = context.table();
+        if (drop.Type == "INDEX")
+        {
+            if (tables.Length > 0)
+            {
+                drop.Name = (Table)Visit(tables[0]);
+                drop.NameList = new List<Table> { drop.Name };
+            }
+            if (context.ON() != null && tables.Length > 1)
+                drop.On = (Table)Visit(tables[1]);
+        }
+        else
+        {
+            drop.NameList = tables.Select(t => (Table)Visit(t)).ToList();
+            drop.Name = drop.NameList.Count > 0 ? drop.NameList[0] : null;
+        }
+
+        if (context.CASCADE() != null) drop.DropBehavior = "CASCADE";
+        else if (context.RESTRICT() != null) drop.DropBehavior = "RESTRICT";
         return drop;
+    }
+
+    public override object VisitCreateDatabaseStatement(JSqlParserGrammar.CreateDatabaseStatementContext context)
+    {
+        return new Statement.Create.Database.CreateDatabase
+        {
+            IfNotExists = context.IF() != null,
+            DatabaseName = context.identifier().GetText()
+        };
+    }
+
+    /// <summary>
+    /// 将 ColumnDefinition 转为 AlterExpression.ColumnDataType，保留类型与列规格（NOT NULL 等）。
+    /// </summary>
+    private static AlterExpression.ColumnDataType BuildAlterColumnDataType(ColumnDefinition colDef)
+    {
+        var dataType = colDef.ColDataType.ToString() ?? "";
+        if (colDef.ColumnSpecs is { Count: > 0 })
+            dataType = string.IsNullOrEmpty(dataType)
+                ? string.Join(" ", colDef.ColumnSpecs)
+                : dataType + " " + string.Join(" ", colDef.ColumnSpecs);
+        return new AlterExpression.ColumnDataType
+        {
+            ColumnName = colDef.ColumnName,
+            DataType = dataType
+        };
     }
 
     public override object VisitTruncateStatement(JSqlParserGrammar.TruncateStatementContext context)
@@ -1356,6 +1490,10 @@ public partial class AstBuilderVisitor
         // 部分索引 WHERE
         if (context.whereClause() != null)
             createIndex.Where = (Expression.IExpression)Visit(context.whereClause().expression());
+        // #2020 SQL Server WITH (opt = val, ...)
+        var withItems = context.parameterListItem();
+        if (withItems is { Length: > 0 })
+            createIndex.WithOptions = withItems.Select(GetOriginalText).ToList();
         return createIndex;
     }
 }

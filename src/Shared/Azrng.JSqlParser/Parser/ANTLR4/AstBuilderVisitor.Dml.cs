@@ -38,10 +38,43 @@ namespace Azrng.JSqlParser.Parser.ANTLR4;
 /// </summary>
 public partial class AstBuilderVisitor
 {
+    /// <summary>#2033 SQL Server INSERT BULK。</summary>
+    public override object VisitInsertBulkStatement(JSqlParserGrammar.InsertBulkStatementContext context)
+    {
+        var insert = new Insert
+        {
+            Bulk = true,
+            Table = (Table)Visit(context.table()),
+            UseValues = false
+        };
+        var colDefs = context.bulkColumnDef();
+        if (colDefs is { Length: > 0 })
+            insert.BulkColumnDefinitions = colDefs.Select(GetOriginalText).ToList();
+        var withItems = context.bulkWithItem();
+        if (withItems is { Length: > 0 })
+            insert.BulkWithOptions = withItems.Select(GetOriginalText).ToList();
+        return insert;
+    }
+
     public override object VisitInsertStatement(JSqlParserGrammar.InsertStatementContext context)
     {
         var insert = new Insert();
         insert.Table = (Table)Visit(context.table());
+
+        // Hive/Spark INSERT OVERWRITE [TABLE]
+        if (context.OVERWRITE() != null)
+        {
+            insert.Overwrite = true;
+            insert.TableKeyword = context.TABLE() != null;
+            if (context.PARTITION() != null && context.partitionAssignment() is { Length: > 0 } parts)
+            {
+                insert.Partitions = parts.Select(p => new Partition
+                {
+                    // 透传 col[=expr] 原文
+                    Name = GetOriginalText(p)
+                }).ToList();
+            }
+        }
 
         // MySQL INSERT 修饰符：LOW_PRIORITY / DELAYED / HIGH_PRIORITY / IGNORE
         if (context.LOW_PRIORITY() != null) insert.ModifierPriority = InsertModifierPriority.LowPriority;

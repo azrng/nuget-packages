@@ -71,6 +71,9 @@ public interface IStatementVisitor<T>
     // JSqlParser 5.4+ - CREATE SCHEMA (上游 commit ac46c434)
     T Visit<S>(Create.Schema.CreateSchema createSchema, S context);
 
+    // CREATE DATABASE（#2070）
+    T Visit<S>(Create.Database.CreateDatabase createDatabase, S context);
+
     // REFRESH MATERIALIZED VIEW (T091 P1-6)
     T Visit<S>(Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context);
 
@@ -135,6 +138,7 @@ public interface IStatementVisitor<T>
     void Visit(Create.Sequence.CreateSequence createSequence) => Visit<object?>(createSequence, default);
     void Visit(Insert.MultiInsert multiInsert) => Visit<object?>(multiInsert, default);
     void Visit(Create.Schema.CreateSchema createSchema) => Visit<object?>(createSchema, default);
+    void Visit(Create.Database.CreateDatabase createDatabase) => Visit<object?>(createDatabase, default);
     void Visit(Refresh.RefreshMaterializedViewStatement refreshMaterializedView) => Visit<object?>(refreshMaterializedView, default);
     void Visit(Insert.UpsertStatement upsert) => Visit<object?>(upsert, default);
     void Visit(BeginTransactionStatement beginTransaction) => Visit<object?>(beginTransaction, default);

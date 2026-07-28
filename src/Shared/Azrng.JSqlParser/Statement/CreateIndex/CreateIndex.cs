@@ -23,6 +23,12 @@ public class CreateIndex : ASTNodeAccessImpl, IStatement
     /// <summary>部分索引的 WHERE 谓词（<c>WHERE ...</c>），未指定时为 null。</summary>
     public IExpression? Where { get; set; }
 
+    /// <summary>
+    /// SQL Server 索引 WITH 选项原始文本列表（#2020），如 <c>PAD_INDEX = OFF</c>、<c>FILLFACTOR = 80</c>。
+    /// 未指定时为 null。
+    /// </summary>
+    public List<string>? WithOptions { get; set; }
+
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -36,6 +42,8 @@ public class CreateIndex : ASTNodeAccessImpl, IStatement
         if (ColumnNames.Count > 0)
             sb.Append(" (").Append(string.Join(", ", ColumnNames)).Append(')');
         if (Where != null) sb.Append(" WHERE ").Append(Where);
+        if (WithOptions is { Count: > 0 })
+            sb.Append(" WITH (").Append(string.Join(", ", WithOptions)).Append(')');
         return sb.ToString();
     }
 }

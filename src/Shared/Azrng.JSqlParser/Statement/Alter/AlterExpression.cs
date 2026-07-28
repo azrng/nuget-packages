@@ -63,6 +63,12 @@ public class AlterExpression : ASTNodeAccessImpl
     /// <summary>ALTER/MODIFY/CHANGE/DROP/ADD 操作是否显式使用 COLUMN 关键字（ALTER COLUMN x / ALTER x）。</summary>
     public bool UseColumnKeyword { get; set; }
 
+    /// <summary>ADD COLUMN IF NOT EXISTS（#1875）。</summary>
+    public bool IfNotExists { get; set; }
+
+    /// <summary>DROP/MODIFY COLUMN IF EXISTS（#2112）。</summary>
+    public bool IfExists { get; set; }
+
     /// <summary>
     /// Column definitions for ADD COLUMN operations.
     /// </summary>
@@ -82,6 +88,9 @@ public class AlterExpression : ASTNodeAccessImpl
     /// <summary>Oracle/DB2 USING INDEX [name] 子句（约束级），commit c7b3bdbd。</summary>
     public string? UsingIndex { get; set; }
     public bool HasUsingIndex { get; set; }
+
+    /// <summary>Oracle USING INDEX TABLESPACE ts（#2039）。</summary>
+    public string? UsingIndexTablespace { get; set; }
 
     /// <summary>
     /// Parameters for SET operations.
@@ -196,6 +205,13 @@ public class AlterExpression : ASTNodeAccessImpl
 
         // 通用分支：ADD/DROP COLUMN/MODIFY/CHANGE/ALTER COLUMN/RENAME COLUMN/RENAME TABLE 等
         var sb2 = new System.Text.StringBuilder(Operation.ToString().ToUpperInvariant().Replace('_', ' '));
+        // ADD/DROP/MODIFY/CHANGE 显式 COLUMN 关键字 + IF [NOT] EXISTS（#1875/#2112）
+        if (Operation is AlterOperation.Add or AlterOperation.Drop or AlterOperation.Modify or AlterOperation.Change)
+        {
+            if (UseColumnKeyword) sb2.Append(" COLUMN");
+            if (IfNotExists) sb2.Append(" IF NOT EXISTS");
+            else if (IfExists) sb2.Append(" IF EXISTS");
+        }
         if (ColumnName != null) sb2.Append(' ').Append(ColumnName);
         if (DataType != null) sb2.Append(' ').Append(DataType);
         if (OptionalSpecifier != null) sb2.Append(' ').Append(OptionalSpecifier);
@@ -222,6 +238,7 @@ public class AlterExpression : ASTNodeAccessImpl
         {
             sb2.Append(" USING INDEX");
             if (UsingIndex != null) sb2.Append(' ').Append(UsingIndex);
+            if (UsingIndexTablespace != null) sb2.Append(" TABLESPACE ").Append(UsingIndexTablespace);
         }
         if (PartitionDefinitions != null)
         {

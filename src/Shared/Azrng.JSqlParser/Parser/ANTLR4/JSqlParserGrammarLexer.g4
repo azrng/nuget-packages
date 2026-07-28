@@ -169,7 +169,10 @@ S_JDBC_NAMED_PARAM
 QUOTED_IDENTIFIER
     : '"' (~["] | '""')* '"'
     | '`' (~[`] | '``')* '`'
-    | '[' [a-zA-Z_".`] (~[\]] | ']')* ']'
+    // SQL Server [name]：
+    // 1) 首字符必须是标识符起始（字母/_/"/`/.), 避免 [3]/[] 被当成标识符抢走数组维度 token
+    // 2) 内部 ] 只能以成对转义 ]] 出现；旧写法 (~[\]] | ']')* 会吞掉中间 ] 并把 [a] int,[b] 并成一个 token
+    | '[' [a-zA-Z_".`] ( ~[\]] | ']' ']' )* ']'
     ;
 
 // ══════════════════════════════════════════════
@@ -367,6 +370,11 @@ TIMESTAMP       : [Tt][Ii][Mm][Ee][Ss][Tt][Aa][Mm][Pp] ;
 TIMESTAMPTZ     : [Tt][Ii][Mm][Ee][Ss][Tt][Aa][Mm][Pp][Tt][Zz] ;
 TINYINT         : [Tt][Ii][Nn][Yy][Ii][Nn][Tt] ;
 UNSIGNED        : [Uu][Nn][Ss][Ii][Gg][Nn][Ee][Dd] ;
+ZEROFILL        : [Zz][Ee][Rr][Oo][Ff][Ii][Ll][Ll] ;
+XMLPARSE        : [Xx][Mm][Ll][Pp][Aa][Rr][Ss][Ee] ;
+XMLSERIALIZE    : [Xx][Mm][Ll][Ss][Ee][Rr][Ii][Aa][Ll][Ii][Zz][Ee] ;
+CONTENT         : [Cc][Oo][Nn][Tt][Ee][Nn][Tt] ;
+DOCUMENT        : [Dd][Oo][Cc][Uu][Mm][Ee][Nn][Tt] ;
 UUID            : [Uu][Uu][Ii][Dd] ;
 VARBINARY       : [Vv][Aa][Rr][Bb][Ii][Nn][Aa][Rr][Yy] ;
 VARCHAR         : [Vv][Aa][Rr][Cc][Hh][Aa][Rr] ;
@@ -416,6 +424,7 @@ BEFORE          : [Bb][Ee][Ff][Oo][Rr][Ee] ;
 BEGIN           : [Bb][Ee][Gg][Ii][Nn] ;
 BIT             : [Bb][Ii][Tt] ;
 BOTH            : [Bb][Oo][Tt][Hh] ;
+BULK            : [Bb][Uu][Ll][Kk] ;
 CACHE           : [Cc][Aa][Cc][Hh][Ee] ;
 CALL            : [Cc][Aa][Ll][Ll] ;
 CERTIFICATE     : [Cc][Ee][Rr][Tt][Ii][Ff][Ii][Cc][Aa][Tt][Ee] ;

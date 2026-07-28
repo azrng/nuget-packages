@@ -52,6 +52,7 @@ public partial class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
     public override object VisitStatement(JSqlParserGrammar.StatementContext context)
     {
         if (context.selectStatement() != null) return Visit(context.selectStatement());
+        if (context.insertBulkStatement() != null) return Visit(context.insertBulkStatement());
         if (context.insertStatement() != null) return Visit(context.insertStatement());
         if (context.multiInsertStatement() != null) return Visit(context.multiInsertStatement());
         if (context.updateStatement() != null) return Visit(context.updateStatement());
@@ -92,6 +93,7 @@ public partial class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.createPolicy() != null) return Visit(context.createPolicy());
         if (context.createSequence() != null) return Visit(context.createSequence());
         if (context.createSchema() != null) return Visit(context.createSchema());
+        if (context.createDatabaseStatement() != null) return Visit(context.createDatabaseStatement());
         if (context.refreshStatement() != null) return Visit(context.refreshStatement());
         if (context.upsertStatement() != null) return Visit(context.upsertStatement());
         if (context.beginTransactionStatement() != null) return Visit(context.beginTransactionStatement());

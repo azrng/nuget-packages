@@ -34,6 +34,11 @@ public class Constraint : ASTNodeAccessImpl
     public bool HasUsingIndex { get; set; }
 
     /// <summary>
+    /// Oracle USING INDEX TABLESPACE ts（#2039）。未指定时为 null。
+    /// </summary>
+    public string? UsingIndexTablespace { get; set; }
+
+    /// <summary>
     /// MySQL 索引尾选项原始字符串列表（USING BTREE/HASH、COMMENT '...'、KEY_BLOCK_SIZE n、VISIBLE/INVISIBLE 等），
     /// 对齐上游 Index.idxSpec / IndexOption。输出时空格连接追加到约束末尾。
     /// </summary>
@@ -49,9 +54,13 @@ public class Constraint : ASTNodeAccessImpl
     {
         var name = Name != null ? $"{Name} " : "";
         var constraintPrefix = string.IsNullOrEmpty(name) ? "" : $"CONSTRAINT {Name} ";
-        var usingIndex = HasUsingIndex
-            ? (UsingIndex != null ? $" USING INDEX {UsingIndex}" : " USING INDEX")
-            : "";
+        var usingIndex = "";
+        if (HasUsingIndex)
+        {
+            usingIndex = UsingIndex != null ? $" USING INDEX {UsingIndex}" : " USING INDEX";
+            if (UsingIndexTablespace != null)
+                usingIndex += $" TABLESPACE {UsingIndexTablespace}";
+        }
         // MySQL 索引尾选项（USING BTREE/HASH、COMMENT 等），空格连接追加
         var indexOpts = IndexOptions is { Count: > 0 } ? " " + string.Join(" ", IndexOptions) : "";
         // SQL Server 聚集属性（CLUSTERED/NONCLUSTERED），紧跟在 PRIMARY KEY / UNIQUE 之后

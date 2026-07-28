@@ -47,31 +47,32 @@
 ### ⭐ 值得修（约 28 条，建议优先）
 
 **① DDL（11）** —— 跨方言常见 DDL/索引/约束，集中清债收益最大：
-- #2070 CREATE DATABASE、#2065 DROP 多表 IF EXISTS、#2112 ALTER MODIFY/DROP IF EXISTS、#1875 ADD COLUMN IF NOT EXISTS、#599 MODIFY NULL/NOT NULL —— 标准常见 DDL
-- #1668 MySQL 分区 create/alter、#1927 MySQL 函数索引、#1060 索引类型错误、#652 多参数索引 —— 正确性
-- #2020 SQL Server `WITH(index options)`、#2039 Oracle ADD CONSTRAINT tablespace —— 主流方言索引/约束选项
+- ✅ T123 已清：#2070 CREATE DATABASE、#2065 DROP 多表 IF EXISTS、#2112 ALTER MODIFY/DROP IF EXISTS、#1875 ADD COLUMN IF NOT EXISTS、#599 MODIFY NULL/NOT NULL
+- ✅ T125 已清：#1668 MySQL 分区 create/alter
+- #652 Spanner NULL_FILTERED（小众暂缓）
+- ✅ T124 已清：#2020 SQL Server WITH 索引选项 + ON PRIMARY（T125 补完）、#2039 Oracle TABLESPACE；#1927/#1060 探针已支持
 - ✅ T115 已清：#1570/#1893/#823/#538/#1295（MySQL 索引名/USING/COMMENT/unique index 同族）
 
-**③ 词法（2）**：#2435 MySQL `0x` 十六进制字面量、#2359 LIMIT 含子查询（正确性）
+**③ 词法（2）**：✅ T123 核实已支持：#2435 MySQL `0x` 十六进制字面量、#2359 LIMIT 含子查询
 
-**② 过程化（1）**：#1994 解析 FUNCTION 后无法续解析（语句边界，影响多语句批解析，核心）
+**② 过程化**：✅ T126 已清 #1978 OR ALTER、#268 OUTPUT、DROP FUNCTION（#1994 简单批解析已通）；完整 PL/SQL 块仍暂缓
 
-**⑤ Oracle（1）**：#672 外连接 `(+)`（大量老 Oracle 库在用）
+**⑤ Oracle**：✅ #672 / #2039 / #2146 / #1564；#1825 JSON_VALUE 已支持
 
-**⑥ SQL Server（2）**：#2033 BULK INSERT、#386 `FOR XML PATH`/STUFF（ETL/拼串常见）
+**⑥ SQL Server**：✅ #2033 / #386 / #268 / IDENTITY / DEFAULT FOR
 
-**⑨ AST 正确性** —— T115 已核实 5 条全部不复现/不适用（详见 ⑨ 节状态块），无需修复
+**⑨ AST 正确性** —— T115 已核实全部不复现/不适用
 
-**⑩ 工程（1）**：#467 marker 接口（与当前「I 前缀」治理同源）
+**⑩ 工程**：#467 marker 接口（非解析，暂缓）
 
-### 🕐 暂缓（约 35 条，按需推进）
+### 🕐 暂缓（小众 / 高成本 / 按需）
 
-- **② 过程化（8）**：#2358/#1946 PG DO 块、#1786 PL/SQL DECLARE、#715 T-SQL TVF、#2007 Oracle 存储过程、#1978 ALTER FUNCTION/PROCEDURE、#268 OUTPUT 变量、#2192 占位符 —— 块语法/控制流，成本高、解析器定位外，单独排期
-- **③ ClickHouse 词法（3）**：#2442 `.N`、#2441 `Nullable(Decimal)`、#2436 `?:` —— 一起做（词法歧义）
-- **⑤ Oracle XML/JSON（3）**：#2146 xmlparse、#1825 JSON_VALUE、#1564 XMLSERIALIZE
-- **⑥（2）**：#1563 整份 sakila 太泛需逐项拆、#397 `%%` FTS 非标准写法
-- **①（3）**：#2353 ClickHouse `CREATE TABLE ORDER BY`、#1735 Redshift BACKUP NO、#1567 SQL Server typed XML（bracket/schema 已支持，typed xml 小众）
-- **⑧ 跨方言/有支持基础（~11）**：#2433 Hive LATERAL VIEW 正确性、#2429 Snowflake `IDENTIFIER`、#2423 DuckDB MAP/PIVOT、#2421 BigQuery MERGE、#2350 MATCH_RECOGNIZE（巨型）、#2119/#1846 Hive INSERT OVERWRITE、#1620 Spark `[shuffle]`、#1139 ODBC `{fn ...}`、#891 Teradata UPDATE FROM、#673 DAY TO SECOND interval
+- **② 过程化块**：#2358/#1946 DO 块、#1786 PL/SQL DECLARE、#715 TVF、#2007 Oracle 存储过程全文、#2192 占位符
+- **③ ClickHouse 词法（3）**：#2442 `.N`、#2441 `Nullable(Decimal)`、#2436 `?:`
+- **⑥**：#1563 sakila 整包、#397 `%%` 非标准 FTS
+- **①**：#2353 ClickHouse ORDER BY、#1735 Redshift BACKUP NO、#1567 typed XML、#652 Spanner
+- **⑧ 小众**：#2429 Snowflake IDENTIFIER（函数形式已可解析）、#2423 DuckDB MAP、#2421 BigQuery MERGE BY TARGET、#2350 MATCH_RECOGNIZE、#1620 Spark shuffle、#891 Teradata UPDATE FROM
+- ✅ 已从暂缓转出：#1139 ODBC、#1846/#2119 OVERWRITE、#2146/#1564 XML、#673、#2433
 
 ### ❌ 不修（8 条，拒绝并说明）
 
@@ -83,6 +84,10 @@
 
 - ✅ 已完成：④ 全 12 条；① #1589（T114）/ #1570 #538 #1893 #823 #1295（T115）；③ #1169/#1314；⑨ AST 5 条（T115 核实不复现/不适用）
 - ✅ T114 完成：#161 OPTION hint、#911 `@table`、#854 `INTO @var`、#2298 CAST CHARACTER SET、#2427+#2006 `_utf8mb4`、#2428 PROCEDURE ANALYSE（拒绝）
+- ✅ T123 完成：① #2070/#2065/#1875/#2112/#599（常见 DDL 真修）+ ③ #2435/#2359 与 ⑤ #672 探针转绿
+- ✅ T124 完成：⑥ #2033 INSERT BULK、⑤ #2039 TABLESPACE、① #2020 CREATE INDEX WITH；顺带 MySQL 前缀索引 + `[quoted]` 词法修复；#1927/#1060/#386 探针转绿
+- ✅ T125 完成：① #1668 分区、⑧ #673 DAY TO SECOND、#2020 ON PRIMARY 补完、#2433 LATERAL VIEW 转绿
+- ✅ T126 清仓：#1139 ODBC、unsigned/IDENTITY、#268 OUTPUT、#1978 OR ALTER、DROP FUNCTION、DEFAULT FOR、#1846 OVERWRITE、#2146/#1564 XML
 
 ---
 
@@ -92,32 +97,32 @@
 
 > 跨方言，最大批；模式重复，适合集中清。子主题：(a) 约束/索引 #1570 #1893 #1589 #823 #538 #1060 #652 #1927 #1295；(b) ALTER IF 系列 #2112 #1875 #599 #2039；(c) 分区/视图/库 #1668 #1735 #2070 #2353；(d) 整体失败 #1567 #2020
 >
-> **Azrng 移植版验证状态**（2026-07-19，T114 + T115 探针 + round-trip）：
-> - 🔧 已修复：#1589（T114，PRIMARY KEY NONCLUSTERED）、#1570（T115，CONSTRAINT 双名场景约束名丢失）、#538（T115，UNIQUE 后直接跟索引名 grammar 不支持）
-> - ✅ 已支持（移植版不存在上游缺陷）：#1893（UNIQUE INDEX + USING + COMMENT）、#823（UNIQUE INDEX in CREATE TABLE 主路径；原始 SQL 含 bigint unsigned 数据类型修饰符属独立问题）、#1295（ALTER ADD INDEX）
-> - ⛔ 复现且未修复：#1060 #652 #1927（函数索引/多参数索引，单独排期）
+> **Azrng 移植版验证状态**（2026-07-28，T114 + T115 + T123 + T124 探针 + round-trip）：
+> - 🔧 已修复：#1589（T114）、#1570/#538（T115）、#2070/#2065/#1875/#2112/#599（T123）、#2020/#2039（T124）、#1668（T125 分区）
+> - ✅ 已支持：#1893、#823、#1295、#1927、#1060（ANTLR 不复现）
+> - 🕐 暂缓：#652 Spanner NULL_FILTERED
 
 | # | 类型 | 标题 | 要点 |
 |---:|:--:|---|---|
 | [#2353](https://github.com/JSQLParser/JSqlParser/issues/2353) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : Clickhouse : ORDER BY after CREATE TABLE unsupported | CREATE TABLE ORDER BY (ClickHouse) |
-| [#2112](https://github.com/JSQLParser/JSqlParser/issues/2112) | [B] | [BUG] `ALTER TABLE ... MODIFY/DROP` should support the `IF EXIST` option | ALTER TABLE MODIFY/DROP 的 IF EXIST 选项 |
-| [#2070](https://github.com/JSQLParser/JSqlParser/issues/2070) | [B] | How to parse CREATE DATABASE DATABASE_NAME  ? | CREATE DATABASE 语句 |
-| [#2065](https://github.com/JSQLParser/JSqlParser/issues/2065) | [F] | [FEATURE] Dropping multiple tables IF EXISTS is not supported | DROP 多表 IF EXISTS (MySQL) [FEATURE] |
-| [#2039](https://github.com/JSQLParser/JSqlParser/issues/2039) | [B] | ORACLE: ALTER TABLE ... ADD CONSTRAINT ... with tablespace option unsupported | ALTER ADD CONSTRAINT 带 tablespace (Oracle) |
-| [#2020](https://github.com/JSQLParser/JSqlParser/issues/2020) | [B] | [BUG] SQLServer  Validation fail  jsqlparser Version :4.9 | SQLServer 校验失败 |
-| [#1927](https://github.com/JSQLParser/JSqlParser/issues/1927) | [B] | [BUG] JSQLParser 4.7 : MySQL 8 : Cannot parse functional indices in table creation DDL | 建表 DDL 函数索引 (MySQL 8) |
+| [#2112](https://github.com/JSQLParser/JSqlParser/issues/2112) | [B] | [BUG] `ALTER TABLE ... MODIFY/DROP` should support the `IF EXIST` option | ALTER MODIFY/DROP IF EXISTS（🔧 T123 已修复） |
+| [#2070](https://github.com/JSQLParser/JSqlParser/issues/2070) | [B] | How to parse CREATE DATABASE DATABASE_NAME  ? | CREATE DATABASE（🔧 T123 已修复） |
+| [#2065](https://github.com/JSQLParser/JSqlParser/issues/2065) | [F] | [FEATURE] Dropping multiple tables IF EXISTS is not supported | DROP 多表 IF EXISTS（🔧 T123 已修复） |
+| [#2039](https://github.com/JSQLParser/JSqlParser/issues/2039) | [B] | ORACLE: ALTER TABLE ... ADD CONSTRAINT ... with tablespace option unsupported | ALTER ADD CONSTRAINT TABLESPACE（🔧 T124 已修复） |
+| [#2020](https://github.com/JSQLParser/JSqlParser/issues/2020) | [B] | [BUG] SQLServer  Validation fail  jsqlparser Version :4.9 | CREATE INDEX WITH 选项（🔧 T124 已修复主路径） |
+| [#1927](https://github.com/JSQLParser/JSqlParser/issues/1927) | [B] | [BUG] JSQLParser 4.7 : MySQL 8 : Cannot parse functional indices in table creation DDL | 建表 DDL 函数索引（✅ T124 核实已支持） |
 | [#1893](https://github.com/JSQLParser/JSqlParser/issues/1893) | [B] | Caused by: net.sf.jsqlparser.parser.ParseException: Encountered unexpected token: "UNIQUE" "UNIQUE" | UNIQUE token |
-| [#1875](https://github.com/JSQLParser/JSqlParser/issues/1875) | [B] | [BUG] JSQLParser 4.7: `ADD COLUMN IF NOT EXISTS` not supported | ADD COLUMN IF NOT EXISTS (PG) |
+| [#1875](https://github.com/JSQLParser/JSqlParser/issues/1875) | [B] | [BUG] JSQLParser 4.7: `ADD COLUMN IF NOT EXISTS` not supported | ADD COLUMN IF NOT EXISTS（🔧 T123 已修复） |
 | [#1735](https://github.com/JSQLParser/JSqlParser/issues/1735) | [B] | [BUG] JSQLParser 4.6 : Redshift : CREATE MATERIALIZED VIEW with BACKUP NO is not supported | CREATE MATERIALIZED VIEW BACKUP NO (Redshift) |
-| [#1668](https://github.com/JSQLParser/JSqlParser/issues/1668) | [B] | parser sql of MySQL create or alter table with partition occur  exception | 分区表 create/alter (MySQL) |
+| [#1668](https://github.com/JSQLParser/JSqlParser/issues/1668) | [B] | parser sql of MySQL create or alter table with partition occur  exception | 分区表 create/alter（🔧 T125 已修复） |
 | [#1589](https://github.com/JSQLParser/JSqlParser/issues/1589) | [B] | Error in parsing create statement: Encountered unexpected token: "KEY" "KEY" | KEY token |
 | [#1570](https://github.com/JSQLParser/JSqlParser/issues/1570) | [B] | MySQL (optional) Index Names | CONSTRAINT UNIQUE KEY 索引名 (MySQL) |
 | [#1567](https://github.com/JSQLParser/JSqlParser/issues/1567) | [B] | Failed to parse SQL Server ddl | SQL Server DDL 解析失败 |
 | [#1295](https://github.com/JSQLParser/JSqlParser/issues/1295) | [B] | Failed to parse MySQL statement and add common index statement with alter | ALTER ADD INDEX (MySQL) |
-| [#1060](https://github.com/JSQLParser/JSqlParser/issues/1060) | [B] | Incorrect index type for indices parsed from create table statement | 索引类型解析错误 |
+| [#1060](https://github.com/JSQLParser/JSqlParser/issues/1060) | [B] | Incorrect index type for indices parsed from create table statement | 索引类型（✅ T124 核实 ANTLR 不复现） |
 | [#823](https://github.com/JSQLParser/JSqlParser/issues/823) | [B] | Failed to parse when creating unique index in creation DDL | 建表 DDL 内 unique index |
-| [#652](https://github.com/JSQLParser/JSqlParser/issues/652) | [B] | Indices with multiple parameters are not parsed correctly | 多参数索引解析错误 |
-| [#599](https://github.com/JSQLParser/JSqlParser/issues/599) | [B] | Modify column with "NULL" or "NOT NULL" is not getting parsed. | MODIFY column NULL/NOT NULL |
+| [#652](https://github.com/JSQLParser/JSqlParser/issues/652) | [B] | Indices with multiple parameters are not parsed correctly | Spanner NULL_FILTERED（🕐 暂缓）；MySQL 前缀 col(n) 已顺带支持 |
+| [#599](https://github.com/JSQLParser/JSqlParser/issues/599) | [B] | Modify column with "NULL" or "NOT NULL" is not getting parsed. | MODIFY column NULL/NOT NULL（🔧 T123 已修复） |
 | [#538](https://github.com/JSQLParser/JSqlParser/issues/538) | [B] | Format create table sql error when encounter unique key with comment | unique key 带 comment |
 
 ### ② 过程化 SQL 与例程：PROCEDURE / FUNCTION / PL-SQL / DO 块  [9 条]
@@ -140,17 +145,18 @@
 
 > 多为词法规则补丁，独立、风险低，适合先做。ClickHouse #2442/.N 与 #2436/?: 是词法歧义，可一起做
 >
-> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
-> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#1169（方向不结构化为字段，整体透传原文）/ #1314（仅 INSERT SET 主体，AS 行别名不修）
-> - ⛔ 复现且未修复：#2435 #2359（后续批次评估）
+> **Azrng 移植版验证状态**（2026-07-28，T114 + T123 探针 + round-trip）：
+> - 🔧 已修复：#1169（方向不结构化为字段，整体透传原文）/ #1314（仅 INSERT SET 主体，AS 行别名不修）
+> - ✅ T123 核实已支持：#2435（S_HEX 早支持 0x）/ #2359（limitClause 接受 expression/subSelect）
+> - 🕐 暂缓：#2442 #2441 #2436（ClickHouse 词法）
 
 | # | 类型 | 标题 | 要点 | Azrng 状态 |
 |---:|:--:|---|---|---|
 | [#2442](https://github.com/JSQLParser/JSqlParser/issues/2442) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Tuple positional access via .N not supported in SELECT | .N tuple 位置访问，.2 被当浮点 (ClickHouse) | — |
 | [#2441](https://github.com/JSQLParser/JSqlParser/issues/2441) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : Parametric type Nullable(Decimal(p, s)) not supported as CAST target | Nullable(Decimal(p,s)) 参数化类型作 CAST 目标 (ClickHouse) | — |
 | [#2436](https://github.com/JSQLParser/JSqlParser/issues/2436) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : ClickHouse : C-style ternary operator (? :) not supported in SELECT | C 风格三元运算符 ?: (ClickHouse) | — |
-| [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) | ⛔ 复现（探针记录） |
-| [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 | ⛔ 复现（探针记录） |
+| [#2435](https://github.com/JSQLParser/JSqlParser/issues/2435) | [B] | [BUG] JSQLParser 5.4-SNAPSHOT : MySQL : 0x hexadecimal literal (0xFF) not supported as select item | 0x 十六进制字面量作 select 项 (MySQL) | ✅ 已支持（T123 核实） |
+| [#2359](https://github.com/JSQLParser/JSqlParser/issues/2359) | [B] | [BUG] JSQLParser Version 5.3: LIMIT with subquery fails: Was expecting: "BY" | LIMIT 含子查询解析失败 | ✅ 已支持（T123 核实） |
 | [#1314](https://github.com/JSQLParser/JSqlParser/issues/1314) | [B] | SET clause with alias not parsed | SET 子句带别名未解析 | 🔧 部分修复（仅 INSERT INTO t SET a=1,b=2 主体；AS new(m,n,p) 行别名极冷门不修） |
 | [#1169](https://github.com/JSQLParser/JSqlParser/issues/1169) | [B] | net.sf.jsqlparser.JSQLParserException: Encountered unexpected token: "desc" "DESC" | desc / DESC token 意外 | 🔧 已修复（groupByColumn 子规则 + GroupByColumnReference 模型） |
 
@@ -190,19 +196,20 @@
 | [#2146](https://github.com/JSQLParser/JSqlParser/issues/2146) | [B] | Oracle `xmlparse(content  ...)` not supported | xmlparse(content ...) (Oracle) |
 | [#1825](https://github.com/JSQLParser/JSqlParser/issues/1825) | [F] | [FEATURE] missing JSON_VALUE function for Oracle | JSON_VALUE 函数 (Oracle) [FEATURE] |
 | [#1564](https://github.com/JSQLParser/JSqlParser/issues/1564) | [B] | Oracle SQL XMLSERIALIZE syntax not supported | XMLSERIALIZE 语法 (Oracle) |
-| [#672](https://github.com/JSQLParser/JSqlParser/issues/672) | [B] | parse error between with oracle outer join(+) | 外连接 (+) 语法 |
+| [#672](https://github.com/JSQLParser/JSqlParser/issues/672) | [B] | parse error between with oracle outer join(+) | 外连接 (+)（✅ T123 核实已支持） |
 
 ### ⑥ SQL Server / T-SQL 专项  [6 条]
 
 > 含全文搜索、FOR XML、hints 等独有语法
 >
-> **Azrng 移植版验证状态**（2026-07-19，T114 探针 + round-trip）：
-> - 🔧 本次已修复（探针转绿 + round-trip 通过）：#911 #161
-> - ⛔ 复现且未修复：#2033 #397（后续批次评估）
+> **Azrng 移植版验证状态**（2026-07-28，T114 + T124 探针 + round-trip）：
+> - 🔧 已修复：#911 #161（T114）；#2033 INSERT BULK（T124）
+> - ✅ 已支持：#386 FOR XML PATH
+> - ⛔ 复现且未修复：#397 `%%` FTS（非标准，按需）
 
 | # | 类型 | 标题 | 要点 | Azrng 状态 |
 |---:|:--:|---|---|---|
-| [#2033](https://github.com/JSQLParser/JSqlParser/issues/2033) | [B] | [BUG] JSQLParser Version : 4.7 : sqlserver insert bulk  sql failed! | insert bulk (SQL Server) | ⛔ 复现（探针记录） |
+| [#2033](https://github.com/JSQLParser/JSqlParser/issues/2033) | [B] | [BUG] JSQLParser Version : 4.7 : sqlserver insert bulk  sql failed! | insert bulk (SQL Server) | 🔧 T124 已修复 |
 | [#1563](https://github.com/JSQLParser/JSqlParser/issues/1563) | [B] | TSQL/MS SQL Server statements/syntax not supported. | TSQL 语法不支持 | — |
 | [#911](https://github.com/JSQLParser/JSqlParser/issues/911) | [B] | SQL Server table variables not supported \| SELECT columnName FROM @table | 表变量 @table | 🔧 已修复（table 规则加 SINGLE_AT_IDENTIFIER/S_AT_IDENTIFIER 分支，@name 整段保留到 Table.Name） |
 | [#397](https://github.com/JSQLParser/JSqlParser/issues/397) | [B] | SqlServer full text search %% | 全文搜索 %% | ⛔ 复现（探针记录） |
@@ -232,7 +239,7 @@
 
 | # | 类型 | 标题 | 要点 |
 |---:|:--:|---|---|
-| [#2433](https://github.com/JSQLParser/JSqlParser/issues/2433) | [B] | [BUG] JSQLParser Version : 5.3 : LATERAL VIEW with three or more column aliases silently mis-parses extras as cross-join tables | LATERAL VIEW 三列及以上别名误解析 (Hive) |
+| [#2433](https://github.com/JSQLParser/JSqlParser/issues/2433) | [B] | [BUG] JSQLParser Version : 5.3 : LATERAL VIEW with three or more column aliases silently mis-parses extras as cross-join tables | LATERAL VIEW 多别名（✅ T125 核实已支持） |
 | [#2429](https://github.com/JSQLParser/JSqlParser/issues/2429) | [F] | [FEATURE] missing feature description, IDENTIFIER from Snowflake | IDENTIFIER() (Snowflake) [FEATURE] |
 | [#2423](https://github.com/JSQLParser/JSqlParser/issues/2423) | [B] | [BUG] JSQLParser Version : RDBMS : failing feature description | MAP / PIVOT (DuckDB) |
 | [#2421](https://github.com/JSQLParser/JSqlParser/issues/2421) | [B] | [BUG] BigQuery statement MERGE ... WHEN NOT MATCHED BY TARGET | MERGE ... WHEN NOT MATCHED BY TARGET (BigQuery) |
@@ -246,7 +253,7 @@
 | [#1161](https://github.com/JSQLParser/JSqlParser/issues/1161) | [B] | support for informix db fnc | CURRENT YEAR TO DAY 等函数 (Informix) |
 | [#1139](https://github.com/JSQLParser/JSqlParser/issues/1139) | [B] | support for (date({fn timestampadd(SQL_TSI_YEAR, 2, date("travel_date"))})) | {fn timestampadd(...)} ODBC 转义 |
 | [#891](https://github.com/JSQLParser/JSqlParser/issues/891) | [B] | JSqlParser failed to parse Teradata "UPDATE" statement with "FROM" clause | UPDATE ... FROM (Teradata) |
-| [#673](https://github.com/JSQLParser/JSqlParser/issues/673) | [B] | `DAY TO SECOND` is not supported | DAY TO SECOND interval |
+| [#673](https://github.com/JSQLParser/JSqlParser/issues/673) | [B] | `DAY TO SECOND` is not supported | DAY TO SECOND（🔧 T125 已修复） |
 | [#297](https://github.com/JSQLParser/JSqlParser/issues/297) | [B] | JSQLParser not able to parse the informatica sql query. | { } 转义语法 (Informatica) |
 | [#271](https://github.com/JSQLParser/JSqlParser/issues/271) | [B] | Parse errors for ALTER TABLE with Informix syntax | ALTER TABLE Informix 语法 |
 

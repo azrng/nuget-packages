@@ -48,6 +48,7 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
     public object? Visit<S>(DoubleValue doubleValue, S context) { _onVisit(doubleValue); return default; }
     public object? Visit<S>(StringValue stringValue, S context) { _onVisit(stringValue); return default; }
     public object? Visit<S>(HexValue hexValue, S context) { _onVisit(hexValue); return default; }
+    public object? Visit<S>(PassthroughExpression passthroughExpression, S context) { _onVisit(passthroughExpression); return default; }
 
     // Parameters（叶子）
     public object? Visit<S>(JdbcParameter jdbcParameter, S context) { _onVisit(jdbcParameter); return default; }

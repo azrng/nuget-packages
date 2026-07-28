@@ -66,6 +66,16 @@ public static class NativeSqlParserService
 
     private static void CollectPlainSelect(PlainSelect select, ParseContext context, bool includeColumns)
     {
+        // CTE WITH 子查询中的 WHERE（含 @named 参数）也需收集，否则 WithTableWhere 类用例 WhereList 恒为空
+        if (select.WithItemsList != null)
+        {
+            foreach (var withItem in select.WithItemsList)
+            {
+                if (withItem.Select != null)
+                    CollectSelect(withItem.Select, context, includeColumns: false);
+            }
+        }
+
         CollectFromItem(select.FromItem, context);
         if (select.Joins != null)
         {

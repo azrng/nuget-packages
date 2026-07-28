@@ -133,6 +133,7 @@ internal sealed class StatementDescendantsWalker : StatementVisitorAdapter<objec
     public override object? Visit<S>(Create.Policy.CreatePolicy createPolicy, S context) { _onVisit(createPolicy); return default; }
     public override object? Visit<S>(Create.Sequence.CreateSequence createSequence, S context) { _onVisit(createSequence); return default; }
     public override object? Visit<S>(Create.Schema.CreateSchema createSchema, S context) { _onVisit(createSchema); return default; }
+    public override object? Visit<S>(Create.Database.CreateDatabase createDatabase, S context) { _onVisit(createDatabase); return default; }
     public override object? Visit<S>(Refresh.RefreshMaterializedViewStatement refreshMaterializedView, S context) { _onVisit(refreshMaterializedView); return default; }
     public override object? Visit<S>(Insert.UpsertStatement upsert, S context) { _onVisit(upsert); return default; }
     public override object? Visit<S>(BeginTransactionStatement beginTransaction, S context) { _onVisit(beginTransaction); return default; }

@@ -20,6 +20,7 @@ public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
     public virtual T Visit<S>(DoubleValue doubleValue, S context) => default!;
     public virtual T Visit<S>(StringValue stringValue, S context) => default!;
     public virtual T Visit<S>(HexValue hexValue, S context) => default!;
+    public virtual T Visit<S>(PassthroughExpression passthroughExpression, S context) => default!;
 
     public virtual T Visit<S>(JdbcParameter jdbcParameter, S context) => default!;
     public virtual T Visit<S>(JdbcNamedParameter jdbcNamedParameter, S context) => default!;

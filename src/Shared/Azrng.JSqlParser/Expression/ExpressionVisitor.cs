@@ -18,6 +18,7 @@ public interface IExpressionVisitor<T>
     T Visit<S>(DoubleValue doubleValue, S context);
     T Visit<S>(StringValue stringValue, S context);
     T Visit<S>(HexValue hexValue, S context);
+    T Visit<S>(PassthroughExpression passthroughExpression, S context);
 
     // Parameters
     T Visit<S>(JdbcParameter jdbcParameter, S context);
@@ -141,6 +142,7 @@ public interface IExpressionVisitor<T>
     void Visit(DoubleValue doubleValue) => Visit<object?>(doubleValue, default);
     void Visit(StringValue stringValue) => Visit<object?>(stringValue, default);
     void Visit(HexValue hexValue) => Visit<object?>(hexValue, default);
+    void Visit(PassthroughExpression passthroughExpression) => Visit<object?>(passthroughExpression, default);
     void Visit(JdbcParameter jdbcParameter) => Visit<object?>(jdbcParameter, default);
     void Visit(JdbcNamedParameter jdbcNamedParameter) => Visit<object?>(jdbcNamedParameter, default);
     void Visit(Parenthesis parenthesis) => Visit<object?>(parenthesis, default);

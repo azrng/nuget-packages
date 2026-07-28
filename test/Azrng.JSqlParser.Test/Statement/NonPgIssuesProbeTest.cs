@@ -83,16 +83,46 @@ ON tt.key = st.key
 WHEN NOT MATCHED BY TARGET THEN INSERT (key, field) VALUES (st.key, st.field)
 WHEN NOT MATCHED BY SOURCE THEN DELETE");
 
-    // ===== 本批次暂不修，保留探针记录现状（Skip） =====
+    // ===== T123 核实：词法/LIMIT 移植版已支持；DDL 本批修复 =====
 
-    // ③ #2435 MySQL 0x 十六进制字面量
-    [Fact(Skip = "本批次暂不修")]
+    // ③ #2435 MySQL 0x 十六进制字面量 —— 探针核实 S_HEX 早支持，转绿
+    [Fact]
     public void Issue2435_MySqlHexLiteral() => Probe("SELECT 0xFF FROM t");
 
-    // ③ #2359 LIMIT 子查询
-    [Fact(Skip = "本批次暂不修")]
+    // ③ #2359 LIMIT 子查询 —— 探针核实 limitClause 接受 expression/subSelect，转绿
+    [Fact]
     public void Issue2359_LimitSubquery() =>
         Probe("SELECT * FROM t LIMIT (SELECT 10)");
+
+    // ① #2070 CREATE DATABASE
+    [Fact]
+    public void Issue2070_CreateDatabase() => Probe("CREATE DATABASE USERS");
+
+    // ① #2065 DROP 多表 IF EXISTS
+    [Fact]
+    public void Issue2065_DropMultipleTablesIfExists() =>
+        Probe("DROP TABLE IF EXISTS t1, t2, t3");
+
+    // ① #1875 ADD COLUMN IF NOT EXISTS
+    [Fact]
+    public void Issue1875_AddColumnIfNotExists() =>
+        Probe("ALTER TABLE t ADD COLUMN IF NOT EXISTS c INT");
+
+    // ① #2112 ALTER DROP/MODIFY IF EXISTS
+    [Fact]
+    public void Issue2112_DropColumnIfExists() =>
+        Probe("ALTER TABLE t DROP COLUMN IF EXISTS c");
+
+    [Fact]
+    public void Issue2112_ModifyColumnIfExists() =>
+        Probe("ALTER TABLE t MODIFY COLUMN IF EXISTS c INT");
+
+    // ① #599 MODIFY NULL/NOT NULL
+    [Fact]
+    public void Issue599_ModifyNotNull() => Probe("ALTER TABLE t MODIFY c NOT NULL");
+
+    [Fact]
+    public void Issue599_ModifyNull() => Probe("ALTER TABLE t MODIFY c NULL");
 
     // ===== T115（① DDL 索引族）已核实 + 修复：5 条全部转绿 =====
 
@@ -101,8 +131,8 @@ WHEN NOT MATCHED BY SOURCE THEN DELETE");
     public void Issue1295_MysqlAlterAddIndex() =>
         Probe("ALTER TABLE table_name8 ADD INDEX (column_1)");
 
-    // ① #1927 建表 DDL 函数索引 —— 本批次仍不做（函数索引改 grammar 影响面大，单独排期）
-    [Fact(Skip = "本批次不做（函数索引）")]
+    // ① #1927 建表 DDL 函数索引 —— T124 探针核实已支持（indexColumn 表达式分支）
+    [Fact]
     public void Issue1927_MysqlFunctionalIndex() =>
         Probe("CREATE TABLE t (id INT, KEY idx_lower ((LOWER(name))))");
 
@@ -157,20 +187,30 @@ WHEN NOT MATCHED BY SOURCE THEN DELETE");
     public void Issue397_SqlServerFullTextPctPct() =>
         Probe("SELECT * FROM vwdatasearch WHERE ComId = ? AND (Title1 %% ?)");
 
-    // ⑥ #2033 insert bulk
-    [Fact(Skip = "本批次暂不修")]
+    // ⑥ #2033 insert bulk —— T124 修复
+    [Fact]
     public void Issue2033_SqlServerInsertBulk() =>
         Probe("INSERT BULK tpch.dbo.order_line([ol_o_id] int,[ol_d_id] tinyint) WITH(ROWS_PER_BATCH=500000)");
 
-    // ⑤ #672 外连接 (+)
-    [Fact(Skip = "本批次暂不修")]
+    // ⑤ #672 外连接 (+) —— 探针核实移植版已支持（postfixExpr 不吞 (+) 场景已覆盖），转绿
+    [Fact]
     public void Issue672_OracleOuterJoin() =>
         Probe("SELECT * FROM table1 t1, table2 t2 WHERE t1.col1 BETWEEN t2.col2(+) AND t2.col3(+)");
 
-    // ⑤ #2039 ALTER ADD CONSTRAINT ... USING INDEX TABLESPACE
-    [Fact(Skip = "本批次暂不修")]
+    // ⑤ #2039 ALTER ADD CONSTRAINT ... USING INDEX TABLESPACE —— T124 修复
+    [Fact]
     public void Issue2039_OracleAddConstraintTablespace() =>
         Probe("ALTER TABLE bfmcs.your_table ADD CONSTRAINT your_table_pk PRIMARY KEY (ID) USING INDEX TABLESPACE your_tablespace");
+
+    // ① #2020 CREATE INDEX WITH 选项 —— T124 修复
+    [Fact]
+    public void Issue2020_CreateIndexWithOptions() =>
+        Probe("CREATE INDEX IX ON t (c) WITH (PAD_INDEX = OFF, FILLFACTOR = 80)");
+
+    // MySQL 前缀索引 col(n)（高价值顺带；#652 Spanner NULL_FILTERED 仍暂缓）
+    [Fact]
+    public void MysqlPrefixIndex_ColLength() =>
+        Probe("CREATE TABLE t (id INT, KEY idx (id(10), name(5)))");
 
     // ===== T115（⑨ AST 正确性）已核实：移植版不复现/不适用，探针转绿 + 结构断言 =====
 
@@ -251,8 +291,84 @@ WHEN NOT MATCHED BY SOURCE THEN DELETE");
         SqlParser.Parse(output);
     }
 
-    // ⑧ #2433 LATERAL VIEW 三列及以上别名
-    [Fact(Skip = "本批次暂不修")]
+    // ⑧ #2433 LATERAL VIEW 三列及以上别名 —— T125 核实已支持（grammar 早为 (COMMA identifier)*）
+    [Fact]
     public void Issue2433_HiveLateralViewManyAliases() =>
         Probe("SELECT a FROM t LATERAL VIEW json_tuple(j, 'a', 'b', 'c') x AS c1, c2, c3");
+
+    // ① #1668 MySQL 分区 —— T125 修复
+    [Fact]
+    public void Issue1668_CreateTablePartitionByRange() =>
+        Probe("CREATE TABLE t1 (year_col INT) PARTITION BY RANGE (year_col) (PARTITION p0 VALUES LESS THAN (1991), PARTITION p1 VALUES LESS THAN (1995))");
+
+    [Fact]
+    public void Issue1668_AlterAddPartition() =>
+        Probe("ALTER TABLE t1 ADD PARTITION (PARTITION p3 VALUES LESS THAN (2002), PARTITION p4 VALUES LESS THAN (2010))");
+
+    // ⑧ #673 DAY TO SECOND —— T125 修复
+    [Fact]
+    public void Issue673_IntervalDayToSecond() =>
+        Probe("SELECT INTERVAL '1' DAY TO SECOND FROM dual");
+
+    [Fact]
+    public void Issue673_ExtractDayToSecond() =>
+        Probe("SELECT EXTRACT(DAY FROM (SYSDATE - to_date('20180101', 'YYYYMMDD')) DAY TO SECOND) FROM dual");
+
+    // ===== T126 高价值清仓探针 =====
+
+    // ⑧ #1139 ODBC
+    [Fact]
+    public void Issue1139_OdbcFnEscape() =>
+        Probe("SELECT {fn timestampadd(SQL_TSI_YEAR, 2, travel_date)} FROM t");
+
+    [Fact]
+    public void Issue1139_OdbcDateLiteral() =>
+        Probe("SELECT d FROM t WHERE d = {d '2020-01-01'}");
+
+    // MySQL unsigned / SQL Server IDENTITY
+    [Fact]
+    public void MysqlUnsignedTypeModifier() =>
+        Probe("CREATE TABLE t (id bigint unsigned NOT NULL)");
+
+    [Fact]
+    public void SqlServerIdentityColumn() =>
+        Probe("CREATE TABLE t (id INT IDENTITY(1,1) PRIMARY KEY)");
+
+    // ⑥ #268 EXEC OUTPUT
+    [Fact]
+    public void Issue268_ExecuteOutputArg() =>
+        Probe("EXECUTE myProc 'foo', @outputVar OUTPUT");
+
+    // ② #1978 CREATE OR ALTER
+    [Fact]
+    public void Issue1978_CreateOrAlterFunction() =>
+        Probe("CREATE OR ALTER FUNCTION getPayments() RETURNS int RETURN 1");
+
+    [Fact]
+    public void DropFunction_IfExists() =>
+        Probe("DROP FUNCTION IF EXISTS fin.f");
+
+    // #2020 DEFAULT FOR
+    [Fact]
+    public void Issue2020_AlterDefaultForColumn() =>
+        Probe("ALTER TABLE dbo.t ADD CONSTRAINT DF_t_d DEFAULT ((0)) FOR _d");
+
+    // ⑧ #1846 INSERT OVERWRITE
+    [Fact]
+    public void Issue1846_InsertOverwriteTable() =>
+        Probe("INSERT OVERWRITE TABLE t PARTITION (d='2020') SELECT 1");
+
+    // ⑤ #2146 / #1564 Oracle XML
+    [Fact]
+    public void Issue2146_XmlParse() =>
+        Probe("SELECT xmlparse(content '<a>1</a>') FROM dual");
+
+    [Fact]
+    public void Issue1564_XmlSerialize() =>
+        Probe("SELECT XMLSERIALIZE(CONTENT xmlcol AS CLOB) FROM t");
+
+    // #1825 已支持
+    [Fact]
+    public void Issue1825_JsonValue() =>
+        Probe("SELECT JSON_VALUE(col, '$.name') FROM t");
 }

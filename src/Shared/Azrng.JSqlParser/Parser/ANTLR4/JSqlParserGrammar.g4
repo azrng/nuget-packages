@@ -29,6 +29,7 @@ expressionEntry
 
 statement
     : selectStatement
+    | insertBulkStatement
     | insertStatement
     | multiInsertStatement
     | updateStatement
@@ -70,6 +71,7 @@ statement
     | createPolicy
     | createSequence
     | createSchema
+    | createDatabaseStatement
     | refreshStatement
     | upsertStatement
     | tableStatement
@@ -610,8 +612,28 @@ fetchClause
 // INSERT
 // ══════════════════════════════════════════════
 
+// #2033 SQL Server INSERT BULK table [(col type, ...)] [WITH (opt=val, ...)]
+// 放在 insertStatement 之前，避免 INSERT 后 BULK 被误判
+insertBulkStatement
+    : INSERT BULK table
+      (OPENING_PAREN bulkColumnDef (COMMA bulkColumnDef)* CLOSING_PAREN)?
+      (WITH OPENING_PAREN bulkWithItem (COMMA bulkWithItem)* CLOSING_PAREN)?
+    ;
+
+bulkColumnDef
+    : identifier dataType (COLLATE identifier)?
+    ;
+
+bulkWithItem
+    : identifier (EQUALS (identifier | LONG_VALUE | TRUE | FALSE | OFF | ON))?
+    ;
+
 insertStatement
-    : INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+    // Hive/Spark INSERT OVERWRITE [TABLE] t [PARTITION (...)] SELECT ...
+    : INSERT OVERWRITE TABLE? table
+      (PARTITION OPENING_PAREN partitionAssignment (COMMA partitionAssignment)* CLOSING_PAREN)?
+      ( VALUES valuesList | selectStatement )
+    | INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
       outputClause?
       ( VALUES valuesList
       | SET assignmentItem (COMMA assignmentItem)*
@@ -621,6 +643,11 @@ insertStatement
       onDuplicateKey?
       onConflictClause?
       returningClause?
+    ;
+
+// Hive PARTITION (col='val', col2=expr)
+partitionAssignment
+    : identifier (EQUALS expression)?
     ;
 
 // MSSQL OUTPUT 子句：OUTPUT selectItems [INTO @var | table [(cols)]]，透传保 round-trip
@@ -732,11 +759,32 @@ createTable
           )
         CLOSING_PAREN
       )?
-      createParameter*               // 表级选项（ENGINE/CHARSET/PARTITION BY/ORDER BY/SAMPLE BY 等），透传为字符串
+      createParameter*               // 表级选项（ENGINE/CHARSET/ORDER BY/SAMPLE BY 等），透传为字符串
+      tablePartitionClause?          // #1668 MySQL PARTITION BY ... (PARTITION ...)
+      (ON (PRIMARY | QUOTED_IDENTIFIER | identifier))?  // #2020 SQL Server ON PRIMARY / filegroup
       rowMovementClause?             // Oracle ENABLE/DISABLE ROW MOVEMENT
       (AS selectStatement)?
       (LIKE table likeOption*)?
       (COMMA spannerInterleaveIn)?
+    ;
+
+// #1668 MySQL/Oracle 表分区：PARTITION BY method [(partition_definition, ...)]
+// 必须独立产生式，避免 createParameter 把 PARTITION 原子吃掉后无法匹配分区定义列表
+tablePartitionClause
+    : PARTITION BY partitionByMethod
+      (OPENING_PAREN partitionDef (COMMA partitionDef)* CLOSING_PAREN)?
+    ;
+
+partitionByMethod
+    : RANGE COLUMNS? OPENING_PAREN expressionList CLOSING_PAREN
+    | identifier? HASH OPENING_PAREN expressionList CLOSING_PAREN partitionsCount?
+    | identifier? KEY OPENING_PAREN expressionList CLOSING_PAREN partitionsCount?
+    | identifier COLUMNS? OPENING_PAREN expressionList CLOSING_PAREN partitionsCount?  // LIST / LIST COLUMNS
+    ;
+
+// PARTITIONS n（PARTITIONS 为普通标识符）
+partitionsCount
+    : identifier LONG_VALUE
     ;
 
 // CREATE 关键字之后的选项（GLOBAL/TEMPORARY/TEMP/EXTERNAL）
@@ -754,8 +802,18 @@ createTableDefinition
     | tableConstraint
     ;
 
+// 列定义：类型后可跟 unsigned/IDENTITY/NOT NULL 等规格（顺序不限，对齐 MySQL/SQL Server 混用）
 columnDefinition
-    : identifier colDataType columnConstraint* (createParameter)*
+    : identifier colDataType columnSpecItem*
+    ;
+
+// 列规格：结构化约束 / 类型修饰 / 透传选项
+columnSpecItem
+    : columnConstraint
+    | UNSIGNED
+    | SIGNED
+    | ZEROFILL
+    | createParameter
     ;
 
 // 列数据类型，对齐上游 ColDataType 产生式。
@@ -810,7 +868,7 @@ dataTypeKeyword
     | UUID | JSON | JSONB | XML
     ;
 
-// 结构化列约束（NOT NULL / DEFAULT / CHECK / REFERENCES / AUTO_INCREMENT / GENERATED AS IDENTITY / UNIQUE / PRIMARY KEY）
+// 结构化列约束（NOT NULL / DEFAULT / CHECK / REFERENCES / AUTO_INCREMENT / IDENTITY / UNIQUE / PRIMARY KEY）
 columnConstraint
     : (CONSTRAINT identifier)? (
         NOT NULL
@@ -822,6 +880,8 @@ columnConstraint
       | REFERENCES table (OPENING_PAREN identifier CLOSING_PAREN)?
         (ON (DELETE | UPDATE) referentialAction)*
       | AUTO_INCREMENT
+      // SQL Server IDENTITY[(seed, increment)] — 高价值常见语法
+      | IDENTITY (OPENING_PAREN LONG_VALUE (COMMA LONG_VALUE)? CLOSING_PAREN)?
       | GENERATED (ALWAYS | BY DEFAULT) AS IDENTITY
       )
     ;
@@ -852,7 +912,9 @@ parameterListItem
 createParameterAtom
     : identifier (OPENING_PAREN (parameterListItem (COMMA parameterListItem)*)? CLOSING_PAREN)?   // 支持 MergeTree() / OPTIONS (k = v) 等形式
     | LONG_VALUE | S_CHAR_LITERAL | MAX | TRUE | FALSE   // 布尔值（Spanner OPTIONS allow_commit_timestamp = true）
-    | ORDER | BY | SAMPLE | HASH | PARTITION   // 表级选项保留关键字（ORDER BY / SAMPLE BY / PARTITION BY HASH）；PARTITIONS/STORE/IN 等非保留字走 identifier
+    | ON | OFF   // SQL Server 索引 WITH 选项 ONLINE = ON / PAD_INDEX = OFF（#2020）
+    // 注意：PARTITION 已从本列表移除，表级 PARTITION BY 走 tablePartitionClause（#1668），避免原子吞掉后无法匹配分区定义列表
+    | ORDER | BY | SAMPLE | HASH   // 表级选项保留关键字（ORDER BY / SAMPLE BY）
     ;
 
 // Oracle ENABLE/DISABLE ROW MOVEMENT（ROW 为保留 token，MOVEMENT 走 identifier）
@@ -894,18 +956,22 @@ spannerInterleaveIn
     : INTERLEAVE IN identifier? table (ON DELETE (CASCADE | NO ACTION))?
     ;
 
-// Oracle/DB2: USING INDEX [index_name] — 约束使用指定索引，commit c7b3bdbd
+// Oracle/DB2: USING INDEX [index_name] [TABLESPACE ts]
+// #2039：TABLESPACE 必须优先于 identifier?，否则 TABLESPACE 会被当成索引名（nonReservedKeyword）
 usingIndexClause
-    : USING INDEX identifier?
+    : USING INDEX TABLESPACE identifier
+    | USING INDEX identifier TABLESPACE identifier
+    | USING INDEX identifier?
     ;
 
-// MySQL 索引列：col [ASC|DESC] 或 (表达式) [ASC|DESC]（功能性索引），对齐上游 IndexColumnWithParams
+// MySQL 索引列：col [(prefix_len)] [ASC|DESC] 或 (表达式) [ASC|DESC]（功能性索引）
+// prefix_len 对齐 MySQL KEY idx (name(10)) 前缀索引
 indexColumnList
     : indexColumn (COMMA indexColumn)*
     ;
 
 indexColumn
-    : (identifier | OPENING_PAREN expression CLOSING_PAREN) (ASC | DESC)?
+    : (identifier (OPENING_PAREN LONG_VALUE CLOSING_PAREN)? | OPENING_PAREN expression CLOSING_PAREN) (ASC | DESC)?
     ;
 
 likeOption
@@ -933,6 +999,8 @@ createIndex
       (USING identifier)?   // PostgreSQL 索引方法：USING btree | gist | gin | ...
       OPENING_PAREN orderByItem (COMMA orderByItem)* CLOSING_PAREN
       whereClause?
+      // #2020 SQL Server 索引 WITH 选项：WITH (PAD_INDEX = OFF, FILLFACTOR = 80, ...)
+      (WITH OPENING_PAREN parameterListItem (COMMA parameterListItem)* CLOSING_PAREN)?
     ;
 
 // ══════════════════════════════════════════════
@@ -959,9 +1027,18 @@ commentStatement
     : COMMENT ON (TABLE table | COLUMN columnRef | VIEW table) IS S_CHAR_LITERAL
     ;
 
-// EXECUTE / EXEC / CALL proc(args)
+// EXECUTE / EXEC / CALL proc(args) 或无括号形式 EXEC proc arg1, @out OUTPUT（#268）
+// 空括号 CALL p() 必须允许（回归：StatementsBatch4Test.Execute_CallNoArgs）
 executeStatement
-    : (EXEC | EXECUTE | CALL) identifier (OPENING_PAREN expressionList? CLOSING_PAREN)?
+    : (EXEC | EXECUTE | CALL) table
+      ( OPENING_PAREN (executeArg (COMMA executeArg)*)? CLOSING_PAREN
+      | executeArg (COMMA executeArg)*
+      )?
+    ;
+
+executeArg
+    : (SINGLE_AT_IDENTIFIER | S_AT_IDENTIFIER | identifier) (EQUALS | ASSIGN) expression OUTPUT?
+    | expression OUTPUT?
     ;
 
 // PURGE 语句（Oracle）
@@ -1036,9 +1113,10 @@ ifElseStatement
     : IF expression statement (ELSE statement)?
     ;
 
-// CREATE [OR REPLACE] FUNCTION|PROCEDURE name ... ;（body 作为 token 流保留）
+// CREATE [OR REPLACE|OR ALTER] FUNCTION|PROCEDURE name ... ;（body 作为 token 流保留）
+// OR ALTER 对齐 SQL Server #1978
 createFunctionStatement
-    : CREATE (OR REPLACE)? (FUNCTION | PROCEDURE) identifier functionBodyTokens
+    : CREATE (OR (REPLACE | ALTER))? (FUNCTION | PROCEDURE) table functionBodyTokens
     ;
 
 // 函数/过程体：简化为收集到分号前的所有 token 文本（对齐上游 captureFunctionBody 的容器式行为）
@@ -1047,10 +1125,17 @@ functionBodyTokens
     ;
 
 alterOperation
-    : MODIFY COLUMN? columnDefinition
+    // #2112 MODIFY [COLUMN] [IF EXISTS] col type...
+    : MODIFY COLUMN? (IF EXISTS)? columnDefinition
+    // #599 MODIFY [COLUMN] [IF EXISTS] col NULL | NOT NULL（仅改可空性，无类型）
+    | MODIFY COLUMN? (IF EXISTS)? identifier (NOT NULL | NULL)
     | CHANGE COLUMN? identifier columnDefinition
-    | ADD COLUMN? columnDefinition
+    // #1875 ADD [COLUMN] [IF NOT EXISTS] col type...
+    | ADD COLUMN? (IF NOT EXISTS)? columnDefinition
+    // SQL Server：ADD CONSTRAINT name DEFAULT expr FOR col
+    | ADD CONSTRAINT identifier DEFAULT expression FOR identifier
     | ADD tableConstraint
+    // #2112 DROP [COLUMN] [IF EXISTS] col
     | DROP COLUMN? (IF EXISTS)? identifier
     | DROP PRIMARY KEY
     | DROP UNIQUE (identifier | OPENING_PAREN identifierList CLOSING_PAREN)
@@ -1069,7 +1154,9 @@ alterOperation
     | CONVERT TO CHARACTER SET identifier (COLLATE EQUALS? identifier)?
     | DEFAULT CHARACTER SET identifier (COLLATE EQUALS? identifier)?
     | CHARACTER SET identifier (COLLATE EQUALS? identifier)?
-    | ADD PARTITION OPENING_PAREN? partitionDef? CLOSING_PAREN?
+    // #1668：ADD PARTITION 支持多个 partitionDef
+    | ADD PARTITION OPENING_PAREN partitionDef (COMMA partitionDef)* CLOSING_PAREN
+    | ADD PARTITION partitionDef
     | DROP PARTITION identifierList
     | TRUNCATE PARTITION identifierList
     | COALESCE PARTITION LONG_VALUE
@@ -1090,6 +1177,10 @@ partitionDef
 dropStatement
     : DROP (TABLE | VIEW) (IF EXISTS)? table (COMMA table)* (CASCADE | RESTRICT)?
     | DROP INDEX (IF EXISTS)? table (ON table)? (CASCADE | RESTRICT)?
+    // DROP FUNCTION/PROCEDURE [IF EXISTS] [schema.]name[(args)] — #1994 批解析前置
+    | DROP (FUNCTION | PROCEDURE) (IF EXISTS)? table
+      (OPENING_PAREN (dataType (COMMA dataType)*)? CLOSING_PAREN)?
+      (CASCADE | RESTRICT)?
     ;
 
 // ══════════════════════════════════════════════
@@ -1268,6 +1359,11 @@ schemaQualifiedName
     : identifier (DOT identifier)?
     ;
 
+// #2070 CREATE DATABASE [IF NOT EXISTS] name
+createDatabaseStatement
+    : CREATE DATABASE (IF NOT EXISTS)? identifier
+    ;
+
 // ══════════════════════════════════════════════
 // RETURNING clause
 // ══════════════════════════════════════════════
@@ -1362,6 +1458,9 @@ primaryExpr
     | castExpr
     | extractExpr
     | intervalExpr
+    | odbcEscapeExpr
+    | xmlParseExpr
+    | xmlSerializeExpr
     | trimFunction
     | functionExpr
     | subSelect
@@ -1510,8 +1609,24 @@ castCharacterSetClause
     : CHARACTER SET identifier (COLLATE identifier)?
     ;
 
+// #1139 ODBC 转义：{fn timestampadd(...)} / {d '2020-01-01'} / {t '12:00:00'} / {ts '...'}
+odbcEscapeExpr
+    : LBRACE identifier identifier OPENING_PAREN expressionList? CLOSING_PAREN RBRACE   // {fn name(...)}
+    | LBRACE identifier S_CHAR_LITERAL RBRACE                                            // {d '...'} / {t '...'} / {ts '...'}
+    ;
+
+// #2146 / #1564 Oracle XML 函数：用固定关键字避免与普通 functionExpr 冲突
+xmlParseExpr
+    : XMLPARSE OPENING_PAREN (CONTENT | DOCUMENT) expression identifier? CLOSING_PAREN
+    ;
+
+xmlSerializeExpr
+    : XMLSERIALIZE OPENING_PAREN (CONTENT | DOCUMENT) expression AS dataType CLOSING_PAREN
+    ;
+
 extractExpr
-    : EXTRACT OPENING_PAREN extractField FROM expression CLOSING_PAREN
+    // #673 Oracle：EXTRACT(DAY FROM expr DAY TO SECOND)
+    : EXTRACT OPENING_PAREN extractField FROM expression (intervalUnit (TO intervalUnit)?)? CLOSING_PAREN
     ;
 
 extractField
@@ -1519,8 +1634,14 @@ extractField
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     ;
 
+// #673 INTERVAL '1' DAY TO SECOND / INTERVAL expr HOUR TO MINUTE
 intervalExpr
-    : INTERVAL expression (YEAR | MONTH | DAY | HOUR | MINUTE | SECOND)?
+    : INTERVAL expression intervalUnit (TO intervalUnit)?
+    | INTERVAL expression
+    ;
+
+intervalUnit
+    : (YEAR | MONTH | DAY | HOUR | MINUTE | SECOND) (OPENING_PAREN LONG_VALUE CLOSING_PAREN)?
     ;
 
 functionExpr
@@ -1805,12 +1926,12 @@ identifier
 nonReservedKeyword
     : ACTION | ACTIVE | ABSENT | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
-    | BEFORE | BEGIN | BIT | BOTH
+    | BEFORE | BEGIN | BIT | BOTH | BULK
     | BUFFERS
     | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
-    | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT
+    | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT | CONTENT
     | CONFLICT | CONSTRAINTS | CONVERT | COSTS | COUNT | CREATED | CURRENT_DATE | CURRENT_TIME | CURRENT_TIMESTAMP | CURRENT_TIMEZONE | CYCLE
-    | DATABASE | DATA | DECLARE | DEFAULTS | DELAYED | DESCRIBE
+    | DATABASE | DATA | DECLARE | DEFAULTS | DELAYED | DESCRIBE | DOCUMENT
     | DISABLE | DISCARD | DISCONNECT | DIV | DDL | DML | DO | DOMAIN | DRIVER | DUPLICATE
     | ELEMENTS | EMPTY_KW | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE
     | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
@@ -1835,10 +1956,11 @@ nonReservedKeyword
     | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW | SUMMARY
     | START | STRICT | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP | TIMING
     | TIES | TRAILING | TRIGGER | TRIM | TRY_CAST | TYPE
-    | UNLOGGED | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
+    | UNLOGGED | UNSIGNED | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
     | WAL | WITHIN | WITHOUT | WORK | ZONE
     | XMLTABLE
     | XMLNAMESPACES
+    | XMLPARSE | XMLSERIALIZE | ZEROFILL
     | YEAR | MONTH | DAY | HOUR | MINUTE | SECOND
     | YAML
     ;

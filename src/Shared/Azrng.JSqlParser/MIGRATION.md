@@ -541,4 +541,150 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 ---
 
+## 十六、T123 上游 issue 修复对照（常见 DDL 批，beta10→beta11）
+
+> 从 `issue/jsqlparser/issue分类清单.md` 的「⭐ 值得修」中挑选跨方言、高覆盖面的常见 DDL 5 条真实修复；
+> 顺带探针核实 ③ #2435/#2359 与 ⑤ #672 移植版已支持（转绿，零源码改动）。
+
+### 16.1 已修复对照表（5 条）
+
+| Issue | 方言 | 上游缺陷 | Azrng C#（修复后） |
+|------|------|---------|------------------|
+| #2070 | 通用 | `CREATE DATABASE name` 解析失败 | 新增 `createDatabaseStatement` 文法 + `CreateDatabase` 模型（`IfNotExists`/`DatabaseName`）+ visitor 全链路 |
+| #2065 | MySQL/通用 | 多表 `DROP TABLE IF EXISTS t1,t2` ToString 只输出首表 | `Drop.NameList` 收集全部表；`DropBehavior` 保留 CASCADE/RESTRICT；`On` 保留 DROP INDEX ON 表 |
+| #1875 | PG/MySQL | `ADD COLUMN IF NOT EXISTS` 解析失败 | `alterOperation` ADD 分支加 `(IF NOT EXISTS)?`；`AlterExpression.IfNotExists` + `UseColumnKeyword` round-trip |
+| #2112 | 通用 | `MODIFY/DROP ... IF EXISTS` 解析失败/丢失 | MODIFY 加 `(IF EXISTS)?`；DROP 保留 IF EXISTS 到 `AlterExpression.IfExists`；ToString 输出 COLUMN/IF EXISTS |
+| #599 | 通用 | `MODIFY col NULL` / `MODIFY col NOT NULL` 解析失败 | 新增 `MODIFY ... identifier (NOT NULL \| NULL)` 分支；顺带 `BuildAlterColumnDataType` 保留类型后列规格（如 `VARCHAR(10) NOT NULL`） |
+
+### 16.2 探针转绿（3 条，移植版早支持）
+
+| Issue | 方言 | 实际状态 | 说明 |
+|------|------|---------|------|
+| #2435 | MySQL | **已支持** | `S_HEX` 早含 `0x[0-9A-Fa-f]+`，`literal` 已挂 `HexValue` |
+| #2359 | 通用 | **已支持** | `limitClause` 接受 `expression`，`(SELECT 10)` 走 `subSelect` |
+| #672 | Oracle | **已支持** | `col(+)` 外连接旧语法可解析 |
+
+### 16.3 本批次仍 Skip
+
+| Issue | 跳过原因 |
+|------|---------|
+| #2033 INSERT BULK | SQL Server 专项，语法独立，下批 |
+| #2039 USING INDEX TABLESPACE | Oracle 约束选项，下批 |
+| #1927 函数索引 | grammar 影响面大，单独排期 |
+| #397 `%%` FTS | 非标准写法，按需 |
+| #2421/#2428/#2433 | 小众/已死语法，不修 |
+
+### 16.4 测试
+
+- 新增 `DdlUpstreamFixRoundTripTest`（12 项 round-trip）
+- `NonPgIssuesProbeTest` 转绿 9 条（5 修复 + 3 已支持 + #672）
+- 相关 DDL 回归（`DdlStatementTest` / `AlterOperationRoundTripTest` / `CreateSchemaTest`）全过
+
+---
+
+## 十七、T124 上游 issue 修复对照（SQL Server / Oracle 专项，beta10→beta11）
+
+> 价值评估后再动手：主流方言常见语法优先；Spanner 小众 / 过程化块语法暂缓。
+
+### 17.1 价值评估
+
+| Issue | 评估 | 结论 |
+|------|------|------|
+| #2033 INSERT BULK | SQL Server ETL 常见 | ⭐ 修 |
+| #2039 USING INDEX TABLESPACE | Oracle 约束常见 | ⭐ 修（此前误把 TABLESPACE 当索引名） |
+| #2020 CREATE INDEX WITH | SQL Server 索引选项常见 | ⭐ 修 |
+| MySQL `col(n)` 前缀索引 | 高频、改动小 | ⭐ 顺带修 |
+| #652 Spanner NULL_FILTERED | 超小众 | 🕐 暂缓 |
+| #1927 函数索引 | 探针已支持 | ✅ 转绿 |
+| #1994 FUNCTION 后续语句 | 探针简单形式已支持 | ✅ 转绿（复杂过程体仍属过程化批次） |
+| #1060 索引类型错 | JavaCC 状态污染，ANTLR 不复现 | ✅ 转绿 |
+| #1668 分区完整列表 | 中等成本，下批 | 🕐 暂缓 |
+
+### 17.2 已修复对照表
+
+| Issue | 方言 | 上游缺陷 | Azrng C#（修复后） |
+|------|------|---------|------------------|
+| #2033 | SQL Server | `INSERT BULK t([c] int) WITH(...)` 解析失败 | 新 `insertBulkStatement` + `Insert.Bulk`/`BulkColumnDefinitions`/`BulkWithOptions` |
+| #2039 | Oracle | `USING INDEX TABLESPACE ts` 把 TABLESPACE 当索引名、丢 ts | `usingIndexClause` 三分支；`UsingIndexTablespace` 字段 |
+| #2020 | SQL Server | `CREATE INDEX ... WITH (opt=val)` 解析失败 | createIndex 末尾 WITH 子句；`CreateIndex.WithOptions`；createParameterAtom 加 ON/OFF |
+| （顺带） | MySQL | `KEY idx (col(10))` 前缀长度解析失败 | `indexColumn` 加 `(LONG_VALUE)?` |
+| （词法） | SQL Server | `[a] int,[b]` 被并成一个 QUOTED_IDENTIFIER | bracket 规则改为 `( ~[\]] \| ']' ']' )*` |
+
+### 17.3 测试
+
+- 新增 `DdlBatch2FixRoundTripTest`（10 项）
+- 探针 #2033/#2039/#2020 转绿
+
+---
+
+## 十八、T125 上游 issue 修复对照（分区 / interval / filegroup，beta10→beta11）
+
+### 18.1 价值评估
+
+| Issue | 评估 | 结论 |
+|------|------|------|
+| #1668 MySQL PARTITION BY 定义列表 | 跨方言常见 DDL ⭐ | 修 |
+| #673 DAY TO SECOND | interval 标准扩展，常见 ⭐ | 修 |
+| #2020 ON PRIMARY | SQL Server 建表 filegroup，T124 剩余 ⭐ | 修 |
+| #2433 LATERAL VIEW 多别名 | 正确性；探针 AST 已正确 | ✅ 转绿 |
+| #1139 ODBC `{fn}` | 有基础但非主流 | 🕐 暂缓 |
+| #891 Teradata UPDATE FROM | 小众 | 🕐 暂缓 |
+| #397 `%%` FTS | 非标准 | 🕐 暂缓 |
+| #268/#1978 过程化 | 成本高 | 🕐 暂缓 |
+
+### 18.2 已修复对照表
+
+| Issue | 方言 | 上游缺陷 | Azrng C#（修复后） |
+|------|------|---------|------------------|
+| #1668 | MySQL | `PARTITION BY RANGE (col) (PARTITION p0 ...)` 解析失败；多分区 ADD 失败 | 独立 `tablePartitionClause`（从 createParameter 拆出 PARTITION）；ADD PARTITION 多 `partitionDef` |
+| #673 | Oracle/标准 | `INTERVAL ... DAY TO SECOND` / `EXTRACT(... DAY TO SECOND)` 失败 | `intervalUnit (TO intervalUnit)?`；`ExtractExpression.IntervalQualifier` |
+| #2020 | SQL Server | `CREATE TABLE ... ON PRIMARY` 尾部失败 | createTable 末尾 `ON (PRIMARY\|quoted\|id)` → TableOptions |
+| #2433 | Hive | 三列及以上别名误解析为 join 表 | ✅ 核实：grammar 早为 `(COMMA identifier)*`，AST 单 LateralView |
+
+### 18.3 测试
+
+- 新增 `DdlBatch3FixRoundTripTest`（11 项）
+- 探针 #1668/#673/#2433 转绿
+
+---
+
+## 十九、T126 高价值剩余 issue 清仓（beta11）
+
+> 对清单中仍 FAIL 且 **用户覆盖面 × 常见度** 高的项一次性清理；ClickHouse / Spanner / 非标准 FTS / 超小众方言继续不修。
+
+### 19.1 价值评估（清仓筛选）
+
+| 项 | 结论 |
+|---|------|
+| #1139 ODBC `{fn}`/`{d}` | ⭐ 修（老系统/迁移常见） |
+| MySQL `unsigned` | ⭐ 修（#823 旁路，极常见） |
+| SQL Server `IDENTITY` | ⭐ 修 |
+| #268 `EXEC ... OUTPUT` | ⭐ 修 |
+| #1978 `CREATE OR ALTER` + DROP FUNCTION | ⭐ 修（#1994 批解析前置） |
+| #2020 `DEFAULT ... FOR col` | ⭐ 修 |
+| #1846/#2119 INSERT OVERWRITE | ⭐ 修（Hive/Spark 常见） |
+| #2146/#1564 XMLPARSE/XMLSERIALIZE | ⭐ 修（Oracle 有用户） |
+| #1825 JSON_VALUE | ✅ 已支持 |
+| #2442/#2441/#2436 ClickHouse | 🕐 小众暂缓 |
+| #652 Spanner / #397 `%%` / #891 Teradata | 🕐/❌ 不修 |
+| #467 marker 接口 | 🕐 工程项，非解析 |
+
+### 19.2 已修复对照
+
+| 能力 | 实现要点 |
+|------|---------|
+| ODBC / XML | `odbcEscapeExpr` / `xmlParseExpr` / `xmlSerializeExpr` → `PassthroughExpression` |
+| unsigned/IDENTITY | `columnSpecItem` + `IDENTITY (seed,inc)?` |
+| EXECUTE OUTPUT | 无括号参数列表 + `OUTPUT`；`Execute.PlainArguments` |
+| OR ALTER / DROP FUNCTION | `CREATE (OR (REPLACE\|ALTER))?`；drop 支持 FUNCTION/PROCEDURE |
+| DEFAULT FOR | alterOperation 专用分支 |
+| INSERT OVERWRITE | insert 首分支 `INSERT OVERWRITE TABLE?` + PARTITION 赋值 |
+
+### 19.3 测试
+
+- 新增 `HighValueCleanupRoundTripTest`（15 项）
+- 相关回归 145 通过 / 3 Skip
+
+---
+
 文件结束。

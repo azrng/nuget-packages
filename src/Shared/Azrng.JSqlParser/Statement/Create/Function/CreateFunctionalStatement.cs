@@ -17,6 +17,9 @@ public abstract class CreateFunctionalStatement : ASTNodeAccessImpl, IStatement
     /// <summary>是否带 OR REPLACE。</summary>
     public bool OrReplace { get; set; }
 
+    /// <summary>是否带 OR ALTER（SQL Server #1978）。</summary>
+    public bool OrAlter { get; set; }
+
     /// <summary>函数/过程声明的 token 字符串列表（含 body 原文，对齐上游 functionDeclarationParts）。</summary>
     public List<string> FunctionDeclarationParts { get; } = new();
 
@@ -30,7 +33,8 @@ public abstract class CreateFunctionalStatement : ASTNodeAccessImpl, IStatement
     public override string ToString()
     {
         var sb = new StringBuilder("CREATE ");
-        if (OrReplace) sb.Append("OR REPLACE ");
+        if (OrAlter) sb.Append("OR ALTER ");
+        else if (OrReplace) sb.Append("OR REPLACE ");
         sb.Append(Kind).Append(' ');
         // 把 token 列表拼回，token 间用空格（上游 formatDeclaration 同样行为）
         sb.Append(string.Join(" ", FunctionDeclarationParts));
