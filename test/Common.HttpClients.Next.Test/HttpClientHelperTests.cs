@@ -1,5 +1,4 @@
 using Common.HttpClients.Next.Test.Helpers;
-using Microsoft.Extensions.Options;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -9,7 +8,7 @@ namespace Common.HttpClients.Next.Test
     public class HttpClientHelperTests
     {
         [Fact]
-        public async Task GetAsync_NonGeneric_ShouldReturnSuccessWithString()
+        public async Task GetAsync_String_ShouldReturnSuccessWithString()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -17,7 +16,7 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            var result = await helper.GetAsync("https://unit.test/health");
+            var result = await helper.GetAsync<string>("https://unit.test/health");
 
             Assert.True(result.IsSuccess);
             Assert.Equal("ok", result.Data);
@@ -42,13 +41,13 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
-        public async Task GetAsync_Failure_WhenFailThrowDisabled_ShouldReturnFailedResult()
+        public async Task GetAsync_Failure_ShouldReturnFailedResult()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
             {
                 Content = new StringContent("server-error")
             });
-            var helper = CreateHelper(client, failThrowException: false);
+            var helper = CreateHelper(client);
 
             var result = await helper.GetAsync<SampleResponse>("https://unit.test/error");
 
@@ -57,18 +56,6 @@ namespace Common.HttpClients.Next.Test
             Assert.Equal("server-error", result.ErrorMessage);
             Assert.Equal("server-error", result.RawBody);
             Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
-        }
-
-        [Fact]
-        public async Task GetAsync_Failure_WhenFailThrowEnabled_ShouldThrowHttpRequestException()
-        {
-            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
-            {
-                Content = new StringContent("server-error")
-            });
-            var helper = CreateHelper(client, failThrowException: true);
-
-            await Assert.ThrowsAsync<HttpRequestException>(() => helper.GetAsync<SampleResponse>("https://unit.test/error"));
         }
 
         [Fact]
@@ -85,7 +72,8 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            await helper.GetAsync("https://unit.test/api", queryParameters: new { page = 1, keyword = "az rng" });
+            await helper.GetAsync<string>("https://unit.test/api",
+                new HttpSendOptions { Query = new { page = 1, keyword = "az rng" } });
 
             Assert.NotNull(capturedUrl);
             Assert.Contains("page=1", capturedUrl);
@@ -106,10 +94,8 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            await helper.GetAsync("https://unit.test/api", headers: new Dictionary<string, string>
-            {
-                ["Authorization"] = "Bearer abc"
-            });
+            await helper.GetAsync<string>("https://unit.test/api",
+                new HttpSendOptions { Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer abc" } });
 
             Assert.Equal("Bearer abc", authHeader);
         }
@@ -151,7 +137,7 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            await helper.PostAsync("https://unit.test/post", "{\"raw\":\"json\"}");
+            await helper.PostAsync<string>("https://unit.test/post", "{\"raw\":\"json\"}");
 
             Assert.Equal("{\"raw\":\"json\"}", payload);
         }
@@ -172,7 +158,7 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            await helper.PostFormDataAsync("https://unit.test/form", new Dictionary<string, string>
+            await helper.PostFormDataAsync<string>("https://unit.test/form", new Dictionary<string, string>
             {
                 ["username"] = "admin",
                 ["password"] = "123"
@@ -245,7 +231,7 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
-        public async Task DeleteAsync_NonGeneric_ShouldReturnString()
+        public async Task DeleteAsync_String_ShouldReturnString()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -253,7 +239,7 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            var result = await helper.DeleteAsync("https://unit.test/item/1");
+            var result = await helper.DeleteAsync<string>("https://unit.test/item/1");
 
             Assert.True(result.IsSuccess);
             Assert.Equal("deleted", result.Data);
@@ -272,55 +258,6 @@ namespace Common.HttpClients.Next.Test
 
             Assert.True(result.IsSuccess);
             Assert.Equal("deleted", result.Data?.Name);
-        }
-
-        [Fact]
-        public async Task SendAsync_WithEnum_ShouldUseCorrespondingMethod()
-        {
-            HttpMethod? method = null;
-            using var client = NewClient(r =>
-            {
-                method = r.Method;
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("ok")
-                };
-            });
-            var helper = CreateHelper(client);
-
-            await helper.SendAsync(HttpRequestEnum.Post, "https://unit.test/send", new StringContent("body"));
-
-            Assert.Equal(HttpMethod.Post, method);
-        }
-
-        [Fact]
-        public async Task SendAsync_WithUnsupportedEnum_ShouldThrowArgumentOutOfRangeException()
-        {
-            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK));
-            var helper = CreateHelper(client);
-
-            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-                helper.SendAsync((HttpRequestEnum)999, "https://unit.test/send", new StringContent("body")));
-        }
-
-        [Fact]
-        public async Task SendAsync_WithMediaTypeHeader_ShouldOverrideContentType()
-        {
-            string? mediaType = null;
-            using var client = NewClient(r =>
-            {
-                mediaType = r.Content?.Headers.ContentType?.MediaType;
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("ok")
-                };
-            });
-            var helper = CreateHelper(client);
-
-            await helper.SendAsync(HttpRequestEnum.Post, "https://unit.test/send",
-                new StringContent("raw"), mediaTypeHeader: MediaTypeHeaderValue.Parse("text/plain"));
-
-            Assert.Equal("text/plain", mediaType);
         }
 
         [Fact]
@@ -359,7 +296,7 @@ namespace Common.HttpClients.Next.Test
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK));
             var helper = CreateHelper(client);
 
-            await Assert.ThrowsAsync<ArgumentNullException>(() => helper.GetAsync(""));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => helper.GetAsync<string>(""));
         }
 
         [Fact]
@@ -377,7 +314,7 @@ namespace Common.HttpClients.Next.Test
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                helper.GetAsync("https://unit.test/slow", cancellation: cts.Token));
+                helper.GetAsync<string>("https://unit.test/slow", cancellation: cts.Token));
         }
 
         [Fact]
@@ -392,9 +329,9 @@ namespace Common.HttpClients.Next.Test
                 resp.Headers.Add("X-Fallback-Response", "true");
                 return resp;
             });
-            var helper = CreateHelper(client, failThrowException: false);
+            var helper = CreateHelper(client);
 
-            var result = await helper.GetAsync("https://unit.test/fallback");
+            var result = await helper.GetAsync<string>("https://unit.test/fallback");
 
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFallbackResponse);
@@ -415,15 +352,10 @@ namespace Common.HttpClients.Next.Test
             return new HttpClient(new DelegateHttpMessageHandler(factory));
         }
 
-        private static HttpClientHelper CreateHelper(HttpClient client, bool failThrowException = false)
+        private static HttpClientHelper CreateHelper(HttpClient client)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            var options = Options.Create(new HttpClientOptions
-            {
-                FailThrowException = failThrowException,
-                Timeout = 100
-            });
-            return new HttpClientHelper(client, options, logger);
+            return new HttpClientHelper(client, logger);
         }
 
         private sealed class SampleResponse

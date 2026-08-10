@@ -22,7 +22,6 @@ namespace Common.HttpClients.Next.Test
 
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = false;
                 o.MaxRetryAttempts = 0;
                 o.Timeout = 5;
                 o.RetryDelaySeconds = 1;
@@ -32,7 +31,7 @@ namespace Common.HttpClients.Next.Test
 
             for (int i = 0; i < 5; i++)
             {
-                var result = await helper.GetAsync($"{server.BaseUrl}fail-{i}");
+                var result = await helper.GetAsync<string>($"{server.BaseUrl}fail-{i}");
                 Assert.False(result.IsSuccess);
             }
         }
@@ -53,7 +52,7 @@ namespace Common.HttpClients.Next.Test
 
             var helper = provider.GetRequiredService<IHttpHelper>();
 
-            var result = await helper.GetAsync($"{server.BaseUrl}ok");
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}ok");
             Assert.True(result.IsSuccess);
             Assert.Equal("ok", result.Data);
         }

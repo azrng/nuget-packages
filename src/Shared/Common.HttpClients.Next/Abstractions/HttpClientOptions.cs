@@ -23,11 +23,6 @@ namespace Common.HttpClients
         public string? UserAgent { get; set; }
 
         /// <summary>
-        /// 失败是否抛出异常
-        /// </summary>
-        public bool FailThrowException { get; set; }
-
-        /// <summary>
         /// 启用审计日志
         /// </summary>
         public bool AuditLog { get; set; } = true;

@@ -82,10 +82,10 @@ namespace HttpTestApi.Controllers
                                                   })
                                  .ToList();
             var result = await _httpHelper.PostAsync<string>(Host + "/anything", list,
-                headers: new Dictionary<string, string>() { { "X-Logger", "skip" } });
+                new HttpSendOptions { Headers = new Dictionary<string, string>() { { "X-Logger", "skip" } } });
 
             var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
-                headers: new Dictionary<string, string>() { { "X-Skip-Logger", "" } });
+                new HttpSendOptions { Headers = new Dictionary<string, string>() { { "X-Skip-Logger", "" } } });
 
             return true;
         }

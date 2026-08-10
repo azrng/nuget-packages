@@ -94,7 +94,6 @@ namespace Common.HttpClients.Next.Test
 
             Assert.True(options.AuditLog);
             Assert.True(options.EnableLogRedaction);
-            Assert.False(options.FailThrowException);
             Assert.Equal(100, options.Timeout);
             Assert.Equal(100, options.ConcurrencyLimit);
             Assert.Equal(3, options.MaxRetryAttempts);
@@ -163,7 +162,7 @@ namespace Common.HttpClients.Next.Test
             int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
 
-            var result = await helper.GetAsync($"http://127.0.0.1:{port}/probe");
+            var result = await helper.GetAsync<string>($"http://127.0.0.1:{port}/probe");
 
             // 由于无服务监听，Polly fallback 返回 503
             Assert.False(result.IsSuccess);

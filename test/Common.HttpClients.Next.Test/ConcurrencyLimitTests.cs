@@ -45,7 +45,7 @@ namespace Common.HttpClients.Next.Test
 
             var helper = provider.GetRequiredService<IHttpHelper>();
             var tasks = Enumerable.Range(0, 5)
-                .Select(_ => helper.GetAsync($"{server.BaseUrl}burst"))
+                .Select(_ => helper.GetAsync<string>($"{server.BaseUrl}burst"))
                 .ToArray();
             await Task.WhenAll(tasks);
 
@@ -82,7 +82,7 @@ namespace Common.HttpClients.Next.Test
 
             var helper = provider.GetRequiredService<IHttpHelper>();
             var tasks = Enumerable.Range(0, 3)
-                .Select(_ => helper.GetAsync($"{server.BaseUrl}serial"))
+                .Select(_ => helper.GetAsync<string>($"{server.BaseUrl}serial"))
                 .ToArray();
             await Task.WhenAll(tasks);
 
@@ -97,7 +97,6 @@ namespace Common.HttpClients.Next.Test
             {
                 o.AuditLog = false;
                 o.EnableLogRedaction = false;
-                o.FailThrowException = false;
                 o.RetryDelaySeconds = 1;
                 setup(o);
             });

@@ -31,7 +31,8 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_GetAsync_WithQuery_ShouldEchoArgs()
     {
-        var result = await _http.GetAsync<EchoResponse>("get", new { foo = "bar", num = 1 });
+        var result = await _http.GetAsync<EchoResponse>("get",
+            new HttpSendOptions { Query = new { foo = "bar", num = 1 } });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -43,7 +44,8 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_GetAsync_AsString_ShouldReturnEchoBody()
     {
-        var result = await _http.GetAsync("get", new { mark = "azrng-default" });
+        var result = await _http.GetAsync<string>("get",
+            new HttpSendOptions { Query = new { mark = "azrng-default" } });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -66,7 +68,8 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_PutAsync_WithBodyAndQuery_ShouldEcho()
     {
-        var result = await _http.PutAsync<EchoResponse>("put", new { k = "v" }, new { id = 99 });
+        var result = await _http.PutAsync<EchoResponse>("put", new { k = "v" },
+            new HttpSendOptions { Query = new { id = 99 } });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -78,7 +81,8 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_DeleteAsync_WithQuery_ShouldEchoArgs()
     {
-        var result = await _http.DeleteAsync<EchoResponse>("delete", new { x = "y" });
+        var result = await _http.DeleteAsync<EchoResponse>("delete",
+            new HttpSendOptions { Query = new { x = "y" } });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -111,7 +115,7 @@ public class ApifoxEchoDefaultClientIntegrationTests
     {
         var headers = new Dictionary<string, string> { { "X-Default-Header", "hello-default" } };
 
-        var result = await _http.GetAsync<EchoResponse>("get", null, headers);
+        var result = await _http.GetAsync<EchoResponse>("get", new HttpSendOptions { Headers = headers });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -121,18 +125,19 @@ public class ApifoxEchoDefaultClientIntegrationTests
             && kvp.Value == "hello-default");
     }
 
-    // ========== SendAsync（枚举 / 原始）==========
+    // ========== SendAsync（原始请求）==========
 
     [Fact]
-    public async Task DefaultClient_SendAsync_WithEnum_ShouldEcho()
+    public async Task DefaultClient_SendAsync_WithRawPostContent_ShouldEcho()
     {
         using var content = new StringContent("{\"a\":1}", Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "post") { Content = content };
 
-        var result = await _http.SendAsync(HttpRequestEnum.Post, "post", content);
+        using var response = await _http.SendAsync(request);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Data.Should().NotBeNullOrEmpty();
-        result.Data.Should().Contain("\"a\"");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"a\"");
     }
 
     [Fact]
@@ -200,12 +205,12 @@ public class ApifoxEchoDefaultClientIntegrationTests
         }
     }
 
-    // ========== 错误处理（FailThrowException = false，返回结构化失败结果）==========
+    // ========== 错误处理（返回结构化失败结果）==========
 
     [Fact]
-    public async Task DefaultClient_StatusNotFound_WhenFailThrowDisabled_ShouldReturnFailResult()
+    public async Task DefaultClient_StatusNotFound_ShouldReturnFailResult()
     {
-        var result = await _http.GetAsync("status/404");
+        var result = await _http.GetAsync<string>("status/404");
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -217,7 +222,7 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_GetAsync_ShouldContainRawBodyAndStatusCode()
     {
-        var result = await _http.GetAsync("get");
+        var result = await _http.GetAsync<string>("get");
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);

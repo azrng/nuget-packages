@@ -1,5 +1,4 @@
 using Common.HttpClients.Next.Test.Helpers;
-using Microsoft.Extensions.Options;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -27,32 +26,19 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
-        public async Task GetStreamAsync_Failure_WhenFailThrowDisabled_ShouldReturnFailedResult()
+        public async Task GetStreamAsync_Failure_ShouldReturnFailedResult()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
             {
                 Content = new StringContent("error")
             });
-            var helper = CreateHelper(client, failThrowException: false);
+            var helper = CreateHelper(client);
 
             var result = await helper.GetStreamAsync("https://unit.test/error");
 
             Assert.False(result.IsSuccess);
             Assert.Equal("error", result.ErrorMessage);
             Assert.Null(result.Data);
-        }
-
-        [Fact]
-        public async Task GetStreamAsync_Failure_WhenFailThrowEnabled_ShouldThrowHttpRequestException()
-        {
-            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
-            {
-                Content = new StringContent("error")
-            });
-            var helper = CreateHelper(client, failThrowException: true);
-
-            await Assert.ThrowsAsync<HttpRequestException>(() =>
-                helper.GetStreamAsync("https://unit.test/error"));
         }
 
         [Fact]
@@ -124,7 +110,7 @@ namespace Common.HttpClients.Next.Test
                 {
                     Content = new StringContent("error")
                 });
-                var helper = CreateHelper(client, failThrowException: false);
+                var helper = CreateHelper(client);
 
                 var result = await helper.DownloadFileAsync("https://unit.test/file", tempPath);
 
@@ -166,15 +152,10 @@ namespace Common.HttpClients.Next.Test
             return new HttpClient(new DelegateHttpMessageHandler((r, _) => Task.FromResult(factory(r))));
         }
 
-        private static HttpClientHelper CreateHelper(HttpClient client, bool failThrowException = false)
+        private static HttpClientHelper CreateHelper(HttpClient client)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            var options = Options.Create(new HttpClientOptions
-            {
-                FailThrowException = failThrowException,
-                Timeout = 100
-            });
-            return new HttpClientHelper(client, options, logger);
+            return new HttpClientHelper(client, logger);
         }
     }
 }

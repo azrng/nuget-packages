@@ -4,11 +4,11 @@
 
 ## 主要特性
 
-- 所有请求方法返回 `IHttpResult<T>`，包含 `IsSuccess`、`Data`、`ErrorMessage`、`StatusCode`、`RawBody` 等结构化信息
+- 所有请求方法返回 `IHttpResult<T>`，包含 `IsSuccess`、`Data`、`ErrorMessage`、`StatusCode`、`RawBody` 等结构化信息；失败统一返回失败结果，需要抛异常可调 `EnsureSuccess()`
+- **统一请求签名**：查询参数与请求头收拢到 `HttpSendOptions`，所有动词方法参数顺序一致，告别"GET 的 query 在第 2 位、POST 的 query 在第 3 位"的记忆负担
 - 支持通过匿名对象、`IDictionary<string, string>`、`NameValueCollection` 自动构建 URL 查询参数
 - 内置文件下载方法 `DownloadFileAsync`
-- 认证信息统一通过 `headers` 传递，不再局限于 Bearer Token
-- 提供 `HttpHelperExtensions.CreateBearerHeaders` 辅助方法，自动构造 Bearer Token 请求头
+- 认证信息统一通过 `HttpSendOptions.Headers` 传递；`CreateBearerHeaders` 辅助方法自动构造 Bearer Token 头
 - 智能日志记录和审计（包含请求前后日志）
 - 完整的 Polly 弹性策略（降级、并发限制、重试、熔断器、超时）
 - 分布式追踪支持（X-Trace-Id 自动传播）
@@ -17,16 +17,16 @@
 ## 安装
 
 ```bash
-dotnet add package Common.HttpClients --version 3.0.1
+dotnet add package Common.HttpClients --version 4.0.0
 ```
 
 ## 项目结构
 
 ```text
 Common.HttpClients.Next/
-├── Abstractions/        # 接口与抽象类型（IHttpHelper、IHttpResult、HttpClientOptions 等）
+├── Abstractions/        # 接口与抽象类型（IHttpHelper、IHttpResult、HttpClientOptions、HttpSendOptions 等）
 ├── Client/              # IHttpHelper 默认实现（HttpClientHelper、HttpHelperFactory、HttpResult）
-├── Extensions/          # DI 扩展（AddHttpClientService）与 HttpHelperExtensions
+├── Extensions/          # DI 扩展（AddHttpClientService）、HttpHelperExtensions（CreateBearerHeaders / EnsureSuccess）
 ├── Internal/            # 内部常量（HTTP 头名称、请求选项键）
 ├── Logging/             # 审计日志处理器与默认脱敏器
 └── Utils/               # JSON 序列化、查询字符串构建等工具
@@ -47,7 +47,6 @@ services.AddHttpClientService(options =>
 {
     options.AuditLog = true;                        // 启用审计日志
     options.EnableLogRedaction = true;              // 启用日志脱敏
-    options.FailThrowException = false;              // 失败时不抛出异常
     options.Timeout = 30;                            // 超时时间（秒）
     options.MaxRetryAttempts = 3;                    // 最大重试次数
     options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒）
@@ -123,6 +122,28 @@ public class MyService
 }
 ```
 
+## HttpSendOptions
+
+所有动词方法的查询参数与请求头都收拢到 `HttpSendOptions`，统一了参数顺序：
+
+```csharp
+public sealed class HttpSendOptions
+{
+    public object? Query { get; set; }                       // 查询参数（匿名对象 / IDictionary / NameValueCollection）
+    public IDictionary<string, string>? Headers { get; set; } // 请求头（覆盖客户端默认头）
+}
+```
+
+```csharp
+// 同时带查询参数与请求头
+var result = await _httpHelper.GetAsync<User>("https://api.example.com/users",
+    new HttpSendOptions
+    {
+        Query = new { page = 1, pageSize = 20 },
+        Headers = HttpHelperExtensions.CreateBearerHeaders("your-token")
+    });
+```
+
 ## IHttpResult\<T\> 返回值
 
 所有请求方法返回 `IHttpResult<T>`，提供结构化的响应信息：
@@ -156,10 +177,13 @@ if (result.StatusCode == HttpStatusCode.NotFound)
     // 处理 404
 }
 
-// 方式3：区分降级响应
+// 方式3：需要失败即抛异常的调用风格 —— 显式调用 EnsureSuccess()
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
+
+// 方式4：区分降级响应
 if (!result.IsSuccess && result.IsFallbackResponse)
 {
-    // Polly 所有重试都失败后的降级响应
+    // Polly 所有重试都失败后的降级响应（503）
 }
 ```
 
@@ -171,8 +195,8 @@ if (!result.IsSuccess && result.IsFallbackResponse)
 // 返回反序列化对象
 var result = await _httpHelper.GetAsync<User>("https://api.example.com/users/1");
 
-// 返回字符串
-var result = await _httpHelper.GetAsync("https://api.example.com/users/1");
+// 返回字符串（T 为 string 时原样返回响应体）
+var result = await _httpHelper.GetAsync<string>("https://api.example.com/users/1");
 
 // 获取文件流
 var result = await _httpHelper.GetStreamAsync("https://api.example.com/files/1");
@@ -185,29 +209,28 @@ if (result.IsSuccess)
 
 ### 查询参数
 
-所有方法支持通过 `queryParameters` 自动构建 URL 查询字符串，支持匿名对象、`IDictionary<string, string>`、`NameValueCollection`：
+通过 `HttpSendOptions.Query` 自动构建 URL 查询字符串，支持匿名对象、`IDictionary<string, string>`、`NameValueCollection`：
 
 ```csharp
 // 匿名对象
 var result = await _httpHelper.GetAsync<List<User>>(
     "https://api.example.com/users",
-    queryParameters: new { page = 1, pageSize = 20, keyword = "test" }
-);
+    new HttpSendOptions { Query = new { page = 1, pageSize = 20, keyword = "test" } });
 // => https://api.example.com/users?page=1&pageSize=20&keyword=test
 
 // IDictionary
-var params = new Dictionary<string, string>
+var query = new Dictionary<string, string>
 {
     ["page"] = "1",
     ["pageSize"] = "20"
 };
-var result = await _httpHelper.GetAsync<List<User>>("https://api.example.com/users", queryParameters: params);
+var result = await _httpHelper.GetAsync<List<User>>("https://api.example.com/users",
+    new HttpSendOptions { Query = query });
 
 // 集合参数自动展开
 var result = await _httpHelper.GetAsync<string>(
     "https://api.example.com/filter",
-    queryParameters: new { ids = new[] { 1, 2, 3 } }
-);
+    new HttpSendOptions { Query = new { ids = new[] { 1, 2, 3 } } });
 // => https://api.example.com/filter?ids=1&ids=2&ids=3
 ```
 
@@ -218,7 +241,7 @@ var result = await _httpHelper.GetAsync<string>(
 var user = new User { Name = "张三", Age = 25 };
 var result = await _httpHelper.PostAsync<User>("https://api.example.com/users", user);
 
-// JSON 格式（传递字符串）
+// JSON 格式（传递字符串，原样发送不二次序列化）
 var json = "{\"name\":\"张三\",\"age\":25}";
 var result = await _httpHelper.PostAsync<string>("https://api.example.com/users", json);
 ```
@@ -238,8 +261,7 @@ var result = await _httpHelper.PostFormDataAsync<LoginResponse>("https://api.exa
 using var stream = File.OpenRead("photo.jpg");
 var result = await _httpHelper.PostFormDataAsync<UploadResponse>(
     "https://api.example.com/upload",
-    "file", stream, "photo.jpg"
-);
+    "file", stream, "photo.jpg");
 
 // 上传多个文件/混合参数
 using var form = new MultipartFormDataContent();
@@ -264,11 +286,11 @@ var result = await _httpHelper.PutAsync<User>("https://api.example.com/users/1",
 // PATCH
 var result = await _httpHelper.PatchAsync<User>("https://api.example.com/users/1", new { name = "李四" });
 
-// DELETE（返回字符串）
-var result = await _httpHelper.DeleteAsync("https://api.example.com/users/1");
-
 // DELETE（返回反序列化对象）
 var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.com/users/1");
+
+// DELETE（返回原始响应体）
+var result = await _httpHelper.DeleteAsync<string>("https://api.example.com/users/1");
 ```
 
 ### 文件下载
@@ -276,8 +298,7 @@ var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.
 ```csharp
 var result = await _httpHelper.DownloadFileAsync(
     "https://api.example.com/files/report.pdf",
-    @"C:\Downloads\report.pdf"
-);
+    @"C:\Downloads\report.pdf");
 
 if (result.IsSuccess)
 {
@@ -302,13 +323,10 @@ var xml = @"<soap:Envelope xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope
 var result = await _httpHelper.PostSoapAsync<SoapResponse>("https://api.example.com/soap", xml);
 ```
 
-### Send（底层方法）
+### Send（底层逃生舱口）
 
 ```csharp
-// 使用 HttpRequestEnum
-var result = await _httpHelper.SendAsync(HttpRequestEnum.Post, url, httpContent);
-
-// 逃生舱口：直接操作 HttpRequestMessage
+// 逃生舱口：直接操作 HttpRequestMessage，返回原始 HttpResponseMessage（调用方自行处理响应与状态码）
 using var request = new HttpRequestMessage(HttpMethod.Get, url);
 request.Headers.Add("X-Custom", "value");
 HttpResponseMessage response = await _httpHelper.SendAsync(request);
@@ -316,39 +334,31 @@ HttpResponseMessage response = await _httpHelper.SendAsync(request);
 
 ## 认证
 
-### 通过 headers 传递
+认证统一通过 `HttpSendOptions.Headers` 传递：
 
 ```csharp
 // Bearer Token
-var headers = new Dictionary<string, string>
-{
-    ["Authorization"] = "Bearer your-token-here"
-};
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here") });
 
 // API Key
-var headers = new Dictionary<string, string>
-{
-    ["X-Api-Key"] = "your-api-key"
-};
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = new Dictionary<string, string> { ["X-Api-Key"] = "your-api-key" } });
 
 // Basic Auth
-var headers = new Dictionary<string, string>
-{
-    ["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes("user:pass"))
-};
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
+var basic = "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes("user:pass"));
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = new Dictionary<string, string> { ["Authorization"] = basic } });
 ```
 
 ### 使用 HttpHelperExtensions.CreateBearerHeaders（Bearer Token 便利构造）
 
-3.x 不再为每个 HTTP 方法单独提供 `bearerToken` 重载，而是提供一个静态辅助方法 `HttpHelperExtensions.CreateBearerHeaders(token)`，自动补全 `"Bearer "` 前缀，返回可直接传入 `headers` 参数的字典：
+`HttpHelperExtensions.CreateBearerHeaders(token)` 自动补全 `"Bearer "` 前缀，返回可直接传入 `HttpSendOptions.Headers` 的字典：
 
 ```csharp
 using Common.HttpClients;
 
-// CreateBearerHeaders 会自动补 "Bearer " 前缀，返回 Authorization 头字典
+// 自动补 "Bearer " 前缀
 var headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here");
 // => { ["Authorization"] = "Bearer your-token-here" }
 
@@ -356,26 +366,26 @@ var headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here");
 var headers2 = HttpHelperExtensions.CreateBearerHeaders("Bearer your-token-here");
 // => 同样是 { ["Authorization"] = "Bearer your-token-here" }
 
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
-var result = await _httpHelper.PostAsync<User>(url, data, headers: headers);
-var result = await _httpHelper.DownloadFileAsync(url, filePath, headers: headers);
+var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions { Headers = headers });
+var result = await _httpHelper.PostAsync<User>(url, data, new HttpSendOptions { Headers = headers });
+var result = await _httpHelper.DownloadFileAsync(url, filePath, new HttpSendOptions { Headers = headers });
 ```
-
-> 注：`CreateBearerHeaders` 仅为构造请求头的便捷方法，不改变请求行为；它适用于所有接受 `headers` 参数的请求方法。
 
 ## 请求头
 
-所有方法支持通过 `headers` 参数传递自定义请求头：
+通过 `HttpSendOptions.Headers` 传递自定义请求头：
 
 ```csharp
-var headers = new Dictionary<string, string>
-{
-    ["X-Trace-Id"] = "custom-trace-id",
-    ["X-Tenant-Id"] = "tenant-001",
-    ["Accept-Language"] = "zh-CN"
-};
-
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions
+    {
+        Headers = new Dictionary<string, string>
+        {
+            ["X-Trace-Id"] = "custom-trace-id",
+            ["X-Tenant-Id"] = "tenant-001",
+            ["Accept-Language"] = "zh-CN"
+        }
+    });
 ```
 
 ## 配置选项 HttpClientOptions
@@ -383,10 +393,9 @@ var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `BaseAddress` | string? | null | 基础地址，请求 URL 为相对路径时自动拼接 |
-| `DefaultHeaders` | IDictionary\<string,string\>? | null | 每个请求自动携带的默认请求头（per-request headers 优先覆盖） |
+| `DefaultHeaders` | IDictionary\<string,string\>? | null | 每个请求自动携带的默认请求头（per-request Headers 优先覆盖） |
 | `UserAgent` | string? | null | 自定义 User-Agent |
 | `AuditLog` | bool | true | 是否启用审计日志 |
-| `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 IHttpResult（IsSuccess=false），true 时抛出 HttpRequestException |
 | `EnableLogRedaction` | bool | true | 是否启用日志脱敏 |
 | `Timeout` | int | 100 | 总超时（秒），覆盖整条重试链；范围：1-3600 |
 | `ConcurrencyLimit` | int | 100 | 并发限制，范围：0-10000；`0` 表示禁用限制 |
@@ -413,32 +422,21 @@ var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 
 ## 异常处理
 
-### FailThrowException = false（默认）
+4.0 起统一为结果对象模型：失败始终返回 `IHttpResult(IsSuccess=false)`，不再有"抛异常 / 返回结果"双开关。需要抛异常的调用风格，显式调用 `EnsureSuccess()`。
 
 ```csharp
-options.FailThrowException = false;
-
+// 默认：判 IsSuccess
 var result = await _httpHelper.GetAsync<User>(url);
 if (!result.IsSuccess)
 {
     _logger.LogWarning("请求失败: {StatusCode} - {Error}", result.StatusCode, result.ErrorMessage);
+    return;
 }
-```
+var user = result.Data;
 
-### FailThrowException = true
-
-```csharp
-options.FailThrowException = true;
-
-try
-{
-    var result = await _httpHelper.GetAsync<User>(url);
-    // 成功时 result.IsSuccess 一定为 true
-}
-catch (HttpRequestException ex)
-{
-    // 请求失败时抛出异常
-}
+// 想要失败即抛异常的风格：
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
+// EnsureSuccess() 在 IsSuccess=false 时抛 HttpRequestException(StatusCode)，成功时返回自身
 ```
 
 ## JSON 序列化
@@ -455,13 +453,13 @@ catch (HttpRequestException ex)
 
 本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
 
-1. **降级处理（Fallback）** - 所有策略失败时返回 503 响应（`IsFallbackResponse = true`）或重新抛出异常
+1. **降级处理（Fallback）** - 所有策略失败时返回 503 降级响应（`IsFallbackResponse = true`）
 2. **总超时（Timeout）** - 覆盖整条重试链的总耗时上限
 3. **并发限制（Concurrency Limiter）** - 限制同时进行的 HTTP 请求数量（`ConcurrencyLimit = 0` 时跳过）
 4. **熔断器（Circuit Breaker）** - 错误率达到阈值时暂时停止请求
 5. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求
 
-> 整个请求链（含所有重试）受单次 `Timeout` 上限约束；超时后由 Fallback 兜底。
+> 整个请求链（含所有重试）受单次 `Timeout` 上限约束；超时后由 Fallback 兜底为 503 降级响应。
 
 ## 日志
 
@@ -469,7 +467,7 @@ catch (HttpRequestException ex)
 
 ```csharp
 var result = await _httpHelper.PostAsync<string>(url, data,
-    headers: new Dictionary<string, string> { { "X-Skip-Logger", "" } });
+    new HttpSendOptions { Headers = new Dictionary<string, string> { { "X-Skip-Logger", "" } } });
 ```
 
 通过设置 `X-Skip-Logger` 或 `X-Logger` 值为 `none`/`skip` 跳过日志。
@@ -493,6 +491,14 @@ services.AddHttpClientService();
 
 ## 版本更新记录
 
+### 4.0.0
+
+- **[破坏性变更]** 统一所有动词方法签名：查询参数与请求头收拢到新增的 `HttpSendOptions`（`Query` / `Headers`），所有方法参数顺序一致，不再有"切动词时 query 位置变化"的问题
+- **[破坏性变更]** 删除 `FailThrowException` 开关与"失败抛异常 / 返回结果"双错误模型：失败统一返回 `IHttpResult(IsSuccess=false)`；需要抛异常的调用方显式调用新增的 `EnsureSuccess()` 扩展方法
+- **[破坏性变更]** 删除所有非泛型 `string` 版方法（`GetAsync` / `PostAsync` / `DeleteAsync` / `PostFormDataAsync` 的非泛型重载），统一用泛型版（返回字符串用 `GetAsync<string>()` 等）
+- **[破坏性变更]** 删除 `HttpRequestEnum` 与 `SendAsync(HttpRequestEnum, …)` 重载（与 BCL `HttpMethod` 重复且不完整）；保留 `SendAsync(HttpRequestMessage)` 底层逃生舱口
+- **[破坏性变更]** Polly Fallback 异常路径统一兜底为 503 降级响应（不再按 `FailThrowException` 分叉为"抛异常 / 返回 503"）
+
 ### 3.0.1
 
 - **[修复]** 移除 `ServiceCollectionExtensions` 中多余的 `TryAddTransient<LoggingHandler>()` 死注册。该注册因 `LoggingHandler` 构造函数首参为 `string clientName` 无法被 DI 容器直接激活，在开启 `ValidateOnBuild` 的环境（如 ASP.NET Core Development 默认行为）下会导致 `builder.Build()` 抛出 `Unable to resolve service for type 'System.String'` 启动异常。实际 `LoggingHandler` 由 `AddHttpMessageHandler` 通过 `ActivatorUtilities` 注入客户端名称创建，不受此改动影响
@@ -508,6 +514,28 @@ services.AddHttpClientService();
 - 新增命名客户端与 `IHttpHelperFactory`：`AddHttpClientService(name, configure)` 注册多个独立客户端，`IHttpHelperFactory.CreateClient(name)` 按名获取，支持不同 BaseAddress / 弹性策略
 - `HttpClientOptions` 新增 `BaseAddress`（相对路径自动拼接）、`UserAgent`、`DefaultHeaders`（默认请求头）
 
+### 从 3.x 迁移到 4.0
+
+```csharp
+// 3.x —— query / headers 是分散的位置参数或命名参数
+var result = await _httpHelper.GetAsync<User>(url, queryParameters: new { page = 1 }, headers: bearHeaders);
+var s = await _httpHelper.GetAsync(url);                       // 非泛型 string 版
+await _httpHelper.SendAsync(HttpRequestEnum.Post, url, content);
+
+// 4.0 —— query / headers 收拢到 HttpSendOptions，字符串用 <string>，枚举版删除
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Query = new { page = 1 }, Headers = bearHeaders });
+var s = await _httpHelper.GetAsync<string>(url);
+using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+var resp = await _httpHelper.SendAsync(req);
+
+// 3.x —— FailThrowException=true 失败抛异常
+options.FailThrowException = true;
+
+// 4.0 —— 删除开关，失败统一返回结果；需要异常显式调 EnsureSuccess()
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
+```
+
 ### 从 2.x 迁移到 3.0
 
 ```csharp
@@ -520,10 +548,5 @@ var result = await _httpHelper.GetAsync<User>(url, headers: new Dictionary<strin
 {
     ["Authorization"] = "Bearer xxx"
 });
-if (result.IsSuccess) { var user = result.Data; }
-
-// 3.0 - 或用 CreateBearerHeaders 简便构造请求头
-var headers = HttpHelperExtensions.CreateBearerHeaders("xxx");
-var result = await _httpHelper.GetAsync<User>(url, headers: headers);
 if (result.IsSuccess) { var user = result.Data; }
 ```

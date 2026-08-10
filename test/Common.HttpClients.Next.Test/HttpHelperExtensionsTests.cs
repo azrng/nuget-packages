@@ -1,7 +1,7 @@
 namespace Common.HttpClients.Next.Test
 {
     /// <summary>
-    /// HttpHelperExtensions.CreateBearerHeaders 测试
+    /// HttpHelperExtensions.CreateBearerHeaders / EnsureSuccess 测试
     /// </summary>
     public class HttpHelperExtensionsTests
     {
@@ -41,6 +41,32 @@ namespace Common.HttpClients.Next.Test
             var headers = HttpHelperExtensions.CreateBearerHeaders("");
 
             Assert.Equal("Bearer ", headers["Authorization"]);
+        }
+
+        [Fact]
+        public void EnsureSuccess_WhenSuccess_ShouldReturnSelf()
+        {
+            var result = HttpResult<string>.Success("ok", HttpStatusCode.OK, "ok");
+
+            var returned = result.EnsureSuccess();
+
+            Assert.Same(result, returned);
+            Assert.Equal("ok", returned.Data);
+        }
+
+        [Fact]
+        public void EnsureSuccess_WhenFailed_ShouldThrowHttpRequestException()
+        {
+            var result = HttpResult<string>.Fail("err", HttpStatusCode.InternalServerError, "err", false);
+
+            var ex = Assert.Throws<HttpRequestException>(() => result.EnsureSuccess());
+            Assert.Equal(HttpStatusCode.InternalServerError, ex.StatusCode);
+        }
+
+        [Fact]
+        public void EnsureSuccess_NullResult_ShouldThrowArgumentNullException()
+        {
+            Assert.Throws<ArgumentNullException>(() => ((IHttpResult<string>)null!).EnsureSuccess());
         }
     }
 }

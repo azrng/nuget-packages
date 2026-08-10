@@ -126,9 +126,9 @@ namespace Common.HttpClients.Next.Test
         [Fact]
         public void AppendQuery_Enum_ShouldUseEnumName()
         {
-            var url = QueryStringBuilder.AppendQuery("https://unit.test/api", new { method = HttpRequestEnum.Post });
+            var url = QueryStringBuilder.AppendQuery("https://unit.test/api", new { method = DayOfWeek.Monday });
 
-            Assert.Contains("method=Post", url);
+            Assert.Contains("method=Monday", url);
         }
 
         [Fact]

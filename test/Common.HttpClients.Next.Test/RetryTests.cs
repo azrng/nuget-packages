@@ -77,7 +77,7 @@ namespace Common.HttpClients.Next.Test
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            var result = await helper.GetAsync($"{server.BaseUrl}noretry");
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}noretry");
 
             Assert.False(result.IsSuccess);
             Assert.Equal(1, attempts);
@@ -101,7 +101,7 @@ namespace Common.HttpClients.Next.Test
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            var result = await helper.GetAsync($"{server.BaseUrl}401");
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}401");
 
             Assert.False(result.IsSuccess);
             Assert.Equal(1, attempts);
@@ -115,7 +115,6 @@ namespace Common.HttpClients.Next.Test
             {
                 o.AuditLog = false;
                 o.EnableLogRedaction = false;
-                o.FailThrowException = false;
                 o.Timeout = 10;
                 o.RetryDelaySeconds = 1;
                 setup(o);

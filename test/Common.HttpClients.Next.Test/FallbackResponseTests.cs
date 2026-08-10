@@ -9,18 +9,17 @@ namespace Common.HttpClients.Next.Test
     public class FallbackResponseTests
     {
         [Fact]
-        public async Task ConnectionFailure_WhenFailThrowDisabled_ShouldReturnFallbackResponse()
+        public async Task ConnectionFailure_ShouldReturnFallbackResponse()
         {
             int closedPort = GetFreeTcpPort();
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = false;
                 o.Timeout = 1;
                 o.MaxRetryAttempts = 0;
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            var result = await helper.GetAsync($"http://127.0.0.1:{closedPort}/fail");
+            var result = await helper.GetAsync<string>($"http://127.0.0.1:{closedPort}/fail");
 
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFallbackResponse);
@@ -28,39 +27,40 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
-        public async Task ConnectionFailure_WhenFailThrowEnabled_ShouldThrowHttpRequestException()
+        public async Task RealServerFailure_ShouldReturnFailedResultWithoutThrowing()
         {
-            // 回归：原代码 FallbackAction 在 args.Outcome.Exception 为 null 时会抛 NRE；
-            //      失败状态码路径上 Exception 为 null，应改为抛 HttpRequestException
+            // 回归：原 FailThrowException=true 路径会抛 HttpRequestException；
+            //      删除开关后统一返回失败结果，真实 5xx 不抛、不标 Fallback
             await using var server = new ScriptedHttpListenerServer(ctx =>
                 ScriptedHttpListenerServer.WriteResponseAsync(ctx, HttpStatusCode.InternalServerError, "server-error"));
 
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = true;
                 o.Timeout = 2;
                 o.MaxRetryAttempts = 0;
                 o.RetryDelaySeconds = 1;
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            await Assert.ThrowsAsync<HttpRequestException>(() =>
-                helper.GetAsync($"{server.BaseUrl}server-fail"));
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}server-fail");
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+            Assert.False(result.IsFallbackResponse);
         }
 
         [Fact]
-        public async Task ConnectionFailure_NonGeneric_ShouldCarryFallbackBody()
+        public async Task ConnectionFailure_ShouldCarryFallbackBody()
         {
             int closedPort = GetFreeTcpPort();
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = false;
                 o.Timeout = 1;
                 o.MaxRetryAttempts = 0;
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            var result = await helper.GetAsync($"http://127.0.0.1:{closedPort}/fail");
+            var result = await helper.GetAsync<string>($"http://127.0.0.1:{closedPort}/fail");
 
             Assert.Contains("Fallback: request failed.", result.ErrorMessage);
         }
@@ -73,14 +73,13 @@ namespace Common.HttpClients.Next.Test
 
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = false;
                 o.Timeout = 2;
                 o.MaxRetryAttempts = 0;
                 o.RetryDelaySeconds = 1;
             });
 
             var helper = provider.GetRequiredService<IHttpHelper>();
-            var result = await helper.GetAsync($"{server.BaseUrl}real-503");
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}real-503");
 
             Assert.False(result.IsSuccess);
             Assert.False(result.IsFallbackResponse);
@@ -93,7 +92,6 @@ namespace Common.HttpClients.Next.Test
             int closedPort = GetFreeTcpPort();
             using var provider = BuildProvider(o =>
             {
-                o.FailThrowException = false;
                 o.Timeout = 1;
                 o.MaxRetryAttempts = 0;
             });

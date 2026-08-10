@@ -1,5 +1,4 @@
 using Common.HttpClients.Next.Test.Helpers;
-using Microsoft.Extensions.Options;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -14,7 +13,7 @@ namespace Common.HttpClients.Next.Test
             using var client = NewClient(_ => Ok(""));
             var helper = CreateHelper(client);
 
-            var result = await helper.GetAsync("https://unit.test/empty");
+            var result = await helper.GetAsync<string>("https://unit.test/empty");
 
             Assert.True(result.IsSuccess);
             Assert.Equal("", result.Data);
@@ -72,13 +71,13 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
-        public async Task GetAsync_NotFound_WhenFailThrowDisabled_ShouldReturnFailedResult()
+        public async Task GetAsync_NotFound_ShouldReturnFailedResult()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.NotFound)
             {
                 Content = new StringContent("not found")
             });
-            var helper = CreateHelper(client, failThrowException: false);
+            var helper = CreateHelper(client);
 
             var result = await helper.GetAsync<SampleResponse>("https://unit.test/404");
 
@@ -94,7 +93,7 @@ namespace Common.HttpClients.Next.Test
             using var client = NewClient(_ => Ok(large));
             var helper = CreateHelper(client);
 
-            var result = await helper.GetAsync("https://unit.test/large");
+            var result = await helper.GetAsync<string>("https://unit.test/large");
 
             Assert.True(result.IsSuccess);
             Assert.Equal(10_000, result.Data?.Length);
@@ -110,7 +109,7 @@ namespace Common.HttpClients.Next.Test
             });
             var helper = CreateHelper(client);
 
-            var result = await helper.GetAsync("https://unit.test/utf8");
+            var result = await helper.GetAsync<string>("https://unit.test/utf8");
 
             Assert.True(result.IsSuccess);
             Assert.Equal(chinese, result.Data);
@@ -153,15 +152,10 @@ namespace Common.HttpClients.Next.Test
             return new HttpClient(new DelegateHttpMessageHandler((r, _) => Task.FromResult(factory(r))));
         }
 
-        private static HttpClientHelper CreateHelper(HttpClient client, bool failThrowException = false)
+        private static HttpClientHelper CreateHelper(HttpClient client)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            var options = Options.Create(new HttpClientOptions
-            {
-                FailThrowException = failThrowException,
-                Timeout = 100
-            });
-            return new HttpClientHelper(client, options, logger);
+            return new HttpClientHelper(client, logger);
         }
 
         private sealed class SampleResponse

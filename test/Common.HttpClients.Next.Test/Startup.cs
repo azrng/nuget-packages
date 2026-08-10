@@ -16,13 +16,12 @@ public class Startup
         // 日志输出到 xunit 测试输出
         services.AddLogging(x => x.AddXunitOutput());
 
-        // 非命名客户端（default）：失败不抛异常，返回结构化 IHttpResult；低重试以加快测试。
+        // 非命名客户端（default）：失败返回结构化 IHttpResult；低重试以加快测试。
         // 该重载内部注册指向 "default" 的 IHttpHelper，可直接通过构造函数注入，
         // 用于覆盖非命名模式（区别于下方通过 IHttpHelperFactory.CreateClient(name) 的命名模式）。
         services.AddHttpClientService(options =>
         {
             options.BaseAddress = "https://echo.apifox.com/";
-            options.FailThrowException = false;
             options.AuditLog = false;
             options.EnableLogRedaction = false;
             options.Timeout = 30;
@@ -30,11 +29,10 @@ public class Startup
             options.RetryDelaySeconds = 1;
         });
 
-        // 默认 Echo 客户端：失败不抛异常，返回结构化 IHttpResult；低重试以加快测试
+        // 默认 Echo 客户端：失败返回结构化 IHttpResult；低重试以加快测试
         services.AddHttpClientService("apifox", options =>
         {
             options.BaseAddress = "https://echo.apifox.com/";
-            options.FailThrowException = false;
             options.AuditLog = false;
             options.EnableLogRedaction = false;
             options.Timeout = 30;
@@ -42,11 +40,10 @@ public class Startup
             options.RetryDelaySeconds = 1;
         });
 
-        // 失败抛异常的客户端：用于测试 FailThrowException = true 的异常路径
+        // 失败结果客户端：用于测试失败返回 IHttpResult(IsSuccess=false) 的路径（4.0 起统一结果对象，不再抛异常）
         services.AddHttpClientService("apifox-throw", options =>
         {
             options.BaseAddress = "https://echo.apifox.com/";
-            options.FailThrowException = true;
             options.AuditLog = false;
             options.EnableLogRedaction = false;
             options.Timeout = 30;
@@ -54,11 +51,10 @@ public class Startup
             options.RetryDelaySeconds = 1;
         });
 
-        // 短超时客户端（2s）：用于 /delay 超时测试；失败不抛异常，由 Fallback 兜底为 503
+        // 短超时客户端（2s）：用于 /delay 超时测试；失败由 Fallback 兜底为 503
         services.AddHttpClientService("apifox-timeout", options =>
         {
             options.BaseAddress = "https://echo.apifox.com/";
-            options.FailThrowException = false;
             options.AuditLog = false;
             options.EnableLogRedaction = false;
             options.Timeout = 2;
@@ -66,11 +62,10 @@ public class Startup
             options.RetryDelaySeconds = 1;
         });
 
-        // 短超时 + 抛异常客户端：用于超时抛异常路径测试
+        // 短超时客户端（2s）：用于超时返回失败结果路径测试
         services.AddHttpClientService("apifox-timeout-throw", options =>
         {
             options.BaseAddress = "https://echo.apifox.com/";
-            options.FailThrowException = true;
             options.AuditLog = false;
             options.EnableLogRedaction = false;
             options.Timeout = 2;

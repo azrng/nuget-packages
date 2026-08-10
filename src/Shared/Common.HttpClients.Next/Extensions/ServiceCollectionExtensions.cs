@@ -98,7 +98,7 @@ namespace Common.HttpClients
                 var httpOptions = handler.ServiceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
 
                 // 1. 降级策略（最外层兜底）
-                builder.AddFallback(BuildFallbackOptions(httpOptions))
+                builder.AddFallback(BuildFallbackOptions())
 
                 // 2. 总超时策略（涵盖整条重试链）
                        .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
@@ -200,7 +200,6 @@ namespace Common.HttpClients
             {
                 config.AuditLog = true;
                 config.EnableLogRedaction = true;
-                config.FailThrowException = false;
                 config.Timeout = 100;
                 config.MaxRequestBodyLength = 4096;
                 config.MaxOutputResponseLength = 4096;
@@ -210,7 +209,7 @@ namespace Common.HttpClients
             });
         }
 
-        private static FallbackStrategyOptions<HttpResponseMessage> BuildFallbackOptions(HttpClientOptions httpOptions)
+        private static FallbackStrategyOptions<HttpResponseMessage> BuildFallbackOptions()
         {
             return new FallbackStrategyOptions<HttpResponseMessage>()
             {
@@ -230,27 +229,14 @@ namespace Common.HttpClients
 
                     return ValueTask.FromResult(false);
                 },
-                FallbackAction = args =>
+                // 统一兜底为 503 降级响应（带 X-Fallback-Response 头），调用方按 IsSuccess / IsFallbackResponse 处理；
+                // 需要抛异常的调用方可对返回的 IHttpResult 调用 EnsureSuccess()。
+                FallbackAction = args => Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
-                    if (!httpOptions.FailThrowException)
-                    {
-                        return Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                        {
-                            Content = new StringContent("Fallback: request failed."),
-                            Headers = { { HttpClientHeaderNames.FallbackResponse, "true" } }
-                        });
-                    }
-
-                    var exception = args.Outcome.Exception ?? WrapFailedResponseAsException(args.Outcome.Result);
-                    return Outcome.FromExceptionAsValueTask<HttpResponseMessage>(exception);
-                }
+                    Content = new StringContent("Fallback: request failed."),
+                    Headers = { { HttpClientHeaderNames.FallbackResponse, "true" } }
+                })
             };
-        }
-
-        private static HttpRequestException WrapFailedResponseAsException(HttpResponseMessage? response)
-        {
-            var statusCode = response?.StatusCode ?? HttpStatusCode.ServiceUnavailable;
-            return new HttpRequestException($"Request failed with status code {(int)statusCode} ({statusCode}).", null, statusCode);
         }
 
         private static void ApplyDefaultHeaders(HttpClient client, HttpClientOptions options)

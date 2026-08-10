@@ -9,8 +9,8 @@ namespace Common.HttpClients.Next.Test.Integration;
 /// <summary>
 /// IHttpHelper 针对 Apifox Echo（https://echo.apifox.com）的集成测试。
 /// 覆盖 IHttpHelper 全部成员：5 种 HTTP 方法、Query/JSON/Form/文件上传/Soap、
-/// 自定义 Header、GetStreamAsync 流式读取、SendAsync（枚举/原始）、DownloadFileAsync 下载、
-/// 以及 /delay 触发的超时（Fail/FailThrow 两种路径）。
+/// 自定义 Header、GetStreamAsync 流式读取、SendAsync（原始请求）、DownloadFileAsync 下载、
+/// 以及 /delay 触发的超时（由 Fallback 兜底为 503）。
 /// 这些测试会发起真实网络请求，需在联网环境执行；
 /// 离线环境可通过 <c>--filter Category!=Integration</c> 跳过。
 /// </summary>
@@ -18,16 +18,12 @@ namespace Common.HttpClients.Next.Test.Integration;
 public class ApifoxEchoIntegrationTests
 {
     private readonly IHttpHelper _http;
-    private readonly IHttpHelper _httpThrow;
     private readonly IHttpHelper _httpTimeout;
-    private readonly IHttpHelper _httpTimeoutThrow;
 
     public ApifoxEchoIntegrationTests(IHttpHelperFactory factory)
     {
         _http = factory.CreateClient("apifox");
-        _httpThrow = factory.CreateClient("apifox-throw");
         _httpTimeout = factory.CreateClient("apifox-timeout");
-        _httpTimeoutThrow = factory.CreateClient("apifox-timeout-throw");
     }
 
     // ========== HTTP 方法与回显 ==========
@@ -35,7 +31,8 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task GetAsync_WithQuery_ShouldEchoArgs()
     {
-        var result = await _http.GetAsync<EchoResponse>("get", new { foo = "bar", num = 1 });
+        var result = await _http.GetAsync<EchoResponse>("get",
+            new HttpSendOptions { Query = new { foo = "bar", num = 1 } });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -47,7 +44,8 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task GetAsync_AsString_ShouldReturnEchoBody()
     {
-        var result = await _http.GetAsync("get", new { mark = "azrng" });
+        var result = await _http.GetAsync<string>("get",
+            new HttpSendOptions { Query = new { mark = "azrng" } });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -70,7 +68,7 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task PostAsync_AsString_ShouldReturnEchoBody()
     {
-        var result = await _http.PostAsync("post", new { name = "azrng" });
+        var result = await _http.PostAsync<string>("post", new { name = "azrng" });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -81,7 +79,8 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task PutAsync_WithBodyAndQuery_ShouldEcho()
     {
-        var result = await _http.PutAsync<EchoResponse>("put", new { k = "v" }, new { id = 99 });
+        var result = await _http.PutAsync<EchoResponse>("put", new { k = "v" },
+            new HttpSendOptions { Query = new { id = 99 } });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -104,7 +103,8 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task DeleteAsync_WithQuery_ShouldEchoArgs()
     {
-        var result = await _http.DeleteAsync<EchoResponse>("delete", new { x = "y" });
+        var result = await _http.DeleteAsync<EchoResponse>("delete",
+            new HttpSendOptions { Query = new { x = "y" } });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -114,7 +114,8 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task DeleteAsync_AsString_ShouldReturnEchoBody()
     {
-        var result = await _http.DeleteAsync("delete", new { x = "y" });
+        var result = await _http.DeleteAsync<string>("delete",
+            new HttpSendOptions { Query = new { x = "y" } });
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -146,7 +147,7 @@ public class ApifoxEchoIntegrationTests
     {
         var form = new List<KeyValuePair<string, string>> { new("field1", "value1") };
 
-        var result = await _http.PostFormDataAsync("post", form);
+        var result = await _http.PostFormDataAsync<string>("post", form);
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNullOrEmpty();
@@ -207,7 +208,7 @@ public class ApifoxEchoIntegrationTests
     {
         var headers = new Dictionary<string, string> { { "X-Test-Header", "hello-echo" } };
 
-        var result = await _http.GetAsync<EchoResponse>("get", null, headers);
+        var result = await _http.GetAsync<EchoResponse>("get", new HttpSendOptions { Headers = headers });
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
@@ -218,18 +219,19 @@ public class ApifoxEchoIntegrationTests
             && kvp.Value == "hello-echo");
     }
 
-    // ========== SendAsync（枚举 / 原始）==========
+    // ========== SendAsync（原始请求）==========
 
     [Fact]
-    public async Task SendAsync_WithEnum_ShouldEcho()
+    public async Task SendAsync_WithRawPostContent_ShouldEcho()
     {
         using var content = new StringContent("{\"a\":1}", Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "post") { Content = content };
 
-        var result = await _http.SendAsync(HttpRequestEnum.Post, "post", content);
+        using var response = await _http.SendAsync(request);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Data.Should().NotBeNullOrEmpty();
-        result.Data.Should().Contain("\"a\"");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"a\"");
     }
 
     [Fact]
@@ -297,12 +299,12 @@ public class ApifoxEchoIntegrationTests
         }
     }
 
-    // ========== 错误处理（IHttpResult.Fail / FailThrowException）==========
+    // ========== 错误处理（IHttpResult.Fail）==========
 
     [Fact]
-    public async Task StatusNotFound_WhenFailThrowDisabled_ShouldReturnFailResult()
+    public async Task StatusNotFound_ShouldReturnFailResult()
     {
-        var result = await _http.GetAsync("status/404");
+        var result = await _http.GetAsync<string>("status/404");
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -310,34 +312,26 @@ public class ApifoxEchoIntegrationTests
     }
 
     [Fact]
-    public async Task StatusError_WhenFailThrowEnabled_ShouldThrowHttpRequestException()
+    public async Task StatusError_ShouldReturnFailResult()
     {
-        var act = async () => await _httpThrow.GetAsync("status/418");
+        // 4.0 起统一结果对象：失败状态码返回 IHttpResult(IsSuccess=false)，不再抛异常
+        var result = await _http.GetAsync<string>("status/418");
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be((HttpStatusCode)418);
     }
 
-    // ========== 超时（/delay 触发，Fail/FailThrow 两种路径）==========
+    // ========== 超时（/delay 触发，由 Fallback 兜底为 503）==========
 
     [Fact]
-    public async Task Timeout_WhenFailThrowDisabled_ShouldReturnFallbackResult()
+    public async Task Timeout_ShouldReturnFallbackResult()
     {
         // /delay/10 远超 2s 超时；超时由 Fallback 兜底为 503
-        var result = await _httpTimeout.GetAsync("delay/10");
+        var result = await _httpTimeout.GetAsync<string>("delay/10");
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         result.IsFallbackResponse.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Timeout_WhenFailThrowEnabled_ShouldThrow()
-    {
-        var act = async () => await _httpTimeoutThrow.GetAsync("delay/10");
-
-        // FailThrowException=true 时，超时直接抛异常（Polly v8 的 TimeoutRejectedException，
-        // 不再继承 OperationCanceledException），而非像 FailThrow=false 那样返回降级 503
-        await act.Should().ThrowAsync<Exception>();
     }
 
     /// <summary>

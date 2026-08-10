@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
@@ -27,10 +26,8 @@ namespace Common.HttpClients
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var client = httpClientFactory.CreateClient(n);
                 var logger = sp.GetRequiredService<ILogger<HttpClientHelper>>();
-                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<HttpClientOptions>>();
-                var options = optionsMonitor.Get(n);
 
-                return new HttpClientHelper(client, Options.Create(options), logger);
+                return new HttpClientHelper(client, logger);
             }, _serviceProvider);
         }
     }
