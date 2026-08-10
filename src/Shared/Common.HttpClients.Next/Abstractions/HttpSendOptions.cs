@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Common.HttpClients
 {
     /// <summary>
@@ -13,8 +11,8 @@ namespace Common.HttpClients
         public object? Query { get; set; }
 
         /// <summary>
-        /// 请求头（per-request，覆盖客户端默认头）
+        /// 请求头（per-request，覆盖客户端默认头）；支持同名多值
         /// </summary>
-        public IDictionary<string, string>? Headers { get; set; }
+        public HttpHeaders? Headers { get; set; }
     }
 }

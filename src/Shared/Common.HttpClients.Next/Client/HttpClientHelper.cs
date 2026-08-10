@@ -1,5 +1,6 @@
 using Common.HttpClients.Utils;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,11 +19,13 @@ namespace Common.HttpClients
     {
         private readonly HttpClient _client;
         private readonly ILogger<HttpClientHelper> _logger;
+        private readonly JsonNamingPolicyType _namingPolicy;
 
-        public HttpClientHelper(HttpClient client, ILogger<HttpClientHelper> logger)
+        public HttpClientHelper(HttpClient client, ILogger<HttpClientHelper> logger, IOptions<HttpClientOptions> httpConfig)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _namingPolicy = (httpConfig ?? throw new ArgumentNullException(nameof(httpConfig))).Value.JsonNamingPolicy;
         }
 
         public async Task<IHttpResult<Stream>> GetStreamAsync(string url, HttpSendOptions? opt = null,
@@ -68,7 +71,7 @@ namespace Common.HttpClients
         public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -124,7 +127,7 @@ namespace Common.HttpClients
         public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Put, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -142,7 +145,7 @@ namespace Common.HttpClients
         public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Patch, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
@@ -246,12 +249,12 @@ namespace Common.HttpClients
                 return HttpResult<T>.Success(default, statusCode, rawBody);
             }
 
-            var data = JsonHelper.ToObject<T>(rawBody);
+            var data = JsonHelper.ToObject<T>(rawBody, _namingPolicy);
             return HttpResult<T>.Success(data, statusCode, rawBody);
         }
 
         private HttpRequestMessage CreateRequestMessage(HttpMethod method, string url,
-                                                        IDictionary<string, string>? headers, HttpContent? content = null)
+                                                        HttpHeaders? headers, HttpContent? content = null)
         {
             ValidateUrl(url);
 
@@ -262,7 +265,7 @@ namespace Common.HttpClients
                 return request;
             }
 
-            foreach (var (key, value) in headers)
+            foreach (var (key, values) in headers)
             {
                 if (string.IsNullOrWhiteSpace(key))
                 {
@@ -271,13 +274,13 @@ namespace Common.HttpClients
 
                 if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 {
-                    request.Content?.Headers.TryAddWithoutValidation(key, value);
+                    request.Content?.Headers.TryAddWithoutValidation(key, values);
                     continue;
                 }
 
-                if (!request.Headers.TryAddWithoutValidation(key, value))
+                if (!request.Headers.TryAddWithoutValidation(key, values))
                 {
-                    request.Content?.Headers.TryAddWithoutValidation(key, value);
+                    request.Content?.Headers.TryAddWithoutValidation(key, values);
                 }
             }
 

@@ -10,11 +10,11 @@ namespace Common.HttpClients
     public static class HttpHelperExtensions
     {
         /// <summary>
-        /// 创建 Bearer Token 请求头字典
+        /// 创建 Bearer Token 请求头集合
         /// </summary>
         /// <param name="token">Bearer Token（自动添加 "Bearer " 前缀）</param>
-        /// <returns>包含 Authorization 头的字典</returns>
-        public static IDictionary<string, string> CreateBearerHeaders(string token)
+        /// <returns>包含 Authorization 头的 <see cref="HttpHeaders"/></returns>
+        public static HttpHeaders CreateBearerHeaders(string token)
         {
             if (token == null)
             {
@@ -22,7 +22,7 @@ namespace Common.HttpClients
             }
 
             var value = token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? token : "Bearer " + token;
-            return new Dictionary<string, string> { ["Authorization"] = value };
+            return new HttpHeaders { ["Authorization"] = value };
         }
 
         /// <summary>

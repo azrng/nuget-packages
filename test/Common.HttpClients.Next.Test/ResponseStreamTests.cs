@@ -1,4 +1,5 @@
 using Common.HttpClients.Next.Test.Helpers;
+using Microsoft.Extensions.Options;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -155,7 +156,8 @@ namespace Common.HttpClients.Next.Test
         private static HttpClientHelper CreateHelper(HttpClient client)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            return new HttpClientHelper(client, logger);
+            var options = Options.Create(new HttpClientOptions());
+            return new HttpClientHelper(client, logger, options);
         }
     }
 }

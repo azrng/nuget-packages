@@ -14,10 +14,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T128 | Common.HttpClients 4.0 增量（HttpHeaders 多值请求头 + JsonNamingPolicy 命名策略） | DONE | 2026-08-10 |
 | T127 | Common.HttpClients 4.0 API 精简与统一（统一签名/废弃FailThrowException/精简方法表） | DONE | 2026-08-10 |
 | T126 | Azrng.JSqlParser 高价值 issue 清仓 + **1.0.0-beta11** | DONE | 2026-07-28 |
 | T122 | Cache.Redis/MemoryCache 审查修复 + 原子计数器 | DONE | 2026-07-27 |
 | T121 | DistributeLock 补充测试 | DONE | 2026-07-26 |
-| T120 | Azrng.DistributeLock 审查问题修复 | DONE | 2026-07-26 |
 
 文件结束。

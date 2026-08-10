@@ -292,7 +292,7 @@ namespace Common.HttpClients
             {
                 var headerMap = CollectHeaders(request.Headers, request.Content?.Headers);
                 var redacted = options.EnableLogRedaction ? redactor.RedactHeaders(headerMap) : headerMap;
-                return JsonHelper.ToJson(redacted);
+                return JsonHelper.ToJson(redacted, JsonNamingPolicyType.None);
             }
             catch (Exception ex)
             {
@@ -310,7 +310,7 @@ namespace Common.HttpClients
             {
                 var headerMap = CollectHeaders(response.Headers, response.Content?.Headers);
                 var redacted = options.EnableLogRedaction ? redactor.RedactHeaders(headerMap) : headerMap;
-                return JsonHelper.ToJson(redacted);
+                return JsonHelper.ToJson(redacted, JsonNamingPolicyType.None);
             }
             catch (Exception ex)
             {

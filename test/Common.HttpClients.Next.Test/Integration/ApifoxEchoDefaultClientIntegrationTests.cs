@@ -113,7 +113,7 @@ public class ApifoxEchoDefaultClientIntegrationTests
     [Fact]
     public async Task DefaultClient_GetAsync_WithCustomHeader_ShouldEchoHeader()
     {
-        var headers = new Dictionary<string, string> { { "X-Default-Header", "hello-default" } };
+        var headers = new HttpHeaders { ["X-Default-Header"] = "hello-default" };
 
         var result = await _http.GetAsync<EchoResponse>("get", new HttpSendOptions { Headers = headers });
 

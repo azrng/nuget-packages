@@ -251,11 +251,11 @@ namespace Common.HttpClients
                 return;
             }
 
-            foreach (var (key, value) in options.DefaultHeaders)
+            foreach (var (key, values) in options.DefaultHeaders)
             {
                 if (!string.IsNullOrWhiteSpace(key))
                 {
-                    client.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(key, values);
                 }
             }
         }

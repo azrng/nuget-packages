@@ -206,7 +206,7 @@ public class ApifoxEchoIntegrationTests
     [Fact]
     public async Task GetAsync_WithCustomHeader_ShouldEchoHeader()
     {
-        var headers = new Dictionary<string, string> { { "X-Test-Header", "hello-echo" } };
+        var headers = new HttpHeaders { ["X-Test-Header"] = "hello-echo" };
 
         var result = await _http.GetAsync<EchoResponse>("get", new HttpSendOptions { Headers = headers });
 

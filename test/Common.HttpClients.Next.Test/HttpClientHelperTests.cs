@@ -1,4 +1,5 @@
 using Common.HttpClients.Next.Test.Helpers;
+using Microsoft.Extensions.Options;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -95,7 +96,7 @@ namespace Common.HttpClients.Next.Test
             var helper = CreateHelper(client);
 
             await helper.GetAsync<string>("https://unit.test/api",
-                new HttpSendOptions { Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer abc" } });
+                new HttpSendOptions { Headers = new HttpHeaders { ["Authorization"] = "Bearer abc" } });
 
             Assert.Equal("Bearer abc", authHeader);
         }
@@ -140,6 +141,47 @@ namespace Common.HttpClients.Next.Test
             await helper.PostAsync<string>("https://unit.test/post", "{\"raw\":\"json\"}");
 
             Assert.Equal("{\"raw\":\"json\"}", payload);
+        }
+
+        [Fact]
+        public async Task PostAsync_WithSnakeCaseNamingPolicy_ShouldSerializeSnakeCase()
+        {
+            string? payload = null;
+            using var client = NewClient(async r =>
+            {
+                payload = await r.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}")
+                };
+            });
+            var helper = CreateHelper(client, JsonNamingPolicyType.SnakeCaseLower);
+
+            await helper.PostAsync<SampleResponse>("https://unit.test/post", new { UserName = "az", UserId = 1 });
+
+            Assert.Contains("\"user_name\"", payload);
+            Assert.Contains("\"user_id\"", payload);
+        }
+
+        [Fact]
+        public async Task GetAsync_WithMultiValueHeaders_ShouldPassAllValues()
+        {
+            var capturedValues = new List<string>();
+            using var client = NewClient(r =>
+            {
+                capturedValues = r.Headers.GetValues("Accept").ToList();
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") };
+            });
+            var helper = CreateHelper(client);
+
+            var headers = new HttpHeaders();
+            headers.Add("Accept", "application/json");
+            headers.Add("Accept", "text/plain");
+
+            await helper.GetAsync<string>("https://unit.test/api", new HttpSendOptions { Headers = headers });
+
+            Assert.Contains("text/plain", capturedValues);
+            Assert.Contains("application/json", capturedValues);
         }
 
         [Fact]
@@ -352,10 +394,11 @@ namespace Common.HttpClients.Next.Test
             return new HttpClient(new DelegateHttpMessageHandler(factory));
         }
 
-        private static HttpClientHelper CreateHelper(HttpClient client)
+        private static HttpClientHelper CreateHelper(HttpClient client, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            return new HttpClientHelper(client, logger);
+            var options = Options.Create(new HttpClientOptions { JsonNamingPolicy = namingPolicy });
+            return new HttpClientHelper(client, logger, options);
         }
 
         private sealed class SampleResponse
