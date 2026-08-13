@@ -8,7 +8,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>一个学习eShop的自用事件总线内存版实现</Description>
-        <Version>1.1.0</Version>
+        <Version>1.1.1</Version>
         <PackageId>Azrng.EventBus.InMemory</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <NoWarn>1701;1702;1591</NoWarn>

@@ -1,4 +1,4 @@
-﻿using Azrng.EventBus.Core.Abstractions;
+using Azrng.EventBus.Core.Abstractions;
 using Azrng.EventBus.InMemory;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -6,16 +6,15 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class InMemoryDependencyInjectionExtensions
 {
     /// <summary>
-    /// 添加 InMemory 的事件总线
+    /// 添加 InMemory 的事件总线。
     /// </summary>
-    /// <param name="services"></param>
-    /// <returns></returns>
+    /// <param name="services">服务集合。</param>
+    /// <returns>事件总线构建者。</returns>
     public static IEventBusBuilder AddInMemoryEventBus(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<IEventBus, InMemoryEventBus>();
-
         return new EventBusBuilder(services);
     }
 
