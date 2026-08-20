@@ -11,15 +11,16 @@
 | T111 | Azrng.JSqlParser 对齐审计修复（17 处走样） | 修复系统对比发现的 17 处迁移走样。Oracle oldOracleJoinSyntax 体系、ParenthesedSelect 继承、GROUP BY 混用、SqlServerHints 完整关键字跳过记录 TODO 在 MIGRATION.md 第 13.2 节。测试 1465→1567（+102） | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-18 |
 | T129 | InMemory EventBus 同步分发 | 对齐 MediatR：发布方 await 等待处理器完成，移除后台队列；保留多处理器并发与异常隔离，并补直接分发测试 | 阶段 1 | Codex | REVIEW | P1 | 2026-08-13 |
 | T130 | GitHub 工作流接入 NuGet Trusted Publishing | nuget-publish.yml 改用 NuGet/login@v1 以 GitHub OIDC 换取 1 小时短时 API 密钥推送包，移除对长期 secrets.NUGET_API_KEY 的依赖 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
+| T131 | Azrng.AspNetCore.Core CORS API 精简 | 删除与框架原生 API 完全重复的 AddCorsPolicy 扩展方法，保留 AddAnyCors 与 AddCorsByOrigins，同步测试、README、ARCHITECTURE 与版本记录（1.5.0，破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T131 | Azrng.AspNetCore.Core CORS API 精简（移除 AddCorsPolicy，1.5.0） | DONE | 2026-08-20 |
 | T128 | Common.HttpClients 4.0 增量（HttpHeaders 多值请求头 + JsonNamingPolicy 命名策略） | DONE | 2026-08-10 |
 | T127 | Common.HttpClients 4.0 API 精简与统一（统一签名/废弃FailThrowException/精简方法表） | DONE | 2026-08-10 |
 | T126 | Azrng.JSqlParser 高价值 issue 清仓 + **1.0.0-beta11** | DONE | 2026-07-28 |
 | T122 | Cache.Redis/MemoryCache 审查修复 + 原子计数器 | DONE | 2026-07-27 |
-| T121 | DistributeLock 补充测试 | DONE | 2026-07-26 |
 
 文件结束。

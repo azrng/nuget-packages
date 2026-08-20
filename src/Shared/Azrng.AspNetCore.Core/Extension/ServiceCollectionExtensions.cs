@@ -5,7 +5,6 @@ using Azrng.Core.DependencyInjection;
 using Azrng.Core.Extension;
 using Azrng.Core.Helpers;
 using Azrng.Core.Results;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics.CodeAnalysis;
@@ -122,42 +121,6 @@ public static class ServiceCollectionExtensions
                     builder.AllowCredentials();
                 }
             });
-        });
-
-        return services;
-    }
-
-    /// <summary>
-    /// 添加自定义 CORS 策略（高级配置）
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <param name="policyName">策略名称</param>
-    /// <param name="configurePolicy">策略配置</param>
-    /// <returns>服务集合</returns>
-    /// <remarks>
-    /// 使用示例：
-    /// <code>
-    /// // SignalR 环境
-    /// services.AddCorsPolicy("SignalRCors", builder => builder
-    ///     .WithOrigins("https://example.com")
-    ///     .AllowAnyMethod()
-    ///     .AllowAnyHeader()
-    ///     .AllowCredentials()
-    ///     .WithExposedHeaders("*")
-    ///     .SetPreflightMaxAge(TimeSpan.FromHours(1)));
-    /// </code>
-    /// </remarks>
-    public static IServiceCollection AddCorsPolicy(this IServiceCollection services,
-                                                   string policyName,
-                                                   Action<CorsPolicyBuilder> configurePolicy)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ThrowIfInvalidPolicyName(policyName);
-        ArgumentNullException.ThrowIfNull(configurePolicy);
-
-        services.AddCors(options =>
-        {
-            options.AddPolicy(policyName, configurePolicy);
         });
 
         return services;

@@ -148,7 +148,6 @@ public class CoreFeatureTests
         var emptyPolicy = () => services.AddAnyCors("");
         var emptyOrigins = () => services.AddCorsByOrigins(Array.Empty<string>());
         var blankOrigin = () => services.AddCorsByOrigins(new[] { "https://a.example", " " });
-        var nullCustomPolicy = () => services.AddCorsPolicy("DefaultCors", null!);
 
         emptyPolicy.Should().Throw<ArgumentException>()
             .WithParameterName("policyName");
@@ -156,8 +155,6 @@ public class CoreFeatureTests
             .WithParameterName("allowedOrigins");
         blankOrigin.Should().Throw<ArgumentException>()
             .WithParameterName("allowedOrigins");
-        nullCustomPolicy.Should().Throw<ArgumentNullException>()
-            .WithParameterName("configurePolicy");
     }
 
     [Fact]

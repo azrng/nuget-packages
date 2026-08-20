@@ -402,17 +402,17 @@ app.UseCorsPolicy();
 
 ##### 高级配置
 
-需要更细粒度控制时，使用 `AddCorsPolicy`：
+需要更细粒度控制（如 `WithExposedHeaders`、`SetPreflightMaxAge`）时，直接使用框架原生写法，`UseCorsPolicy` 仍可按策略名启用：
 
 ```csharp
-// 自定义配置
-builder.Services.AddCorsPolicy("CustomPolicy", builder => builder
+// 自定义配置（框架原生 API）
+builder.Services.AddCors(options => options.AddPolicy("CustomPolicy", builder => builder
     .WithOrigins("https://example.com")
     .WithMethods("GET", "POST", "PUT", "DELETE")
     .WithHeaders("Content-Type", "Authorization")
     .AllowCredentials()
     .WithExposedHeaders("X-Total-Count")
-    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+    .SetPreflightMaxAge(TimeSpan.FromHours(1))));
 
 // 启用 CORS 中间件
 app.UseCorsPolicy("CustomPolicy");
@@ -424,7 +424,6 @@ app.UseCorsPolicy("CustomPolicy");
 |------|---------|------|
 | `AddAnyCors()` | 开发环境 | `policyName`（可选） |
 | `AddCorsByOrigins()` | 生产环境 | `allowedOrigins`, `policyName`, `allowCredentials` |
-| `AddCorsPolicy()` | 高级配置 | `policyName`, `configurePolicy` |
 
 ##### 中间件
 
@@ -658,6 +657,8 @@ ForbiddenException
 
 ### 版本更新记录
 
+* 1.5.0
+  * **破坏性变更**：移除 `AddCorsPolicy()`，该方法与框架原生 `services.AddCors(o => o.AddPolicy(name, builder => ...))` 完全等价；高级场景请直接使用原生写法，`AddAnyCors()` 与 `AddCorsByOrigins()` 保持不变
 * 1.4.0
   * 新增 `UnauthorizedException`（401）异常映射，补齐未认证语义，与 `ForbiddenException`（403）区分；`Azrng.Core` 依赖改为本地项目引用（最新版）
   * **破坏性变更**：`ForbiddenException` 由 HTTP 401 改为 403，与 HTTP 语义对齐；前端/网关若按 401 判断鉴权需同步调整

@@ -6,7 +6,7 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>基本的公共类库</Description>
-        <Version>1.4.0</Version>
+        <Version>1.5.0</Version>
         <PackageId>Azrng.AspNetCore.Core</PackageId>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591;CA1416</NoWarn>

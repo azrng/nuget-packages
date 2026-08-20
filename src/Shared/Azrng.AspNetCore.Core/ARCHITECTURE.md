@@ -278,13 +278,12 @@ services.AddSingleton<ILoggerService, CustomLoggerService>();
 
 **功能**: 提供简单易用的 CORS 策略配置，支持不同使用场景。
 
-**三种配置方法**:
+**两种配置方法**:
 
 | 方法 | 适用场景 | 复杂度 | 安全性 |
 |------|----------|--------|--------|
 | `AddAnyCors()` | 开发环境 | ⭐ 简单 | ⚠️ 仅开发 |
 | `AddCorsByOrigins()` | 生产环境 | ⭐⭐ 中等 | ✅ 安全 |
-| `AddCorsPolicy()` | 高级定制 | ⭐⭐⭐ 灵活 | ✅ 完全可控 |
 
 **使用示例**:
 
@@ -307,14 +306,14 @@ builder.Services.AddCorsByOrigins(
 );
 app.UseCorsPolicy();
 
-// 高级配置 - 完全自定义
-builder.Services.AddCorsPolicy("CustomPolicy", builder => builder
+// 高级配置 - 直接使用框架原生 API
+builder.Services.AddCors(options => options.AddPolicy("CustomPolicy", builder => builder
     .WithOrigins("https://example.com")
     .WithMethods("GET", "POST", "PUT", "DELETE")
     .WithHeaders("Content-Type", "Authorization")
     .AllowCredentials()
     .WithExposedHeaders("X-Total-Count")
-    .SetPreflightMaxAge(TimeSpan.FromHours(1)));
+    .SetPreflightMaxAge(TimeSpan.FromHours(1))));
 app.UseCorsPolicy("CustomPolicy");
 ```
 
@@ -331,7 +330,7 @@ app.UseCorsPolicy("CustomPolicy");
 **设计原则**:
 1. **简单优先**: 常用场景一行代码搞定
 2. **安全第一**: 生产环境强制明确指定来源
-3. **灵活扩展**: 保留高级配置选项满足特殊需求
+3. **灵活扩展**: 高级场景直接使用框架原生 `AddCors`/`AddPolicy`，不做多余包装
 4. **向后兼容**: 保留原有的 `AddAnyCors()` 方法
 
 **安全建议**:
@@ -636,6 +635,7 @@ app.Run();
 
 | 版本 | 主要变更 |
 |------|----------|
+| 1.5.0 | **CORS API 精简（破坏性）**：移除与框架原生 `AddCors`/`AddPolicy` 完全等价的 `AddCorsPolicy()`；高级场景直接使用原生写法；`AddAnyCors`、`AddCorsByOrigins`、`UseCorsPolicy` 保持不变 |
 | 1.4.0 | **审查问题修复（P0+P1）**：`CommonMvcConfig` 改为 `IOptions` 注入使配置真正生效；移除异常中间件 `HasStarted` 有害判断；审计中间件 `EndTime`/`Elapsed` 统一在响应完成回调内计算并补异常保护；`ForbiddenException` 状态码 401→403（破坏性）；移除 `IsAotCompatible` 声明与 trim 警告抑制；异常中间件 `JsonSerializerOptions` 改为静态复用；新增 `UnauthorizedException`→401 映射；`Azrng.Core` 改为本地项目引用 |
 | 1.3.1 | **扩展前基础加固**：测试覆盖 `net6.0`/`net8.0`/`net9.0`/`net10.0`；CORS 注册增加参数校验；审计日志默认序列化增加 `System.Text.Json` 兜底；补充关键行为回归测试 |
 | 1.3.0 | **CORS 配置重构**：简化为 3 个方法（`AddAnyCors`、`AddCorsByOrigins`、`AddCorsPolicy`）；移除复杂的配置类；新增 `UseCorsPolicy` 中间件方法；改进易用性和安全性 |
