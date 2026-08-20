@@ -12,15 +12,16 @@
 | T129 | InMemory EventBus 同步分发 | 对齐 MediatR：发布方 await 等待处理器完成，移除后台队列；保留多处理器并发与异常隔离，并补直接分发测试 | 阶段 1 | Codex | REVIEW | P1 | 2026-08-13 |
 | T130 | GitHub 工作流接入 NuGet Trusted Publishing | nuget-publish.yml 改用 NuGet/login@v1 以 GitHub OIDC 换取 1 小时短时 API 密钥推送包，移除对长期 secrets.NUGET_API_KEY 的依赖 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T131 | Azrng.AspNetCore.Core CORS API 精简 | 删除与框架原生 API 完全重复的 AddCorsPolicy 扩展方法，保留 AddAnyCors 与 AddCorsByOrigins，同步测试、README、ARCHITECTURE 与版本记录（1.5.0，破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
+| T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系 | 删除从未被 Options 管道消费的 PreConfigure/AddObjectAccessor 预配置体系（3 个源文件），清理 APIStudy 试验代码与测试，同步文档（并入 1.5.0 破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系（并入 1.5.0） | DONE | 2026-08-20 |
 | T131 | Azrng.AspNetCore.Core CORS API 精简（移除 AddCorsPolicy，1.5.0） | DONE | 2026-08-20 |
 | T128 | Common.HttpClients 4.0 增量（HttpHeaders 多值请求头 + JsonNamingPolicy 命名策略） | DONE | 2026-08-10 |
 | T127 | Common.HttpClients 4.0 API 精简与统一（统一签名/废弃FailThrowException/精简方法表） | DONE | 2026-08-10 |
 | T126 | Azrng.JSqlParser 高价值 issue 清仓 + **1.0.0-beta11** | DONE | 2026-07-28 |
-| T122 | Cache.Redis/MemoryCache 审查修复 + 原子计数器 | DONE | 2026-07-27 |
 
 文件结束。

@@ -1,5 +1,4 @@
 using APIStudy.Model;
-using Azrng.AspNetCore.Core.Extension;
 using Azrng.AspNetCore.Core.JsonConverters;
 using Azrng.Core.Json;
 using Azrng.Swashbuckle;
@@ -30,19 +29,6 @@ public class Startup
         services.ConfigureDefaultJson();
 
         services.AddShowAllServices();
-
-        #region 测试配置注入
-
-        services.AddObjectAccessor(new TestOptions { Name = "李四" });
-        var info = services.GetObjectOrNull<TestOptions>();
-        Console.WriteLine($"配置值为：{info?.Name}");
-
-        // 还是没有搞懂咋回事
-        services.PreConfigure<TestOptions>(options => options.Name = "bbb");
-        var info2 = services.GetPreConfigureActions<TestOptions>();
-        var bbb = info2.Configure();
-
-        #endregion
     }
 
     public void Configure(WebApplication app, IWebHostEnvironment env)

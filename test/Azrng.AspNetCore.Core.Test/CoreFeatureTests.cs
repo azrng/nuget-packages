@@ -4,7 +4,6 @@ using Azrng.AspNetCore.Core.Filter;
 using Azrng.AspNetCore.Core.JsonConverters;
 using Azrng.AspNetCore.Core.Middleware;
 using Azrng.AspNetCore.Core.Model;
-using Azrng.AspNetCore.Core.PreConfigure;
 using Azrng.Core.DependencyInjection;
 using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
@@ -65,48 +64,6 @@ public class CoreFeatureTests
         json.Should().Be("\"1234567890123\"");
         fromString.Should().Be(1234567890123L);
         fromNumber.Should().Be(1234567890123L);
-    }
-
-    [Fact]
-    public void PreConfigureActionList_ExecutesActionsInOrderAndCanInstantiateOptions()
-    {
-        var list = new PreConfigureActionList<SampleOptions>
-        {
-            options => options.Trace.Add("first"),
-            options => options.Trace.Add("second")
-        };
-
-        var configured = list.Configure();
-
-        configured.Trace.Should().Equal("first", "second");
-    }
-
-    [Fact]
-    public void AddObjectAccessor_RegistersAccessorAndPreventsDuplicates()
-    {
-        var services = new ServiceCollection();
-        var accessor = services.AddObjectAccessor(new SampleOptions { Name = "demo" });
-
-        services.GetObjectOrNull<SampleOptions>()!.Name.Should().Be("demo");
-        accessor.Value!.Name.Should().Be("demo");
-
-        var act = () => services.AddObjectAccessor(new ObjectAccessor<SampleOptions>(new SampleOptions()));
-
-        act.Should().Throw<Exception>()
-            .WithMessage("*object accessor*");
-    }
-
-    [Fact]
-    public void PreConfigure_StoresAndReusesActionList()
-    {
-        var services = new ServiceCollection();
-
-        services.PreConfigure<SampleOptions>(options => options.Trace.Add("configured"));
-        var list1 = services.GetPreConfigureActions<SampleOptions>();
-        var list2 = services.GetPreConfigureActions<SampleOptions>();
-
-        ReferenceEquals(list1, list2).Should().BeTrue();
-        list1.Configure().Trace.Should().ContainSingle().Which.Should().Be("configured");
     }
 
     [Fact]
@@ -503,8 +460,6 @@ public class CoreFeatureTests
 public class SampleOptions
 {
     public string? Name { get; set; }
-
-    public List<string> Trace { get; } = new();
 }
 
 internal interface ISampleScopedService

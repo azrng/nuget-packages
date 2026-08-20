@@ -40,7 +40,6 @@ Azrng.AspNetCore.Core/
 │   ├── HttpContextExtensions.cs         # HttpContext 扩展
 │   ├── IApplicationBuilderExtensions.cs # IApplicationBuilder 扩展
 │   ├── ServiceCollectionExtensions.cs   # IServiceCollection 扩展（包含 CORS 配置）
-│   ├── PreConfigureExtensions.cs        # 预配置扩展
 │   └── CustomContractResolver.cs        # JSON 序列化契约解析器
 │
 ├── Filter/                               # MVC 过滤器
@@ -63,10 +62,6 @@ Azrng.AspNetCore.Core/
 │
 ├── Model/                                # 数据模型
 │   └── ShowServiceConfig.cs             # 服务显示配置
-│
-├── PreConfigure/                         # 预配置功能
-│   ├── IObjectAccessor.cs               # 对象访问器接口
-│   └── PreConfigureActionList.cs        # 预配置动作列表
 │
 ├── JsonConverters/                       # JSON 转换器
 │   └── LongToStringConverter.cs         # Long 转 String 转换器
@@ -129,11 +124,11 @@ Azrng.AspNetCore.Core/
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          扩展和工具层                                     │
-│  ┌────────────────────┬───────────────────────┬──────────────────────┐  │
-│  │ServiceCollection   │ HttpContextExtensions│  PreConfigure       │  │
-│  │Extensions          │ (IP获取、URL解析等)    │  (预配置系统)        │  │
-│  │(批量服务注册)       │                       │                      │  │
-│  └────────────────────┴───────────────────────┴──────────────────────┘  │
+│  ┌────────────────────────────┬───────────────────────────────────────┐  │
+│  │ServiceCollection           │ HttpContextExtensions                 │  │
+│  │Extensions                  │ (IP获取、URL解析等)                    │  │
+│  │(批量服务注册)               │                                       │  │
+│  └────────────────────────────┴───────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
 │  │  自定义验证特性                                                    │   │
 │  │  - MinValueAttribute: 最小值验证                                  │   │
@@ -397,74 +392,9 @@ public class UserService : IScopedDependency, IUserService, IEmailSender
 
 ---
 
-## 五、预配置系统 (PreConfigure)
+## 五、自定义验证特性
 
-### 5.1 设计目的
-
-在 Options 正式配置之前执行预配置动作，适用于：
-
-- 设置默认配置值
-- 多个模块需要配置同一选项时，按优先级组合配置
-- 在应用启动前修改配置
-
-### 5.2 执行顺序
-
-```
-1. PreConfigure 动作 (按添加顺序执行)
-2. Configure 动作 (正式配置)
-3. IOptions<T> 注入到容器
-```
-
-### 5.3 使用示例
-
-```csharp
-// 模块 A 设置默认值
-services.PreConfigure<DatabaseOptions>(options =>
-{
-    options.CommandTimeout = 30;
-});
-
-// 模块 B 设置连接字符串
-services.PreConfigure<DatabaseOptions>(options =>
-{
-    options.ConnectionString = "Server=localhost;";
-});
-
-// 最终配置 (会覆盖 PreConfigure 的值)
-services.Configure<DatabaseOptions>(configuration.GetSection("Database"));
-
-// 或手动执行所有预配置
-var preConfigActions = services.GetPreConfigureActions<DatabaseOptions>();
-var configuredOptions = preConfigActions.Configure();
-```
-
-### 5.4 对象访问器 (ObjectAccessor)
-
-将已创建的对象实例直接添加到服务容器：
-
-```csharp
-// 注册对象
-services.AddObjectAccessor(new AppOptions
-{
-    AppName = "MyApp",
-    Version = "1.0.0"
-});
-
-// 获取对象
-var options = services.GetObjectOrNull<AppOptions>();
-Console.WriteLine($"App: {options?.AppName}");
-```
-
-**特点**:
-- 直接添加对象实例，不依赖依赖注入容器创建
-- 只能通过 `GetObjectOrNull<T>` 方法获取
-- 同一类型只能注册一次，重复注册会抛出异常
-
----
-
-## 六、自定义验证特性
-
-### 6.1 MinValueAttribute
+### 5.1 MinValueAttribute
 
 验证数值类型的最小值：
 
@@ -476,7 +406,7 @@ public class RequestDto
 }
 ```
 
-### 6.2 CollectionNotEmptyAttribute
+### 5.2 CollectionNotEmptyAttribute
 
 验证集合不能为空：
 
@@ -490,9 +420,9 @@ public class RequestDto
 
 ---
 
-## 七、HttpContext 扩展
+## 六、HttpContext 扩展
 
-### 7.1 IP 地址获取
+### 6.1 IP 地址获取
 
 ```csharp
 // 获取本地 IPv4
@@ -508,7 +438,7 @@ var remoteIp = HttpContext.GetRemoteIpAddress();
 var url = HttpContext.Request.GetRequestUrlAddress();
 ```
 
-### 7.2 请求体重复读取
+### 6.2 请求体重复读取
 
 ```csharp
 // 启用请求体重复读取
@@ -521,9 +451,9 @@ var body2 = await HttpContext.Request.ReadBodyAsync();
 
 ---
 
-## 八、配置系统
+## 七、配置系统
 
-### 8.1 CommonMvcConfig
+### 7.1 CommonMvcConfig
 
 MVC 通用配置类，控制核心行为：
 
@@ -544,7 +474,7 @@ services.AddDefaultControllers(options =>
 });
 ```
 
-### 8.2 AuditLogOptions
+### 7.2 AuditLogOptions
 
 审计日志配置选项（详见 3.2.4 节表格）
 
@@ -567,9 +497,9 @@ app.UseAutoAuditLog();
 
 ---
 
-## 九、中间件执行顺序
+## 八、中间件执行顺序
 
-### 9.1 推荐顺序
+### 8.1 推荐顺序
 
 ```csharp
 var app = builder.Build();
@@ -611,7 +541,7 @@ app.MapControllers();
 app.Run();
 ```
 
-### 9.2 执行顺序说明
+### 8.2 执行顺序说明
 
 ```
 请求 → GlobalException → RequestId → CORS Policy → AuditLog → Routing →
@@ -631,11 +561,11 @@ app.Run();
 
 ---
 
-## 十、版本演进
+## 九、版本演进
 
 | 版本 | 主要变更 |
 |------|----------|
-| 1.5.0 | **CORS API 精简（破坏性）**：移除与框架原生 `AddCors`/`AddPolicy` 完全等价的 `AddCorsPolicy()`；高级场景直接使用原生写法；`AddAnyCors`、`AddCorsByOrigins`、`UseCorsPolicy` 保持不变 |
+| 1.5.0 | **CORS 与预配置 API 精简（破坏性）**：移除与框架原生 `AddCors`/`AddPolicy` 完全等价的 `AddCorsPolicy()`，高级场景直接使用原生写法；移除 `PreConfigure`/`AddObjectAccessor` 预配置体系（存入的委托从不被 Options 管道消费）；`AddAnyCors`、`AddCorsByOrigins`、`UseCorsPolicy` 保持不变 |
 | 1.4.0 | **审查问题修复（P0+P1）**：`CommonMvcConfig` 改为 `IOptions` 注入使配置真正生效；移除异常中间件 `HasStarted` 有害判断；审计中间件 `EndTime`/`Elapsed` 统一在响应完成回调内计算并补异常保护；`ForbiddenException` 状态码 401→403（破坏性）；移除 `IsAotCompatible` 声明与 trim 警告抑制；异常中间件 `JsonSerializerOptions` 改为静态复用；新增 `UnauthorizedException`→401 映射；`Azrng.Core` 改为本地项目引用 |
 | 1.3.1 | **扩展前基础加固**：测试覆盖 `net6.0`/`net8.0`/`net9.0`/`net10.0`；CORS 注册增加参数校验；审计日志默认序列化增加 `System.Text.Json` 兜底；补充关键行为回归测试 |
 | 1.3.0 | **CORS 配置重构**：简化为 3 个方法（`AddAnyCors`、`AddCorsByOrigins`、`AddCorsPolicy`）；移除复杂的配置类；新增 `UseCorsPolicy` 中间件方法；改进易用性和安全性 |
@@ -654,7 +584,7 @@ app.Run();
 | 0.1.0-beta2 | 优化代码 |
 | 0.1.0-beta1 | 升级支持 .NET 7 |
 
-## 10.1 扩展边界
+## 9.1 扩展边界
 
 后续扩展优先沿用现有模块边界，避免把应用业务规则放入基础设施包：
 
@@ -674,9 +604,9 @@ dotnet build src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj -c Re
 
 ---
 
-## 十一、使用场景示例
+## 十、使用场景示例
 
-### 11.1 完整配置示例
+### 10.1 完整配置示例
 
 ```csharp
 // Program.cs
@@ -736,7 +666,7 @@ app.MapControllers();
 app.Run();
 ```
 
-### 11.2 Controller 示例
+### 10.2 Controller 示例
 
 ```csharp
 [ApiController]
@@ -768,9 +698,9 @@ public class UsersController : ControllerBase
 
 ---
 
-## 十二、注意事项
+## 十一、注意事项
 
-### 12.1 安全建议
+### 11.1 安全建议
 
 1. **CORS 配置**:
    - ⚠️ `AddAnyCors()` 仅适用于开发环境，允许任何来源访问
@@ -780,7 +710,7 @@ public class UsersController : ControllerBase
 2. **审计日志**: 避免记录敏感信息（密码、Token 等），可在 `ILoggerService` 实现中脱敏
 3. **异常信息**: 生产环境应避免返回详细异常堆栈，防止信息泄露
 
-### 12.2 性能考虑
+### 11.2 性能考虑
 
 1. **审计日志**: 记录大量日志可能影响性能，建议：
    - 仅记录必要的 HTTP 方法 (默认不记录 GET)
@@ -788,14 +718,14 @@ public class UsersController : ControllerBase
    - 考虑使用异步日志存储 (`ILoggerService.WriteAsync`)
 2. **返回结果包装**: 对于文件下载等大响应场景，使用 `[NoWrapper]` 或忽略路由前缀
 
-### 12.3 兼容性
+### 11.3 兼容性
 
 1. **System.Text.Json**: 从 1.1.0 版本开始，使用 `System.Text.Json` 替代 `Newtonsoft.Json`
-2. **Native AOT**: 自 1.4.0 起不再声明 AOT 兼容。库内存在反射扫描程序集（`RegisterBusinessServices`）、泛型 JSON 序列化（`DefaultLoggerService`）、`Activator.CreateInstance`（`PreConfigureActionList`）等 trim 不安全路径，正式 AOT 部署需补 `JsonSerializerContext` 与源生成注册后再启用
+2. **Native AOT**: 自 1.4.0 起不再声明 AOT 兼容。库内存在反射扫描程序集（`RegisterBusinessServices`）、泛型 JSON 序列化（`DefaultLoggerService`）等 trim 不安全路径，正式 AOT 部署需补 `JsonSerializerContext` 与源生成注册后再启用
 
 ---
 
-## 十三、参考资料
+## 十二、参考资料
 
 - [ASP.NET Core 过滤器](https://learn.microsoft.com/zh-cn/aspnet/core/mvc/controllers/filters)
 - [ASP.NET Core 中间件](https://learn.microsoft.com/zh-cn/aspnet/core/fundamentals/middleware/)
