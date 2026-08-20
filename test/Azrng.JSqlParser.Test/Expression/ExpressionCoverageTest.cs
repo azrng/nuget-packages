@@ -563,6 +563,19 @@ public class ExpressionCoverageTest
         Assert.Contains("SOME", expr!.ToString()!);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM my_table v WHERE v.visit_state_id = ANY(@notValidVisitCodes)", "= ANY (@notValidVisitCodes)")]
+    [InlineData("SELECT * FROM my_table v WHERE NOT (v.visit_state_id = ANY(@notValidVisitCodes))", "NOT (v.visit_state_id = ANY (@notValidVisitCodes))")]
+    [InlineData("SELECT * FROM sample.\"user\" WHERE account != ALL(@ids)", "account <> ALL (@ids)")]
+    [InlineData("SELECT * FROM t WHERE id = ANY(ARRAY[1, 2, 3])", "id = ANY (ARRAY[1, 2, 3])")]
+    public void AnyComparison_ArrayOrParameter_ShouldRoundTrip(string sql, string expectedFragment)
+    {
+        var statement = SqlParser.Parse(sql);
+
+        Assert.NotNull(statement);
+        Assert.Contains(expectedFragment, statement!.ToString()!);
+    }
+
     /// <summary>
     /// 数组构造器和数组下标访问应正确解析并往返。
     /// </summary>

@@ -300,7 +300,12 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
         return default;
     }
     public object? Visit<S>(NextValExpression nextValExpression, S context) { _onVisit(nextValExpression); return default; }
-    public object? Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) { _onVisit(anyComparisonExpression); return default; }
+    public object? Visit<S>(AnyComparisonExpression anyComparisonExpression, S context)
+    {
+        _onVisit(anyComparisonExpression);
+        (anyComparisonExpression.RightExpression ?? anyComparisonExpression.Select)?.Accept(this, context);
+        return default;
+    }
     public object? Visit<S>(ArrayConstructor arrayConstructor, S context)
     {
         _onVisit(arrayConstructor);

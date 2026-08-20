@@ -235,7 +235,11 @@ public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
         return default!;
     }
     public virtual T Visit<S>(NextValExpression nextValExpression, S context) => default!;
-    public virtual T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => default!;
+    public virtual T Visit<S>(AnyComparisonExpression anyComparisonExpression, S context)
+    {
+        (anyComparisonExpression.RightExpression ?? anyComparisonExpression.Select)?.Accept(this, context);
+        return default!;
+    }
     public virtual T Visit<S>(ArrayConstructor arrayConstructor, S context)
     {
         if (arrayConstructor.Expressions?.Expressions != null)

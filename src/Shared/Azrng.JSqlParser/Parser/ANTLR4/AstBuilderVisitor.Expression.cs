@@ -122,14 +122,19 @@ public partial class AstBuilderVisitor
         {
             var op = suffix.comparisonOperator();
 
-            // = ANY/ALL/SOME (subquery) 形式
+            // = ANY/ALL/SOME (subquery/array/parameter) 形式
             if (suffix.ANY() != null || suffix.SOME() != null || suffix.ALL() != null)
             {
                 var anyType = suffix.ALL() != null ? AnyType.All
                     : suffix.SOME() != null ? AnyType.Some : AnyType.Any;
-                var select = (Select)Visit(suffix.selectStatement());
+                var rightExpression = suffix.selectStatement() != null
+                    ? (Expression.IExpression)Visit(suffix.selectStatement())
+                    : (Expression.IExpression)Visit(suffix.concatenationExpr(0));
                 // 包装成比较运算符 + ANY/ALL/SOME
-                var anyCompare = new AnyComparisonExpression(anyType, select);
+                var anyCompare = new AnyComparisonExpression(anyType, rightExpression as Select)
+                {
+                    RightExpression = rightExpression
+                };
                 Expression.IExpression result = anyCompare;
                 if (op.EQUALS() != null) return new EqualsTo { LeftExpression = concat, RightExpression = result };
                 if (op.NOT_EQUALS() != null || op.NOT_EQUALS2() != null || op.NOT_EQUALS3() != null)

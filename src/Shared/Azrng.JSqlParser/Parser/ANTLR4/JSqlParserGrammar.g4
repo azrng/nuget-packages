@@ -1407,7 +1407,8 @@ predicate
 
 predicateSuffix
     : comparisonOperator concatenationExpr
-    | comparisonOperator (ANY | SOME | ALL) OPENING_PAREN selectStatement CLOSING_PAREN
+    // ANY/ALL/SOME 支持 PostgreSQL 数组/参数表达式，也保留子查询形式
+    | comparisonOperator (ANY | SOME | ALL) OPENING_PAREN (selectStatement | concatenationExpr) CLOSING_PAREN
     | (NOT? IN | GLOBAL NOT? IN) OPENING_PAREN (selectStatement | expressionList) CLOSING_PAREN
     | NOT? BETWEEN (SYMMETRIC | ASYMMETRIC)? concatenationExpr AND concatenationExpr
     | NOT? (LIKE | ILIKE | RLIKE | REGEXP | REGEXP_LIKE | MATCH_ANY | MATCH_ALL | MATCH_PHRASE | MATCH_PHRASE_PREFIX | MATCH_REGEXP) BINARY? (ANY | ALL)? concatenationExpr (ESCAPE concatenationExpr)?

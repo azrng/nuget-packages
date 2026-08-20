@@ -378,7 +378,11 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
         return null;
     }
     public object? Visit<S>(NextValExpression nextValExpression, S context) => null;
-    public object? Visit<S>(AnyComparisonExpression anyComparisonExpression, S context) => null;
+    public object? Visit<S>(AnyComparisonExpression anyComparisonExpression, S context)
+    {
+        (anyComparisonExpression.RightExpression ?? anyComparisonExpression.Select)?.Accept(this, context);
+        return null;
+    }
     public object? Visit<S>(ArrayConstructor arrayConstructor, S context)
     {
         if (arrayConstructor.Expressions?.Expressions != null)

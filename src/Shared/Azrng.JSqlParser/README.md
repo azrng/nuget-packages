@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta11" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta12" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta11`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta12`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -211,7 +211,7 @@ Console.WriteLine(stmt.ToString());
 
 - 字面量：整数、浮点数、字符串、十六进制、布尔值、null
 - 运算符：算术（`+`、`-`、`*`、`/`、`%`）、比较（`=`、`<>`、`>`、`<`、`>=`、`<=`）、逻辑（`AND`、`OR`、`NOT`、`XOR`）、字符串（`||`、`CONCAT`）、位运算
-- 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`REGEXP_LIKE`、`SIMILAR TO`、PostgreSQL 正则符号（`~`、`~*`、`!~`、`!~*`）、`IN`、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
+- 谓词：`LIKE`、`ILIKE`、`RLIKE`、`REGEXP`、`REGEXP_LIKE`、`SIMILAR TO`、PostgreSQL 正则符号（`~`、`~*`、`!~`、`!~*`）、`IN`、`ANY`/`ALL`/`SOME`（支持子查询、数组表达式和命名数组参数）、`BETWEEN`、`IS NULL`、`IS UNKNOWN`、`EXISTS`、`MEMBER OF`、`OVERLAPS`
 - 高级：`CASE WHEN`、`CAST`、`EXTRACT`（含 `DAY TO SECOND` 限定）、`INTERVAL`（含 `DAY TO SECOND`）、`COALESCE`、`NULLIF`、`LAMBDA`、`STRUCT`、`CONNECT BY PRIOR`、`HIGH`/`LOW`/`INVERSE`（Exasol）
 - 函数：聚合（`COUNT`、`SUM`、`AVG`、`MIN`、`MAX`）、字符串、数学、窗口/分析函数；Oracle `XMLPARSE` / `XMLSERIALIZE`；ODBC `{fn ...}` / `{d|t|ts '...'}`
 - 参数：`?`（位置参数）、`$1`（编号参数）、`:name` / `@name`（命名参数，`JdbcNamedParameter.Name` 返回不含前缀的名称，`Prefix` 字段保留原始前缀 `:`/`@`）
@@ -235,6 +235,10 @@ Console.WriteLine(stmt.ToString());
 - `TRUNCATE`、`COMMIT`、`ROLLBACK`、`SAVEPOINT`、`SET`、`USE`、`SHOW`、`DESCRIBE`、`EXPLAIN`、`SESSION START/APPLY/DROP/SHOW/DESCRIBE`
 
 ## 版本历史
+
+### 1.0.0-beta12
+
+支持 PostgreSQL `ANY`/`ALL`/`SOME` 使用数组表达式、命名数组参数或子查询，并补充 `@name` 参数及否定条件回归测试。
 
 ### 1.0.0-beta11
 
