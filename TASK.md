@@ -13,6 +13,7 @@
 | T130 | GitHub 工作流接入 NuGet Trusted Publishing | nuget-publish.yml 改用 NuGet/login@v1 以 GitHub OIDC 换取 1 小时短时 API 密钥推送包，移除对长期 secrets.NUGET_API_KEY 的依赖 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T131 | Azrng.AspNetCore.Core CORS API 精简 | 删除与框架原生 API 完全重复的 AddCorsPolicy 扩展方法，保留 AddAnyCors 与 AddCorsByOrigins，同步测试、README、ARCHITECTURE 与版本记录（1.5.0，破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系 | 删除从未被 Options 管道消费的 PreConfigure/AddObjectAccessor 预配置体系（3 个源文件），清理 APIStudy 试验代码与测试，同步文档（并入 1.5.0 破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
+| T133 | AspNetCore.Core 反向代理真实客户端 IP 扩展 | 新增 UseForwardedHeaders 中间件封装（可信代理配置 + 防伪造）与 GetClientIp 扩展（X-Forwarded-For/X-Real-IP 兜底解析），补测试与文档；另产出 RequestIdMiddleware 评审结论 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 
 ## 最近完成
 

@@ -132,6 +132,38 @@ namespace Azrng.AspNetCore.Core.Extension
         }
 
         /// <summary>
+        /// 获取客户端真实 IP
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// 优先读取 X-Forwarded-For 首个条目（原始客户端），其次 X-Real-IP，均无则回退 RemoteIpAddress。
+        /// 推荐配合 UseForwardedHeaders 使用：中间件解析后转发头被消费，此方法自动回退到已修正的 RemoteIpAddress，不可伪造。
+        /// 未启用中间件时直连客户端可伪造这两个头，仅适用于展示、统计等非鉴权场景。
+        /// </remarks>
+        public static string? GetClientIp(this HttpContext context)
+        {
+            // ForwardedHeaders 中间件未启用时的兜底解析：X-Forwarded-For 首跳为原始客户端
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
+            if (!string.IsNullOrWhiteSpace(forwardedFor))
+            {
+                var firstHop = forwardedFor.Split(',')[0].Trim();
+                if (firstHop.Length > 0)
+                {
+                    return firstHop;
+                }
+            }
+
+            var realIp = context.Request.Headers["X-Real-IP"].ToString();
+            if (!string.IsNullOrWhiteSpace(realIp))
+            {
+                return realIp.Trim();
+            }
+
+            return context.Connection.RemoteIpAddress?.ToString();
+        }
+
+        /// <summary>
         /// 获取来源地址
         /// </summary>
         /// <param name="request"></param>

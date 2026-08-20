@@ -8,6 +8,7 @@ using Azrng.Core.DependencyInjection;
 using Azrng.Core.Exceptions;
 using Azrng.Core.Results;
 using FluentAssertions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -18,8 +19,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
@@ -112,6 +115,84 @@ public class CoreFeatureTests
             .WithParameterName("allowedOrigins");
         blankOrigin.Should().Throw<ArgumentException>()
             .WithParameterName("allowedOrigins");
+    }
+
+    [Fact]
+    public void GetClientIp_FallsBackToRemoteIpAddress_WhenNoProxyHeaders()
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("10.1.1.1");
+
+        context.GetClientIp().Should().Be("10.1.1.1");
+    }
+
+    [Fact]
+    public void GetClientIp_ParsesFirstHopOfForwardedFor()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers["X-Forwarded-For"] = "1.2.3.4, 10.0.0.5";
+
+        context.GetClientIp().Should().Be("1.2.3.4");
+    }
+
+    [Fact]
+    public void GetClientIp_UsesRealIpHeader_AsFallback()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers["X-Real-IP"] = "1.2.3.4";
+
+        context.GetClientIp().Should().Be("1.2.3.4");
+    }
+
+    [Fact]
+    public async Task UseForwardedHeaders_RewritesClientIp_FromTrustedProxy()
+    {
+        var context = CreateForwardedContext(remoteIp: "10.0.0.5", forwardedFor: "1.2.3.4");
+        var pipeline = BuildForwardedPipeline("10.0.0.5");
+
+        await pipeline(context);
+
+        context.Connection.RemoteIpAddress.Should().Be(IPAddress.Parse("1.2.3.4"));
+        context.Request.Headers["X-Forwarded-For"].ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UseForwardedHeaders_IgnoresHeaders_FromUntrustedSource()
+    {
+        var context = CreateForwardedContext(remoteIp: "8.8.8.8", forwardedFor: "1.2.3.4");
+        var pipeline = BuildForwardedPipeline("10.0.0.5");
+
+        await pipeline(context);
+
+        context.Connection.RemoteIpAddress.Should().Be(IPAddress.Parse("8.8.8.8"));
+    }
+
+    [Fact]
+    public void UseForwardedHeaders_RejectsInvalidProxyAddress()
+    {
+        var app = new ApplicationBuilder(new ServiceCollection().BuildServiceProvider());
+
+        var act = () => app.UseForwardedHeaders("not-an-ip");
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("knownProxies");
+    }
+
+    private static DefaultHttpContext CreateForwardedContext(string remoteIp, string forwardedFor)
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
+        context.Request.Headers["X-Forwarded-For"] = forwardedFor;
+        return context;
+    }
+
+    private static RequestDelegate BuildForwardedPipeline(params string[] knownProxies)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(LoggerFactory.Create(_ => { }));
+        var app = new ApplicationBuilder(services.BuildServiceProvider());
+        app.UseForwardedHeaders(knownProxies);
+        return app.Build();
     }
 
     [Fact]

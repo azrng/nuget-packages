@@ -13,6 +13,7 @@
 ```c#
 var iPv4 = HttpContext.GetLocalIpAddressToIPv4();
 var ipv6 = HttpContext.GetLocalIpAddressToIPv6();
+var clientIp = HttpContext.GetClientIp(); // 反向代理后的真实客户端 IP
 var requestInfo = HttpContext.Request.GetUrl();
 ```
 
@@ -372,6 +373,23 @@ app.UseCorsPolicy("CustomPolicy");
 app.UseRequestBodyRepetitionRead();
 ```
 
+#### 反向代理获取真实客户端 IP
+
+部署在 Nginx/网关后时，`GetRemoteIpAddressToIPv4()` 拿到的是网关 IP。启用转发头处理后即可拿到真实客户端 IP：
+
+```csharp
+// 可信代理 IP 列表可选；不传时仅信任本机回环
+app.UseForwardedHeaders("10.0.0.5", "10.0.0.6");
+
+// 获取真实客户端 IP
+var clientIp = HttpContext.GetClientIp();
+```
+
+⚠️ **安全提示**：
+- `UseForwardedHeaders` 须在 `UseRouting()` 之前注册，且只消费可信代理来源的 `X-Forwarded-For`/`X-Forwarded-Proto`，直连请求伪造的转发头会被忽略
+- 未启用该中间件时，`GetClientIp()` 直接解析请求头，结果可被客户端伪造，仅适用于展示、统计等非鉴权场景
+- 需要按网段（CIDR）配置可信代理等高级场景，请直接使用框架原生 `ForwardedHeaders` 中间件
+
 #### 启用自定义审计
 
 ##### 默认配置
@@ -585,6 +603,7 @@ ForbiddenException
 ### 版本更新记录
 
 * 1.5.0
+  * 新增反向代理真实客户端 IP 支持：`UseForwardedHeaders()` 转发头中间件封装（可信代理列表 + 防伪造）与 `HttpContext.GetClientIp()` 扩展
   * **破坏性变更**：移除 `AddCorsPolicy()`，该方法与框架原生 `services.AddCors(o => o.AddPolicy(name, builder => ...))` 完全等价；高级场景请直接使用原生写法，`AddAnyCors()` 与 `AddCorsByOrigins()` 保持不变
   * **破坏性变更**：移除 `PreConfigure`/`GetPreConfigureActions`/`AddObjectAccessor`/`GetObjectOrNull` 预配置体系；该机制存入的委托从不被 Options 管道消费，属于无效 API，配置默认值请直接使用框架 `services.Configure<T>()`
 * 1.4.0
