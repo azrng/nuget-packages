@@ -118,6 +118,18 @@ namespace Common.HttpClients
         Task<IHttpResult<T>> DeleteAsync<T>(string url, HttpSendOptions? opt = null, CancellationToken cancellation = default);
 
         /// <summary>
+        /// Delete请求携带JSON请求体返回自定义内容（data 为字符串时按原始 JSON 发送；T 为 string 时返回原始响应体）
+        /// </summary>
+        /// <typeparam name="T">返回的结果</typeparam>
+        /// <param name="url">请求地址</param>
+        /// <param name="data">请求的数据（字符串、对象），适用于批量删除、删除注明原因等需要 body 的场景</param>
+        /// <param name="opt">请求选项（查询参数、请求头）</param>
+        /// <param name="cancellation"></param>
+        /// <returns>包含反序列化对象的HttpResult</returns>
+        Task<IHttpResult<T>> DeleteAsync<T>(string url, object data, HttpSendOptions? opt = null,
+                                            CancellationToken cancellation = default);
+
+        /// <summary>
         /// Patch请求返回自定义内容
         /// </summary>
         /// <typeparam name="T">响应内容</typeparam>

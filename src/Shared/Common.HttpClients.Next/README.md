@@ -236,6 +236,8 @@ var result = await _httpHelper.PutAsync<User>("https://api.example.com/users/1",
 var result = await _httpHelper.PatchAsync<User>("https://api.example.com/users/1", new { name = "李四" });
 var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.com/users/1");
 var result = await _httpHelper.DeleteAsync<string>("https://api.example.com/users/1"); // 原始响应体
+// 携带请求体（批量删除、注明原因等场景）
+var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.com/users", new { ids = new[] { 1, 2 } });
 ```
 
 ### 文件下载

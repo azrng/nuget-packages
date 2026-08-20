@@ -155,6 +155,19 @@ public class ApifoxEchoSamples
     }
 
     /// <summary>
+    /// DeleteAsync 示例（携带请求体）：部分接口要求删除时附带 body（如批量删除、注明删除原因）
+    /// </summary>
+    [Fact]
+    public async Task DeleteWithBodyExample()
+    {
+        var result = await _httpHelper.DeleteAsync<string>(Host + "/delete",
+            new { ids = new[] { 1, 2 }, reason = "cleanup" });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().Contain("cleanup");
+    }
+
+    /// <summary>
     /// PatchAsync 示例：JSON body 局部更新
     /// </summary>
     [Fact]

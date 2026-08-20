@@ -303,6 +303,31 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
+        public async Task DeleteAsync_WithBody_ShouldSendJsonBodyWithDeleteMethod()
+        {
+            HttpMethod? method = null;
+            string? payload = null;
+            using var client = NewClient(async r =>
+            {
+                method = r.Method;
+                payload = await r.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"id\":1,\"name\":\"deleted\"}")
+                };
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.DeleteAsync<SampleResponse>("https://unit.test/items", new { ids = new[] { 1, 2 } });
+
+            Assert.Equal(HttpMethod.Delete, method);
+            Assert.NotNull(payload);
+            Assert.Contains("\"ids\"", payload);
+            Assert.True(result.IsSuccess);
+            Assert.Equal("deleted", result.Data?.Name);
+        }
+
+        [Fact]
         public async Task SendAsync_RawRequestMessage_ShouldPassThrough()
         {
             HttpRequestMessage? captured = null;
