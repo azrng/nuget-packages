@@ -603,6 +603,7 @@ ForbiddenException
 ### 版本更新记录
 
 * 1.5.0
+  * `RequestIdMiddleware` 加固：入站 `X-RequestId` 增加长度上限与字符白名单校验（防日志注入与伪造关联）；无合法入站头时沿用宿主 `TraceIdentifier`，与诊断 traceId 体系对齐（行为变更：不再重新生成 N 格式 GUID）；多值头取第一个值；移除 .NET 3.0 起已失效的 `IHttpRequestIdentifierFeature` 死代码
   * 新增反向代理真实客户端 IP 支持：`UseForwardedHeaders()` 转发头中间件封装（可信代理列表 + 防伪造）与 `HttpContext.GetClientIp()` 扩展
   * **破坏性变更**：移除 `AddCorsPolicy()`，该方法与框架原生 `services.AddCors(o => o.AddPolicy(name, builder => ...))` 完全等价；高级场景请直接使用原生写法，`AddAnyCors()` 与 `AddCorsByOrigins()` 保持不变
   * **破坏性变更**：移除 `PreConfigure`/`GetPreConfigureActions`/`AddObjectAccessor`/`GetObjectOrNull` 预配置体系；该机制存入的委托从不被 Options 管道消费，属于无效 API，配置默认值请直接使用框架 `services.Configure<T>()`

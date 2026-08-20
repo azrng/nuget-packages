@@ -477,6 +477,34 @@ public class CoreFeatureTests
         context.Response.Headers["X-RequestId"].ToString().Should().Be(requestId);
     }
 
+    [Fact]
+    public async Task RequestIdMiddleware_RejectsInvalidRequestIdFromHeader()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers["X-RequestId"] = "<script>alert(1)</script>";
+        var middleware = new RequestIdMiddleware(_ => Task.CompletedTask);
+
+        await middleware.Invoke(context);
+
+        // 非法字符的头被丢弃，回退为宿主 TraceIdentifier，不回显到响应头
+        context.Response.Headers["X-RequestId"].ToString().Should().Be(context.TraceIdentifier);
+        context.TraceIdentifier.Should().NotContain("<script>");
+    }
+
+    [Fact]
+    public async Task RequestIdMiddleware_UsesFirstValue_WhenHeaderHasMultipleValues()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Append("X-RequestId", "first-id");
+        context.Request.Headers.Append("X-RequestId", "second-id");
+        var middleware = new RequestIdMiddleware(_ => Task.CompletedTask);
+
+        await middleware.Invoke(context);
+
+        context.TraceIdentifier.Should().Be("first-id");
+        context.Response.Headers["X-RequestId"].ToString().Should().Be("first-id");
+    }
+
     private static ResultExecutingContext CreateResultExecutingContext(IActionResult result, params IFilterMetadata[] filters)
     {
         var httpContext = new DefaultHttpContext();
