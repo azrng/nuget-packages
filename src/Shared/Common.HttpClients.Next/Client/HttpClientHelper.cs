@@ -68,7 +68,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, HttpSendOptions? opt = null,
+                                                       CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
@@ -124,7 +125,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, HttpSendOptions? opt = null,
+                                                      CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
@@ -142,7 +144,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> DeleteAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> DeleteAsync<T>(string url, object data, HttpSendOptions? opt = null,
+                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
@@ -152,7 +155,8 @@ namespace Common.HttpClients
             return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
         }
 
-        public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default)
+        public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, HttpSendOptions? opt = null,
+                                                        CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);

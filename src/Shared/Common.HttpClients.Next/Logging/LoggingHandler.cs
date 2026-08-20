@@ -130,18 +130,17 @@ namespace Common.HttpClients
         /// 记录完整的审计日志（包括请求和响应）
         /// </summary>
         private async Task LogAuditAsync(HttpRequestMessage request,
-                                          HttpResponseMessage response,
-                                          DateTime startTime,
-                                          string traceId,
-                                          HttpClientOptions options)
+                                         HttpResponseMessage response,
+                                         DateTime startTime,
+                                         string traceId,
+                                         HttpClientOptions options)
         {
             try
             {
                 var redactor = GetRedactor(options);
 
                 var reqHeader = ReadRequestHeader(request, redactor, options);
-                var reqContent = TruncateContent(
-                    await ReadRequestContentAsync(request, redactor, options).ConfigureAwait(false),
+                var reqContent = TruncateContent(await ReadRequestContentAsync(request, redactor, options).ConfigureAwait(false),
                     options.MaxRequestBodyLength);
 
                 var respHeader = ReadResponseHeader(response, redactor, options);
@@ -151,10 +150,9 @@ namespace Common.HttpClients
                 var statusCode = response.StatusCode.ToString();
                 var elapsed = DateTime.UtcNow - startTime;
 
-                _logger.LogInformation(
-                    "Http请求审计日志.TraceId:{TraceId} Url:{Url} Method:{Method} StatusCode:{StatusCode} 耗时:{ElapsedMs}ms\n" +
-                    "RequestHeader:{RequestHeader}\nRequestContent:{RequestContent}\n" +
-                    "ResponseHeader:{ResponseHeader}\nResponseContent:{ResponseContent}",
+                _logger.LogInformation("Http请求审计日志.TraceId:{TraceId} Url:{Url} Method:{Method} StatusCode:{StatusCode} 耗时:{ElapsedMs}ms\n" +
+                                       "RequestHeader:{RequestHeader}\nRequestContent:{RequestContent}\n" +
+                                       "ResponseHeader:{ResponseHeader}\nResponseContent:{ResponseContent}",
                     traceId, request.RequestUri, request.Method, statusCode, elapsed.TotalMilliseconds,
                     reqHeader, reqContent, respHeader, respContent);
             }
@@ -221,7 +219,8 @@ namespace Common.HttpClients
         /// <summary>
         /// 读取请求内容并应用脱敏
         /// </summary>
-        private async Task<string?> ReadRequestContentAsync(HttpRequestMessage request, IHttpLogRedactor redactor, HttpClientOptions options)
+        private async Task<string?> ReadRequestContentAsync(HttpRequestMessage request, IHttpLogRedactor redactor,
+                                                            HttpClientOptions options)
         {
             try
             {
@@ -250,9 +249,9 @@ namespace Common.HttpClients
         /// 读取响应内容并应用脱敏
         /// </summary>
         private async Task<string?> ReadResponseContentAsync(HttpRequestMessage request,
-                                                               HttpResponseMessage response,
-                                                               IHttpLogRedactor redactor,
-                                                               HttpClientOptions options)
+                                                             HttpResponseMessage response,
+                                                             IHttpLogRedactor redactor,
+                                                             HttpClientOptions options)
         {
             try
             {
@@ -320,7 +319,7 @@ namespace Common.HttpClients
         }
 
         private static Dictionary<string, string> CollectHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers,
-                                                                  IEnumerable<KeyValuePair<string, IEnumerable<string>>>? contentHeaders)
+                                                                 IEnumerable<KeyValuePair<string, IEnumerable<string>>>? contentHeaders)
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -350,16 +349,16 @@ namespace Common.HttpClients
                 return false;
             }
 
-            return mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("gzip", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("rar", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("7z", StringComparison.OrdinalIgnoreCase)
-                   || mediaType.Contains("tar", StringComparison.OrdinalIgnoreCase);
+            return mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("octet-stream", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("pdf", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("zip", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("gzip", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("rar", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("7z", StringComparison.OrdinalIgnoreCase) ||
+                   mediaType.Contains("tar", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

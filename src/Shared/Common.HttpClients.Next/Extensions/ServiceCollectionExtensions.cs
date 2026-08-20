@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -27,7 +26,8 @@ namespace Common.HttpClients
         /// <param name="name">客户端名称</param>
         /// <param name="configure">配置委托</param>
         /// <returns>IHttpClientBuilder，支持链式调用 AddHttpMessageHandler 等</returns>
-        public static IHttpClientBuilder AddHttpClientService(this IServiceCollection services, string name, Action<HttpClientOptions> configure)
+        public static IHttpClientBuilder AddHttpClientService(this IServiceCollection services, string name,
+                                                              Action<HttpClientOptions> configure)
         {
             if (services == null)
             {
@@ -63,34 +63,31 @@ namespace Common.HttpClients
 
             // 配置命名 HttpClient
             var clientBuilder = services.AddHttpClient(name)
+                                        .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                                        {
+                                            var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
+                                            var handler = new HttpClientHandler();
 
-                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
-                {
-                    var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
-                    var handler = new HttpClientHandler();
+                                            if (config.IgnoreUntrustedCertificate)
+                                            {
+                                                handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+                                            }
 
-                    if (config.IgnoreUntrustedCertificate)
-                    {
-                        handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-                    }
+                                            return handler;
+                                        })
+                                        .ConfigureHttpClient((serviceProvider, client) =>
+                                        {
+                                            client.Timeout = Timeout.InfiniteTimeSpan;
 
-                    return handler;
-                })
+                                            var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
+                                            if (!string.IsNullOrWhiteSpace(config.BaseAddress))
+                                            {
+                                                client.BaseAddress = new Uri(config.BaseAddress);
+                                            }
 
-                .ConfigureHttpClient((serviceProvider, client) =>
-                {
-                    client.Timeout = Timeout.InfiniteTimeSpan;
-
-                    var config = serviceProvider.GetRequiredService<IOptionsMonitor<HttpClientOptions>>().Get(name);
-                    if (!string.IsNullOrWhiteSpace(config.BaseAddress))
-                    {
-                        client.BaseAddress = new Uri(config.BaseAddress);
-                    }
-
-                    ApplyDefaultHeaders(client, config);
-                })
-
-                .AddHttpMessageHandler(sp => ActivatorUtilities.CreateInstance<LoggingHandler>(sp, name));
+                                            ApplyDefaultHeaders(client, config);
+                                        })
+                                        .AddHttpMessageHandler(sp => ActivatorUtilities.CreateInstance<LoggingHandler>(sp, name));
 
             // 添加弹性策略处理器（外 -> 内：Fallback -> Timeout -> ConcurrencyLimiter -> CircuitBreaker -> Retry）
             clientBuilder.AddResilienceHandler($"{name}_handler", (builder, handler) =>
@@ -100,15 +97,14 @@ namespace Common.HttpClients
                 // 1. 降级策略（最外层兜底）
                 builder.AddFallback(BuildFallbackOptions())
 
-                // 2. 总超时策略（涵盖整条重试链）
+                       // 2. 总超时策略（涵盖整条重试链）
                        .AddTimeout(new HttpTimeoutStrategyOptions { Timeout = TimeSpan.FromSeconds(httpOptions.Timeout) });
 
                 // 3. 并发限制策略（0 表示禁用）。permitLimit 决定最大并发，超出部分进入队列等待
                 //    （由外层 Timeout 兜底，等待时间不会超过 Timeout）。
                 if (httpOptions.ConcurrencyLimit > 0)
                 {
-                    builder.AddConcurrencyLimiter(
-                        permitLimit: httpOptions.ConcurrencyLimit,
+                    builder.AddConcurrencyLimiter(permitLimit: httpOptions.ConcurrencyLimit,
                         queueLimit: Math.Max(httpOptions.ConcurrencyLimit * 10, 100));
                 }
 
@@ -119,40 +115,41 @@ namespace Common.HttpClients
                 if (httpOptions.MaxRetryAttempts > 0)
                 {
                     builder.AddRetry(new HttpRetryStrategyOptions
-                    {
-                        MaxRetryAttempts = httpOptions.MaxRetryAttempts,
-                        Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
-                        BackoffType = DelayBackoffType.Exponential,
-                        ShouldHandle = args =>
-                        {
-                            if (args.Context.CancellationToken.IsCancellationRequested)
-                            {
-                                return ValueTask.FromResult(false);
-                            }
+                                     {
+                                         MaxRetryAttempts = httpOptions.MaxRetryAttempts,
+                                         Delay = TimeSpan.FromSeconds(httpOptions.RetryDelaySeconds),
+                                         BackoffType = DelayBackoffType.Exponential,
+                                         ShouldHandle = args =>
+                                         {
+                                             if (args.Context.CancellationToken.IsCancellationRequested)
+                                             {
+                                                 return ValueTask.FromResult(false);
+                                             }
 
-                            if (args.Outcome.Exception != null)
-                            {
-                                var shouldRetryException =
-                                    args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException;
-                                return ValueTask.FromResult(shouldRetryException);
-                            }
+                                             if (args.Outcome.Exception != null)
+                                             {
+                                                 var shouldRetryException =
+                                                     args.Outcome.Exception is HttpRequestException or TaskCanceledException
+                                                         or TimeoutException or TimeoutRejectedException;
+                                                 return ValueTask.FromResult(shouldRetryException);
+                                             }
 
-                            var response = args.Outcome.Result;
-                            if (response == null)
-                            {
-                                return ValueTask.FromResult(false);
-                            }
+                                             var response = args.Outcome.Result;
+                                             if (response == null)
+                                             {
+                                                 return ValueTask.FromResult(false);
+                                             }
 
-                            if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
-                            {
-                                return ValueTask.FromResult(true);
-                            }
+                                             if (httpOptions.RetryOnUnauthorized && response.StatusCode == HttpStatusCode.Unauthorized)
+                                             {
+                                                 return ValueTask.FromResult(true);
+                                             }
 
-                            var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
-                                                        response.StatusCode == HttpStatusCode.RequestTimeout;
-                            return ValueTask.FromResult(shouldRetryStatusCode);
-                        }
-                    });
+                                             var shouldRetryStatusCode = response.StatusCode >= HttpStatusCode.InternalServerError ||
+                                                                         response.StatusCode == HttpStatusCode.RequestTimeout;
+                                             return ValueTask.FromResult(shouldRetryStatusCode);
+                                         }
+                                     });
                 }
             });
 
@@ -212,31 +209,36 @@ namespace Common.HttpClients
         private static FallbackStrategyOptions<HttpResponseMessage> BuildFallbackOptions()
         {
             return new FallbackStrategyOptions<HttpResponseMessage>()
-            {
-                ShouldHandle = args =>
-                {
-                    if (args.Context.CancellationToken.IsCancellationRequested)
-                    {
-                        return ValueTask.FromResult(false);
-                    }
+                   {
+                       ShouldHandle = args =>
+                       {
+                           if (args.Context.CancellationToken.IsCancellationRequested)
+                           {
+                               return ValueTask.FromResult(false);
+                           }
 
-                    // 仅在“无法得到真实响应”的异常路径上兜底；
-                    // HTTP 5xx 是真实响应，应原样返回（由调用方按 StatusCode 判断）。
-                    if (args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException or TimeoutRejectedException)
-                    {
-                        return ValueTask.FromResult(true);
-                    }
+                           // 仅在“无法得到真实响应”的异常路径上兜底；
+                           // HTTP 5xx 是真实响应，应原样返回（由调用方按 StatusCode 判断）。
+                           if (args.Outcome.Exception is HttpRequestException or TaskCanceledException or TimeoutException
+                               or TimeoutRejectedException)
+                           {
+                               return ValueTask.FromResult(true);
+                           }
 
-                    return ValueTask.FromResult(false);
-                },
-                // 统一兜底为 503 降级响应（带 X-Fallback-Response 头），调用方按 IsSuccess / IsFallbackResponse 处理；
-                // 需要抛异常的调用方可对返回的 IHttpResult 调用 EnsureSuccess()。
-                FallbackAction = args => Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-                {
-                    Content = new StringContent("Fallback: request failed."),
-                    Headers = { { HttpClientHeaderNames.FallbackResponse, "true" } }
-                })
-            };
+                           return ValueTask.FromResult(false);
+                       },
+
+                       // 统一兜底为 503 降级响应（带 X-Fallback-Response 头），调用方按 IsSuccess / IsFallbackResponse 处理；
+                       // 需要抛异常的调用方可对返回的 IHttpResult 调用 EnsureSuccess()。
+                       FallbackAction = args => Outcome.FromResultAsValueTask(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                                                                              {
+                                                                                  Content = new StringContent("Fallback: request failed."),
+                                                                                  Headers =
+                                                                                  {
+                                                                                      { HttpClientHeaderNames.FallbackResponse, "true" }
+                                                                                  }
+                                                                              })
+                   };
         }
 
         private static void ApplyDefaultHeaders(HttpClient client, HttpClientOptions options)
