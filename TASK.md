@@ -15,6 +15,7 @@
 | T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系 | 删除从未被 Options 管道消费的 PreConfigure/AddObjectAccessor 预配置体系（3 个源文件），清理 APIStudy 试验代码与测试，同步文档（并入 1.5.0 破坏性变更） | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T133 | AspNetCore.Core 反向代理真实客户端 IP 扩展 | 新增 UseForwardedHeaders 中间件封装（可信代理配置 + 防伪造）与 GetClientIp 扩展（X-Forwarded-For/X-Real-IP 兜底解析），补测试与文档；另产出 RequestIdMiddleware 评审结论 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T134 | RequestIdMiddleware 加固优化 | 入站请求 ID 增加长度与字符白名单校验（防日志注入/伪造关联），无合法入站头时沿用宿主 TraceIdentifier 与诊断体系对齐，删除 IHttpRequestIdentifierFeature 死代码，多值头取第一个值 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
+| T135 | IHttpHelper Apifox Echo 使用示例 | 在 Common.HttpClients.Next 新增 Samples/ApifoxEchoSamples，为 IHttpHelper 每个方法提供最小调用示例（目标 https://echo.apifox.com），便于学习用法 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 
 ## 最近完成
 
