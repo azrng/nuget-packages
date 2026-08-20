@@ -10,6 +10,9 @@ jobs:
   build-and-publish: # 构建和发布
     runs-on: windows-latest
 
+    permissions:
+      id-token: write # 允许该 job 签发 GitHub OIDC 令牌，用于向 nuget.org 换取短时 API 密钥
+
     steps: # 执行任务
       - name: Checkout code # 拉取代码
         uses: actions/checkout@v2
@@ -29,6 +32,16 @@ jobs:
         run: |
           dotnet pack PackPackages.slnx --configuration Release --no-build
 
-      # 需在github库中设置${{ secrets.NUGET_API_KEY }}
+      # 通过 GitHub OIDC 令牌向 nuget.org 换取短时 API 密钥（有效期 1 小时，应在推送前才请求）
+      # 前置条件：
+      # 1. nuget.org 账户 → Trusted Publishing 登记策略：Repository Owner=azrng / Repository=nuget-packages / Workflow File=nuget-publish.yml
+      # 2. GitHub 仓库 Secrets 配置 NUGET_USER = nuget.org 用户名（个人资料名，非邮箱地址）
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # 使用短时密钥推送，替代原来的长期 secrets.NUGET_API_KEY
       - name: Publish NuGet package
-        run: dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push **/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
