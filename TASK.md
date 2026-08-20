@@ -17,6 +17,7 @@
 | T134 | RequestIdMiddleware 加固优化 | 入站请求 ID 增加长度与字符白名单校验（防日志注入/伪造关联），无合法入站头时沿用宿主 TraceIdentifier 与诊断体系对齐，删除 IHttpRequestIdentifierFeature 死代码，多值头取第一个值 | 阶段 2 | ZCode | DONE | P2 | 2026-08-20 |
 | T135 | IHttpHelper Apifox Echo 使用示例 | 在 Common.HttpClients.Next.Test 新增 Samples/ApifoxEchoSamples，为 IHttpHelper 每个方法提供最小调用示例（目标 https://echo.apifox.com，可运行测试），便于学习用法；原库内示例类已按用户要求迁移出包 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 | T136 | IHttpHelper 新增带请求体的 DeleteAsync 重载 | IHttpHelper/HttpClientHelper 新增 DeleteAsync(url, data) 重载，支持 DELETE 请求携带 JSON body（批量删除、注明原因等场景），补单测、示例测试与 README | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
+| T137 | DefaultHttpLogRedactor 脱敏性能优化 | 增加"敏感命中预检快速返回"与"非 JSON 首字符快查跳过解析"，JSON 路径重写为 Utf8JsonWriter 单次遍历写出（消除反序列化装箱再序列化），补 5 个单测 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 
 ## 最近完成
 

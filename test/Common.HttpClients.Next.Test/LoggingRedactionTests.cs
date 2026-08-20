@@ -190,6 +190,68 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
+        public void RedactContent_NoSensitiveHit_ShouldReturnOriginalText()
+        {
+            var redactor = NewRedactor();
+            // 带空格的格式化 JSON：若走"解析后重新序列化"路径会被压缩，原样返回说明命中了快速预检通道
+            var json = "{ \"name\": \"az\", \"id\": 1 }";
+
+            var redacted = redactor.RedactContent(json);
+
+            Assert.Equal(json, redacted);
+        }
+
+        [Fact]
+        public void RedactContent_NumericSensitiveValue_ShouldBeRedacted()
+        {
+            // 快速预检按"字段名出现"形态判断，不能漏掉非字符串值
+            var redactor = NewRedactor();
+            var json = "{\"token\":12345}";
+
+            var redacted = redactor.RedactContent(json);
+
+            using var doc = JsonDocument.Parse(redacted);
+            Assert.Equal("***", doc.RootElement.GetProperty("token").GetString());
+        }
+
+        [Fact]
+        public void RedactContent_BooleanSensitiveValue_ShouldBeRedacted()
+        {
+            var redactor = NewRedactor();
+            var json = "{\"pwd\":true,\"name\":\"az\"}";
+
+            var redacted = redactor.RedactContent(json);
+
+            using var doc = JsonDocument.Parse(redacted);
+            Assert.Equal("***", doc.RootElement.GetProperty("pwd").GetString());
+            Assert.Equal("az", doc.RootElement.GetProperty("name").GetString());
+        }
+
+        [Fact]
+        public void RedactContent_XmlContent_ShouldReturnAsIs()
+        {
+            var redactor = NewRedactor();
+            var xml = "<soap:Envelope><soap:Body><Ping>hello</Ping></soap:Body></soap:Envelope>";
+
+            var redacted = redactor.RedactContent(xml);
+
+            Assert.Equal(xml, redacted);
+        }
+
+        [Fact]
+        public void RedactContent_NonAsciiJson_ShouldKeepCharactersUnescaped()
+        {
+            var redactor = NewRedactor();
+            var json = "{\"name\":\"中文\",\"password\":\"x\"}";
+
+            var redacted = redactor.RedactContent(json);
+
+            Assert.Contains("中文", redacted);
+            using var doc = JsonDocument.Parse(redacted);
+            Assert.Equal("***", doc.RootElement.GetProperty("password").GetString());
+        }
+
+        [Fact]
         public void Constructor_NullOptions_ShouldThrow()
         {
             Assert.Throws<ArgumentNullException>(() => new DefaultHttpLogRedactor(null!));

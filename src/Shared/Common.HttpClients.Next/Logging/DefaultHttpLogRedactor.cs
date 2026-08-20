@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Options;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -40,7 +42,10 @@ namespace Common.HttpClients
             "api-key"
         };
 
-        private static readonly JsonSerializerOptions RelaxedJsonOptions = new()
+        /// <summary>
+        /// 脱敏 JSON 写出选项：非 ASCII 不转义，保持日志可读（与库内 JsonHelper 行为一致）
+        /// </summary>
+        private static readonly JsonWriterOptions RedactingWriterOptions = new()
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
@@ -62,8 +67,14 @@ namespace Common.HttpClients
         /// </summary>
         private static readonly ConcurrentDictionary<string, Regex> KvPatternCache = new();
 
+        /// <summary>
+        /// 敏感字段名出现形态（"name": 或 name=）正则缓存，用于 RedactContent 快速预检
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, Regex> FieldNamePatternCache = new();
+
         private readonly HashSet<string> _sensitiveHeaderNames;
         private readonly HashSet<string> _sensitiveFieldNames;
+        private readonly Regex _sensitiveFieldNamePattern;
         private readonly Regex _jsonSensitiveValuePattern;
         private readonly Regex _kvSensitiveValuePattern;
 
@@ -82,6 +93,9 @@ namespace Common.HttpClients
             _sensitiveFieldNames = BuildSensitiveFields(httpConfig.AdditionalSensitiveFields);
 
             var sensitiveFieldPattern = BuildSensitiveFieldPattern(_sensitiveFieldNames);
+            _sensitiveFieldNamePattern = FieldNamePatternCache.GetOrAdd(sensitiveFieldPattern,
+                p => new Regex("(?:\"(?:" + p + ")\"\\s*:\\s*|\\b(?:" + p + ")=)",
+                    RegexOptions.IgnoreCase | RegexOptions.Compiled));
             _jsonSensitiveValuePattern = JsonPatternCache.GetOrAdd(sensitiveFieldPattern,
                 p => new Regex("(\"(?:" + p + ")\"\\s*:\\s*\")([^\"]*)(\")",
                     RegexOptions.IgnoreCase | RegexOptions.Compiled));
@@ -98,7 +112,16 @@ namespace Common.HttpClients
                 return content;
             }
 
-            if (TryRedactJson(content, out var json))
+            // 快速预检：敏感字段名与 Bearer Token 均未出现时直接原样返回，跳过 JSON 解析与重排；
+            // 字段名形态（"name": 或 name=）不能要求值为字符串，否则会漏掉 "token":12345 这类数字值
+            if (!_sensitiveFieldNamePattern.IsMatch(content)
+                && !_kvSensitiveValuePattern.IsMatch(content)
+                && !BearerValuePattern.IsMatch(content))
+            {
+                return content;
+            }
+
+            if (LooksLikeJson(content) && TryRedactJson(content, out var json))
             {
                 return json!;
             }
@@ -129,6 +152,25 @@ namespace Common.HttpClients
             return redacted;
         }
 
+        /// <summary>
+        /// 首字符快查：仅 JSON 可能的起始字符才尝试解析，XML、普通文本直接走正则路径，
+        /// 避免非 JSON 内容每次都经历"解析抛异常再回退"
+        /// </summary>
+        private static bool LooksLikeJson(string content)
+        {
+            foreach (var ch in content)
+            {
+                if (char.IsWhiteSpace(ch))
+                {
+                    continue;
+                }
+
+                return ch is '{' or '[' or '"' or '-' or 't' or 'f' or 'n' || char.IsDigit(ch);
+            }
+
+            return false;
+        }
+
         private bool TryRedactJson(string content, out string? redacted)
         {
             redacted = null;
@@ -136,8 +178,14 @@ namespace Common.HttpClients
             try
             {
                 using var document = JsonDocument.Parse(content);
-                var redactedValue = RedactJsonElement(document.RootElement, null);
-                redacted = JsonSerializer.Serialize(redactedValue, RelaxedJsonOptions);
+                var buffer = new ArrayBufferWriter<byte>();
+                using (var writer = new Utf8JsonWriter(buffer, RedactingWriterOptions))
+                {
+                    WriteRedactedJson(writer, document.RootElement, null);
+                    writer.Flush();
+                }
+
+                redacted = Encoding.UTF8.GetString(buffer.WrittenSpan);
                 return true;
             }
             catch (JsonException)
@@ -146,43 +194,56 @@ namespace Common.HttpClients
             }
         }
 
-        private object? RedactJsonElement(JsonElement element, string? propertyName)
+        /// <summary>
+        /// 单次遍历写出脱敏 JSON：敏感字段的值统一写为 ***，其余元素经 <see cref="JsonElement.WriteTo"/> 原样透传，
+        /// 避免"反序列化装箱再序列化"的中间分配
+        /// </summary>
+        private void WriteRedactedJson(Utf8JsonWriter writer, JsonElement element, string? propertyName)
         {
             if (IsSensitiveField(propertyName))
             {
-                return "***";
+                writer.WriteStringValue("***");
+                return;
             }
 
             switch (element.ValueKind)
             {
                 case JsonValueKind.Object:
-                    return element.EnumerateObject()
-                                  .ToDictionary(property => property.Name,
-                                      property => RedactJsonElement(property.Value, property.Name));
+                    writer.WriteStartObject();
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        writer.WritePropertyName(property.Name);
+                        WriteRedactedJson(writer, property.Value, property.Name);
+                    }
+                    writer.WriteEndObject();
+                    break;
 
                 case JsonValueKind.Array:
-                    return element.EnumerateArray()
-                                  .Select(item => RedactJsonElement(item, propertyName))
-                                  .ToList();
+                    writer.WriteStartArray();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        WriteRedactedJson(writer, item, propertyName);
+                    }
+                    writer.WriteEndArray();
+                    break;
 
                 case JsonValueKind.String:
                     var value = element.GetString();
-                    return value == null ? null : BearerValuePattern.Replace(value, "$1***");
-
-                case JsonValueKind.Number:
-                case JsonValueKind.True:
-                case JsonValueKind.False:
-                case JsonValueKind.Null:
-                    return CloneJsonElement(element);
+                    if (value == null)
+                    {
+                        writer.WriteNullValue();
+                    }
+                    else
+                    {
+                        writer.WriteStringValue(BearerValuePattern.Replace(value, "$1***"));
+                    }
+                    break;
 
                 default:
-                    return CloneJsonElement(element);
+                    // 数字 / true / false / null 原样写出（WriteTo 保留原始词法形式）
+                    element.WriteTo(writer);
+                    break;
             }
-        }
-
-        private static object? CloneJsonElement(JsonElement element)
-        {
-            return JsonSerializer.Deserialize<object>(element.GetRawText());
         }
 
         private bool IsSensitiveField(string? fieldName)
