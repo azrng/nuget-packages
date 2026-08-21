@@ -20,15 +20,16 @@
 | T137 | DefaultHttpLogRedactor 脱敏性能优化 | 增加"敏感命中预检快速返回"与"非 JSON 首字符快查跳过解析"，JSON 路径重写为 Utf8JsonWriter 单次遍历写出（消除反序列化装箱再序列化），补 5 个单测 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 | T139 | 撤回 T138 版本号收敛（f07511b） | 经查 beta10~beta12 实际均已发布成功（nuget.org 页面显示 beta9 为 SemVer 预发布字符串排序假象），收敛前提不成立；revert 恢复 csproj=beta12 与 README 三段版本历史 | 阶段 2 | ZCode | DONE | P1 | 2026-08-21 |
 | T140 | Azrng.JSqlParser 版本升至 1.0.0-rc1 | beta 序号按字符串排序永远低于 beta9，页面最新版本无法翻篇；改用 rc 前缀（代码与 beta12 一致，无功能变更），发布后 rc1 成为排序最新版本 | 阶段 2 | ZCode | DONE | P1 | 2026-08-21 |
+| T141 | README 版本历史恢复原样（移除 rc1 段） | 按用户澄清："撤回版本历史"仅指恢复折叠前原始记录，不含新增 rc1 段；移除后版本历史与 f07511b 之前逐字节一致，仅安装示例指向 rc1 | 阶段 2 | ZCode | DONE | P2 | 2026-08-21 |
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T141 | README 版本历史恢复原样（移除 rc1 段） | DONE | 2026-08-21 |
 | T140 | Azrng.JSqlParser 版本升至 1.0.0-rc1 | DONE | 2026-08-21 |
 | T139 | 撤回 T138 版本号收敛（beta10~12 实际均已发布） | DONE | 2026-08-21 |
 | T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系（并入 1.5.0） | DONE | 2026-08-20 |
 | T131 | Azrng.AspNetCore.Core CORS API 精简（移除 AddCorsPolicy，1.5.0） | DONE | 2026-08-20 |
-| T128 | Common.HttpClients 4.0 增量（HttpHeaders 多值请求头 + JsonNamingPolicy 命名策略） | DONE | 2026-08-10 |
 
 文件结束。

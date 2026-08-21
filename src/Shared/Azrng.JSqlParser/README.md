@@ -236,13 +236,6 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
-### 1.0.0-rc1
-
-版本序列修正，代码与 1.0.0-beta12 完全一致，无功能变更。
-
-- **背景**：SemVer 预发布标识符含字母时按 ASCII 字符串比较，`beta10`~`beta12` 均排序低于 `beta9`，导致 nuget.org 页面"最新版本"长期停留在 beta9。
-- **处理**：改用 `rc` 前缀（`rc` > `beta`），rc1 成为排序上的最新版本；全部功能能力见下方 beta12 / beta11 / beta10 各节。
-
 ### 1.0.0-beta12
 
 支持 PostgreSQL `ANY`/`ALL`/`SOME` 使用数组表达式、命名数组参数或子查询，并补充 `@name` 参数及否定条件回归测试。
