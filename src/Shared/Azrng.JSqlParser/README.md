@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta12" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-beta10" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta12`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-beta10`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -236,24 +236,16 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
-### 1.0.0-beta12
+### 1.0.0-beta10
 
-支持 PostgreSQL `ANY`/`ALL`/`SOME` 使用数组表达式、命名数组参数或子查询，并补充 `@name` 参数及否定条件回归测试。
+上游 issue 高价值清仓收口（T123–T126）+ `@name` 参数与 ANY 数组参数 + 单元测试补全。**无破坏性 API 变更**（仅新增字段/类型与文法能力；相对 beta9 的公共面扩展均向后兼容）。
 
-### 1.0.0-beta11
-
-上游 issue 高价值清仓收口（T123–T126）+ 单元测试补全。**无破坏性 API 变更**（仅新增字段/类型与文法能力；相对 beta9 的公共面扩展均向后兼容）。
-
-**相对 beta9 累计能力**（详见下列 beta10 条目与 `MIGRATION.md` 第十六～十九节）：
+**相对 beta9 累计能力**（详见下列条目与 `MIGRATION.md` 第十六～十九节）：
 - 常见 DDL：`CREATE DATABASE`、多表 DROP、`ADD/DROP/MODIFY IF [NOT] EXISTS`、`MODIFY NULL/NOT NULL`、MySQL 分区定义列表
 - SQL Server：`INSERT BULK`、`CREATE INDEX WITH`、`ON PRIMARY`、`IDENTITY`、`DEFAULT ... FOR`、`EXEC ... OUTPUT`、`CREATE OR ALTER`
 - Oracle：`USING INDEX TABLESPACE`、`XMLPARSE`/`XMLSERIALIZE`、`DAY TO SECOND`
-- 其他：ODBC `{fn}/{d|t|ts}`、Hive `INSERT OVERWRITE`、`unsigned`/`zerofill`、前缀索引、`[quoted]` 词法修复
-- 测试：全量 **1750** 通过 / 3 Skip；补齐探针 + round-trip + `CALL()` 空括号回归
-
-### 1.0.0-beta10
-
-上游 issue 常见 DDL / SQL Server·Oracle 专项修复（T123 + T124）+ 探针核实。**无破坏性 API 变更**（仅新增字段/类型与文法能力）。
+- 其他：ODBC `{fn}/{d|t|ts}`、Hive `INSERT OVERWRITE`、`unsigned`/`zerofill`、前缀索引、`[quoted]` 词法修复、PostgreSQL `ANY/ALL/SOME` 数组参数、`@name` 参数名保留
+- 测试：全量 1750+ 通过 / 3 Skip；补齐探针 + round-trip + `CALL()` 空括号回归
 
 **新增 / 修复能力（T123 常见 DDL）**：
 - `CREATE DATABASE [IF NOT EXISTS] name`（#2070）— 新语句类型 `CreateDatabase`
@@ -291,6 +283,10 @@ Console.WriteLine(stmt.ToString());
 - `CREATE OR ALTER FUNCTION/PROCEDURE`（#1978）、`DROP FUNCTION/PROCEDURE`
 - Hive `INSERT OVERWRITE TABLE ... PARTITION (...)`（#1846/#2119）
 - Oracle `XMLPARSE` / `XMLSERIALIZE`（#2146/#1564）
+
+**新增 / 修复能力（T107 ANY 数组参数）**：
+- PostgreSQL `ANY`/`ALL`/`SOME` 支持数组表达式、命名数组参数或子查询作为右值（如 `id = ANY(@ids)`）
+- `@name` 参数解析保留参数名，补充否定条件回归测试
 
 **测试**：`DdlUpstream/Batch2/3` + `HighValueCleanupRoundTripTest`；相关探针与回归通过。
 

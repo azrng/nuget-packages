@@ -18,15 +18,16 @@
 | T135 | IHttpHelper Apifox Echo 使用示例 | 在 Common.HttpClients.Next.Test 新增 Samples/ApifoxEchoSamples，为 IHttpHelper 每个方法提供最小调用示例（目标 https://echo.apifox.com，可运行测试），便于学习用法；原库内示例类已按用户要求迁移出包 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 | T136 | IHttpHelper 新增带请求体的 DeleteAsync 重载 | IHttpHelper/HttpClientHelper 新增 DeleteAsync(url, data) 重载，支持 DELETE 请求携带 JSON body（批量删除、注明原因等场景），补单测、示例测试与 README | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
 | T137 | DefaultHttpLogRedactor 脱敏性能优化 | 增加"敏感命中预检快速返回"与"非 JSON 首字符快查跳过解析"，JSON 路径重写为 Utf8JsonWriter 单次遍历写出（消除反序列化装箱再序列化），补 5 个单测 | 阶段 1 | ZCode | DONE | P2 | 2026-08-20 |
+| T138 | Azrng.JSqlParser 版本号收敛回 1.0.0-beta10 | NuGet 官网最新仅到 beta9，本地 beta10~beta12 均未发布；csproj/README 版本号收敛为 beta10，changelog 三段折叠为一段 | 阶段 2 | ZCode | DONE | P2 | 2026-08-21 |
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T138 | Azrng.JSqlParser 版本号收敛回 1.0.0-beta10（合并未发布的 beta10~beta12） | DONE | 2026-08-21 |
 | T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系（并入 1.5.0） | DONE | 2026-08-20 |
 | T131 | Azrng.AspNetCore.Core CORS API 精简（移除 AddCorsPolicy，1.5.0） | DONE | 2026-08-20 |
 | T128 | Common.HttpClients 4.0 增量（HttpHeaders 多值请求头 + JsonNamingPolicy 命名策略） | DONE | 2026-08-10 |
 | T127 | Common.HttpClients 4.0 API 精简与统一（统一签名/废弃FailThrowException/精简方法表） | DONE | 2026-08-10 |
-| T126 | Azrng.JSqlParser 高价值 issue 清仓 + **1.0.0-beta11** | DONE | 2026-07-28 |
 
 文件结束。
