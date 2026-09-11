@@ -43,7 +43,7 @@ dependencies: [agents-root]
 
 - 破坏性变更必须升 major 版本号，不得借 minor / patch 号发布
 - 已按某版本开发的内容，发布前不得回退版本号"降级"发出；确需调整版本号时，必须同步核对 README 安装示例、版本更新记录与实际 API 形态是否一致
-- 发布前核对三处一致：csproj `<Version>`、README 安装示例 `--version`、README 版本更新记录的最新版本号；`push-packer.sh` 已内置 csproj 与 README 的一致性预检，不一致会中止推送
+- 发布前核对三处一致：csproj `<Version>`、README 安装示例 `--version`、README 版本更新记录的最新版本号
 - nuget.org 包不可覆盖：发布后发现内容失实，只能在下一版本修正，并在版本更新记录中说明误发情况
 
 > 背景：2026-08 连续出现版本序列事故（JSqlParser beta 序号排序误判、Common.HttpClients 3.1.0 误含 4.0 的 README 与破坏性变更），按根规则「重复错误回顾机制」固化本节。

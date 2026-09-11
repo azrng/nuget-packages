@@ -29,7 +29,7 @@
     <ItemGroup>
         <!-- 仅依赖 IHttpContextAccessor / HttpContext（TraceId 透传），不绑整个 AspNetCore 共享框架；
              Web 宿主下由共享框架统一接管（SDK 自动忽略包版本），Worker/控制台宿主只需此轻量包 -->
-        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2"/>
+        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.13"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
