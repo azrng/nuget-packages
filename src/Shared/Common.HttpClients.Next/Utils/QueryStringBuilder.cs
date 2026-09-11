@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -127,10 +128,12 @@ namespace Common.HttpClients.Utils
 
         private static string? ConvertToString(object value)
         {
+            // 日期显式 InvariantCulture：自定义格式中的 ":" 会随区域替换为本地时间分隔符，
+            // 部分文化的历法与数字形状也不同，服务器区域不应影响生成的 URL
             return value switch
             {
-                DateTime dt => dt.ToString(DateTimeFormat),
-                DateTimeOffset dto => dto.ToString(DateTimeFormat),
+                DateTime dt => dt.ToString(DateTimeFormat, CultureInfo.InvariantCulture),
+                DateTimeOffset dto => dto.ToString(DateTimeFormat, CultureInfo.InvariantCulture),
                 bool b => b ? "true" : "false",
                 Enum e => e.ToString(),
                 _ => value.ToString()

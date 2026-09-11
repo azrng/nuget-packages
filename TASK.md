@@ -22,15 +22,16 @@
 | T140 | Azrng.JSqlParser 版本升至 1.0.0-rc1 | beta 序号按字符串排序永远低于 beta9，页面最新版本无法翻篇；改用 rc 前缀（代码与 beta12 一致，无功能变更），发布后 rc1 成为排序最新版本 | 阶段 2 | ZCode | DONE | P1 | 2026-08-21 |
 | T141 | README 版本历史恢复原样（移除 rc1 段） | 按用户澄清："撤回版本历史"仅指恢复折叠前原始记录，不含新增 rc1 段；移除后版本历史与 f07511b 之前逐字节一致，仅安装示例指向 rc1 | 阶段 2 | ZCode | DONE | P2 | 2026-08-21 |
 | T142 | Common.HttpClients 4.0.0 正式收编 + 去共享框架强依赖 | 方案A：版本升至 4.0.0 收编已随 3.1.0 误发的破坏性变更（README 补 3.1.0 误发说明）；移除 FrameworkReference Microsoft.AspNetCore.App 改为 Microsoft.AspNetCore.Http 2.3.13 包引用；push-packer.sh 预检经用户确认取消，发布前按 infra-AGENTS.md 发布纪律人工核对三处一致 | 阶段 2 | ZCode | DONE | P1 | 2026-09-11 |
+| T143 | Common.HttpClients 代码审查问题修复（5 项） | IHttpHelper 每请求从 IHttpClientFactory 现取 HttpClient（修复缓存绕过 handler 轮换）；反序列化失败返回失败结果；DownloadFileAsync 临时文件替换防误删；查询参数日期 InvariantCulture；ConvertResponseResult 补 cancellation、无参注册去默认值双份维护；补 4 个回归测试（204→208） | 阶段 2 | ZCode | DONE | P1 | 2026-09-11 |
 
 ## 最近完成
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T143 | Common.HttpClients 代码审查问题修复（5 项） | DONE | 2026-09-11 |
 | T142 | Common.HttpClients 4.0.0 正式收编 + 去共享框架强依赖 | DONE | 2026-09-11 |
 | T141 | README 版本历史恢复原样（移除 rc1 段） | DONE | 2026-08-21 |
 | T140 | Azrng.JSqlParser 版本升至 1.0.0-rc1 | DONE | 2026-08-21 |
 | T139 | 撤回 T138 版本号收敛（beta10~12 实际均已发布） | DONE | 2026-08-21 |
-| T132 | Azrng.AspNetCore.Core 移除 PreConfigure 预配置体系（并入 1.5.0） | DONE | 2026-08-20 |
 
 文件结束。

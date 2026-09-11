@@ -404,6 +404,32 @@ namespace Common.HttpClients.Next.Test
             Assert.True(result.IsFallbackResponse);
         }
 
+        [Fact]
+        public async Task GetAsync_FactoryConstructor_ShouldFetchClientPerRequest()
+        {
+            // 工厂构造的 helper 每次请求现取 HttpClient，避免缓存客户端绕过 IHttpClientFactory 的 handler 轮换
+            var createCount = 0;
+            var httpClientFactory = new CountingHttpClientFactory(name =>
+            {
+                Assert.Equal("order-api", name);
+                Interlocked.Increment(ref createCount);
+                return NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"id\":1}")
+                });
+            });
+            var helper = new HttpClientHelper("order-api", httpClientFactory, new ListLogger<HttpClientHelper>(),
+                new FakeOptionsMonitor<HttpClientOptions>(new HttpClientOptions()));
+
+            var first = await helper.GetAsync<SampleResponse>("https://unit.test/a");
+            var second = await helper.GetAsync<SampleResponse>("https://unit.test/b");
+
+            Assert.True(first.IsSuccess);
+            Assert.Equal(1, first.Data?.Id);
+            Assert.True(second.IsSuccess);
+            Assert.Equal(2, createCount);
+        }
+
         private static HttpClient NewClient(Func<HttpRequestMessage, HttpResponseMessage> factory)
         {
             return new HttpClient(new DelegateHttpMessageHandler((r, _) => Task.FromResult(factory(r))));
@@ -429,7 +455,20 @@ namespace Common.HttpClients.Next.Test
         private sealed class SampleResponse
         {
             public int Id { get; set; }
+
             public string? Name { get; set; }
+        }
+
+        private sealed class CountingHttpClientFactory : IHttpClientFactory
+        {
+            private readonly Func<string, HttpClient> _factory;
+
+            public CountingHttpClientFactory(Func<string, HttpClient> factory)
+            {
+                _factory = factory;
+            }
+
+            public HttpClient CreateClient(string name) => _factory(name);
         }
     }
 }

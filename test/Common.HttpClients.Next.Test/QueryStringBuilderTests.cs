@@ -1,5 +1,6 @@
 using Common.HttpClients.Next.Test.Helpers;
 using Common.HttpClients.Utils;
+using System.Globalization;
 
 namespace Common.HttpClients.Next.Test
 {
@@ -111,6 +112,26 @@ namespace Common.HttpClients.Next.Test
             finally
             {
                 QueryStringBuilder.DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+            }
+        }
+
+        [Fact]
+        public void AppendQuery_DateTime_ShouldIgnoreCurrentCulture()
+        {
+            // it-IT 的时间分隔符是 "."，区域不应影响生成的 URL（自定义格式中的 ":" 是文化相关占位符）
+            var originalCulture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("it-IT");
+            try
+            {
+                var dt = new DateTime(2026, 6, 14, 10, 30, 5);
+                var url = QueryStringBuilder.AppendQuery("https://unit.test/api", new { at = dt });
+
+                Assert.Contains("at=2026-06-14+10%3A30%3A05", url);
+                Assert.DoesNotContain("10.30.05", url);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
             }
         }
 

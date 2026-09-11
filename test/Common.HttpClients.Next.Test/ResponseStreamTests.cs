@@ -125,6 +125,32 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
+        public async Task DownloadFileAsync_Failure_ShouldKeepExistingFile()
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), $"nextdl_{Guid.NewGuid():N}.txt");
+            try
+            {
+                // 目标路径已有调用方的文件：下载失败时不能破坏它
+                await File.WriteAllTextAsync(tempPath, "existing-content");
+                using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("error")
+                });
+                var helper = CreateHelper(client);
+
+                var result = await helper.DownloadFileAsync("https://unit.test/file", tempPath);
+
+                Assert.False(result.IsSuccess);
+                Assert.Equal("existing-content", await File.ReadAllTextAsync(tempPath));
+                Assert.False(File.Exists(tempPath + ".downloading"));
+            }
+            finally
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            }
+        }
+
+        [Fact]
         public async Task DownloadFileAsync_ShouldCreateMissingDirectory()
         {
             var tempDir = Path.Combine(Path.GetTempPath(), $"nextdl_{Guid.NewGuid():N}");

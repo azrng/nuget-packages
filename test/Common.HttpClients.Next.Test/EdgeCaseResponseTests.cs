@@ -143,6 +143,21 @@ namespace Common.HttpClients.Next.Test
             Assert.Equal("{\"access_token\":\"abc.def\"}", result.RawBody);
         }
 
+        [Fact]
+        public async Task GetAsync_MalformedJson_ShouldReturnFailResult()
+        {
+            using var client = NewClient(_ => Ok("{\"id\": not-valid-json"));
+            var helper = CreateHelper(client);
+
+            var result = await helper.GetAsync<SampleResponse>("https://unit.test/badjson");
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.Null(result.Data);
+            Assert.Contains("反序列化失败", result.ErrorMessage);
+            Assert.Equal("{\"id\": not-valid-json", result.RawBody);
+        }
+
         private static HttpResponseMessage Ok(string body) => new(HttpStatusCode.OK)
         {
             Content = new StringContent(body)

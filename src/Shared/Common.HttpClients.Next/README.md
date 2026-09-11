@@ -351,7 +351,7 @@ var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions { Headers
 
 ## 异常处理
 
-4.0 起统一为结果对象模型：失败始终返回 `IHttpResult(IsSuccess=false)`，不再有"抛异常 / 返回结果"双开关。需要抛异常的调用风格，显式调用 `EnsureSuccess()`。
+4.0 起统一为结果对象模型：失败始终返回 `IHttpResult(IsSuccess=false)`，不再有"抛异常 / 返回结果"双开关。需要抛异常的调用风格，显式调用 `EnsureSuccess()`。传输失败（网络异常、超时）、非 2xx 状态码、响应体反序列化失败均按失败结果返回（`IsFallbackResponse=true` 表示为 Polly 降级合成的 503 响应）。
 
 ```csharp
 var result = await _httpHelper.GetAsync<User>(url);
@@ -422,6 +422,10 @@ services.AddHttpClientService();
 ### 4.0.0
 
 - **[变更]** 移除对 `Microsoft.AspNetCore.App` 共享框架的强依赖（`FrameworkReference`），改为引用轻量的 `Microsoft.AspNetCore.Http` 包：Worker Service / 控制台宿主无需再安装 ASP.NET Core 共享框架；Web 宿主下类型由共享框架统一接管，行为不变
+- **[修复]** `IHttpHelper` 内部改为每次请求从 `IHttpClientFactory` 现取 `HttpClient`：此前缓存的客户端会绕过工厂的 handler 轮换，长驻服务无法感知 DNS / 证书变更；`JsonNamingPolicy`、`BaseAddress` 等配置热更新同步即时生效
+- **[修复]** 响应体反序列化失败（非法 JSON / 与 T 不匹配）不再抛出 `JsonException`，统一返回 `IHttpResult(IsSuccess=false)`，`ErrorMessage` 为解析错误信息
+- **[修复]** `DownloadFileAsync` 改为先写临时文件（`<目标路径>.downloading`）再整体替换：下载失败不再误删目标路径已有的文件
+- **[修复]** 查询参数中 `DateTime` / `DateTimeOffset` 的格式化改用 `InvariantCulture`，服务器区域设置不再影响生成的 URL
 - **[说明]** 本版本 API 与 3.1.0 完全一致：下列破坏性变更此前已随 3.1.0 误发（发布时版本号与 README 未同步），4.0.0 为正式版本号收敛，从 3.1.0 升级无需任何代码改动
 - **[破坏性变更]** 统一所有动词方法签名：查询参数与请求头收拢到新增的 `HttpSendOptions`（`Query` / `Headers`），所有方法参数顺序一致
 - **[破坏性变更]** 删除 `FailThrowException` 开关与"失败抛异常 / 返回结果"双错误模型：失败统一返回 `IHttpResult(IsSuccess=false)`；需要抛异常显式调用新增的 `EnsureSuccess()` 扩展方法

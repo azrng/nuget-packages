@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,15 +18,51 @@ namespace Common.HttpClients
     /// </summary>
     public class HttpClientHelper : IHttpHelper
     {
-        private readonly HttpClient _client;
+        private readonly Func<HttpClient> _clientAccessor;
+        private readonly Func<JsonNamingPolicyType> _namingPolicyAccessor;
         private readonly ILogger<HttpClientHelper> _logger;
-        private readonly JsonNamingPolicyType _namingPolicy;
 
+        /// <summary>
+        /// 直接持有调用方提供的 <see cref="HttpClient"/> 初始化（客户端生命周期由调用方管理）
+        /// </summary>
         public HttpClientHelper(HttpClient client, ILogger<HttpClientHelper> logger, IOptions<HttpClientOptions> httpConfig)
         {
+            if (client == null)
+            {
+                throw new ArgumentNullException(nameof(client));
+            }
+
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _client = client ?? throw new ArgumentNullException(nameof(client));
-            _namingPolicy = (httpConfig ?? throw new ArgumentNullException(nameof(httpConfig))).Value.JsonNamingPolicy;
+            var options = httpConfig ?? throw new ArgumentNullException(nameof(httpConfig));
+            _clientAccessor = () => client;
+            _namingPolicyAccessor = () => options.Value.JsonNamingPolicy;
+        }
+
+        /// <summary>
+        /// 每次请求从 <see cref="IHttpClientFactory"/> 现取命名客户端初始化（DI 默认路径）：
+        /// 跟随工厂的 handler 轮换感知 DNS / 证书变更，options 热更新即时生效
+        /// </summary>
+        public HttpClientHelper(string name, IHttpClientFactory httpClientFactory, ILogger<HttpClientHelper> logger,
+                                IOptionsMonitor<HttpClientOptions> optionsMonitor)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
+            if (httpClientFactory == null)
+            {
+                throw new ArgumentNullException(nameof(httpClientFactory));
+            }
+
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            if (optionsMonitor == null)
+            {
+                throw new ArgumentNullException(nameof(optionsMonitor));
+            }
+
+            _clientAccessor = () => httpClientFactory.CreateClient(name);
+            _namingPolicyAccessor = () => optionsMonitor.Get(name).JsonNamingPolicy;
         }
 
         public async Task<IHttpResult<Stream>> GetStreamAsync(string url, HttpSendOptions? opt = null,
@@ -65,18 +102,18 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, opt?.Headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PostAsync<T>(string url, object data, HttpSendOptions? opt = null,
                                                        CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
@@ -86,7 +123,7 @@ namespace Common.HttpClients
             using var httpContent = new FormUrlEncodedContent(data);
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, httpContent);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, HttpSendOptions? opt = null,
@@ -95,7 +132,7 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, data);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, HttpSendOptions? opt = null,
@@ -105,7 +142,7 @@ namespace Common.HttpClients
             using var content = new StringContent(xmlData ?? string.Empty, Encoding.UTF8, "application/soap+xml");
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName,
@@ -122,18 +159,18 @@ namespace Common.HttpClients
 
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, formData);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PutAsync<T>(string url, object data, HttpSendOptions? opt = null,
                                                       CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Put, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> DeleteAsync<T>(string url, HttpSendOptions? opt = null, CancellationToken cancellation = default)
@@ -141,29 +178,29 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, opt?.Headers);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> DeleteAsync<T>(string url, object data, HttpSendOptions? opt = null,
                                                          CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<T>> PatchAsync<T>(string url, object data, HttpSendOptions? opt = null,
                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicy);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Patch, fullUrl, opt?.Headers, content);
             using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
-            return await ConvertResponseResult<T>(response, fullUrl).ConfigureAwait(false);
+            return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
         public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellation = default)
@@ -173,7 +210,7 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(request));
             }
 
-            return await _client.SendAsync(request, cancellation).ConfigureAwait(false);
+            return await _clientAccessor().SendAsync(request, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<DownloadResult>> DownloadFileAsync(string url, string filePath, HttpSendOptions? opt = null,
@@ -204,8 +241,10 @@ namespace Common.HttpClients
                     Directory.CreateDirectory(directory);
                 }
 
+                // 先写临时文件再整体替换：失败时不破坏调用方在目标路径已有的文件
+                var tempFilePath = filePath + ".downloading";
                 long fileSize;
-                await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920,
+                await using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920,
                                  true))
                 {
                     await using var httpStream = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
@@ -215,6 +254,7 @@ namespace Common.HttpClients
 
                 response.Dispose();
 
+                File.Move(tempFilePath, filePath, true);
                 return HttpResult<DownloadResult>.Success(new DownloadResult { FilePath = filePath, FileSize = fileSize }, statusCode,
                     null);
             }
@@ -222,12 +262,13 @@ namespace Common.HttpClients
             {
                 response.Dispose();
 
-                // 清理不完整的文件
+                // 只清理本次产生的临时文件，不动调用方在目标路径已有的文件
                 try
                 {
-                    if (File.Exists(filePath))
+                    var tempFilePath = filePath + ".downloading";
+                    if (File.Exists(tempFilePath))
                     {
-                        File.Delete(filePath);
+                        File.Delete(tempFilePath);
                     }
                 }
                 catch
@@ -239,11 +280,12 @@ namespace Common.HttpClients
             }
         }
 
-        private async Task<IHttpResult<T>> ConvertResponseResult<T>(HttpResponseMessage response, string url)
+        private async Task<IHttpResult<T>> ConvertResponseResult<T>(HttpResponseMessage response, string url,
+                                                                    CancellationToken cancellation)
         {
             var isFallback = IsFallbackResponse(response);
             var statusCode = response.StatusCode;
-            var rawBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var rawBody = await response.Content.ReadAsStringAsync(cancellation).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -263,8 +305,18 @@ namespace Common.HttpClients
                 return HttpResult<T>.Success(default, statusCode, rawBody);
             }
 
-            var data = JsonHelper.ToObject<T>(rawBody, _namingPolicy);
-            return HttpResult<T>.Success(data, statusCode, rawBody);
+            // 响应体不是合法 JSON / 与 T 不匹配时按失败结果返回，保持结果对象模型一致；
+            // 仅捕获 JsonException，T 不受支持等编码错误仍抛出
+            try
+            {
+                var data = JsonHelper.ToObject<T>(rawBody, _namingPolicyAccessor());
+                return HttpResult<T>.Success(data, statusCode, rawBody);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "API:{Url} response deserialization failed", url);
+                return HttpResult<T>.Fail($"响应体反序列化失败: {ex.Message}", statusCode, rawBody, isFallbackResponse: false);
+            }
         }
 
         private HttpRequestMessage CreateRequestMessage(HttpMethod method, string url,
@@ -304,7 +356,9 @@ namespace Common.HttpClients
         private Task<HttpResponseMessage> SendCoreAsync(HttpRequestMessage request, CancellationToken cancellation,
                                                         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
         {
-            return _client.SendAsync(request, completionOption, cancellation);
+            // 每次请求现取客户端（工厂以 disposeHandler:false 包装，由工厂统一管理 handler 生命周期）；
+            // 缓存客户端会使工厂的 handler 轮换失效，长驻服务将无法感知 DNS / 证书变更
+            return _clientAccessor().SendAsync(request, completionOption, cancellation);
         }
 
         private static bool IsFallbackResponse(HttpResponseMessage response)

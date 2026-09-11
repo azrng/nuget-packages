@@ -193,17 +193,8 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(services));
             }
 
-            return services.AddHttpClientService(config =>
-            {
-                config.AuditLog = true;
-                config.EnableLogRedaction = true;
-                config.Timeout = 100;
-                config.MaxRequestBodyLength = 4096;
-                config.MaxOutputResponseLength = 4096;
-                config.ConcurrencyLimit = 100;
-                config.MaxRetryAttempts = 3;
-                config.RetryDelaySeconds = 1;
-            });
+            // 默认值统一由 HttpClientOptions 属性初始化器维护，此处不再重复赋值
+            return services.AddHttpClientService(static _ => { });
         }
 
         private static FallbackStrategyOptions<HttpResponseMessage> BuildFallbackOptions()

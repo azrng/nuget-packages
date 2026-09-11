@@ -22,15 +22,14 @@ namespace Common.HttpClients
 
         public IHttpHelper CreateClient(string name)
         {
+            // HttpClientHelper 对客户端无状态（每次请求从 IHttpClientFactory 现取），缓存仅复用适配器本身
             return _clients.GetOrAdd(name, static (n, sp) =>
             {
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                var client = httpClientFactory.CreateClient(n);
                 var logger = sp.GetRequiredService<ILogger<HttpClientHelper>>();
                 var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<HttpClientOptions>>();
-                var options = optionsMonitor.Get(n);
 
-                return new HttpClientHelper(client, logger, Options.Create(options));
+                return new HttpClientHelper(n, httpClientFactory, logger, optionsMonitor);
             }, _serviceProvider);
         }
     }
