@@ -4,7 +4,7 @@
         <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <Version>3.1.0</Version>
+        <Version>4.0.0</Version>
         <PackageId>Common.HttpClients</PackageId>
         <RootNamespace>Common.HttpClients</RootNamespace>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs</PackageProjectUrl>
@@ -27,7 +27,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <!-- 仅依赖 IHttpContextAccessor / HttpContext（TraceId 透传），不绑整个 AspNetCore 共享框架；
+             Web 宿主下由共享框架统一接管（SDK 自动忽略包版本），Worker/控制台宿主只需此轻量包 -->
+        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">

@@ -421,6 +421,8 @@ services.AddHttpClientService();
 
 ### 4.0.0
 
+- **[变更]** 移除对 `Microsoft.AspNetCore.App` 共享框架的强依赖（`FrameworkReference`），改为引用轻量的 `Microsoft.AspNetCore.Http` 包：Worker Service / 控制台宿主无需再安装 ASP.NET Core 共享框架；Web 宿主下类型由共享框架统一接管，行为不变
+- **[说明]** 本版本 API 与 3.1.0 完全一致：下列破坏性变更此前已随 3.1.0 误发（发布时版本号与 README 未同步），4.0.0 为正式版本号收敛，从 3.1.0 升级无需任何代码改动
 - **[破坏性变更]** 统一所有动词方法签名：查询参数与请求头收拢到新增的 `HttpSendOptions`（`Query` / `Headers`），所有方法参数顺序一致
 - **[破坏性变更]** 删除 `FailThrowException` 开关与"失败抛异常 / 返回结果"双错误模型：失败统一返回 `IHttpResult(IsSuccess=false)`；需要抛异常显式调用新增的 `EnsureSuccess()` 扩展方法
 - **[破坏性变更]** 删除所有非泛型 `string` 版方法，统一用泛型版（返回字符串用 `GetAsync<string>()` 等）
@@ -429,6 +431,12 @@ services.AddHttpClientService();
 - **[新增]** `HttpHeaders` 多值请求头集合类型，单值场景不啰嗦、多值场景原生支持
 - **[新增]** `HttpClientOptions.JsonNamingPolicy` 配置项（CamelCase / PascalCase / SnakeCaseLower / None），适配不同后端字段约定
 - **[变更]** Polly Fallback 异常路径统一兜底为 503 降级响应（不再按 `FailThrowException` 分叉）
+
+### 3.1.0
+
+- 本版本为版本号误标发布：实际已包含原计划 4.0.0 的全部破坏性变更（统一 `HttpSendOptions` 签名、删除 `FailThrowException`、删除非泛型 string 版方法、删除 `HttpRequestEnum`、`HttpHeaders` 多值请求头、`JsonNamingPolicy`），且包内 README 误写为 `--version 4.0.0` 安装示例
+- 同时包含：`DeleteAsync(url, data)` 带请求体重载、`DefaultHttpLogRedactor` 脱敏性能优化
+- 该版本 API 与 4.0.0 一致，可直接升级到 4.0.0（4.0.0 额外移除了共享框架强依赖）
 
 ### 3.0.1
 
@@ -445,7 +453,8 @@ services.AddHttpClientService();
 | 版本 | 关键变化 | 调用方迁移要点 |
 |------|----------|----------------|
 | 2.x → 3.0 | 返回值 `T` → `IHttpResult<T>`；`bearerToken` 参数移除 | `if (user != null)` → `if (result.IsSuccess)`；认证改用 `headers` |
-| 3.0 → 4.0 | 统一签名（`HttpSendOptions`）；删 `FailThrowException`；删非泛型 string 版；删 `HttpRequestEnum`；请求头改 `HttpHeaders`；新增 `JsonNamingPolicy` | query/headers 收进 `HttpSendOptions`；非泛型 `GetAsync()` → `GetAsync<string>()`；`FailThrowException=true` → `EnsureSuccess()`；`SendAsync(HttpRequestEnum,…)` → `SendAsync(HttpRequestMessage)`；`new Dictionary<string,string>` headers → `new HttpHeaders` |
+| 3.0 → 3.1.0 | （误发）`HttpSendOptions` 统一签名；删 `FailThrowException`；删非泛型 string 版；删 `HttpRequestEnum`；请求头改 `HttpHeaders`；新增 `JsonNamingPolicy` | query/headers 收进 `HttpSendOptions`；非泛型 `GetAsync()` → `GetAsync<string>()`；`FailThrowException=true` → `EnsureSuccess()`；`SendAsync(HttpRequestEnum,…)` → `SendAsync(HttpRequestMessage)`；`new Dictionary<string,string>` headers → `new HttpHeaders` |
+| 3.1.0 → 4.0.0 | 仅依赖变化（移除 AspNetCore 共享框架强依赖），API 一致 | 无需代码改动 |
 
 ### 从 3.x 迁移到 4.0
 

@@ -1,7 +1,7 @@
 ---
 rule_id: infra-agents
-version: 1.12.0
-last_updated: 2026-08-14
+version: 1.12.1
+last_updated: 2026-09-11
 dependencies: [agents-root]
 ---
 
@@ -36,6 +36,17 @@ dependencies: [agents-root]
 - 发现环境变量、端口、Docker、构建脚本、启动命令或部署链路存在不一致、不可复现或文档缺失时，应主动提醒
 - 涉及清理环境、删除数据、停止未知进程、修改部署配置等高风险操作时，只能提出建议，必须等待明确确认后执行
 - 复用、查证优先级等共性规则见根 `AGENTS.md`「模型行为约束与主动建议」
+
+---
+
+## 发布纪律（NuGet 包）
+
+- 破坏性变更必须升 major 版本号，不得借 minor / patch 号发布
+- 已按某版本开发的内容，发布前不得回退版本号"降级"发出；确需调整版本号时，必须同步核对 README 安装示例、版本更新记录与实际 API 形态是否一致
+- 发布前核对三处一致：csproj `<Version>`、README 安装示例 `--version`、README 版本更新记录的最新版本号；`push-packer.sh` 已内置 csproj 与 README 的一致性预检，不一致会中止推送
+- nuget.org 包不可覆盖：发布后发现内容失实，只能在下一版本修正，并在版本更新记录中说明误发情况
+
+> 背景：2026-08 连续出现版本序列事故（JSqlParser beta 序号排序误判、Common.HttpClients 3.1.0 误含 4.0 的 README 与破坏性变更），按根规则「重复错误回顾机制」固化本节。
 
 ---
 
