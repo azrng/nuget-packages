@@ -8,6 +8,7 @@
 - **统一请求签名**：查询参数与请求头收拢到 `HttpSendOptions`，所有动词方法参数顺序一致，告别"GET 的 query 在第 2 位、POST 的 query 在第 3 位"的记忆负担
 - **多值请求头 `HttpHeaders`**：单值用索引器直接赋字符串，多值用 `Add` 追加，支持多个 `Accept`/`Set-Cookie` 等同名头
 - **可配置 JSON 命名策略**：`JsonNamingPolicy` 支持 CamelCase / PascalCase / SnakeCaseLower / None，适配不同后端字段约定（默认 CamelCase）
+- **大小写不敏感响应匹配**：响应 JSON 属性名默认忽略大小写，可通过 `PropertyNameCaseInsensitive` 关闭
 - 支持通过匿名对象、`IDictionary<string, string>`、`NameValueCollection` 自动构建 URL 查询参数
 - 内置文件下载方法 `DownloadFileAsync`
 - `CreateBearerHeaders` 辅助方法自动构造 Bearer Token 头
@@ -19,7 +20,7 @@
 ## 安装
 
 ```bash
-dotnet add package Common.HttpClients --version 4.0.0
+dotnet add package Common.HttpClients --version 4.1.0
 ```
 
 ## 项目结构
@@ -54,6 +55,7 @@ services.AddHttpClientService(options =>
     options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒）
     options.ConcurrencyLimit = 100;                  // 并发限制
     options.JsonNamingPolicy = JsonNamingPolicyType.CamelCase; // JSON 命名策略（默认 CamelCase）
+    options.PropertyNameCaseInsensitive = true;      // 响应属性名匹配忽略大小写（默认 true）
 });
 ```
 
@@ -334,6 +336,7 @@ var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions { Headers
 | `MaxOutputResponseLength` | int | 4096 | 响应体日志最大输出长度，≥0。0 表示不限制 |
 | `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书，仅建议开发/测试环境使用 |
 | `RetryOnUnauthorized` | bool | false | 401未授权错误时是否重试 |
+| `PropertyNameCaseInsensitive` | bool | true | 响应 JSON 属性名匹配是否忽略大小写 |
 | `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头 |
 | `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名 |
 
@@ -371,6 +374,7 @@ var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
 请求体序列化与响应反序列化统一基于 `System.Text.Json`：
 
 - 默认 `CamelCase` 命名策略，可通过 `HttpClientOptions.JsonNamingPolicy` 切换为 `PascalCase` / `SnakeCaseLower` / `None`
+- 响应 JSON 属性名默认忽略大小写，可通过 `HttpClientOptions.PropertyNameCaseInsensitive = false` 关闭
 - 启用 `UnsafeRelaxedJsonEscaping`（中文等非 ASCII 字符不转义）
 - 反序列化额外启用 `JsonStringEnumConverter`（枚举以字符串形式处理）
 - 容忍注释与尾随逗号
@@ -418,6 +422,10 @@ services.AddHttpClientService();
 支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ## 版本更新记录
+
+### 4.1.0
+
+- **[新增]** `HttpClientOptions.PropertyNameCaseInsensitive` 配置项，默认忽略响应 JSON 属性名大小写，可按 HTTP 客户端实例关闭
 
 ### 4.0.0
 

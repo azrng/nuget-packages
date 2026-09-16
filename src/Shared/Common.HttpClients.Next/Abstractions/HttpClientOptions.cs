@@ -81,6 +81,12 @@ namespace Common.HttpClients
         public JsonNamingPolicyType JsonNamingPolicy { get; set; } = JsonNamingPolicyType.CamelCase;
 
         /// <summary>
+        /// 响应 JSON 属性名匹配是否忽略大小写，默认忽略。
+        /// 可在注册 HTTP 客户端时通过配置委托覆盖。
+        /// </summary>
+        public bool PropertyNameCaseInsensitive { get; set; } = true;
+
+        /// <summary>
         /// 并发限制数量
         /// </summary>
         public int ConcurrencyLimit { get; set; } = 100;
@@ -104,5 +110,6 @@ namespace Common.HttpClients
         /// 额外需要脱敏的字段名（用于json和key=value文本）
         /// </summary>
         public ICollection<string> AdditionalSensitiveFields { get; set; } = new List<string>();
+
     }
 }

@@ -11,37 +11,42 @@ namespace Common.HttpClients.Utils
     /// </summary>
     internal static class JsonHelper
     {
-        private static readonly ConcurrentDictionary<JsonNamingPolicyType, (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize)> OptionsCache = new();
+        private static readonly ConcurrentDictionary<(JsonNamingPolicyType NamingPolicy, bool PropertyNameCaseInsensitive),
+            (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize)> OptionsCache = new();
 
         /// <summary>
         /// 将对象序列化为JSON字符串
         /// </summary>
         public static string ToJson(object obj, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase)
         {
-            var (serialize, _) = GetOptions(namingPolicy);
+            var (serialize, _) = GetOptions(namingPolicy, true);
             return JsonSerializer.Serialize(obj, serialize);
         }
 
         /// <summary>
         /// 将JSON字符串反序列化为对象
         /// </summary>
-        public static T? ToObject<T>(string? json, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase)
+        public static T? ToObject<T>(string? json, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase,
+                                     bool propertyNameCaseInsensitive = true)
         {
             if (json == null)
             {
                 return default;
             }
 
-            var (_, deserialize) = GetOptions(namingPolicy);
+            var (_, deserialize) = GetOptions(namingPolicy, propertyNameCaseInsensitive);
             return JsonSerializer.Deserialize<T>(json, deserialize);
         }
 
-        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) GetOptions(JsonNamingPolicyType namingPolicy)
+        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) GetOptions(
+            JsonNamingPolicyType namingPolicy, bool propertyNameCaseInsensitive)
         {
-            return OptionsCache.GetOrAdd(namingPolicy, BuildOptions);
+            return OptionsCache.GetOrAdd((namingPolicy, propertyNameCaseInsensitive), key =>
+                BuildOptions(key.NamingPolicy, key.PropertyNameCaseInsensitive));
         }
 
-        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) BuildOptions(JsonNamingPolicyType namingPolicy)
+        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) BuildOptions(
+            JsonNamingPolicyType namingPolicy, bool propertyNameCaseInsensitive)
         {
             JsonNamingPolicy? policy = namingPolicy switch
             {
@@ -63,6 +68,7 @@ namespace Common.HttpClients.Utils
             };
 
             var deserialize = new JsonSerializerOptions(serialize);
+            deserialize.PropertyNameCaseInsensitive = propertyNameCaseInsensitive;
             deserialize.Converters.Add(new JsonStringEnumConverter());
 
             return (serialize, deserialize);

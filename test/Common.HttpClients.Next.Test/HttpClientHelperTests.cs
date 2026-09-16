@@ -42,6 +42,38 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
+        public async Task GetAsync_PascalCaseResponse_ShouldDeserializeByDefault()
+        {
+            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"Id\":7,\"Name\":\"az\"}")
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.GetAsync<SampleResponse>("https://unit.test/item");
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(7, result.Data?.Id);
+            Assert.Equal("az", result.Data?.Name);
+        }
+
+        [Fact]
+        public async Task GetAsync_PascalCaseResponse_ShouldRespectCaseSensitiveOption()
+        {
+            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"Id\":7,\"Name\":\"az\"}")
+            });
+            var helper = CreateHelper(client, propertyNameCaseInsensitive: false);
+
+            var result = await helper.GetAsync<SampleResponse>("https://unit.test/item");
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, result.Data?.Id);
+            Assert.Null(result.Data?.Name);
+        }
+
+        [Fact]
         public async Task GetAsync_Failure_ShouldReturnFailedResult()
         {
             using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -445,10 +477,16 @@ namespace Common.HttpClients.Next.Test
             return new HttpClient(new DelegateHttpMessageHandler(factory));
         }
 
-        private static HttpClientHelper CreateHelper(HttpClient client, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase)
+        private static HttpClientHelper CreateHelper(HttpClient client,
+                                                     JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase,
+                                                     bool propertyNameCaseInsensitive = true)
         {
             var logger = new ListLogger<HttpClientHelper>();
-            var options = Options.Create(new HttpClientOptions { JsonNamingPolicy = namingPolicy });
+            var options = Options.Create(new HttpClientOptions
+                                         {
+                                             JsonNamingPolicy = namingPolicy,
+                                             PropertyNameCaseInsensitive = propertyNameCaseInsensitive
+                                         });
             return new HttpClientHelper(client, logger, options);
         }
 

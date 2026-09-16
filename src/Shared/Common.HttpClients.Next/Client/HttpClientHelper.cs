@@ -20,6 +20,7 @@ namespace Common.HttpClients
     {
         private readonly Func<HttpClient> _clientAccessor;
         private readonly Func<JsonNamingPolicyType> _namingPolicyAccessor;
+        private readonly Func<bool> _propertyNameCaseInsensitiveAccessor;
         private readonly ILogger<HttpClientHelper> _logger;
 
         /// <summary>
@@ -36,6 +37,7 @@ namespace Common.HttpClients
             var options = httpConfig ?? throw new ArgumentNullException(nameof(httpConfig));
             _clientAccessor = () => client;
             _namingPolicyAccessor = () => options.Value.JsonNamingPolicy;
+            _propertyNameCaseInsensitiveAccessor = () => options.Value.PropertyNameCaseInsensitive;
         }
 
         /// <summary>
@@ -63,6 +65,7 @@ namespace Common.HttpClients
 
             _clientAccessor = () => httpClientFactory.CreateClient(name);
             _namingPolicyAccessor = () => optionsMonitor.Get(name).JsonNamingPolicy;
+            _propertyNameCaseInsensitiveAccessor = () => optionsMonitor.Get(name).PropertyNameCaseInsensitive;
         }
 
         public async Task<IHttpResult<Stream>> GetStreamAsync(string url, HttpSendOptions? opt = null,
@@ -309,7 +312,7 @@ namespace Common.HttpClients
             // 仅捕获 JsonException，T 不受支持等编码错误仍抛出
             try
             {
-                var data = JsonHelper.ToObject<T>(rawBody, _namingPolicyAccessor());
+                var data = JsonHelper.ToObject<T>(rawBody, _namingPolicyAccessor(), _propertyNameCaseInsensitiveAccessor());
                 return HttpResult<T>.Success(data, statusCode, rawBody);
             }
             catch (JsonException ex)

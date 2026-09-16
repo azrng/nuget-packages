@@ -6,6 +6,8 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T145 | Common.HttpClients 版本升级至 4.1.0 | 发布前将包版本、安装示例和版本记录统一升级至 4.1.0，纳入响应 JSON 属性大小写配置 | 阶段 2 | Codex | DOING | P1 | 2026-09-16 |
+| T144 | Common.HttpClients 响应属性大小写配置 | 通过 `HttpClientOptions.PropertyNameCaseInsensitive` 控制响应 JSON 属性匹配，默认忽略大小写；补齐反序列化回归测试与 README 配置说明 | 阶段 2 | Codex | DONE | P1 | 2026-09-16 |
 | T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T107 | Azrng.JSqlParser 支持 @ 命名参数及 ANY 数组参数 | 保留 @name 参数名，并支持 PostgreSQL `ANY/ALL/SOME` 接收命名数组参数、数组表达式或子查询，补测试并产出新版包 | 阶段 2 | Codex | DONE | P1 | 2026-08-20 |
 | T111 | Azrng.JSqlParser 对齐审计修复（17 处走样） | 修复系统对比发现的 17 处迁移走样。Oracle oldOracleJoinSyntax 体系、ParenthesedSelect 继承、GROUP BY 混用、SqlServerHints 完整关键字跳过记录 TODO 在 MIGRATION.md 第 13.2 节。测试 1465→1567（+102） | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-18 |
