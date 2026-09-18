@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T147 | 精简根 AGENTS 规则 | 删除重复章节，将模型行为约束与最终输出要求合并到现有流程规则，保留任务、交付和编码约束 | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |
 | T146 | Azrng.JSqlParser 拆分版本变更记录 | 将 README 中的完整版本历史迁移至 CHANGELOG.md，README 保留入口说明并提供 GitHub 变更记录链接，并将拆分规则固化到根 AGENTS.md | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |
 | T145 | Common.HttpClients 版本升级至 4.1.0 | 发布前将包版本、安装示例和版本记录统一升级至 4.1.0，纳入响应 JSON 属性大小写配置 | 阶段 2 | Codex | DOING | P1 | 2026-09-16 |
 | T144 | Common.HttpClients 响应属性大小写配置 | 通过 `HttpClientOptions.PropertyNameCaseInsensitive` 控制响应 JSON 属性匹配，默认忽略大小写；补齐反序列化回归测试与 README 配置说明 | 阶段 2 | Codex | DONE | P1 | 2026-09-16 |
