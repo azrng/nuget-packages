@@ -28,7 +28,8 @@ expressionEntry
     ;
 
 statement
-    : selectStatement
+    : createTriggerStatement
+    | selectStatement
     | insertBulkStatement
     | insertStatement
     | multiInsertStatement
@@ -75,8 +76,153 @@ statement
     | refreshStatement
     | upsertStatement
     | tableStatement
+    | exportDataStatement
     | exportStatement
     | importStatement
+    | loadDataStatement
+    | assertStatement
+    | copyStatement
+    | attachStatement
+    | pragmaStatement
+    | createMacroStatement
+    | createRoleStatement
+    | createDomainStatement
+    | createExtensionStatement
+    | createPublicationStatement
+    | createSubscriptionStatement
+    | createEventStatement
+    | doStatement
+    ;
+
+// ─── T149 批次A：PG/MySQL DDL 族（简化透传版，结构化关键字段 + 尾部透传保 round-trip）───
+
+// #2546/#2555 CREATE USER|ROLE|GROUP [IF NOT EXISTS] name[@host] [WITH attrs...]（属性透传）
+createRoleStatement
+    : CREATE (USER | ROLE | GROUP) (IF NOT EXISTS)? userAccount statementTail?
+    ;
+
+userAccount
+    : accountPart (AT_SIGN accountPart)?
+    ;
+
+accountPart
+    : identifier
+    | QUOTED_IDENTIFIER
+    | S_CHAR_LITERAL
+    ;
+
+// #2536 CREATE DOMAIN [IF NOT EXISTS] [schema.]name ...（类型/约束体透传）
+createDomainStatement
+    : CREATE DOMAIN (IF NOT EXISTS)? domainName statementTail?
+    ;
+
+domainName
+    : identifier (DOT identifier)*
+    ;
+
+// #2553 CREATE EXTENSION [IF NOT EXISTS] name [WITH (SCHEMA|VERSION|CASCADE)...]（选项透传）
+createExtensionStatement
+    : CREATE EXTENSION (IF NOT EXISTS)? identifier statementTail?
+    ;
+
+// #2554 CREATE PUBLICATION name [FOR ALL TABLES | FOR TABLE t1,t2] [WITH (...)]
+createPublicationStatement
+    : CREATE PUBLICATION identifier (FOR (ALL TABLES | TABLE tableList))? withTail?
+    ;
+
+tableList
+    : table (COMMA table)*
+    ;
+
+// #2554 CREATE SUBSCRIPTION name CONNECTION 'conn' PUBLICATION pub1,pub2 [WITH (...)]
+createSubscriptionStatement
+    : CREATE SUBSCRIPTION identifier CONNECTION S_CHAR_LITERAL PUBLICATION identifierList withTail?
+    ;
+
+// #2548 MySQL CREATE [DEFINER = user@host] TRIGGER name (BEFORE|AFTER) ev ON t FOR EACH ROW [order] body
+createTriggerStatement
+    : CREATE (DEFINER EQUALS userAccount)?
+      TRIGGER table (BEFORE | AFTER) (INSERT | UPDATE | DELETE) ON table
+      FOR EACH ROW ((FOLLOWS | PRECEDES) table)?
+      triggerBody
+    ;
+
+// 触发体：单语句或 BEGIN...END 块（透传透传二分实验：statement → triggerBody）
+triggerBody
+    : blockStatement
+    | statementTail
+    ;
+
+// #2547 MySQL CREATE EVENT [IF NOT EXISTS] e ON SCHEDULE ... [ON COMPLETION ...] [status] [COMMENT] DO stmt
+createEventStatement
+    : CREATE EVENT (IF NOT EXISTS)? table eventScheduleClause?
+      (ON COMPLETION (NOT)? PRESERVE)?
+      (ENABLE | DISABLE (ON SLAVE)?)?
+      (COMMENT S_CHAR_LITERAL)?
+      DO statement
+    ;
+
+// 调度子句：AT expr | EVERY n unit [STARTS expr] [ENDS expr]（时间量与单位半结构化）
+eventScheduleClause
+    : ON SCHEDULE (
+        AT expression
+        | EVERY (LONG_VALUE | S_DOUBLE | S_CHAR_LITERAL) identifier (STARTS expression)? (ENDS expression)?
+      )
+    ;
+
+// #2589 DO [LANGUAGE id] $$...$$ / DO $$...$$ —— PG 匿名块，整体透传
+doStatement
+    : DO statementTail?
+    ;
+
+// ─── T149 批次D：DuckDB 语句族（COPY/ATTACH/PRAGMA/MACRO，尾部透传版）───
+
+// COPY t TO 'file' (...) / COPY (SELECT ...) TO 'file' — 目标与选项透传
+copyStatement
+    : COPY (table | OPENING_PAREN selectStatement CLOSING_PAREN) (TO | FROM) statementTail?
+    ;
+
+// ATTACH 'file.db' [AS alias] — 透传
+attachStatement
+    : ATTACH statementTail?
+    ;
+
+// PRAGMA name[=value] / PRAGMA table_info('t') — 透传
+pragmaStatement
+    : PRAGMA statementTail?
+    ;
+
+// CREATE MACRO name(p) AS expr / CREATE MACRO m AS TABLE ... — 头部之后透传
+createMacroStatement
+    : CREATE MACRO statementTail?
+    ;
+
+// ─── T149 批次C：BigQuery 语句族 ───
+
+// EXPORT DATA ['uri' | OPTIONS(...)| WITH CONNECTION ...] AS query — uri/选项透传，查询结构化
+exportDataStatement
+    : EXPORT DATA (S_CHAR_LITERAL | OPTIONS OPENING_PAREN parameterListItem (COMMA parameterListItem)* CLOSING_PAREN)*
+      (AS)? selectStatement
+    ;
+
+// LOAD DATA [OVERWRITE] [INTO] ...（BigQuery 外表装载，整体透传）
+loadDataStatement
+    : LOAD DATA OVERWRITE? statementTail?
+    ;
+
+// ASSERT 条件 [AS 'msg']（BigQuery 语句形式；函数形式走 functionExpr）
+assertStatement
+    : ASSERT expression (AS S_CHAR_LITERAL)?
+    ;
+
+// 通用语句尾透传（到分号/文件尾为止；仅允许出现在产生式末尾）
+statementTail
+    : ~(SEMICOLON | EOF)+
+    ;
+
+// WITH 开头的选项尾透传（CREATE ROLE ... WITH / PUBLICATION ... WITH (...) 等）
+withTail
+    : WITH ~(SEMICOLON | EOF)+
     ;
 
 // BEGIN WORK|TRANSACTION — 标准事务开始语句（PostgreSQL/MySQL，上游不支持，Azrng 增强）
@@ -255,9 +401,17 @@ selectColumnList
 
 selectItem
     : OPENING_PAREN expression CLOSING_PAREN DOT MULTIPLY   // PostgreSQL 行展开 (expr).*
+    | COLUMNS OPENING_PAREN expression CLOSING_PAREN columnsTransformer*   // #2631/#2635 ClickHouse COLUMNS(...) 变换
     | expression (AS? alias)?
     | MULTIPLY
     | identifier DOT MULTIPLY
+    ;
+
+// #2631/#2635 COLUMNS(...) 的 APPLY/EXCEPT/REPLACE 变换器（可组合）
+columnsTransformer
+    : APPLY expression
+    | EXCEPT (OPENING_PAREN identifierList CLOSING_PAREN | identifier)
+    | REPLACE selectItem (COMMA selectItem)*
     ;
 
 topClause
@@ -298,8 +452,9 @@ fromItem
     ;
 
 tableOrSubquery
-    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause? timeTravelClause?
+    : table alias? sqlServerHints? mySqlIndexHint? tableSampleClause? pivotClause? timeTravelClause? matchRecognize?   // #2634 MATCH_RECOGNIZE 表后缀
     | xmlTable alias?   // PostgreSQL XMLTABLE(...) 表函数
+    | UNNEST OPENING_PAREN expression CLOSING_PAREN alias? (WITH OFFSET (AS? identifier)?)?   // #2642 BigQuery UNNEST [AS alias] [WITH OFFSET [AS col]]
     | tableFunction (WITH ORDINALITY)? alias? (OPENING_PAREN columnList CLOSING_PAREN)?   // PG: func() WITH ORDINALITY ARR(item, pos)
     | ROWS FROM OPENING_PAREN tableFunction (COMMA tableFunction)* CLOSING_PAREN alias? (OPENING_PAREN columnList CLOSING_PAREN)?   // PG ROWS FROM (...)
     | subSelect
@@ -402,6 +557,61 @@ jsonTablePassingItem
     : expression AS identifier
     ;
 
+// #2634 MATCH_RECOGNIZE 行模式识别（SQL:2016 行模式匹配）
+// PARTITION BY / ORDER BY / MEASURES 结构化；PATTERN 变量表达式递归解析（原文透传保 round-trip）
+matchRecognize
+    : MATCH_RECOGNIZE OPENING_PAREN
+      (PARTITION BY expression (COMMA expression)*)?
+      orderByClause?
+      (MEASURES selectColumnList)?
+      (ONE ROW (PER MATCH)? | ALL ROWS (PER MATCH)?)?
+      (AFTER MATCH SKIP_KW? matchRecognizeSkip)?
+      (PATTERN_KW OPENING_PAREN patternExpression CLOSING_PAREN)?
+      (SUBSET subsetDefinition (COMMA subsetDefinition)*)?
+      (DEFINE identifier AS expression (COMMA identifier AS expression)*)?
+      CLOSING_PAREN
+      (AS? identifier)?
+    ;
+
+// PATTERN 变量表达式：'|' 分支 + 顺序因子 + 量词 + 括号分组 + ^ $ 锚点
+// 量词限定 * + ? 与 {n}/{n,}/{n,m} 形式
+patternExpression
+    : patternSequence (PIPE patternSequence)*
+    ;
+
+patternSequence
+    : patternFactor+
+    ;
+
+patternFactor
+    : patternPrimary (MULTIPLY | PLUS | QUESTION_MARK | patternBraceQuantifier)?
+    ;
+
+patternBraceQuantifier
+    : LBRACE LONG_VALUE (COMMA (LONG_VALUE)?)? RBRACE
+    ;
+
+patternPrimary
+    : identifier
+    | OPENING_PAREN patternExpression CLOSING_PAREN
+    | CARET
+    | DOLLAR
+    ;
+
+// AFTER MATCH 跳过子句
+matchRecognizeSkip
+    : PAST LAST ROW
+    | NEXT ROW
+    | TO (FIRST | LAST) identifier
+    | FIRST identifier
+    | LAST identifier
+    ;
+
+// SUBSET s1 = (a, b)
+subsetDefinition
+    : identifier EQUALS OPENING_PAREN identifierList CLOSING_PAREN
+    ;
+
 // PostgreSQL XMLTABLE 行集函数：
 //   XMLTABLE(xpath_row_query PASSING expr [, ...] [COLUMNS (col_def, ...)])
 xmlTable
@@ -448,7 +658,14 @@ joinClause
     | NATURAL joinType? JOIN tableOrSubquery
     | CROSS JOIN tableOrSubquery
     | STRAIGHT_JOIN tableOrSubquery joinCondition?
+    | ARRAY JOIN arrayJoinItem (COMMA arrayJoinItem)*          // #2482 ClickHouse ARRAY JOIN
+    | LEFT ARRAY JOIN arrayJoinItem (COMMA arrayJoinItem)*     // #2482 LEFT ARRAY JOIN
     | lateralViewClause          // Hive/Spark LATERAL VIEW [OUTER] function() AS col（接在表后，语义类似 join）
+    ;
+
+// #2482 ARRAY JOIN 项：表达式 [AS alias]（数组展开为多行）
+arrayJoinItem
+    : expression (AS? identifier)?
     ;
 
 // ksqlDB 流式 JOIN WITHIN 窗口：WITHIN (n unit) 或 WITHIN (n unit, n unit)
@@ -467,6 +684,7 @@ joinType
     | RIGHT OUTER?
     | FULL OUTER?
     | SEMI
+    | ANTI   // #2643 DuckDB ANTI JOIN
     ;
 
 joinCondition
@@ -595,11 +813,26 @@ preferenceTerm
     ;
 
 orderByClause
-    : ORDER BY orderByItem (COMMA orderByItem)*
+    : ORDER BY orderByItem (COMMA orderByItem)* interpolateClause?
     ;
 
 orderByItem
     : expression (COLLATE (S_CHAR_LITERAL | QUOTED_IDENTIFIER))? (ASC | DESC)? (NULLS (FIRST | LAST))? (WITH ROLLUP)?
+      withFillClause?   // #2469 ClickHouse ORDER BY ... WITH FILL
+    ;
+
+// #2469 ClickHouse WITH FILL [FROM e] [TO e] [STEP e] [STALENESS e]（间隙填充）
+withFillClause
+    : WITH FILL (FROM expression)? (TO expression)? (STEP expression)? (STALENESS expression)?
+    ;
+
+// #2469 ClickHouse INTERPOLATE ([col [AS expr], ...])（相邻行插值），位于 ORDER BY 后 LIMIT 前
+interpolateClause
+    : INTERPOLATE (OPENING_PAREN (interpolateElement (COMMA interpolateElement)*)? CLOSING_PAREN)?
+    ;
+
+interpolateElement
+    : identifier (AS expression)?
     ;
 
 limitClause
@@ -1036,9 +1269,20 @@ analyzeStatement
     : ANALYZE table
     ;
 
-// COMMENT ON TABLE/COLUMN ... IS 'xxx'
+// COMMENT ON <目标> IS '文本' | IS NULL（#2562 NULL=删除注释）
+// TABLE/COLUMN/VIEW 结构化；#2639 其余 PG 目标（SCHEMA/DATABASE/ROLE/TYPE/DOMAIN/FUNCTION/...）透传
 commentStatement
-    : COMMENT ON (TABLE table | COLUMN columnRef | VIEW table) IS S_CHAR_LITERAL
+    : COMMENT ON (TABLE table | COLUMN columnRef | VIEW table) IS commentText
+    | COMMENT ON commentOnTarget IS commentText
+    ;
+
+commentText
+    : S_CHAR_LITERAL
+    | NULL
+    ;
+
+commentOnTarget
+    : ~(IS | SEMICOLON | EOF)+
     ;
 
 // EXECUTE / EXEC / CALL proc(args) 或无括号形式 EXEC proc arg1, @out OUTPUT（#268）
@@ -1400,7 +1644,13 @@ returningOutputAlias
 // ══════════════════════════════════════════════
 
 expression
-    : orExpression
+    : ternaryExpr
+    ;
+
+// #2436/#2466 ClickHouse 三元条件 cond ? then : else（右结合；else 分支嵌套吸收）
+// 注意：else 分隔 ':' 紧跟标识符（如 ':c'）会被 lexer 合成命名参数 token，需写 ': c'
+ternaryExpr
+    : orExpression (QUESTION_MARK ternaryExpr COLON ternaryExpr)?
     ;
 
 orExpression
@@ -1459,6 +1709,7 @@ unaryExpr
 postfixExpr
     : primaryExpr
       ( DOT identifier
+      | DOT LONG_VALUE    // #2454 ClickHouse tuple 位置访问 t.1（列名直接存数字原文）
       | OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
         withinGroupClause? filterClause? overClause?
       | AT TIME ZONE expression
@@ -1671,6 +1922,7 @@ functionExpr
     | jsonObjectAggFunction
     | jsonArrayAggFunction
     | specialStringFunction          // SQL 标准 SUBSTRING(x FROM 1 FOR 3) / POSITION(a IN b) / OVERLAY(x PLACING y FROM 1)
+    | assertFunction                 // #2642 BigQuery ASSERT(cond [, 'msg'])
     | identifier OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
       functionKeywordArgument*
       keepExpression?
@@ -1679,6 +1931,14 @@ functionExpr
     | NEXTVAL OPENING_PAREN expressionList CLOSING_PAREN
     | NEXTVAL FOR columnRef
     | NEXT VALUE FOR columnRef
+    ;
+
+// #2642 BigQuery ASSERT 函数形式：ASSERT(cond, 'msg')
+assertFunction
+    : ASSERT OPENING_PAREN (DISTINCT? expressionList | MULTIPLY)? CLOSING_PAREN
+      functionKeywordArgument*
+      keepExpression?
+      withinGroupClause? filterClause? overClause?
     ;
 
 // SQL 标准命名参数字符串函数：SUBSTRING/SUBSTR/POSITION/OVERLAY
@@ -1941,39 +2201,40 @@ identifier
     ;
 
 nonReservedKeyword
-    : ACTION | ACTIVE | ABSENT | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE
+    : ACTION | ACTIVE | ABSENT | ADD | AGGREGATE | ALTER | ALWAYS | ANALYZE | APPLY | ASSERT | ATTACH
     | AT | AUTHORIZATION | AUTO | AUTO_INCREMENT
-    | BEFORE | BEGIN | BIT | BOTH | BULK
-    | BUFFERS
-    | CACHE | CALL | CASCADE | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
-    | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT | CONTENT
+    | BEFORE | BEGIN | BIT | BOTH | BULK | BUFFERS
+    | CACHE | CALL | CASCADE | CARET | CERTIFICATE | CHANGE | CHECKPOINT | CLOSE
+    | COALESCE | COLLATE | COLUMN | COLUMNS | COMMIT | COMMENT | COMPLETION | CONNECTION | CONTENT | COPY
     | CONFLICT | CONSTRAINTS | CONVERT | COSTS | COUNT | CREATED | CURRENT_DATE | CURRENT_TIME | CURRENT_TIMESTAMP | CURRENT_TIMEZONE | CYCLE
-    | DATABASE | DATA | DECLARE | DEFAULTS | DELAYED | DESCRIBE | DOCUMENT
+    | DATABASE | DATA | DECLARE | DEFAULTS | DEFINE | DELAYED | DESCRIBE | DOCUMENT
     | DISABLE | DISCARD | DISCONNECT | DIV | DDL | DML | DO | DOMAIN | DRIVER | DUPLICATE
-    | ELEMENTS | EMPTY_KW | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE
-    | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
+    | ELEMENTS | EMPTY_KW | ENABLE | ENCODING | ENCRYPTION | ENFORCED | ENGINE | EVENT | EVERY
+    | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE | EXTENSION
     | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXTERNAL
-    | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | GENERATED
-    | GRANT | GROUP_CONCAT | GROUPING | GROUPS   // #2473 GROUPS 非保留字（窗口帧/列名两用，同 RANGE 先例）
+    | FILTER | FIELDS | FINAL_KW | FIRST | FILL | FLUSH | FOLLOWING | FOLLOWS | FORMAT | FULL | FULLTEXT | GENERATED
+    | GRANT | GROUP_CONCAT | GROUPING | GROUPS
     | HASH | HIGH | HISTORY
-    | IDENTIFIED | IDENTITY | IGNORE | INCLUDE | INCLUDING | INCREMENT
+    | AFTER | ENDS
+    | ONE | OPTIONS | PER
+    | SLAVE | STALENESS | STARTS | STEP
+    | IDENTIFIED | IDENTITY | IGNORE | INCLUDE | INCLUDING | INCREMENT | INTERPOLATE
     | INDEX | INFORMATION | INSERT | INTERLEAVE | INVALIDATE | INVERSE | INVISIBLE | ISNULL
     | KEEP | KEY | KEYS | KILL
-    | LAST | LEADING | LESS | LEVEL | LINES | LOCAL | LOCALTIME | LOCALTIMESTAMP | LOCK | LOCKED | LOG | LOOP | LOW
-    | MATCH | MATCHED | MATERIALIZED | MAX | MAXVALUE | MIN | MINVALUE
+    | LAST | LEADING | LESS | LEVEL | LINES | LOAD | LOCAL | LOCALTIME | LOCALTIMESTAMP | LOCK | LOCKED | LOG | LOOP | LOW
+    | MACRO | MATCH | MATCHED | MATERIALIZED | MAX | MAXVALUE | MEASURES | MIN | MINVALUE
     | MODE | MODIFY
     | NAMES | NAME | NEVER | NEXT | NEXTVAL | NOCACHE | NOLOCK | NONE | NOTNULL | NULLS | NOWAIT
     | OF | OFF | OPTIONALLY | OPEN | ORDINALITY | OVER | OVERFLOW | OVERRIDING | OVERWRITE
-    | PADDING | PARALLEL | PARSER | PARTITION | PARTITIONING | PATH | PERCENT | PLACING | PLAN
-    | POLICY | PRIOR | PRIVILEGES | PROCEDURE | PUBLIC | PURGE
+    | PADDING | PARALLEL | PARSER | PARTITION | PARTITIONING | PAST | PATH | PATTERN_KW | PERCENT | PLACING | PLAN | POLICY | PRESERVE | PRECEDES | PRAGMA | PRIOR | PRIVILEGES | PROCEDURE | PUBLIC | PUBLICATION | PURGE
     | QUERY | QUICK
     | RANGE | READ | REBUILD | RECURSIVE | REFRESH | REGEXP
-    | REJECT | RENAME | REPLACE | RESET | RESTART | RESUME | RESTRICT
+    | REJECT | RENAME | REPLACE | RESET | RESTART | RESUME | RESTRICT | ROLE | RUNNING
     | RETURN | RETURNS | RETURNING | ROLLBACK | ROLLUP | RLIKE
-    | SAMPLE | SAVEPOINT | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW | SUMMARY
+    | SAMPLE | SAVEPOINT | SCHEDULE | SCHEMA | SEPARATOR | SESSION | SETTINGS | SHOW | SUBSCRIPTION | SUBSET | SUMMARY
     | START | STRICT | TABLES | TABLESPACE | TABLESAMPLE | TEMPORARY | TEMP | TIMING
     | TIES | TRAILING | TRIGGER | TRIM | TRY_CAST | TYPE
-    | UNLOGGED | UNSIGNED | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
+    | UNLOGGED | UNSIGNED | UNNEST | VALIDATE | VERBOSE | VERIFY | VISIBLE | VOLATILE
     | WAL | WITHIN | WITHOUT | WORK | ZONE
     | XMLTABLE
     | XMLNAMESPACES

@@ -145,4 +145,41 @@ public interface IStatementVisitor<T>
     void Visit(Select.TableStatement tableStatement) => Visit<object?>(tableStatement, default);
     void Visit(Export.ExportStatement export) => Visit<object?>(export, default);
     void Visit(Import.ImportStatement import) => Visit<object?>(import, default);
+
+    // T149 批次A：PG/MySQL DDL 族 + DO
+    T Visit<S>(Create.Role.CreateRole createRole, S context);
+    T Visit<S>(Create.Domain.CreateDomain createDomain, S context);
+    T Visit<S>(Create.Extension.CreateExtension createExtension, S context);
+    T Visit<S>(Create.Publication.CreatePublication createPublication, S context);
+    T Visit<S>(Create.Subscription.CreateSubscription createSubscription, S context);
+    T Visit<S>(Create.Trigger.CreateTrigger createTrigger, S context);
+    T Visit<S>(Create.Event.CreateEvent createEvent, S context);
+    T Visit<S>(DoStatement doStatement, S context);
+
+    // T149 批次C/D：BigQuery + DuckDB
+    T Visit<S>(Export.ExportData exportData, S context);
+    T Visit<S>(LoadDataStatement loadData, S context);
+    T Visit<S>(AssertStatement assert, S context);
+    T Visit<S>(DuckDb.CopyStatement copy, S context);
+    T Visit<S>(DuckDb.AttachStatement attach, S context);
+    T Visit<S>(DuckDb.PragmaStatement pragma, S context);
+    T Visit<S>(Create.Macro.CreateMacro createMacro, S context);
+
+    void Visit(Create.Role.CreateRole createRole) => Visit<object?>(createRole, default);
+    void Visit(Create.Domain.CreateDomain createDomain) => Visit<object?>(createDomain, default);
+    void Visit(Create.Extension.CreateExtension createExtension) => Visit<object?>(createExtension, default);
+    void Visit(Create.Publication.CreatePublication createPublication) => Visit<object?>(createPublication, default);
+    void Visit(Create.Subscription.CreateSubscription createSubscription) => Visit<object?>(createSubscription, default);
+    void Visit(Create.Trigger.CreateTrigger createTrigger) => Visit<object?>(createTrigger, default);
+    void Visit(Create.Event.CreateEvent createEvent) => Visit<object?>(createEvent, default);
+    void Visit(DoStatement doStatement) => Visit<object?>(doStatement, default);
+
+    // T149 批次C/D：BigQuery + DuckDB
+    void Visit(Export.ExportData exportData) => Visit<object?>(exportData, default);
+    void Visit(LoadDataStatement loadData) => Visit<object?>(loadData, default);
+    void Visit(AssertStatement assert) => Visit<object?>(assert, default);
+    void Visit(DuckDb.CopyStatement copy) => Visit<object?>(copy, default);
+    void Visit(DuckDb.AttachStatement attach) => Visit<object?>(attach, default);
+    void Visit(DuckDb.PragmaStatement pragma) => Visit<object?>(pragma, default);
+    void Visit(Create.Macro.CreateMacro createMacro) => Visit<object?>(createMacro, default);
 }

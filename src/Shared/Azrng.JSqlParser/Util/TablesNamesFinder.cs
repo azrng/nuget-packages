@@ -767,6 +767,56 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     }
     public object? Visit<S>(Statement.UnsupportedStatement unsupportedStatement, S context) => null;
 
+    // T149 新表达式（三元条件 / COLUMNS 变换）
+    public object? Visit<S>(Expression.TernaryExpression ternaryExpression, S context)
+    {
+        ternaryExpression.Condition.Accept(this);
+        ternaryExpression.ThenExpression.Accept(this);
+        ternaryExpression.ElseExpression.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(Expression.ColumnsExpression columnsExpression, S context)
+    {
+        columnsExpression.Pattern.Accept(this);
+        columnsExpression.Apply?.Accept(this);
+        return null;
+    }
+
+    // ─── T149 批次A/C/D 新语句 ───
+    public object? Visit<S>(Statement.Create.Role.CreateRole createRole, S context) => null;
+    public object? Visit<S>(Statement.Create.Domain.CreateDomain createDomain, S context) => null;
+    public object? Visit<S>(Statement.Create.Extension.CreateExtension createExtension, S context) => null;
+    public object? Visit<S>(Statement.Create.Publication.CreatePublication createPublication, S context)
+    {
+        if (createPublication.Tables != null)
+            foreach (var t in createPublication.Tables) AddTable(t);
+        return null;
+    }
+    public object? Visit<S>(Statement.Create.Subscription.CreateSubscription createSubscription, S context) => null;
+    public object? Visit<S>(Statement.Create.Trigger.CreateTrigger createTrigger, S context)
+    {
+        if (createTrigger.Table != null) AddTable(createTrigger.Table);
+        createTrigger.Body?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(Statement.Create.Event.CreateEvent createEvent, S context)
+    {
+        createEvent.Body?.Accept(this);
+        return null;
+    }
+    public object? Visit<S>(Statement.DoStatement doStatement, S context) => null;
+    public object? Visit<S>(Statement.Export.ExportData exportData, S context)
+    {
+        ((Statement.IStatementVisitor<object?>)this).Visit(exportData.Select!, (object?)null);
+        return null;
+    }
+    public object? Visit<S>(Statement.LoadDataStatement loadData, S context) => null;
+    public object? Visit<S>(Statement.AssertStatement assert, S context) => null;
+    public object? Visit<S>(Statement.DuckDb.CopyStatement copy, S context) => null;
+    public object? Visit<S>(Statement.DuckDb.AttachStatement attach, S context) => null;
+    public object? Visit<S>(Statement.DuckDb.PragmaStatement pragma, S context) => null;
+    public object? Visit<S>(Statement.Create.Macro.CreateMacro createMacro, S context) => null;
+
     // JSqlParser 5.1 - Parenthesized DML for CTEs
     public object? Visit<S>(Statement.Select.ParenthesedInsert parenthesedInsert, S context)
     {

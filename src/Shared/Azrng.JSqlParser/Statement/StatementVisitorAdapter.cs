@@ -87,4 +87,23 @@ public class StatementVisitorAdapter<T> : IStatementVisitor<T>
     public virtual T Visit<S>(Select.TableStatement tableStatement, S context) => default!;
     public virtual T Visit<S>(Export.ExportStatement export, S context) => default!;
     public virtual T Visit<S>(Import.ImportStatement import, S context) => default!;
+
+    // T149 批次A：PG/MySQL DDL 族 + DO
+    public virtual T Visit<S>(Create.Role.CreateRole createRole, S context) => default!;
+    public virtual T Visit<S>(Create.Domain.CreateDomain createDomain, S context) => default!;
+    public virtual T Visit<S>(Create.Extension.CreateExtension createExtension, S context) => default!;
+    public virtual T Visit<S>(Create.Publication.CreatePublication createPublication, S context) => default!;
+    public virtual T Visit<S>(Create.Subscription.CreateSubscription createSubscription, S context) => default!;
+    public virtual T Visit<S>(Create.Trigger.CreateTrigger createTrigger, S context) { createTrigger.Body?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(Create.Event.CreateEvent createEvent, S context) { createEvent.Body?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(DoStatement doStatement, S context) => default!;
+
+    // T149 批次C/D：BigQuery + DuckDB
+    public virtual T Visit<S>(Export.ExportData exportData, S context) { exportData.Select?.Accept(this, context); return default!; }
+    public virtual T Visit<S>(LoadDataStatement loadData, S context) => default!;
+    public virtual T Visit<S>(AssertStatement assert, S context) => default!;
+    public virtual T Visit<S>(DuckDb.CopyStatement copy, S context) => default!;
+    public virtual T Visit<S>(DuckDb.AttachStatement attach, S context) => default!;
+    public virtual T Visit<S>(DuckDb.PragmaStatement pragma, S context) => default!;
+    public virtual T Visit<S>(Create.Macro.CreateMacro createMacro, S context) => default!;
 }

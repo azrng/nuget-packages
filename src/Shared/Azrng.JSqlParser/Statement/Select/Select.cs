@@ -173,6 +173,12 @@ public abstract class Select : ASTNodeAccessImpl, IStatement, IExpression
             builder.Append(string.Join(", ", OrderByElements));
         }
 
+        // ClickHouse INTERPOLATE（#2469，ORDER BY 之后）
+        if (this is PlainSelect { InterpolateElements: { Count: > 0 } interpolate })
+        {
+            builder.Append(" INTERPOLATE (").Append(string.Join(", ", interpolate)).Append(')');
+        }
+
         return builder;
     }
 

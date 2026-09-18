@@ -19,6 +19,16 @@ public class Join : ASTNodeAccessImpl
     public bool Cross { get; set; }
     public bool Semi { get; set; }
 
+    /// <summary>DuckDB ANTI JOIN（#2643，反连接）。</summary>
+    public bool Anti { get; set; }
+
+    /// <summary>ClickHouse ARRAY JOIN / LEFT ARRAY JOIN（#2482）。Left 为 true 时是 LEFT ARRAY JOIN。</summary>
+    public bool ArrayJoin { get; set; }
+    public bool LeftArrayJoin { get; set; }
+
+    /// <summary>ARRAY JOIN 的展开项列表（仅 ArrayJoin/LeftArrayJoin 时有意义）。</summary>
+    public List<ArrayJoinItem>? ArrayJoinItems { get; set; }
+
     /// <summary>ClickHouse/MySQL STRAIGHT_JOIN（强制连接顺序）。</summary>
     public bool Straight { get; set; }
 
@@ -77,6 +87,17 @@ public class Join : ASTNodeAccessImpl
             return sb.ToString();
         }
 
+        // ClickHouse ARRAY JOIN / LEFT ARRAY JOIN（#2482）：独立形态，不走通用 join 渲染
+        if (ArrayJoin || LeftArrayJoin)
+        {
+            sb.Append(LeftArrayJoin ? "LEFT ARRAY JOIN " : "ARRAY JOIN ");
+            if (ArrayJoinItems is { Count: > 0 })
+                sb.Append(string.Join(", ", ArrayJoinItems));
+            else if (RightItem != null)
+                sb.Append(RightItem);
+            return sb.ToString();
+        }
+
         // ClickHouse 修饰顺序：GLOBAL → NATURAL → ANY|ALL → 方向(LEFT/RIGHT/FULL/CROSS) → OUTER/INNER/SEMI
         if (Global) sb.Append("GLOBAL ");
         if (Natural) sb.Append("NATURAL ");
@@ -90,6 +111,7 @@ public class Join : ASTNodeAccessImpl
         if (Outer) sb.Append("OUTER ");
         if (Cross) sb.Append("CROSS ");
         if (Semi) sb.Append("SEMI ");
+        if (Anti) sb.Append("ANTI ");
         // SQL Server Join 提示（方向词后、JOIN 前）
         if (JoinHint != null) sb.Append(JoinHint).Append(' ');
 

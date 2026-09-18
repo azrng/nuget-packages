@@ -4,6 +4,35 @@
 
 ## 版本历史
 
+### 1.0.0-rc3
+
+同步上游 JSqlParser 5.4 第二/三档全部剩余缺口（T149）。**含一处建模变更**：`FROM unnest(arr)` 从 `TableFunction` 改为专用 `UnnestTable` 节点（其余为新增字段/类型与文法能力）。
+
+**PG/MySQL DDL 族（简化透传版：结构化关键字段 + 尾部透传保 round-trip）**：
+- `CREATE USER|ROLE|GROUP [IF NOT EXISTS] name[@host] ...`（#2546/#2555）— 新语句 `CreateRole`
+- `CREATE DOMAIN [IF NOT EXISTS] name AS type ...`（#2536）— 新语句 `CreateDomain`
+- `CREATE EXTENSION [IF NOT EXISTS] name ...`（#2553）— 新语句 `CreateExtension`
+- `CREATE PUBLICATION name [FOR ALL TABLES | FOR TABLE ...]`（#2554）— 新语句 `CreatePublication`
+- `CREATE SUBSCRIPTION name CONNECTION '...' PUBLICATION ...`（#2554）— 新语句 `CreateSubscription`
+- MySQL `CREATE [DEFINER = ...] TRIGGER ... FOR EACH ROW ...`（#2548）— 新语句 `CreateTrigger`（BEGIN..END 块体结构化，单语句体透传）
+- MySQL `CREATE EVENT ... ON SCHEDULE ... DO ...`（#2547）— 新语句 `CreateEvent`（调度子句透传、body 结构化）
+- `DO $$ ... $$` PG 匿名块（#2589）— 新语句 `DoStatement`
+- `COMMENT ON` 目标扩展至 SCHEMA/DATABASE/FUNCTION 等（#2639）+ `IS NULL` 删除注释（#2562）— `Comment.TargetText` / `Comment.Remove`
+
+**ClickHouse**：`ARRAY JOIN / LEFT ARRAY JOIN`（#2482，`Join.ArrayJoin/LeftArrayJoin/ArrayJoinItems`）；`ORDER BY ... WITH FILL [FROM] [TO] [STEP] [STALENESS]`（#2469，`OrderByElement.WithFill`）；`INTERPOLATE (...)`（#2469，`PlainSelect.InterpolateElements`）；`COLUMNS(...) APPLY/EXCEPT/REPLACE`（#2631/#2635，`ColumnsExpression`）；tuple 位置访问 `t.1`（#2454）
+
+**BigQuery**：`UNNEST(arr) [AS u] [WITH OFFSET [AS o]]`（#2642，新 FROM 项 `UnnestTable`，替代原 TableFunction 建模）；`EXPORT DATA ... AS query`（新语句 `ExportData`）；`LOAD DATA [OVERWRITE] ...`（新语句 `LoadDataStatement`）；`ASSERT cond AS 'msg'` 语句与 `ASSERT(...)` 函数（新语句 `AssertStatement` / Function）
+
+**DuckDB**：`ANTI JOIN`（#2643，`Join.Anti`，ANTI 保留化同 GLOBAL 先例）；`COPY ... TO/FROM ...`、`ATTACH`、`PRAGMA`、`CREATE MACRO`（均透传语句）
+
+**表达式**：ClickHouse 三元条件 `cond ? then : else`（#2436/#2466，新 `TernaryExpression`，右结合；`:c` 紧跟形式的命名参数歧义仍不支持，需 `: c`）
+
+**行模式识别**：SQL:2016 `MATCH_RECOGNIZE`（#2634，新 FROM 项 `MatchRecognize`：PARTITION/ORDER/MEASURES/SKIP/DEFINE 结构化、PATTERN 变量表达式原文透传）
+
+**模型结构化**：`IntervalQualifier` 结构化限定符（#1728，`IntervalExpression.Qualifier`，`IntervalType` 原文保留）；`ColDataType.Precision/Scale` 便捷属性（#2539，从括号参数解析，AST 结构不变）
+
+**测试**：新增 `Upstream54SyncBatch2Test`（48 项）；全量 **1829** 通过 / 2 Skip × 3 TFM（net8/9/10）。
+
 ### 1.0.0-rc2
 
 同步上游 JSqlParser 5.4 正式版（tag `jsqlparser-5.4`，commit `e847e94b`）第一档缺口 7 项。**无破坏性 API 变更**（仅新增字段/枚举与文法能力，全部向后兼容）。

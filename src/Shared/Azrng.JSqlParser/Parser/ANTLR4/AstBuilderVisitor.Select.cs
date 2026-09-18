@@ -62,6 +62,14 @@ public partial class AstBuilderVisitor
         }
 
         // ksqlDB EMIT CHANGES（ORDER BY 之后、LIMIT 之前）
+        // ClickHouse INTERPOLATE（#2469，随 orderByClause 解析，挂在 PlainSelect）
+        if (select is PlainSelect interpolateSelect
+            && context.orderByClause()?.interpolateClause() is { } interpolateCtx)
+        {
+            interpolateSelect.InterpolateElements = interpolateCtx.interpolateElement()
+                .Select(e => (InterpolateElement)Visit(e)).ToList();
+        }
+
         if (context.ksqlEmitClause() != null && select is PlainSelect emitPlainSelect)
         {
             emitPlainSelect.EmitChanges = true;
@@ -862,6 +870,27 @@ public partial class AstBuilderVisitor
 
     public override object VisitSelectItem(JSqlParserGrammar.SelectItemContext context)
     {
+        // ClickHouse COLUMNS(...) APPLY/EXCEPT/REPLACE（#2631/#2635）
+        if (context.COLUMNS() != null)
+        {
+            var columns = new ColumnsExpression
+            {
+                Pattern = (Expression.IExpression)Visit(context.expression())
+            };
+            foreach (var t in context.columnsTransformer())
+            {
+                if (t.APPLY() != null)
+                    columns.Apply = (Expression.IExpression)Visit(t.expression());
+                else if (t.EXCEPT() != null)
+                    columns.Except = t.identifierList() != null
+                        ? t.identifierList().identifier().Select(i => i.GetText()).ToList()
+                        : new List<string> { t.identifier().GetText() };
+                else if (t.REPLACE() != null)
+                    columns.Replace = t.selectItem().Select(i => (SelectItem)Visit(i)).ToList();
+            }
+            return new SelectItem(columns);
+        }
+
         // PostgreSQL 行展开 (expr).* —— 用 RowGetExpression 保留外层括号保 round-trip
         if (context.OPENING_PAREN() != null && context.DOT() != null)
         {
@@ -913,6 +942,21 @@ public partial class AstBuilderVisitor
             };
             // 包装为 Simple Join（RightItem = LateralView），放入 joinClause* 列表
             return new Join { Simple = true, RightItem = lv };
+        }
+
+        // ClickHouse ARRAY JOIN / LEFT ARRAY JOIN（#2482）
+        if (context.ARRAY() != null)
+        {
+            var arrayJoin = new Join
+            {
+                // ARRAY JOIN 无右侧连接目标，RightItem 占位为空（渲染走 ArrayJoinItems 分支）
+                RightItem = null!,
+                ArrayJoin = context.LEFT() == null,
+                LeftArrayJoin = context.LEFT() != null,
+                ArrayJoinItems = context.arrayJoinItem()
+                    .Select(i => (ArrayJoinItem)Visit(i)).ToList()
+            };
+            return arrayJoin;
         }
 
         // RightItem 是 required，需先计算以便在初始化器中赋值
@@ -982,6 +1026,21 @@ public partial class AstBuilderVisitor
 
     public override object VisitTableOrSubquery(JSqlParserGrammar.TableOrSubqueryContext context)
     {
+        // BigQuery UNNEST(array) [WITH OFFSET [AS col]]（#2642）
+        if (context.UNNEST() != null)
+        {
+            var unnest = new UnnestTable
+            {
+                Expression = (Expression.IExpression)Visit(context.expression()),
+                WithOffset = context.OFFSET() != null,
+                OffsetAlias = context.OFFSET() != null && context.identifier() != null
+                    ? context.identifier().GetText() : null
+            };
+            if (context.alias() != null)
+                unnest.Alias = new Alias(context.alias().identifier().GetText(), context.alias().AS() != null);
+            return unnest;
+        }
+
         // 表函数（FROM func(...) [WITH ORDINALITY] alias[(cols)]）—— 必须在 ROWS FROM 之后判定
         if (context.tableFunction().Length > 0 && context.ROWS() == null)
         {
@@ -1044,6 +1103,13 @@ public partial class AstBuilderVisitor
             if (context.timeTravelClause() != null)
             {
                 table.TimeTravel = BuildTimeTravel(context.timeTravelClause());
+            }
+            // MATCH_RECOGNIZE 表后缀（#2634）：包装为 MatchRecognize(Input=table)
+            if (context.matchRecognize() != null)
+            {
+                var mr = (MatchRecognize)Visit(context.matchRecognize());
+                mr.Input = table;
+                return mr;
             }
             return table;
         }
@@ -1257,6 +1323,12 @@ public partial class AstBuilderVisitor
         if (context.WITH() != null && context.ROLLUP() != null)
         {
             item.MysqlWithRollup = true;
+        }
+
+        // ClickHouse WITH FILL [FROM] [TO] [STEP] [STALENESS]（#2469）
+        if (context.withFillClause() is { } fillCtx)
+        {
+            item.WithFill = (WithFillClause)Visit(fillCtx);
         }
 
         return item;
@@ -1577,6 +1649,7 @@ public partial class AstBuilderVisitor
         if (context.RIGHT() != null) { join.Right = true; if (context.OUTER() != null) join.Outer = true; return; }
         if (context.FULL() != null) { join.Full = true; if (context.OUTER() != null) join.Outer = true; return; }
         if (context.SEMI() != null) { join.Semi = true; return; }
+        if (context.ANTI() != null) { join.Anti = true; return; }
         join.Inner = true;
     }
 

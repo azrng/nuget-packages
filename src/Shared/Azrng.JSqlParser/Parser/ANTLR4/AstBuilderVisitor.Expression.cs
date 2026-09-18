@@ -45,7 +45,7 @@ public partial class AstBuilderVisitor
 
     public override object VisitExpression(JSqlParserGrammar.ExpressionContext context)
     {
-        return Visit(context.orExpression());
+        return Visit(context.ternaryExpr());
     }
 
     public override object VisitOrExpression(JSqlParserGrammar.OrExpressionContext context)
@@ -527,6 +527,11 @@ public partial class AstBuilderVisitor
                     expr = new RowGetExpression(expr, identifiers[identifierIdx].GetText());
                     identifierIdx++;
                 }
+                else if (terminal.Symbol.Type == JSqlParserGrammarLexer.LONG_VALUE)
+                {
+                    // ClickHouse tuple 位置访问 t.1（#2454）：数字原文直接作列名
+                    expr = new RowGetExpression(expr, terminal.GetText());
+                }
                 else if (terminal.Symbol.Type == JSqlParserGrammarLexer.AT)
                 {
                     expectingTimeZoneExpr = true;
@@ -959,14 +964,40 @@ public partial class AstBuilderVisitor
         interval.IntervalKeyword = true;
         interval.Expression = (Expression.IExpression)Visit(context.expression());
 
-        // #673 INTERVAL expr DAY TO SECOND
+        // #673 INTERVAL expr DAY TO SECOND；#1728 同步填充结构化 Qualifier
         var units = context.intervalUnit();
         if (units is { Length: 1 })
+        {
             interval.IntervalType = GetOriginalText(units[0]);
+            interval.Qualifier = BuildIntervalQualifier(units[0]);
+        }
         else if (units is { Length: >= 2 })
+        {
+            var q0 = BuildIntervalQualifier(units[0]);
+            var q1 = BuildIntervalQualifier(units[1]);
             interval.IntervalType = $"{GetOriginalText(units[0])} TO {GetOriginalText(units[1])}";
+            interval.Qualifier = new IntervalQualifier
+            {
+                Unit = q0.Unit,
+                Precision = q0.Precision,
+                ToUnit = q1.Unit,
+                ToPrecision = q1.Precision
+            };
+        }
 
         return interval;
+    }
+
+    /// <summary>intervalUnit 产生式 → 结构化 IntervalQualifier（unit[(p)]）。</summary>
+    private static IntervalQualifier BuildIntervalQualifier(JSqlParserGrammar.IntervalUnitContext unitCtx)
+    {
+        var qualifier = new IntervalQualifier { Unit = unitCtx.GetChild(0).GetText() };
+        if (unitCtx.LONG_VALUE() != null
+            && int.TryParse(unitCtx.LONG_VALUE().GetText(), out var precision))
+        {
+            qualifier.Precision = precision;
+        }
+        return qualifier;
     }
 
     public override object VisitExpressionList(JSqlParserGrammar.ExpressionListContext context)

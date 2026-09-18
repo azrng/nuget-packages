@@ -329,6 +329,21 @@ internal sealed class ExpressionDescendantsWalker : IExpressionVisitor<object?>
             foreach (var expr in rowConstructor.Expressions.Expressions) expr.Accept(this, context);
         return default;
     }
+    public object? Visit<S>(TernaryExpression ternaryExpression, S context)
+    {
+        _onVisit(ternaryExpression);
+        ternaryExpression.Condition.Accept(this, context);
+        ternaryExpression.ThenExpression.Accept(this, context);
+        ternaryExpression.ElseExpression.Accept(this, context);
+        return default;
+    }
+    public object? Visit<S>(ColumnsExpression columnsExpression, S context)
+    {
+        _onVisit(columnsExpression);
+        columnsExpression.Pattern.Accept(this, context);
+        columnsExpression.Apply?.Accept(this, context);
+        return default;
+    }
 
     // ---------- 私有辅助 ----------
 

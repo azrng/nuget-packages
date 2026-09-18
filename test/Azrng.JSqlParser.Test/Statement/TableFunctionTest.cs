@@ -32,11 +32,12 @@ public class TableFunctionTest
     {
         var stmt = SqlParser.Parse("SELECT * FROM unnest(arr) AS u");
         var plainSelect = Assert.IsType<PlainSelect>(stmt);
-        var tableFn = Assert.IsType<TableFunction>(plainSelect.FromItem);
+        // unnest 是关键字表函数（#2642），统一建模为 UnnestTable（原为 TableFunction）
+        var unnest = Assert.IsType<UnnestTable>(plainSelect.FromItem);
 
-        Assert.Equal("unnest", tableFn.Function.Name);
-        Assert.NotNull(tableFn.Alias);
-        Assert.Equal("u", tableFn.Alias.Name);
+        Assert.Equal("arr", unnest.Expression!.ToString());
+        Assert.NotNull(unnest.Alias);
+        Assert.Equal("u", unnest.Alias.Name);
     }
 
     [Fact]

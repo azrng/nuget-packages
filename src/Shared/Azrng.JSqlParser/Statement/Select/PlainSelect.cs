@@ -66,6 +66,9 @@ public class PlainSelect : Select
     /// <summary>QUALIFY 过滤表达式（Snowflake/Teradata），对齐上游 qualify。</summary>
     public Expression.IExpression? Qualify { get; set; }
 
+    /// <summary>ClickHouse INTERPOLATE 相邻行插值元素（#2469，ORDER BY 后），未指定时为 null。</summary>
+    public List<InterpolateElement>? InterpolateElements { get; set; }
+
     /// <summary>Oracle 层次查询（START WITH ... CONNECT BY ...），对齐上游 oracleHierarchical。</summary>
     public OracleHierarchicalExpression? OracleHierarchical { get; set; }
 

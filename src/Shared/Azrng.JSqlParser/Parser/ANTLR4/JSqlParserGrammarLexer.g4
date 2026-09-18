@@ -677,6 +677,52 @@ WORK            : [Ww][Oo][Rr][Kk] ;
 ZONE            : [Zz][Oo][Nn][Ee] ;
 
 // ══════════════════════════════════════════════
+// T149 批次新增方言关键字（全部同步进入 parser nonReservedKeyword 词表，保持可作标识符）
+// ══════════════════════════════════════════════
+ROLE            : [Rr][Oo][Ll][Ee] ;                // #2555 PG CREATE ROLE / CREATE USER
+EXTENSION       : [Ee][Xx][Tt][Ee][Nn][Ss][Ii][Oo][Nn] ;   // #2553 PG CREATE EXTENSION
+PUBLICATION     : [Pp][Uu][Bb][Ll][Ii][Cc][Aa][Tt][Ii][Oo][Nn] ;  // #2554 PG publication DDL
+SUBSCRIPTION    : [Ss][Uu][Bb][Ss][Cc][Rr][Ii][Pp][Tt][Ii][Oo][Nn] ;  // #2554 PG subscription DDL
+EVENT           : [Ee][Vv][Ee][Nn][Tt] ;            // #2547 MySQL CREATE EVENT
+CONNECTION      : [Cc][Oo][Nn][Nn][Ee][Cc][Tt][Ii][Oo][Nn] ;  // #2554 SUBSCRIPTION CONNECTION
+SCHEDULE        : [Ss][Cc][Hh][Ee][Dd][Uu][Ll][Ee] ;        // #2547 ON SCHEDULE
+EVERY           : [Ee][Vv][Ee][Rr][Yy] ;            // #2547 EVERY n unit
+COMPLETION      : [Cc][Oo][Mm][Pp][Ll][Ee][Tt][Ii][Oo][Nn] ;  // #2547 ON COMPLETION
+PRESERVE        : [Pp][Rr][Ee][Ss][Ee][Rr][Vv][Ee] ;        // #2547 [NOT] PRESERVE
+EACH            : [Ee][Aa][Cc][Hh] ;                // #2548 FOR EACH ROW
+FOLLOWS         : [Ff][Oo][Ll][Ll][Oo][Ww][Ss] ;    // #2548 trigger order
+PRECEDES        : [Pp][Rr][Ee][Cc][Ee][Dd][Ee][Ss] ;       // #2548 trigger order
+DEFINER         : [Dd][Ee][Ff][Ii][Nn][Ee][Rr] ;    // #2548 DEFINER = user
+FILL            : [Ff][Ii][Ll][Ll] ;                // #2469 ClickHouse WITH FILL
+INTERPOLATE     : [Ii][Nn][Tt][Ee][Rr][Pp][Oo][Ll][Aa][Tt][Ee] ;  // #2469 INTERPOLATE
+UNNEST          : [Uu][Nn][Nn][Ee][Ss][Tt] ;        // #2642 BigQuery UNNEST
+ASSERT          : [Aa][Ss][Ss][Ee][Rr][Tt] ;        // #2642 BigQuery ASSERT
+LOAD            : [Ll][Oo][Aa][Dd] ;                // #2642 BigQuery LOAD DATA
+ANTI            : [Aa][Nn][Tt][Ii] ;                // #2643 DuckDB ANTI JOIN
+COPY            : [Cc][Oo][Pp][Yy] ;                // #2643 DuckDB COPY
+ATTACH          : [Aa][Tt][Tt][Aa][Cc][Hh] ;        // #2643 DuckDB ATTACH
+PRAGMA          : [Pp][Rr][Aa][Gg][Mm][Aa] ;        // #2643 DuckDB PRAGMA
+MACRO           : [Mm][Aa][Cc][Rr][Oo] ;            // #2643 DuckDB MACRO
+MEASURES        : [Mm][Ee][Aa][Ss][Uu][Rr][Ee][Ss] ;       // #2634 MATCH_RECOGNIZE
+PATTERN_KW      : [Pp][Aa][Tt][Tt][Ee][Rr][Nn] ;    // #2634（避免与既有 PATTERN 类 token 混淆）
+DEFINE          : [Dd][Ee][Ff][Ii][Nn][Ee] ;        // #2634 DEFINE
+SUBSET          : [Ss][Uu][Bb][Ss][Ee][Tt] ;        // #2634 SUBSET
+RUNNING         : [Rr][Uu][Nn][Nn][Ii][Nn][Gg] ;    // #2634 RUNNING/FINAL 语义
+FINAL_KW        : [Ff][Ii][Nn][Aa][Ll] ;            // #2634
+MATCH_RECOGNIZE : [Mm][Aa][Tt][Cc][Hh]'_'[Rr][Ee][Cc][Oo][Gg][Nn][Ii][Zz][Ee] ;  // #2634（须长于 MATCH/IDENTIFIER 前缀匹配）
+AFTER           : [Aa][Ff][Tt][Ee][Rr] ;            // #2548 trigger AFTER
+STARTS          : [Ss][Tt][Aa][Rr][Tt][Ss] ;        // #2547 EVERY ... STARTS
+ENDS            : [Ee][Nn][Dd][Ss] ;                // #2547 EVERY ... ENDS
+STEP            : [Ss][Tt][Ee][Pp] ;                // #2469 WITH FILL STEP
+STALENESS       : [Ss][Tt][Aa][Ll][Ee][Nn][Ee][Ss][Ss] ;  // #2469 WITH FILL STALENESS
+SLAVE           : [Ss][Ll][Aa][Vv][Ee] ;            // #2547 DISABLE ON SLAVE
+ONE             : [Oo][Nn][Ee] ;                    // #2634 ONE ROW PER MATCH
+PER             : [Pp][Ee][Rr] ;                    // #2634 PER MATCH
+OPTIONS         : [Oo][Pp][Tt][Ii][Oo][Nn][Ss] ;    // #2642 EXPORT DATA OPTIONS(...)
+CARET           : '^' ;                             // #2634 PATTERN 起始锚点
+PAST            : [Pp][Aa][Ss][Tt] ;                // #2634 AFTER MATCH PAST LAST ROW
+
+// ══════════════════════════════════════════════
 // IDENTIFIERS — MUST be LAST (catch-all for non-keyword identifiers)
 // ══════════════════════════════════════════════
 

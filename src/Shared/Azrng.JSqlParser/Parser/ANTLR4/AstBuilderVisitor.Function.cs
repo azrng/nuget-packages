@@ -320,6 +320,12 @@ public partial class AstBuilderVisitor
             return Visit(context.specialStringFunction());
         }
 
+        // BigQuery ASSERT(cond, 'msg') 函数形式（#2642）
+        if (context.assertFunction() != null)
+        {
+            return Visit(context.assertFunction());
+        }
+
         // 序列取值表达式：NEXTVAL FOR seq 或 NEXT VALUE FOR seq
         // （NEXTVAL(seq) PostgreSQL 风格继续按 Function 处理）
         if ((context.NEXTVAL() != null || context.NEXT() != null) && context.FOR() != null)

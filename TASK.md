@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T149 | Azrng.JSqlParser 同步上游 5.4 第二/三档全部缺口 | 清完基线 e847e94b 剩余能力：PG/MySQL DDL 族（USER/ROLE/DOMAIN/EXTENSION/PUBLICATION/SUBSCRIPTION/TRIGGER/EVENT/DO 块/COMMENT 多目标）、ClickHouse（ARRAY JOIN/WITH FILL/INTERPOLATE/COLUMNS 变换）、BigQuery（UNNEST WITH OFFSET/EXPORT·LOAD DATA/ASSERT）、DuckDB（ANTI JOIN/COPY/ATTACH/PRAGMA/MACRO）、三元 ?:、MATCH_RECOGNIZE、IntervalQualifier/Precision 结构化，发 1.0.0-rc3 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
 | T148 | Azrng.JSqlParser 同步上游 5.4 第一档缺口（7 项） | 对齐基线更新至 tag jsqlparser-5.4（e847e94b）；实现 GROUPS 非保留字、CREATE INDEX INCLUDE、SET IDENTITY_INSERT/SET 布尔开关、MERGE NOT MATCHED BY TARGET/SOURCE、MERGE RETURNING、INSERT OVERRIDING USER VALUE、递归 CTE CYCLE，补 round-trip 测试并发 1.0.0-rc2 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
 | T147 | 精简根 AGENTS 规则 | 删除重复章节，将模型行为约束与最终输出要求合并到现有流程规则，保留任务、交付和编码约束 | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |
 | T146 | Azrng.JSqlParser 拆分版本变更记录 | 将 README 中的完整版本历史迁移至 CHANGELOG.md，README 保留入口说明并提供 GitHub 变更记录链接，并将拆分规则固化到根 AGENTS.md | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |

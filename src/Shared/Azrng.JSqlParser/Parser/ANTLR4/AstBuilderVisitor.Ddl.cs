@@ -145,6 +145,13 @@ public partial class AstBuilderVisitor
     /// STRUCT(fld type, ...)（DataType="STRUCT"，字段进 ArgumentsStringList，对齐上游 ColDataType() STRUCT 分支）、
     /// 普通 dataType + 可选 PostgreSQL [] 数组维度。
     /// </summary>
+    /// <summary>取 start（含）到 stop（不含）之间的原文（保留 token 间空格）。</summary>
+    private static string GetTextBetween(Antlr4.Runtime.IToken start, Antlr4.Runtime.IToken stopExclusive)
+    {
+        var interval = new Antlr4.Runtime.Misc.Interval(start.StartIndex, stopExclusive.StartIndex - 1);
+        return start.InputStream?.GetText(interval) ?? "";
+    }
+
     private static ColDataType BuildColDataType(JSqlParserGrammar.ColDataTypeContext? ctx)
     {
         var result = new ColDataType();
@@ -172,7 +179,14 @@ public partial class AstBuilderVisitor
         var dtCtx = ctx.dataType();
         if (dtCtx != null)
         {
-            var typeText = GetOriginalText(dtCtx);
+            // #2539 对齐：括号参数拆入 ArgumentsStringList（Precision/Scale 便捷属性依赖），
+            // DataType 只保留类型名（参数由 ToString 依 ArgumentsStringList 重建，避免双重输出）
+            var args = dtCtx.dataTypeArgument();
+            var typeText = args is { Length: > 0 } && dtCtx.OPENING_PAREN() is { } openParen
+                ? GetTextBetween(dtCtx.Start, openParen.Symbol)
+                : GetOriginalText(dtCtx);
+            if (args is { Length: > 0 })
+                result.ArgumentsStringList = args.Select(a => a.GetText()).ToList();
             if (ctx.timeZoneSuffix() is { } tz)
                 typeText += " " + GetOriginalText(tz);
             result.DataType = typeText;
@@ -571,14 +585,21 @@ public partial class AstBuilderVisitor
     public override object VisitCommentStatement(JSqlParserGrammar.CommentStatementContext context)
     {
         var comment = new Comment();
-        // grammar: COMMENT ON (TABLE table | COLUMN identifier | VIEW table)
+        // grammar: COMMENT ON (TABLE table | COLUMN identifier | VIEW table) IS text
+        //          | COMMENT ON <目标透传> IS text（#2639）；IS NULL = 删除注释（#2562）
         if (context.VIEW() != null && context.table() is { } viewCtx)
             comment.View = (Table)Visit(viewCtx);
         else if (context.table() is { } tableCtx)
             comment.Table = (Table)Visit(tableCtx);
         else if (context.columnRef() is { } colCtx)
             comment.Column = new Column { ColumnName = colCtx.GetText() };
-        comment.CommentText = new StringValue(context.S_CHAR_LITERAL().GetText());
+        else if (context.commentOnTarget() is { } targetCtx)
+            comment.TargetText = GetOriginalText(targetCtx);
+
+        if (context.commentText().NULL() != null)
+            comment.Remove = true;
+        else
+            comment.CommentText = new StringValue(context.commentText().S_CHAR_LITERAL().GetText());
         return comment;
     }
 

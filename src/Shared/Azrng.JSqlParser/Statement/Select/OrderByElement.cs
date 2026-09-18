@@ -25,6 +25,9 @@ public class OrderByElement
     /// </summary>
     public bool MysqlWithRollup { get; set; }
 
+    /// <summary>ClickHouse WITH FILL 间隙填充子句（#2469），未指定时为 null。</summary>
+    public WithFillClause? WithFill { get; set; }
+
     public OrderByElement() { }
 
     public override string ToString()
@@ -36,6 +39,7 @@ public class OrderByElement
         if (NullOrder.HasValue)
             sb.Append(' ').Append(NullOrder == NullOrdering.NULLS_FIRST ? "NULLS FIRST" : "NULLS LAST");
         if (MysqlWithRollup) sb.Append(" WITH ROLLUP");
+        if (WithFill != null) sb.Append(' ').Append(WithFill);
         return sb.ToString();
     }
 }

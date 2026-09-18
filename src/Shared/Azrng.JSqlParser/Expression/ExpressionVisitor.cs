@@ -235,4 +235,10 @@ public interface IExpressionVisitor<T>
     void Visit(ArrayConstructor arrayConstructor) => Visit<object?>(arrayConstructor, default);
     void Visit(ArrayExpression arrayExpression) => Visit<object?>(arrayExpression, default);
     void Visit(RowConstructor rowConstructor) => Visit<object?>(rowConstructor, default);
+
+    // T149 新表达式
+    T Visit<S>(TernaryExpression ternaryExpression, S context);
+    T Visit<S>(ColumnsExpression columnsExpression, S context);
+    void Visit(TernaryExpression ternaryExpression) => Visit<object?>(ternaryExpression, default);
+    void Visit(ColumnsExpression columnsExpression) => Visit<object?>(columnsExpression, default);
 }

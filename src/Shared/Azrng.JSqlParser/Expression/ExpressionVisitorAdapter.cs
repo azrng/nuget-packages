@@ -265,6 +265,21 @@ public class ExpressionVisitorAdapter<T> : IExpressionVisitor<T>
         return default!;
     }
 
+    public virtual T Visit<S>(TernaryExpression ternaryExpression, S context)
+    {
+        ternaryExpression.Condition.Accept(this, context);
+        ternaryExpression.ThenExpression.Accept(this, context);
+        ternaryExpression.ElseExpression.Accept(this, context);
+        return default!;
+    }
+
+    public virtual T Visit<S>(ColumnsExpression columnsExpression, S context)
+    {
+        columnsExpression.Pattern.Accept(this, context);
+        columnsExpression.Apply?.Accept(this, context);
+        return default!;
+    }
+
     private T VisitBinary<S>(BinaryExpression binary, S context)
     {
         binary.LeftExpression.Accept(this, context);

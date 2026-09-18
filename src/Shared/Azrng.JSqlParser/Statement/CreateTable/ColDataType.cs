@@ -19,6 +19,14 @@ public class ColDataType : ASTNodeAccessImpl
     /// <summary>括号内参数原始字符串列表，如 <c>DECIMAL(10,2)</c> → ["10","2"]。未指定时为 null。</summary>
     public System.Collections.Generic.List<string>? ArgumentsStringList { get; set; }
 
+    /// <summary>精度便捷访问（#2539 对齐）：DECIMAL(10,2) → 10。参数不是单个整数时为 null（如 set('a') / MAX）。</summary>
+    public int? Precision =>
+        ArgumentsStringList is { Count: >= 1 } && int.TryParse(ArgumentsStringList[0], out var p) ? p : null;
+
+    /// <summary>标度便捷访问（#2539 对齐）：DECIMAL(10,2) → 2。无第二参数或非整数时为 null。</summary>
+    public int? Scale =>
+        ArgumentsStringList is { Count: >= 2 } && int.TryParse(ArgumentsStringList[1], out var s) ? s : null;
+
     /// <summary>数组维度列表，如 <c>text[]</c> → [null]，<c>int[3][4]</c> → [3,4]；null 元素表示无尺寸 <c>[]</c>。</summary>
     public System.Collections.Generic.List<int?>? ArrayData { get; set; }
 

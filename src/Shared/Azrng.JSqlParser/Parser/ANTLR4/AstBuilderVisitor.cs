@@ -101,6 +101,23 @@ public partial class AstBuilderVisitor : JSqlParserGrammarBaseVisitor<object>
         if (context.exportStatement() != null) return Visit(context.exportStatement());
         if (context.importStatement() != null) return Visit(context.importStatement());
 
+        // T149 批次A/C/D 新语句
+        if (context.exportDataStatement() != null) return Visit(context.exportDataStatement());
+        if (context.loadDataStatement() != null) return Visit(context.loadDataStatement());
+        if (context.assertStatement() != null) return Visit(context.assertStatement());
+        if (context.copyStatement() != null) return Visit(context.copyStatement());
+        if (context.attachStatement() != null) return Visit(context.attachStatement());
+        if (context.pragmaStatement() != null) return Visit(context.pragmaStatement());
+        if (context.createMacroStatement() != null) return Visit(context.createMacroStatement());
+        if (context.createRoleStatement() != null) return Visit(context.createRoleStatement());
+        if (context.createDomainStatement() != null) return Visit(context.createDomainStatement());
+        if (context.createExtensionStatement() != null) return Visit(context.createExtensionStatement());
+        if (context.createPublicationStatement() != null) return Visit(context.createPublicationStatement());
+        if (context.createSubscriptionStatement() != null) return Visit(context.createSubscriptionStatement());
+        if (context.createTriggerStatement() != null) return Visit(context.createTriggerStatement());
+        if (context.createEventStatement() != null) return Visit(context.createEventStatement());
+        if (context.doStatement() != null) return Visit(context.doStatement());
+
         return new UnsupportedStatement();
     }
 

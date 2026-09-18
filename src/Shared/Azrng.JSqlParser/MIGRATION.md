@@ -722,4 +722,56 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 第二档（PG/MySQL DDL 建模族：CREATE ROLE/USER/TRIGGER/EVENT、PUBLICATION/SUBSCRIPTION、CREATE DOMAIN/EXTENSION、DO $$ 块）与第三档（MATCH_RECOGNIZE、DuckDB/BigQuery/ClickHouse 大特性、三元 `?:`）评估结论见任务记录；均为中等以上改动，按业务驱动另行排期。
 
+---
+
+## 二十一、T149 同步上游 5.4 第二/三档全部剩余缺口（rc3）
+
+> 上游 5.4 正式版剩余能力清仓：PG/MySQL DDL 族、ClickHouse、BigQuery、DuckDB、三元表达式、MATCH_RECOGNIZE、模型结构化。
+
+### 21.1 语句族对照表
+
+| 上游 issue | 能力 | Azrng C# | 建模策略 |
+|-----------|------|----------|---------|
+| #2546/#2555 | `CREATE USER\|ROLE\|GROUP [IF NOT EXISTS] name[@host] ...` | `CreateRole`（Command/IfNotExists/Name/Host + 属性尾透传） | 简化透传版 |
+| #2536 | `CREATE DOMAIN [IF NOT EXISTS] name ...` | `CreateDomain`（Name + Tail 透传） | 简化透传版 |
+| #2553 | `CREATE EXTENSION [IF NOT EXISTS] name ...` | `CreateExtension`（Name + OptionsText 透传） | 简化透传版 |
+| #2554 | `CREATE PUBLICATION ...` / `CREATE SUBSCRIPTION ...` | `CreatePublication`（ForAllTables/Tables 结构化）/ `CreateSubscription`（全结构化） | 半结构化 |
+| #2548 | MySQL `CREATE [DEFINER] TRIGGER ... FOR EACH ROW ...` | `CreateTrigger`（Timing/Event/Table/Order 结构化；BEGIN..END 块体结构化、单语句体 BodyText 透传） | 半结构化 |
+| #2547 | MySQL `CREATE EVENT ... ON SCHEDULE ... DO ...` | `CreateEvent`（调度透传 ScheduleText、body 结构化） | 半结构化 |
+| #2589 | `DO $$ ... $$` | `DoStatement`（Text 透传） | 透传版 |
+| #2639/#2562 | `COMMENT ON <多目标>` / `IS NULL` | `Comment.TargetText` / `Comment.Remove` | 透传目标 + 结构化文本 |
+| #2642 | `EXPORT DATA ... AS query` / `LOAD DATA` / `ASSERT` | `ExportData`（Specs 透传 + Select 结构化）/ `LoadDataStatement` / `AssertStatement` | 半结构化 |
+| #2643 | DuckDB `COPY` / `ATTACH` / `PRAGMA` / `CREATE MACRO` | `CopyStatement`（Source/To 结构化）等 | 透传版 |
+
+### 21.2 SELECT 层能力对照表
+
+| 上游 issue | 能力 | Azrng C# | 说明 |
+|-----------|------|----------|------|
+| #2482 | `ARRAY JOIN / LEFT ARRAY JOIN` | `Join.ArrayJoin/LeftArrayJoin/ArrayJoinItems` | ClickHouse 数组展开 |
+| #2469 | `ORDER BY ... WITH FILL [FROM][TO][STEP][STALENESS]` + `INTERPOLATE (...)` | `OrderByElement.WithFill`（`WithFillClause`）/ `PlainSelect.InterpolateElements`（`InterpolateElement`） | 间隙填充与插值 |
+| #2631/#2635 | `COLUMNS(...) APPLY/EXCEPT/REPLACE` | `ColumnsExpression`（Pattern/Apply/Except/Replace） | selectItem 级变换器 |
+| #2454 | tuple 位置访问 `t.1` | `RowGetExpression`，列名存数字原文 | |
+| #2642 | `UNNEST(arr) [AS u] [WITH OFFSET [AS o]]` | 新 FROM 项 `UnnestTable` | **建模变更**：`FROM unnest(arr)` 由 `TableFunction` 改为 `UnnestTable` |
+| #2643 | `ANTI JOIN` | `Join.Anti` | ANTI 保留化（GLOBAL 先例） |
+| #2436/#2466 | 三元 `cond ? then : else` | `TernaryExpression`（右结合） | `:c` 紧跟形式不支持（lexer 命名参数歧义，需 `: c`） |
+| #2634 | `MATCH_RECOGNIZE` | `MatchRecognize` FROM 项（Input 持有来源表）：PartitionKeys/OrderBy/Measures/RowsPerMatch/Skip/Defines 结构化，PatternText 原文透传 | SQL:2016 行模式识别 |
+
+### 21.3 模型结构化对照
+
+| 上游 issue | 能力 | Azrng C# | 说明 |
+|-----------|------|----------|------|
+| #1728 | interval qualifier 结构化 | `IntervalQualifier`（Unit/Precision/ToUnit/ToPrecision），`IntervalExpression.Qualifier`；`IntervalType` 原文保留 | |
+| #2539 | ColDataType 精度/标度 | `ColDataType.Precision/Scale` 便捷属性（从 ArgumentsStringList 解析）；DataType 改存类型名、参数由 ArgumentsStringList 重建 | 渲染结果不变，AST 拆分 |
+
+### 21.4 实现约束记录（ANTLR 移植特有）
+
+- **隐式 token 坑**：parser grammar 引用 lexer 未定义的大写 token 会生成隐式 token（大小写敏感、不可达）。本轮新增 lexer token：AFTER/STARTS/ENDS/STEP/STALENESS/SLAVE/ONE/PER/OPTIONS/CARET/PAST/MATCH_RECOGNIZE 等，全部同步进 nonReservedKeyword 词表（例外：ANTI 保留化——否则 `FROM t ANTI JOIN` 的 ANTI 被吃成表别名）。
+- **间接左递归**：statement→createTriggerStatement→triggerBody→statement 会产生 ANTLR4 不支持的间接左递归（运行时表现为无关位置的 no viable alternative）。触发体改为「块结构化 / 单语句透传」两形态。
+- **VisitStatement 分派链**：AstBuilderVisitor 的语句分派是手写 if 链，新增语句必须同步补分支，否则落入 `UnsupportedStatement` 兜底。
+
+### 21.5 测试
+
+- 新增 `Upstream54SyncBatch2Test`（48 项）
+- 全量 1829 通过 / 2 Skip × 3 TFM（net8/9/10）
+
 文件结束。
