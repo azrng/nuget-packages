@@ -13,8 +13,8 @@ public class CreateExtension : ASTNodeAccessImpl, IStatement
 
     public string Name { get; set; } = "";
 
-    /// <summary>WITH 之后的选项原文，整体透传，未指定时为 null。</summary>
-    public string? OptionsText { get; set; }
+    /// <summary>WITH 之后的选项列表（SCHEMA/VERSION/CASCADE），未指定时为 null。</summary>
+    public List<ExtensionOption>? Options { get; set; }
 
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
@@ -23,7 +23,32 @@ public class CreateExtension : ASTNodeAccessImpl, IStatement
         var sb = new StringBuilder("CREATE EXTENSION ");
         if (IfNotExists) sb.Append("IF NOT EXISTS ");
         sb.Append(Name);
-        if (OptionsText != null) sb.Append(" WITH ").Append(OptionsText);
+        if (Options is { Count: > 0 })
+            sb.Append(" WITH ").Append(string.Join(" ", Options));
         return sb.ToString();
     }
+}
+
+/// <summary>CREATE EXTENSION 单个选项。</summary>
+public class ExtensionOption
+{
+    public ExtensionOptionKind Kind { get; set; }
+
+    /// <summary>SCHEMA/VERSION 的参数原文，CASCADE 时为 null。</summary>
+    public string? Value { get; set; }
+
+    public override string ToString() => Kind switch
+    {
+        ExtensionOptionKind.Schema => $"SCHEMA {Value}",
+        ExtensionOptionKind.Version => $"VERSION {Value}",
+        _ => "CASCADE"
+    };
+}
+
+/// <summary>CREATE EXTENSION 选项类别。</summary>
+public enum ExtensionOptionKind
+{
+    Schema,
+    Version,
+    Cascade
 }

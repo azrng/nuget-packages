@@ -45,9 +45,15 @@ public partial class AstBuilderVisitor
         var domain = new CreateDomain
         {
             IfNotExists = context.IF() != null,
-            Name = context.domainName().GetText(),
-            Tail = context.statementTail() != null ? GetOriginalText(context.statementTail()) : null
+            Name = context.domainName().GetText()
         };
+        if (context.dataType() != null)
+        {
+            domain.UseAs = context.AS() != null;
+            domain.DataType = GetOriginalText(context.dataType());
+        }
+        if (context.domainTail() != null)
+            domain.Tail = GetOriginalText(context.domainTail());
         return domain;
     }
 
@@ -58,11 +64,17 @@ public partial class AstBuilderVisitor
             IfNotExists = context.IF() != null,
             Name = context.identifier().GetText()
         };
-        if (context.statementTail() != null)
+        if (context.extensionOption() is { Length: > 0 } opts)
         {
-            // 尾部以 WITH 开头时拆分到 OptionsText，保输出空格约定
-            var tail = GetOriginalText(context.statementTail());
-            ext.OptionsText = tail.StartsWith("WITH ") ? tail[5..] : tail;
+            ext.Options = opts.Select(o => new ExtensionOption
+            {
+                Kind = o.SCHEMA() != null ? ExtensionOptionKind.Schema
+                     : o.VERSION() != null ? ExtensionOptionKind.Version
+                     : ExtensionOptionKind.Cascade,
+                Value = o.SCHEMA() != null ? o.identifier().GetText()
+                      : o.VERSION() != null ? (o.S_CHAR_LITERAL() != null ? o.S_CHAR_LITERAL().GetText() : o.identifier().GetText())
+                      : null
+            }).ToList();
         }
         return ext;
     }
@@ -121,10 +133,13 @@ public partial class AstBuilderVisitor
                 OtherTrigger = (Table)Visit(context.table(2))
             };
         }
-        if (context.triggerBody().blockStatement() != null)
-            trigger.Body = (IStatement)Visit(context.triggerBody().blockStatement());
-        else
-            trigger.BodyText = GetOriginalText(context.triggerBody().statementTail());
+        var bodyCtx = context.triggerBody();
+        if (bodyCtx.blockStatement() != null)
+            trigger.Body = (IStatement)Visit(bodyCtx.blockStatement());
+        else if (bodyCtx.triggerSimpleStatement() != null)
+            trigger.Body = (IStatement)Visit(bodyCtx.triggerSimpleStatement().GetChild(0));
+        else if (bodyCtx.statementTail() != null)
+            trigger.BodyText = GetOriginalText(bodyCtx.statementTail());
         return trigger;
     }
 
@@ -163,6 +178,38 @@ public partial class AstBuilderVisitor
 
     public override object VisitDoStatement(JSqlParserGrammar.DoStatementContext context)
     {
+        // 按子节点顺序扫描：LANGUAGE 与代码块字面量的相对位置决定前后置；MySQL DO expr 走 Text 兜底
+        string? language = null, code = null;
+        int langIndex = -1, codeIndex = -1;
+        bool pendingLanguage = false;
+        for (int i = 0; i < context.ChildCount; i++)
+        {
+            // identifier 是 parser 规则节点（包裹 terminal），需单独识别
+            if (pendingLanguage && context.GetChild(i) is JSqlParserGrammar.IdentifierContext idCtx)
+            {
+                language = idCtx.GetText();
+                pendingLanguage = false;
+                continue;
+            }
+            if (context.GetChild(i) is Antlr4.Runtime.Tree.ITerminalNode t)
+            {
+                var type = t.Symbol.Type;
+                if (type == JSqlParserGrammarLexer.LANGUAGE) { langIndex = i; pendingLanguage = true; }
+                else if (type == JSqlParserGrammarLexer.S_CHAR_LITERAL
+                         || type == JSqlParserGrammarLexer.S_DOLLAR_QUOTED_STRING)
+                { code = t.GetText(); codeIndex = i; pendingLanguage = false; }
+            }
+        }
+
+        if (code != null)
+        {
+            return new DoStatement
+            {
+                Language = language,
+                Code = code,
+                LanguageBeforeCode = langIndex >= 0 && langIndex < codeIndex
+            };
+        }
         return new DoStatement
         {
             Text = context.statementTail() != null ? GetOriginalText(context.statementTail()) : null

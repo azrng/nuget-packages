@@ -111,18 +111,29 @@ accountPart
     | S_CHAR_LITERAL
     ;
 
-// #2536 CREATE DOMAIN [IF NOT EXISTS] [schema.]name ...（类型/约束体透传）
+// #2536 CREATE DOMAIN [IF NOT EXISTS] [schema.]name [AS] type [COLLATE ...] [DEFAULT ...] [约束透传]
 createDomainStatement
-    : CREATE DOMAIN (IF NOT EXISTS)? domainName statementTail?
+    : CREATE DOMAIN (IF NOT EXISTS)? domainName (AS? dataType domainTail?)?
+    ;
+
+// COLLATE/DEFAULT/约束等类型后的剩余子句，透传保 round-trip
+domainTail
+    : ~(SEMICOLON | EOF)+
     ;
 
 domainName
     : identifier (DOT identifier)*
     ;
 
-// #2553 CREATE EXTENSION [IF NOT EXISTS] name [WITH (SCHEMA|VERSION|CASCADE)...]（选项透传）
+// #2553 CREATE EXTENSION [IF NOT EXISTS] name [WITH] (SCHEMA x | VERSION x | CASCADE)*
 createExtensionStatement
-    : CREATE EXTENSION (IF NOT EXISTS)? identifier statementTail?
+    : CREATE EXTENSION (IF NOT EXISTS)? identifier (WITH extensionOption+)?
+    ;
+
+extensionOption
+    : SCHEMA identifier
+    | VERSION (S_CHAR_LITERAL | identifier)
+    | CASCADE
     ;
 
 // #2554 CREATE PUBLICATION name [FOR ALL TABLES | FOR TABLE t1,t2] [WITH (...)]
@@ -150,7 +161,18 @@ createTriggerStatement
 // 触发体：单语句或 BEGIN...END 块（透传透传二分实验：statement → triggerBody）
 triggerBody
     : blockStatement
-    | statementTail
+    | triggerSimpleStatement
+    | statementTail   // 其余形态兜底透传
+    ;
+
+// 触发体常见单语句（直接引用底层语句规则，不经 statement 规则以避免间接左递归）
+triggerSimpleStatement
+    : insertStatement
+    | updateStatement
+    | deleteStatement
+    | selectStatement
+    | setStatement
+    | declareStatement
     ;
 
 // #2547 MySQL CREATE EVENT [IF NOT EXISTS] e ON SCHEDULE ... [ON COMPLETION ...] [status] [COMMENT] DO stmt
@@ -170,9 +192,11 @@ eventScheduleClause
       )
     ;
 
-// #2589 DO [LANGUAGE id] $$...$$ / DO $$...$$ —— PG 匿名块，整体透传
+// #2589 DO [LANGUAGE id] code —— PG 匿名块（$$...$$ 或 '...'），MySQL DO expr 走兜底透传
 doStatement
-    : DO statementTail?
+    : DO LANGUAGE identifier (S_CHAR_LITERAL | S_DOLLAR_QUOTED_STRING)   // LANGUAGE 前置
+    | DO (S_CHAR_LITERAL | S_DOLLAR_QUOTED_STRING) (LANGUAGE identifier)?   // LANGUAGE 后置/无
+    | DO statementTail?                                                  // MySQL DO expr 等兜底
     ;
 
 // ─── T149 批次D：DuckDB 语句族（COPY/ATTACH/PRAGMA/MACRO，尾部透传版）───
@@ -2249,6 +2273,14 @@ nonReservedKeyword
 
 fromQuery
     : FROM? fromItem joinClause* pipeOperator+
+    | FROM fromItem joinClause* fromFirstTail?   // #2643 DuckDB FROM-first：FROM t [SELECT ...] [WHERE ...]
+    ;
+
+// FROM-first 的 selectBody 后续子句（SELECT 起，到语句尾子句；整体挂 FromQuery.SelectBody 透传）
+fromFirstTail
+    : SELECT (DISTINCT distinctOnClause? | DISTINCTROW | ALL)? selectColumnList
+      intoClause? whereClause? groupByClause? havingClause? windowClause? qualifyClause?
+      orderByClause? limitClause? offsetClause? fetchClause?
     ;
 
 pipeOperator

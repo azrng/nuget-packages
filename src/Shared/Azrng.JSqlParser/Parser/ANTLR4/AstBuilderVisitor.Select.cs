@@ -1390,6 +1390,10 @@ public partial class AstBuilderVisitor
             fromQuery.PipeOperators.Add((PipeOperator)Visit(pipeOpCtx));
         }
 
+        // #2643 DuckDB FROM-first：FROM t [SELECT ... WHERE ...]，SELECT 及后续子句透传
+        if (context.fromFirstTail() != null)
+            fromQuery.SelectBodyText = GetOriginalText(context.fromFirstTail());
+
         return fromQuery;
     }
 

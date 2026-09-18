@@ -20,20 +20,20 @@
 
 **PG/MySQL DDL 族（简化透传版：结构化关键字段 + 尾部透传保 round-trip）**：
 - `CREATE USER|ROLE|GROUP [IF NOT EXISTS] name[@host] ...`（#2546/#2555）— 新语句 `CreateRole`
-- `CREATE DOMAIN [IF NOT EXISTS] name AS type ...`（#2536）— 新语句 `CreateDomain`
-- `CREATE EXTENSION [IF NOT EXISTS] name ...`（#2553）— 新语句 `CreateExtension`
+- `CREATE DOMAIN [IF NOT EXISTS] name [AS] type [COLLATE ...] [DEFAULT ...] [约束透传]`（#2536）— 新语句 `CreateDomain`（类型结构化、约束体透传）
+- `CREATE EXTENSION [IF NOT EXISTS] name [WITH (SCHEMA|VERSION|CASCADE)...]`（#2553）— 新语句 `CreateExtension`（选项结构化 `ExtensionOption`）
 - `CREATE PUBLICATION name [FOR ALL TABLES | FOR TABLE ...]`（#2554）— 新语句 `CreatePublication`
 - `CREATE SUBSCRIPTION name CONNECTION '...' PUBLICATION ...`（#2554）— 新语句 `CreateSubscription`
-- MySQL `CREATE [DEFINER = ...] TRIGGER ... FOR EACH ROW ...`（#2548）— 新语句 `CreateTrigger`（BEGIN..END 块体结构化，单语句体透传）
+- MySQL `CREATE [DEFINER = ...] TRIGGER ... FOR EACH ROW ...`（#2548）— 新语句 `CreateTrigger`（体结构化：BEGIN..END 块或 INSERT/UPDATE/DELETE/SELECT/SET/DECLARE 单语句，其余形态透传）
 - MySQL `CREATE EVENT ... ON SCHEDULE ... DO ...`（#2547）— 新语句 `CreateEvent`（调度子句透传、body 结构化）
-- `DO $$ ... $$` PG 匿名块（#2589）— 新语句 `DoStatement`
+- `DO [LANGUAGE x] $$ ... $$` PG 匿名块（#2589）— 新语句 `DoStatement`（Language/Code 结构化，MySQL DO expr 走 Text 兜底）
 - `COMMENT ON` 目标扩展至 SCHEMA/DATABASE/FUNCTION 等（#2639）+ `IS NULL` 删除注释（#2562）— `Comment.TargetText` / `Comment.Remove`
 
 **ClickHouse**：`ARRAY JOIN / LEFT ARRAY JOIN`（#2482，`Join.ArrayJoin/LeftArrayJoin/ArrayJoinItems`）；`ORDER BY ... WITH FILL [FROM] [TO] [STEP] [STALENESS]`（#2469，`OrderByElement.WithFill`）；`INTERPOLATE (...)`（#2469，`PlainSelect.InterpolateElements`）；`COLUMNS(...) APPLY/EXCEPT/REPLACE`（#2631/#2635，`ColumnsExpression`）；tuple 位置访问 `t.1`（#2454）
 
 **BigQuery**：`UNNEST(arr) [AS u] [WITH OFFSET [AS o]]`（#2642，新 FROM 项 `UnnestTable`）；`EXPORT DATA ... AS query`（新语句 `ExportData`）；`LOAD DATA [OVERWRITE] ...`（新语句 `LoadDataStatement`）；`ASSERT cond AS 'msg'` 语句与 `ASSERT(...)` 函数
 
-**DuckDB**：`ANTI JOIN`（#2643，`Join.Anti`，ANTI 保留化同 GLOBAL 先例）；`COPY ... TO/FROM ...`、`ATTACH`、`PRAGMA`、`CREATE MACRO`（均透传语句）
+**DuckDB**：`ANTI JOIN`（#2643，`Join.Anti`，ANTI 保留化同 GLOBAL 先例）；FROM-first `FROM t [SELECT ... WHERE ... ORDER BY ... LIMIT ...]`（#2643，`FromQuery.SelectBodyText` 透传）；`COPY ... TO/FROM ...`、`ATTACH`、`PRAGMA`、`CREATE MACRO`（均透传语句）
 
 **表达式**：ClickHouse 三元条件 `cond ? then : else`（#2436/#2466，新 `TernaryExpression`，右结合；`:c` 紧跟形式的命名参数歧义不支持，需 `: c`）
 
@@ -41,7 +41,7 @@
 
 **模型结构化**：`IntervalQualifier` 结构化限定符（#1728，`IntervalExpression.Qualifier`，`IntervalType` 原文保留）；`ColDataType.Precision/Scale` 便捷属性（#2539，从括号参数解析，AST 结构不变）
 
-**测试**：新增 `Upstream54SyncRoundTripTest`（27 项）+ `Upstream54SyncBatch2Test`（48 项）；全量 **1829** 通过 / 2 Skip × 3 TFM（net8/9/10）。
+**测试**：新增 `Upstream54SyncRoundTripTest`（27 项）+ `Upstream54SyncBatch2Test`（59 项）；全量 **1840** 通过 / 2 Skip × 3 TFM（net8/9/10）。
 
 ### 1.0.0-rc1
 

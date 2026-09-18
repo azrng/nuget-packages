@@ -14,6 +14,9 @@ public class FromQuery : Select.Select
     public List<PipeOperator> PipeOperators { get; set; } = new();
     public List<Join>? Joins { get; set; }
 
+    /// <summary>DuckDB FROM-first 的 SELECT 及后续子句原文（FROM t SELECT * WHERE ...），透传。</summary>
+    public string? SelectBodyText { get; set; }
+
     public FromQuery() { }
 
     [SetsRequiredMembers]
@@ -65,6 +68,8 @@ public class FromQuery : Select.Select
             builder.Append(' ');
             op.AppendTo(builder);
         }
+
+        if (SelectBodyText != null) builder.Append(' ').Append(SelectBodyText);
 
         return builder;
     }

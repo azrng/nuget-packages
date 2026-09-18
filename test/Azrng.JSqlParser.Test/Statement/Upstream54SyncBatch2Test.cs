@@ -12,6 +12,7 @@ using Azrng.JSqlParser.Statement.Create.Subscription;
 using Azrng.JSqlParser.Statement.Create.Trigger;
 using Azrng.JSqlParser.Statement.DuckDb;
 using Azrng.JSqlParser.Statement.Export;
+using Azrng.JSqlParser.Statement.Piped;
 using Azrng.JSqlParser.Statement.Select;
 using Azrng.JSqlParser.Util;
 using PlainSelectType = Azrng.JSqlParser.Statement.Select.PlainSelect;
@@ -51,7 +52,8 @@ public class Upstream54SyncBatch2Test
         var sql = "CREATE DOMAIN addr AS TEXT DEFAULT 'n/a' CHECK (VALUE IS NOT NULL)";
         var stmt = Assert.IsType<CreateDomain>(SqlParser.Parse(sql));
         Assert.Equal("addr", stmt.Name);
-        Assert.Contains("TEXT", stmt.Tail);
+        Assert.Equal("TEXT", stmt.DataType);
+        Assert.Contains("DEFAULT 'n/a'", stmt.Tail);
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -61,7 +63,8 @@ public class Upstream54SyncBatch2Test
         var sql = "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public";
         var stmt = Assert.IsType<CreateExtension>(SqlParser.Parse(sql));
         Assert.Equal("pgcrypto", stmt.Name);
-        Assert.Contains("SCHEMA public", stmt.OptionsText);
+        Assert.Equal(ExtensionOptionKind.Schema, stmt.Options![0].Kind);
+        Assert.Equal("public", stmt.Options[0].Value);
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -91,7 +94,10 @@ public class Upstream54SyncBatch2Test
         var stmt = Assert.IsType<CreateTrigger>(SqlParser.Parse(sql));
         Assert.Equal(TriggerTiming.After, stmt.Timing);
         Assert.Equal(TriggerEvent.Delete, stmt.Event);
-        Assert.Contains("INSERT INTO audit_log VALUES (1)", stmt.BodyText);
+        // 单语句体已结构化（triggerSimpleStatement → Insert）
+        var insert = Assert.IsType<Azrng.JSqlParser.Statement.Insert.Insert>(stmt.Body);
+        Assert.Equal("audit_log", insert.Table!.Name);
+        Assert.Null(stmt.BodyText);
         Assert.Equal(sql, stmt.ToString());
     }
 
@@ -356,6 +362,81 @@ public class Upstream54SyncBatch2Test
         var mr = Assert.IsType<MatchRecognize>(stmt.FromItem!);
         Assert.Equal("A", mr.PatternText);
         Assert.Equal(sql, stmt.ToString());
+    }
+
+    #endregion
+
+    #region 结构化升级复核（T149 后续：去透传 + FROM-first）
+
+    [Fact]
+    public void CreateDomain_Structured_TypeAndTail()
+    {
+        var sql = "CREATE DOMAIN addr AS TEXT DEFAULT 'n/a' CHECK (VALUE IS NOT NULL)";
+        var stmt = Assert.IsType<CreateDomain>(SqlParser.Parse(sql));
+        Assert.True(stmt.UseAs);
+        Assert.Equal("TEXT", stmt.DataType);
+        Assert.Contains("DEFAULT 'n/a'", stmt.Tail);
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Fact]
+    public void CreateExtension_Structured_Options()
+    {
+        var sql = "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public CASCADE";
+        var stmt = Assert.IsType<CreateExtension>(SqlParser.Parse(sql));
+        Assert.Equal(2, stmt.Options!.Count);
+        Assert.Equal(ExtensionOptionKind.Schema, stmt.Options[0].Kind);
+        Assert.Equal("public", stmt.Options[0].Value);
+        Assert.Equal(ExtensionOptionKind.Cascade, stmt.Options[1].Kind);
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Theory]
+    [InlineData("DO $$ BEGIN RETURN 1; END $$", null, false)]
+    [InlineData("DO LANGUAGE plpgsql $$ BEGIN RETURN 1; END $$", "plpgsql", true)]
+    [InlineData("DO $$ BEGIN RETURN 1; END $$ LANGUAGE plpgsql", "plpgsql", false)]
+    public void DoStatement_Structured_CodeAndLanguage(string sql, string? language, bool beforeCode)
+    {
+        var stmt = Assert.IsType<DoStatement>(SqlParser.Parse(sql));
+        Assert.NotNull(stmt.Code);
+        Assert.Equal(language, stmt.Language);
+        Assert.Equal(beforeCode, stmt.LanguageBeforeCode);
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Theory]
+    [InlineData("CREATE TRIGGER trg AFTER INSERT ON orders FOR EACH ROW INSERT INTO audit_log VALUES (1)", "audit_log")]
+    [InlineData("CREATE TRIGGER trg BEFORE UPDATE ON t FOR EACH ROW DELETE FROM log", "log")]
+    public void CreateTrigger_SimpleStatementBody_Structured(string sql, string bodyTable)
+    {
+        var stmt = Assert.IsType<CreateTrigger>(SqlParser.Parse(sql));
+        Assert.NotNull(stmt.Body);
+        Assert.Null(stmt.BodyText);
+        var tables = stmt.GetTableNames();
+        Assert.Contains(bodyTable, tables);
+        Assert.Equal(sql, stmt.ToString());
+    }
+
+    [Fact]
+    public void CreateTrigger_SetBody_WithFromFirst()
+    {
+        // 触发体 SET 语句 + FROM-first 查询
+        var stmt = SqlParser.Parse("CREATE TRIGGER trg AFTER INSERT ON t FOR EACH ROW SET @x = 1");
+        Assert.IsType<CreateTrigger>(stmt);
+        var fromFirst = SqlParser.Parse("FROM trades SELECT symbol, price WHERE price > 10 ORDER BY price LIMIT 5");
+        Assert.IsType<FromQuery>(fromFirst);
+        Assert.Contains("SELECT symbol, price", fromFirst!.ToString());
+    }
+
+    [Theory]
+    [InlineData("FROM trades SELECT symbol, price WHERE price > 10 ORDER BY price LIMIT 5")]
+    [InlineData("FROM t SELECT *")]
+    [InlineData("FROM t")]
+    public void DuckDbFromFirst_RoundTrips(string sql)
+    {
+        var stmt = Assert.IsType<FromQuery>(SqlParser.Parse(sql));
+        Assert.True(stmt.UsingFromKeyword);
+        Assert.Equal(sql, stmt!.ToString());
     }
 
     #endregion

@@ -733,15 +733,15 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 | 上游 issue | 能力 | Azrng C# | 建模策略 |
 |-----------|------|----------|---------|
 | #2546/#2555 | `CREATE USER\|ROLE\|GROUP [IF NOT EXISTS] name[@host] ...` | `CreateRole`（Command/IfNotExists/Name/Host + 属性尾透传） | 简化透传版 |
-| #2536 | `CREATE DOMAIN [IF NOT EXISTS] name ...` | `CreateDomain`（Name + Tail 透传） | 简化透传版 |
-| #2553 | `CREATE EXTENSION [IF NOT EXISTS] name ...` | `CreateExtension`（Name + OptionsText 透传） | 简化透传版 |
+| #2536 | `CREATE DOMAIN [IF NOT EXISTS] name [AS] type ...` | `CreateDomain`（UseAs/DataType 结构化 + Tail 透传） | 半结构化 |
+| #2553 | `CREATE EXTENSION [IF NOT EXISTS] name [WITH ...]` | `CreateExtension`（Options 结构化 `ExtensionOption`） | 结构化 |
 | #2554 | `CREATE PUBLICATION ...` / `CREATE SUBSCRIPTION ...` | `CreatePublication`（ForAllTables/Tables 结构化）/ `CreateSubscription`（全结构化） | 半结构化 |
-| #2548 | MySQL `CREATE [DEFINER] TRIGGER ... FOR EACH ROW ...` | `CreateTrigger`（Timing/Event/Table/Order 结构化；BEGIN..END 块体结构化、单语句体 BodyText 透传） | 半结构化 |
+| #2548 | MySQL `CREATE [DEFINER] TRIGGER ... FOR EACH ROW ...` | `CreateTrigger`（Timing/Event/Table/Order 结构化；体结构化——BEGIN..END 块或受限单语句集 `triggerSimpleStatement`，其余透传） | 结构化 |
 | #2547 | MySQL `CREATE EVENT ... ON SCHEDULE ... DO ...` | `CreateEvent`（调度透传 ScheduleText、body 结构化） | 半结构化 |
-| #2589 | `DO $$ ... $$` | `DoStatement`（Text 透传） | 透传版 |
+| #2589 | `DO [LANGUAGE x] $$ ... $$` | `DoStatement`（Language/Code 结构化 + Text 兜底） | 结构化 |
 | #2639/#2562 | `COMMENT ON <多目标>` / `IS NULL` | `Comment.TargetText` / `Comment.Remove` | 透传目标 + 结构化文本 |
 | #2642 | `EXPORT DATA ... AS query` / `LOAD DATA` / `ASSERT` | `ExportData`（Specs 透传 + Select 结构化）/ `LoadDataStatement` / `AssertStatement` | 半结构化 |
-| #2643 | DuckDB `COPY` / `ATTACH` / `PRAGMA` / `CREATE MACRO` | `CopyStatement`（Source/To 结构化）等 | 透传版 |
+| #2643 | DuckDB `COPY` / `ATTACH` / `PRAGMA` / `CREATE MACRO` / FROM-first | `CopyStatement`（Source/To 结构化）等；FROM-first `FROM t [SELECT ...]` 挂 `FromQuery.SelectBodyText` | 透传版 / 半结构化 |
 
 ### 21.2 SELECT 层能力对照表
 
@@ -771,7 +771,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 ### 21.5 测试
 
-- 新增 `Upstream54SyncBatch2Test`（48 项）
-- 全量 1829 通过 / 2 Skip × 3 TFM（net8/9/10）
+- 新增 `Upstream54SyncBatch2Test`（59 项）
+- 全量 1840 通过 / 2 Skip × 3 TFM（net8/9/10）
 
 文件结束。
