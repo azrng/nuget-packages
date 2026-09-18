@@ -20,6 +20,9 @@ public class Merge : ASTNodeAccessImpl, IStatement
     public Azrng.JSqlParser.Expression.IExpression? OnCondition { get; set; }
     public System.Collections.Generic.List<MergeOperation> Operations { get; set; } = new();
 
+    /// <summary>RETURNING / RETURN 子句（#2569，PostgreSQL MERGE RETURNING），未指定时为 null。</summary>
+    public ReturningClause? Returning { get; set; }
+
     public T Accept<T, S>(IStatementVisitor<T> visitor, S context) => visitor.Visit(this, context);
 
     public override string ToString()
@@ -30,6 +33,7 @@ public class Merge : ASTNodeAccessImpl, IStatement
         if (SourceTable != null) sb.Append(" USING ").Append(SourceTable);
         if (OnCondition != null) sb.Append(" ON ").Append(OnCondition);
         foreach (var op in Operations) sb.Append(' ').Append(op);
+        if (Returning != null) sb.Append(Returning);
         return sb.ToString();
     }
 }

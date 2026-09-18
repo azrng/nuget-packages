@@ -5,9 +5,5 @@ namespace Azrng.JSqlParser.Statement.Merge;
 /// </summary>
 public class MergeDelete : MergeOperation
 {
-    public override string ToString()
-    {
-        var cond = Condition != null ? $" AND {Condition}" : "";
-        return $"WHEN {(Not ? "NOT " : "")}MATCHED{cond} THEN DELETE";
-    }
+    public override string ToString() => $"{MatchedHeaderText} THEN DELETE";
 }

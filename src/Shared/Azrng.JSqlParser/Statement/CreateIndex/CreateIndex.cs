@@ -20,6 +20,9 @@ public class CreateIndex : ASTNodeAccessImpl, IStatement
     /// <summary>索引列定义原始文本列表（含 ASC/DESC/表达式/opclass），保 round-trip。</summary>
     public List<string> ColumnNames { get; } = new();
 
+    /// <summary>SQL Server INCLUDE 覆盖列名列表（#2462 <c>CREATE INDEX ... INCLUDE (cols)</c>），未指定时为 null。</summary>
+    public List<string>? IncludedColumns { get; set; }
+
     /// <summary>部分索引的 WHERE 谓词（<c>WHERE ...</c>），未指定时为 null。</summary>
     public IExpression? Where { get; set; }
 
@@ -41,6 +44,8 @@ public class CreateIndex : ASTNodeAccessImpl, IStatement
         if (UsingMethod != null) sb.Append(" USING ").Append(UsingMethod);
         if (ColumnNames.Count > 0)
             sb.Append(" (").Append(string.Join(", ", ColumnNames)).Append(')');
+        if (IncludedColumns is { Count: > 0 })
+            sb.Append(" INCLUDE (").Append(string.Join(", ", IncludedColumns)).Append(')');
         if (Where != null) sb.Append(" WHERE ").Append(Where);
         if (WithOptions is { Count: > 0 })
             sb.Append(" WITH (").Append(string.Join(", ", WithOptions)).Append(')');

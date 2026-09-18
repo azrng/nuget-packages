@@ -228,6 +228,24 @@ public partial class AstBuilderVisitor
             withItem.SearchClause = (WithSearchClause)Visit(context.withSearchClause());
         }
 
+        // #2566 CYCLE cols SET mark [TO x DEFAULT y] USING path
+        // identifier(0)=标记列、identifier(1)=路径列；TO/DEFAULT 同时出现时 expression(0)/expression(1)
+        if (context.withCycleClause() is { } cycleCtx)
+        {
+            withItem.CycleClause = new WithCycleClause
+            {
+                CycleColumns = cycleCtx.identifierList().identifier()
+                    .Select(i => i.GetText()).ToList(),
+                MarkColumnName = cycleCtx.identifier(0).GetText(),
+                PathColumnName = cycleCtx.identifier(1).GetText()
+            };
+            if (cycleCtx.expression() is { Length: 2 } cycleExprs)
+            {
+                withItem.CycleClause.MarkValue = (Expression.IExpression)Visit(cycleExprs[0]);
+                withItem.CycleClause.MarkDefault = (Expression.IExpression)Visit(cycleExprs[1]);
+            }
+        }
+
         return withItem;
     }
 

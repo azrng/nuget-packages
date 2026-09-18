@@ -119,12 +119,30 @@ public partial class AstBuilderVisitor
     public override object VisitSetStatement(JSqlParserGrammar.SetStatementContext context)
     {
         var stmt = new SetStatement();
+
+        // #2605 SET IDENTITY_INSERT t ON|OFF（IDENTITY_INSERT 无专用 token，Name 保留首标识符原文）
+        if (context.table() != null)
+        {
+            stmt.Name = context.identifier().GetText();
+            stmt.IdentityInsertTable = (Table)Visit(context.table());
+            stmt.SwitchValue = context.ON() != null;
+            return stmt;
+        }
+
         if (context.identifier() != null)
             stmt.Name = context.identifier().GetText();
         else if (context.S_AT_IDENTIFIER() != null)
             stmt.Name = context.S_AT_IDENTIFIER().GetText();
         else if (context.SINGLE_AT_IDENTIFIER() != null)
             stmt.Name = context.SINGLE_AT_IDENTIFIER().GetText();
+
+        // #2604 SET NOCOUNT ON 等布尔开关（ON/OFF 为保留 token，与赋值形式无歧义）
+        if (context.ON() != null || context.OFF() != null)
+        {
+            stmt.SwitchValue = context.ON() != null;
+            return stmt;
+        }
+
         stmt.Value = (Expression.IExpression)Visit(context.expression());
         return stmt;
     }

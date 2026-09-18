@@ -14,7 +14,6 @@ public class MergeInsert : MergeOperation
     {
         var cols = Columns != null ? $" ({string.Join(", ", Columns)})" : "";
         var vals = Values != null ? $" VALUES ({string.Join(", ", Values)})" : "";
-        var cond = Condition != null ? $" AND {Condition}" : "";
-        return $"WHEN {(Not ? "NOT " : "")}MATCHED{cond} THEN INSERT{cols}{vals}";
+        return $"{MatchedHeaderText} THEN INSERT{cols}{vals}";
     }
 }

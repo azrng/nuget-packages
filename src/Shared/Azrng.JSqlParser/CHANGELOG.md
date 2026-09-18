@@ -4,6 +4,22 @@
 
 ## 版本历史
 
+### 1.0.0-rc2
+
+同步上游 JSqlParser 5.4 正式版（tag `jsqlparser-5.4`，commit `e847e94b`）第一档缺口 7 项。**无破坏性 API 变更**（仅新增字段/枚举与文法能力，全部向后兼容）。
+
+**新增能力**：
+- SQL Server `SET IDENTITY_INSERT t ON|OFF`（#2605）— `SetStatement.IdentityInsertTable` / `SwitchValue`，表名可被 `GetTableNames()` 提取
+- SQL Server 布尔开关 `SET NOCOUNT ON` / `SET ANSI_NULLS OFF` 等（#2604）— `SetStatement.SwitchValue`
+- `MERGE ... WHEN NOT MATCHED [BY TARGET|BY SOURCE]`（#2421/#2480）— `MergeOperation.Side`（新枚举 `MergeSide`）；配对校验对齐上游（BY TARGET 仅配 INSERT、BY SOURCE 仅配 UPDATE/DELETE，违规抛 `JSqlParserException`）
+- `MERGE ... RETURNING`（#2569）— `Merge.Returning`
+- `INSERT ... OVERRIDING [USER|SYSTEM] VALUE`（#2569）— `Insert.Overriding`（既有字段补 grammar 接线，输出位置修正到列清单之后对齐上游）
+- 递归 CTE 环检测 `WITH RECURSIVE ... CYCLE cols SET mark [TO x DEFAULT y] USING path`（#2566）— `WithItem.CycleClause`（新类 `WithCycleClause`，USING 必填）
+- `CREATE INDEX ... INCLUDE (cols)`（#2462）— `CreateIndex.IncludedColumns`
+- `GROUPS` 降为非保留字，可作列名/表名（#2473；窗口帧 `GROUPS BETWEEN` 不受影响）
+
+**测试**：新增 `Upstream54SyncRoundTripTest`（27 项），#2421 探针转正；全量 **1781** 通过 / 2 Skip × 3 TFM（net8/9/10）。
+
 ### 1.0.0-rc1
 
 版本号从 `1.0.0-beta12` 调整为 `1.0.0-rc1`，功能内容与 beta12 一致，解决预发布版本按字符串排序导致最新版本无法正确显示的问题。

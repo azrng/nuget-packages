@@ -747,7 +747,12 @@ public class TablesNamesFinder : IExpressionVisitor<object?>, Statement.IStateme
     public object? Visit<S>(Statement.RollbackStatement rollbackStatement, S context) => null;
     public object? Visit<S>(Statement.SavepointStatement savepointStatement, S context) => null;
     public object? Visit<S>(Statement.UseStatement use, S context) => null;
-    public object? Visit<S>(Statement.SetStatement set, S context) => null;
+    public object? Visit<S>(Statement.SetStatement set, S context)
+    {
+        // #2605 SET IDENTITY_INSERT t ON|OFF 的结构化表目标
+        if (set.IdentityInsertTable != null) AddTable(set.IdentityInsertTable);
+        return null;
+    }
     public object? Visit<S>(Statement.ResetStatement reset, S context) => null;
     public object? Visit<S>(Statement.ShowStatement show, S context) => null;
     public object? Visit<S>(Statement.Show.ShowColumnsStatement showColumns, S context) { if (showColumns.Table != null) AddTable(showColumns.Table); return null; }

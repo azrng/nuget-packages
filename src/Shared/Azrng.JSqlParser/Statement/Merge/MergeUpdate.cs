@@ -9,9 +9,5 @@ public class MergeUpdate : MergeOperation
 {
     public System.Collections.Generic.List<UpdateSet> UpdateSets { get; set; } = new();
 
-    public override string ToString()
-    {
-        var cond = Condition != null ? $" AND {Condition}" : "";
-        return $"WHEN {(Not ? "NOT " : "")}MATCHED{cond} THEN UPDATE SET {string.Join(", ", UpdateSets)}";
-    }
+    public override string ToString() => $"{MatchedHeaderText} THEN UPDATE SET {string.Join(", ", UpdateSets)}";
 }

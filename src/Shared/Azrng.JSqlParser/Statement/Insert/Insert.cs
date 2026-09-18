@@ -125,11 +125,12 @@ public class Insert : ASTNodeAccessImpl, IStatement
             Partition.AppendPartitionsTo(sb, Partitions);
             sb.Append(')');
         }
-        if (Overriding != null) sb.Append(" OVERRIDING ").Append(Overriding).Append(" VALUE");
         if (Columns != null && Columns.Count > 0)
         {
             sb.Append(" (").Append(string.Join(", ", Columns)).Append(')');
         }
+        // OVERRIDING [USER|SYSTEM] VALUE 位于列清单之后（#2569，对齐上游 grammar 位置）
+        if (Overriding != null) sb.Append(" OVERRIDING ").Append(Overriding).Append(" VALUE");
         if (OutputClause != null) sb.Append(' ').Append(OutputClause);
         if (UseSet && SetUpdateSets != null && SetUpdateSets.Count > 0)
         {

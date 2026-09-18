@@ -7,6 +7,10 @@
 
 Azrng.JSqlParser 是从 JSqlParser 5.4 移植而来。两类内容需要与上游保持对照能力：
 
+> **对齐基线（T148 起）**：上游 tag `jsqlparser-5.4` 正式版（commit `e847e94b`，2026-09-13 发布）。
+> 此前基线为 `2b141568`（5.4-SNAPSHOT，2026-04-12）；正式版前 224 个提交中与 grammar/AST/visitor 相关的
+> 高价值缺口由 T148 起分批同步（见第二十节），JavaCC 性能优化与 Java 内部重构不适用 ANTLR4 移植版。
+
 | 内容 | 是否需要对照上游 | 说明 |
 |------|----------------|------|
 | ANTLR4 grammar（`.g4`） | ✅ 需要 | 语法规则源头，上游升级 grammar 时需同步 |
@@ -686,5 +690,36 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 - 相关回归 145 通过 / 3 Skip
 
 ---
+
+---
+
+## 二十、T148 同步上游 5.4 正式版第一档缺口（rc2）
+
+> 基线更新至 tag `jsqlparser-5.4`（e847e94b）。本批 7 项均为小改动（既有规则加分支），
+> 上游参考：`SetIdentityInsertStatement.java` / `MergeSide.java` / `WithCycleClause` 产生式 /
+> `Set()` 的 `SqlServerSetOnOffOptions()` / CREATE INDEX 的 `K_INCLUDE includeColumns`。
+
+### 20.1 已实现对照表（7 项）
+
+| 上游 issue | 能力 | Azrng C# | 说明 |
+|-----------|------|----------|------|
+| #2605 | `SET IDENTITY_INSERT t ON\|OFF` | `SetStatement.IdentityInsertTable` + `SwitchValue`；grammar 无 IDENTITY_INSERT 专用 token，`SET identifier table ON/OFF` 形态 + visitor 判别；表名入 `GetTableNames()` | 独立语句类 `SetIdentityInsertStatement` 的等价建模（不新增语句类型，保持 visitor 面最小） |
+| #2604 | `SET NOCOUNT ON` 布尔开关 | `SetStatement.SwitchValue`（true=ON/false=OFF/null=赋值形式） | 上游按方言开关 + `OnOffOption` 枚举白名单；移植版放宽为任意 `SET name ON/OFF`，不做枚举白名单校验 |
+| #2421/#2480 | `MERGE ... NOT MATCHED [BY TARGET\|BY SOURCE]` | `MergeOperation.Side`（新枚举 `MergeSide { None, Target, Source }`） | 配对校验对齐上游 `MergeSide.validatePairing`：BY TARGET 仅配 INSERT、BY SOURCE 仅配 UPDATE/DELETE，违规抛 `JSqlParserException`；`None` 等价 BY TARGET 语义（仅 INSERT） |
+| #2569 | `MERGE ... RETURNING` | `Merge.Returning`（复用 `ReturningClause`） | 与 INSERT/UPDATE/DELETE 共用 returningClause 产生式 |
+| #2569 | `INSERT ... OVERRIDING [USER\|SYSTEM] VALUE` | `Insert.Overriding`（"USER"/"SYSTEM"，既有字段补 grammar 接线） | 上游 `Insert.OverridingMode` 枚举 vs 移植版字符串透传（历史字段，保持不变）；输出位置修正到列清单之后 |
+| #2566 | 递归 CTE `CYCLE cols SET mark [TO x DEFAULT y] USING path` | `WithItem.CycleClause`（新类 `WithCycleClause`） | USING 必填、TO/DEFAULT 成对可选，对齐上游 `WithCycleClause()` 产生式 |
+| #2462 | `CREATE INDEX ... INCLUDE (cols)` | `CreateIndex.IncludedColumns` | 列名列表，位于索引列后、WHERE 前（对齐上游顺序） |
+| #2473 | `GROUPS` 作非保留字 | 词表 `nonReservedKeyword` 加 GROUPS | 同 `RANGE` 先例；窗口帧 `GROUPS BETWEEN` 仍解析（identifier 分支与帧分支无歧义） |
+
+### 20.2 测试
+
+- 新增 `Upstream54SyncRoundTripTest`（27 项，含配对校验异常路径与 `GetTableNames` 集成）
+- `NonPgIssuesProbeTest` #2421 探针转绿（原 Skip 转为验证修复的 active 探针）
+- 全量 1781 通过 / 2 Skip × 3 TFM
+
+### 20.3 本批跳过（留后续批次）
+
+第二档（PG/MySQL DDL 建模族：CREATE ROLE/USER/TRIGGER/EVENT、PUBLICATION/SUBSCRIPTION、CREATE DOMAIN/EXTENSION、DO $$ 块）与第三档（MATCH_RECOGNIZE、DuckDB/BigQuery/ClickHouse 大特性、三元 `?:`）评估结论见任务记录；均为中等以上改动，按业务驱动另行排期。
 
 文件结束。

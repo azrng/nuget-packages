@@ -160,8 +160,14 @@ withClause
     ;
 
 withItem
-    : identifier (OPENING_PAREN identifierList CLOSING_PAREN)? AS (MATERIALIZED | NOT MATERIALIZED)? OPENING_PAREN (selectStatement | insertStatement | updateStatement | deleteStatement) CLOSING_PAREN withSearchClause?
+    : identifier (OPENING_PAREN identifierList CLOSING_PAREN)? AS (MATERIALIZED | NOT MATERIALIZED)? OPENING_PAREN (selectStatement | insertStatement | updateStatement | deleteStatement) CLOSING_PAREN withSearchClause? withCycleClause?
     | withFunctionDeclaration
+    ;
+
+// 标准递归 CTE 环检测子句（#2566）：CYCLE cols SET markcol [TO mark DEFAULT nomark] USING pathcol
+// USING 必填、TO/DEFAULT 成对可选，对齐上游 WithCycleClause
+withCycleClause
+    : CYCLE identifierList SET identifier (TO expression DEFAULT expression)? USING identifier
     ;
 
 // WITH FUNCTION 内联函数声明（SQL 标准新语法）：FUNCTION name(params) RETURNS type RETURN expr
@@ -634,6 +640,7 @@ insertStatement
       (PARTITION OPENING_PAREN partitionAssignment (COMMA partitionAssignment)* CLOSING_PAREN)?
       ( VALUES valuesList | selectStatement )
     | INSERT (LOW_PRIORITY | DELAYED | HIGH_PRIORITY)? IGNORE? INTO? table (OPENING_PAREN identifierList CLOSING_PAREN)?
+      (OVERRIDING (USER | SYSTEM) VALUE)?   // #2569 SQL 标准/PG 身份列覆盖
       outputClause?
       ( VALUES valuesList
       | SET assignmentItem (COMMA assignmentItem)*
@@ -740,11 +747,17 @@ deleteStatement
 mergeStatement
     : MERGE INTO? table alias? USING fromItem ON expression
       mergeWhenClause+
+      returningClause?
     ;
 
+// #2421/#2480：WHEN NOT MATCHED 可带 BY TARGET（默认，只配 INSERT）或 BY SOURCE（只配 UPDATE/DELETE），
+// 配对校验在 VisitMergeStatement 中完成（对齐上游 MergeSide.validatePairing）
 mergeWhenClause
     : WHEN MATCHED (AND expression)? THEN (UPDATE SET assignmentItem (COMMA assignmentItem)* | DELETE)
-    | WHEN NOT MATCHED (AND expression)? THEN INSERT (OPENING_PAREN identifierList CLOSING_PAREN)? VALUES valuesItem
+    | WHEN NOT MATCHED (BY identifier)? (AND expression)?
+      THEN ( INSERT (OPENING_PAREN identifierList CLOSING_PAREN)? VALUES valuesItem
+           | UPDATE SET assignmentItem (COMMA assignmentItem)*
+           | DELETE )
     ;
 
 // ══════════════════════════════════════════════
@@ -998,6 +1011,7 @@ createIndex
     : CREATE UNIQUE? INDEX (IF NOT EXISTS)? identifier ON table
       (USING identifier)?   // PostgreSQL 索引方法：USING btree | gist | gin | ...
       OPENING_PAREN orderByItem (COMMA orderByItem)* CLOSING_PAREN
+      (INCLUDE OPENING_PAREN columnList CLOSING_PAREN)?   // #2462 SQL Server INCLUDE 覆盖列
       whereClause?
       // #2020 SQL Server 索引 WITH 选项：WITH (PAD_INDEX = OFF, FILLFACTOR = 80, ...)
       (WITH OPENING_PAREN parameterListItem (COMMA parameterListItem)* CLOSING_PAREN)?
@@ -1217,6 +1231,8 @@ useStatement
 
 setStatement
     : SET (SESSION | LOCAL)? (identifier | S_AT_IDENTIFIER | SINGLE_AT_IDENTIFIER) (EQUALS | TO) expression
+    | SET identifier table (ON | OFF)   // #2605 SQL Server SET IDENTITY_INSERT t ON|OFF（IDENTITY_INSERT 无专用 token，visitor 语义校验配对）
+    | SET (SESSION | LOCAL)? (identifier | S_AT_IDENTIFIER | SINGLE_AT_IDENTIFIER) (ON | OFF)   // #2604 SET NOCOUNT ON 等布尔开关
     ;
 
 // RESET 语句：RESET name | RESET ALL
@@ -1938,7 +1954,7 @@ nonReservedKeyword
     | ERROR | ERRORS | EXCHANGE | EXCLUDE | EXCLUDING | EXCLUSIVE
     | EXEC | EXECUTE | EXPLAIN | EXPLICIT | EXTEND | EXTENDED | EXTRACT | EXTERNAL
     | FILTER | FIELDS | FIRST | FLUSH | FOLLOWING | FORMAT | FULL | FULLTEXT | GENERATED
-    | GRANT | GROUP_CONCAT | GROUPING
+    | GRANT | GROUP_CONCAT | GROUPING | GROUPS   // #2473 GROUPS 非保留字（窗口帧/列名两用，同 RANGE 先例）
     | HASH | HIGH | HISTORY
     | IDENTIFIED | IDENTITY | IGNORE | INCLUDE | INCLUDING | INCREMENT
     | INDEX | INFORMATION | INSERT | INTERLEAVE | INVALIDATE | INVERSE | INVISIBLE | ISNULL

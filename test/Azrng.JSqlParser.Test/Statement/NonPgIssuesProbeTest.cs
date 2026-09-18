@@ -74,8 +74,8 @@ public class NonPgIssuesProbeTest
     public void Issue1589_SqlServerPrimaryKeyNonclustered() =>
         Probe("CREATE TABLE actor (actor_id INT NOT NULL IDENTITY, first_name VARCHAR(45) NOT NULL, PRIMARY KEY NONCLUSTERED (actor_id))");
 
-    // ⑧ #2421 BigQuery MERGE WHEN NOT MATCHED BY TARGET/SOURCE — 本批次不做（BigQuery 小众语法）
-    [Fact(Skip = "本批次暂不修（小众语言）")]
+    // ⑧ #2421/#2480 MERGE WHEN NOT MATCHED BY TARGET/SOURCE — T148 批次已修，探针转绿
+    [Fact]
     public void Issue2421_BigQueryMergeNotMatchedByTarget() =>
         Probe(@"MERGE INTO target_table AS tt
 USING (SELECT key, field FROM source_table) AS st

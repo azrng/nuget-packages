@@ -29,6 +29,9 @@ public class WithItem : Select
     /// <summary>标准递归 CTE 序列化子句（SEARCH DEPTH FIRST BY cols SET seqcol），结构化对齐上游 WithSearchClause。</summary>
     public WithSearchClause? SearchClause { get; set; }
 
+    /// <summary>标准递归 CTE 环检测子句（CYCLE cols SET mark USING path，#2566），结构化对齐上游 WithCycleClause。</summary>
+    public WithCycleClause? CycleClause { get; set; }
+
     /// <summary>WITH FUNCTION 内联函数声明（SQL 标准新语法）。设置时替代 CTE alias/select 路径。</summary>
     public WithFunctionDeclaration? WithFunctionDeclaration { get; set; }
 
@@ -66,6 +69,7 @@ public class WithItem : Select
             builder.Append('(').Append(Select).Append(')');
         }
         if (SearchClause != null) builder.Append(' ').Append(SearchClause);
+        if (CycleClause != null) builder.Append(' ').Append(CycleClause);
         return builder;
     }
 }

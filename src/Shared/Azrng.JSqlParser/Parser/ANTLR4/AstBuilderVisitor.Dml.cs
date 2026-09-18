@@ -91,6 +91,10 @@ public partial class AstBuilderVisitor
             }
         }
 
+        // #2569 OVERRIDING [USER|SYSTEM] VALUE（SQL 标准/PG 身份列覆盖）
+        if (context.OVERRIDING() != null)
+            insert.Overriding = context.USER() != null ? "USER" : "SYSTEM";
+
         // MSSQL OUTPUT 子句（透传原始文本保 round-trip）
         if (context.outputClause() is { } outputCtx)
             insert.OutputClause = GetOriginalText(outputCtx);
@@ -525,11 +529,23 @@ public partial class AstBuilderVisitor
                 whenAndCondition = (Expression.IExpression)Visit(whenCtx.expression());
             }
 
+            // #2421 BY TARGET/SOURCE 限定（两者均为非保留 identifier，按文本判别）
+            var side = Statement.Merge.MergeSide.None;
+            if (whenCtx.BY() != null)
+            {
+                var sideText = whenCtx.identifier()?.GetText();
+                side = sideText != null && sideText.Equals("TARGET", StringComparison.OrdinalIgnoreCase)
+                    ? Statement.Merge.MergeSide.Target
+                    : sideText != null && sideText.Equals("SOURCE", StringComparison.OrdinalIgnoreCase)
+                        ? Statement.Merge.MergeSide.Source
+                        : throw new JSqlParserException(
+                            $"MERGE WHEN NOT MATCHED BY 仅支持 TARGET/SOURCE，实际: {sideText}");
+            }
+
+            Statement.Merge.MergeOperation op;
             if (whenCtx.UPDATE() != null)
             {
-                var op = new Statement.Merge.MergeUpdate();
-                if (whenCtx.NOT() != null) op.Not = true;
-                op.Condition = whenAndCondition;
+                var update = new Statement.Merge.MergeUpdate();
                 foreach (var assignment in whenCtx.assignmentItem())
                 {
                     var updateSet = new UpdateSet();
@@ -540,41 +556,55 @@ public partial class AstBuilderVisitor
                     }
                     updateSet.Values = new List<Expression.IExpression>();
                     updateSet.Values.Add((Expression.IExpression)Visit(assignment.expression()));
-                    op.UpdateSets.Add(updateSet);
+                    update.UpdateSets.Add(updateSet);
                 }
-                merge.Operations.Add(op);
+                op = update;
             }
             else if (whenCtx.DELETE() != null)
             {
-                var op = new Statement.Merge.MergeDelete();
-                if (whenCtx.NOT() != null) op.Not = true;
-                op.Condition = whenAndCondition;
-                merge.Operations.Add(op);
+                op = new Statement.Merge.MergeDelete();
             }
-            else if (whenCtx.INSERT() != null)
+            else
             {
-                var op = new Statement.Merge.MergeInsert();
-                if (whenCtx.NOT() != null) op.Not = true;
-                op.Condition = whenAndCondition;
+                // THEN INSERT（grammar 保证三选一必现）
+                var insert = new Statement.Merge.MergeInsert();
                 if (whenCtx.identifierList() != null)
                 {
-                    op.Columns = new List<Column>();
+                    insert.Columns = new List<Column>();
                     foreach (var id in whenCtx.identifierList().identifier())
                     {
-                        op.Columns.Add(new Column { ColumnName = id.GetText() });
+                        insert.Columns.Add(new Column { ColumnName = id.GetText() });
                     }
                 }
                 // VALUES valuesItem（grammar 保证 INSERT 分支必现）
                 if (whenCtx.valuesItem() != null)
                 {
-                    op.Values = new List<Expression.IExpression>();
+                    insert.Values = new List<Expression.IExpression>();
                     foreach (var exprCtx in whenCtx.valuesItem().expression())
                     {
-                        op.Values.Add((Expression.IExpression)Visit(exprCtx));
+                        insert.Values.Add((Expression.IExpression)Visit(exprCtx));
                     }
                 }
-                merge.Operations.Add(op);
+                op = insert;
             }
+
+            op.Not = whenCtx.NOT() != null;
+            op.Condition = whenAndCondition;
+            op.Side = side;
+
+            // #2480 配对校验：BY TARGET（默认）只允许 INSERT，BY SOURCE 只允许 UPDATE/DELETE
+            if (side == Statement.Merge.MergeSide.Source && op is Statement.Merge.MergeInsert)
+                throw new JSqlParserException("MERGE WHEN NOT MATCHED BY SOURCE 仅允许 UPDATE/DELETE 子句");
+            if (side == Statement.Merge.MergeSide.Target && op is not Statement.Merge.MergeInsert)
+                throw new JSqlParserException("MERGE WHEN NOT MATCHED BY TARGET 仅允许 INSERT 子句");
+
+            merge.Operations.Add(op);
+        }
+
+        // #2569 MERGE ... RETURNING
+        if (context.returningClause() != null)
+        {
+            merge.Returning = (ReturningClause)Visit(context.returningClause());
         }
 
         return merge;

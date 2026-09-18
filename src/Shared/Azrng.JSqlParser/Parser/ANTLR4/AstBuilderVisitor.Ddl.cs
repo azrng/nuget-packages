@@ -1487,6 +1487,12 @@ public partial class AstBuilderVisitor
         // 索引列（含 ASC/DESC/表达式/opclass），取原始文本保 round-trip
         foreach (var item in context.orderByItem())
             createIndex.ColumnNames.Add(GetOriginalText(item));
+
+        // #2462 SQL Server INCLUDE 覆盖列
+        if (context.INCLUDE() != null && context.columnList() != null)
+            createIndex.IncludedColumns = context.columnList().identifier()
+                .Select(i => i.GetText()).ToList();
+
         // 部分索引 WHERE
         if (context.whereClause() != null)
             createIndex.Where = (Expression.IExpression)Visit(context.whereClause().expression());
