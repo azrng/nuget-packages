@@ -4,9 +4,19 @@
 
 ## 版本历史
 
-### 1.0.0-rc3
+### 1.0.0-rc2
 
-同步上游 JSqlParser 5.4 第二/三档全部剩余缺口（T149）。**含一处建模变更**：`FROM unnest(arr)` 从 `TableFunction` 改为专用 `UnnestTable` 节点（其余为新增字段/类型与文法能力）。
+同步上游 JSqlParser 5.4 正式版（tag `jsqlparser-5.4`，commit `e847e94b`，2026-09-13）全部能力缺口（T148 第一档 7 项 + T149 第二/三档清仓）。**含一处建模变更**：`FROM unnest(arr)` 从 `TableFunction` 改为专用 `UnnestTable` 节点，其余为新增字段/类型与文法能力。
+
+**第一档（小改动，通用价值高）**：
+- SQL Server `SET IDENTITY_INSERT t ON|OFF`（#2605）— `SetStatement.IdentityInsertTable` / `SwitchValue`，表名可被 `GetTableNames()` 提取
+- SQL Server 布尔开关 `SET NOCOUNT ON` / `SET ANSI_NULLS OFF` 等（#2604）— `SetStatement.SwitchValue`
+- `MERGE ... WHEN NOT MATCHED [BY TARGET|BY SOURCE]`（#2421/#2480）— `MergeOperation.Side`（新枚举 `MergeSide`），配对校验对齐上游（违规抛 `JSqlParserException`）
+- `MERGE ... RETURNING`（#2569）— `Merge.Returning`
+- `INSERT ... OVERRIDING [USER|SYSTEM] VALUE`（#2569）— `Insert.Overriding`（既有字段补 grammar 接线，输出位置修正到列清单之后）
+- 递归 CTE 环检测 `WITH RECURSIVE ... CYCLE cols SET mark [TO x DEFAULT y] USING path`（#2566）— `WithItem.CycleClause`（新类 `WithCycleClause`，USING 必填）
+- `CREATE INDEX ... INCLUDE (cols)`（#2462）— `CreateIndex.IncludedColumns`
+- `GROUPS` 降为非保留字，可作列名/表名（#2473；窗口帧 `GROUPS BETWEEN` 不受影响）
 
 **PG/MySQL DDL 族（简化透传版：结构化关键字段 + 尾部透传保 round-trip）**：
 - `CREATE USER|ROLE|GROUP [IF NOT EXISTS] name[@host] ...`（#2546/#2555）— 新语句 `CreateRole`
@@ -21,33 +31,17 @@
 
 **ClickHouse**：`ARRAY JOIN / LEFT ARRAY JOIN`（#2482，`Join.ArrayJoin/LeftArrayJoin/ArrayJoinItems`）；`ORDER BY ... WITH FILL [FROM] [TO] [STEP] [STALENESS]`（#2469，`OrderByElement.WithFill`）；`INTERPOLATE (...)`（#2469，`PlainSelect.InterpolateElements`）；`COLUMNS(...) APPLY/EXCEPT/REPLACE`（#2631/#2635，`ColumnsExpression`）；tuple 位置访问 `t.1`（#2454）
 
-**BigQuery**：`UNNEST(arr) [AS u] [WITH OFFSET [AS o]]`（#2642，新 FROM 项 `UnnestTable`，替代原 TableFunction 建模）；`EXPORT DATA ... AS query`（新语句 `ExportData`）；`LOAD DATA [OVERWRITE] ...`（新语句 `LoadDataStatement`）；`ASSERT cond AS 'msg'` 语句与 `ASSERT(...)` 函数（新语句 `AssertStatement` / Function）
+**BigQuery**：`UNNEST(arr) [AS u] [WITH OFFSET [AS o]]`（#2642，新 FROM 项 `UnnestTable`）；`EXPORT DATA ... AS query`（新语句 `ExportData`）；`LOAD DATA [OVERWRITE] ...`（新语句 `LoadDataStatement`）；`ASSERT cond AS 'msg'` 语句与 `ASSERT(...)` 函数
 
 **DuckDB**：`ANTI JOIN`（#2643，`Join.Anti`，ANTI 保留化同 GLOBAL 先例）；`COPY ... TO/FROM ...`、`ATTACH`、`PRAGMA`、`CREATE MACRO`（均透传语句）
 
-**表达式**：ClickHouse 三元条件 `cond ? then : else`（#2436/#2466，新 `TernaryExpression`，右结合；`:c` 紧跟形式的命名参数歧义仍不支持，需 `: c`）
+**表达式**：ClickHouse 三元条件 `cond ? then : else`（#2436/#2466，新 `TernaryExpression`，右结合；`:c` 紧跟形式的命名参数歧义不支持，需 `: c`）
 
-**行模式识别**：SQL:2016 `MATCH_RECOGNIZE`（#2634，新 FROM 项 `MatchRecognize`：PARTITION/ORDER/MEASURES/SKIP/DEFINE 结构化、PATTERN 变量表达式原文透传）
+**行模式识别**：SQL:2016 `MATCH_RECOGNIZE`（#2634，新 FROM 项 `MatchRecognize`：PARTITION/ORDER/MEASURES/SKIP/DEFINE 结构化、PATTERN 原文透传）
 
 **模型结构化**：`IntervalQualifier` 结构化限定符（#1728，`IntervalExpression.Qualifier`，`IntervalType` 原文保留）；`ColDataType.Precision/Scale` 便捷属性（#2539，从括号参数解析，AST 结构不变）
 
-**测试**：新增 `Upstream54SyncBatch2Test`（48 项）；全量 **1829** 通过 / 2 Skip × 3 TFM（net8/9/10）。
-
-### 1.0.0-rc2
-
-同步上游 JSqlParser 5.4 正式版（tag `jsqlparser-5.4`，commit `e847e94b`）第一档缺口 7 项。**无破坏性 API 变更**（仅新增字段/枚举与文法能力，全部向后兼容）。
-
-**新增能力**：
-- SQL Server `SET IDENTITY_INSERT t ON|OFF`（#2605）— `SetStatement.IdentityInsertTable` / `SwitchValue`，表名可被 `GetTableNames()` 提取
-- SQL Server 布尔开关 `SET NOCOUNT ON` / `SET ANSI_NULLS OFF` 等（#2604）— `SetStatement.SwitchValue`
-- `MERGE ... WHEN NOT MATCHED [BY TARGET|BY SOURCE]`（#2421/#2480）— `MergeOperation.Side`（新枚举 `MergeSide`）；配对校验对齐上游（BY TARGET 仅配 INSERT、BY SOURCE 仅配 UPDATE/DELETE，违规抛 `JSqlParserException`）
-- `MERGE ... RETURNING`（#2569）— `Merge.Returning`
-- `INSERT ... OVERRIDING [USER|SYSTEM] VALUE`（#2569）— `Insert.Overriding`（既有字段补 grammar 接线，输出位置修正到列清单之后对齐上游）
-- 递归 CTE 环检测 `WITH RECURSIVE ... CYCLE cols SET mark [TO x DEFAULT y] USING path`（#2566）— `WithItem.CycleClause`（新类 `WithCycleClause`，USING 必填）
-- `CREATE INDEX ... INCLUDE (cols)`（#2462）— `CreateIndex.IncludedColumns`
-- `GROUPS` 降为非保留字，可作列名/表名（#2473；窗口帧 `GROUPS BETWEEN` 不受影响）
-
-**测试**：新增 `Upstream54SyncRoundTripTest`（27 项），#2421 探针转正；全量 **1781** 通过 / 2 Skip × 3 TFM（net8/9/10）。
+**测试**：新增 `Upstream54SyncRoundTripTest`（27 项）+ `Upstream54SyncBatch2Test`（48 项）；全量 **1829** 通过 / 2 Skip × 3 TFM（net8/9/10）。
 
 ### 1.0.0-rc1
 

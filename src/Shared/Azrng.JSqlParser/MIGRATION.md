@@ -724,7 +724,7 @@ var conds = where.GetWhereConditions();         // 拍平好的条件列表
 
 ---
 
-## 二十一、T149 同步上游 5.4 第二/三档全部剩余缺口（rc3）
+## 二十一、T149 同步上游 5.4 第二/三档全部剩余缺口（并入 rc2）
 
 > 上游 5.4 正式版剩余能力清仓：PG/MySQL DDL 族、ClickHouse、BigQuery、DuckDB、三元表达式、MATCH_RECOGNIZE、模型结构化。
 

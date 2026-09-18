@@ -35,10 +35,10 @@ Console.WriteLine(stmt.ToString());
 ## 安装
 
 ```xml
-<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-rc3" />
+<PackageReference Include="Azrng.JSqlParser" Version="1.0.0-rc2" />
 ```
 
-或 `dotnet add package Azrng.JSqlParser --version 1.0.0-rc3`
+或 `dotnet add package Azrng.JSqlParser --version 1.0.0-rc2`
 
 **依赖项：**
 - `Antlr4.Runtime.Standard` 4.13.1
@@ -240,7 +240,7 @@ Console.WriteLine(stmt.ToString());
 
 ## 版本历史
 
-当前版本为 `1.0.0-rc3`。
+当前版本为 `1.0.0-rc2`。
 
 完整版本变更记录请查看 [CHANGELOG.md](https://github.com/azrng/nuget-packages/blob/master/src/Shared/Azrng.JSqlParser/CHANGELOG.md)。
 
