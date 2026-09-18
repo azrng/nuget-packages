@@ -1,7 +1,7 @@
 ---
 rule_id: agents-root
-version: 1.12.0
-last_updated: 2026-08-14
+version: 1.13.0
+last_updated: 2026-09-18
 dependencies: []
 ---
 
@@ -158,6 +158,13 @@ dependencies: []
 
 ### 文档同步要求
 - 命令、脚本、环境变量、启动方式、数据结构或对外接口约定发生变化时，必须同步更新相关文档；同步范围与目录细则见 `doc-AGENTS.md`「文档更新要求」
+
+### NuGet 包变更记录
+- NuGet 包目录下的 `README.md` 只保留项目定位、安装方式、主要用法和当前版本的简要变更；当版本历史持续增长、明显影响使用说明阅读时，将历史记录迁移到同目录的 `CHANGELOG.md`。
+- `CHANGELOG.md` 按版本号倒序维护，每个版本独立成节；迁移既有历史时保留原有条目，不因文档拆分改写发布事实。
+- README 中指向变更记录的链接使用绝对 GitHub HTTPS 地址，确保 NuGet 页面渲染后可以直接访问仓库中的 `CHANGELOG.md`。
+- 保持项目文件的 `<PackageReadmeFile>` 指向 `README.md`；`PackageProjectUrl` 继续指向项目文档入口，`RepositoryUrl` 继续指向代码仓库，不用变更记录替代 NuGet 首页说明或项目主页。
+- 拆分或新增版本记录后，至少核对 README 链接、CHANGELOG 最新版本、README 安装示例与 csproj `<Version>` 一致；文档改动按文档规则重新读取并检查 UTF-8，涉及打包链路时补一次 `dotnet pack` 等价验证。
 
 ---
 
