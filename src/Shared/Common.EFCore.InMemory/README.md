@@ -8,6 +8,9 @@ services.AddEntityFramework();
 
 ### 版本更新记录
 
+* 1.6.1
+  * 使用 `Azrng.Core.Helpers.Snowflake` 配置 WorkerId 并生成实体 ID
+
 * 1.5.0
   * 支持.Net10
 * 1.4.1

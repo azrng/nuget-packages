@@ -963,6 +963,10 @@ public IResultModel<bool> Save()
 
 ## 📝 版本更新记录
 
+### 1.20.1
+- Snowflake 新增 WorkerId 配置、范围校验和生成后的切换保护
+- 补充雪花 ID 并发唯一性、序列号边界和时间类型测试
+
 ### 1.20.0
 - 新增 `UnauthorizedException`（ErrorCode 401），表示未认证（未登录或凭证无效），与 `ForbiddenException`（403，已认证但无权限）区分
 

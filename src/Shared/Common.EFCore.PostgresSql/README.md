@@ -36,6 +36,9 @@ builder.Logging.AddConsole();
 
 #### 版本更新记录
 
+* 1.7.2
+  * 使用 `Azrng.Core.Helpers.Snowflake` 配置 WorkerId 并生成实体 ID
+
 * 1.7.1
   * 修复 DbContextOptions 创建时重复创建 ConsoleLoggerProvider 的资源泄漏风险，SQL 日志输出改由宿主应用 Logging 配置控制
 * 1.6.0

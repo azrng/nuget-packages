@@ -642,6 +642,12 @@ catch
 
 ## 版本更新记录
 
+### 1.7.1
+
+- 使用 `Azrng.Core.Helpers.Snowflake` 替代 `IdHelper` 生成实体 ID
+- 移除 `IdHelper` 包依赖，保留 `AddIdHelper` 注册 API 兼容现有调用
+- 增加 WorkerId、实体主键和 Provider 注册链路测试
+
 ### 1.6.2
 
 - 新增显式事务作用域支持：

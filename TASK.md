@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T151 | Common.EFCore 系列包版本升级 | 将本次 Snowflake 替换涉及的 Azrng.Core、Common.EFCore 及五个 Provider 各升级一个补丁版本，并同步 README 版本记录与打包验证 | 阶段 2 | Codex | DONE | P1 | 2026-09-22 |
 | T150 | Common.EFCore 使用 Azrng.Core Snowflake 替换 IdHelper | 移除 Common.EFCore 的 IdHelper 依赖，补齐 Snowflake WorkerId 配置与边界能力，替换各 Provider 和实体生成链路，增加单元测试并记录历史 ID 纪元兼容风险 | 阶段 2 | Codex | DONE | P1 | 2026-09-22 |
 | T149 | Azrng.JSqlParser 同步上游 5.4 第二/三档全部缺口 | 清完基线 e847e94b 剩余能力：PG/MySQL DDL 族（USER/ROLE/DOMAIN/EXTENSION/PUBLICATION/SUBSCRIPTION/TRIGGER/EVENT/DO 块/COMMENT 多目标）、ClickHouse（ARRAY JOIN/WITH FILL/INTERPOLATE/COLUMNS 变换）、BigQuery（UNNEST WITH OFFSET/EXPORT·LOAD DATA/ASSERT）、DuckDB（ANTI JOIN/COPY/ATTACH/PRAGMA/MACRO）、三元 ?:、MATCH_RECOGNIZE、IntervalQualifier/Precision 结构化，，与 T148 同发 1.0.0-rc2 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
 | T148 | Azrng.JSqlParser 同步上游 5.4 第一档缺口（7 项） | 对齐基线更新至 tag jsqlparser-5.4（e847e94b）；实现 GROUPS 非保留字、CREATE INDEX INCLUDE、SET IDENTITY_INSERT/SET 布尔开关、MERGE NOT MATCHED BY TARGET/SOURCE、MERGE RETURNING、INSERT OVERRIDING USER VALUE、递归 CTE CYCLE，补 round-trip 测试并发 1.0.0-rc2 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
