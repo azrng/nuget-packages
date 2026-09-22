@@ -79,7 +79,7 @@ IEntity (标记接口)
    ```csharp
    protected IdentityBaseEntity()
    {
-       Id = IdHelper.GetLongId(); // 使用雪花算法生成分布式ID
+       Id = Snowflake.NewId(); // 使用雪花算法生成分布式ID
    }
    ```
 
@@ -499,7 +499,10 @@ public class MultiDbService
 使用雪花算法（Snowflake）生成分布式唯一 ID：
 - 64位 Long 类型
 - 包含时间戳、机器ID、序列号
-- 通过 `IdHelper.GetLongId()` 生成
+- 通过 `Azrng.Core.Helpers.Snowflake.NewId()` 生成
+- 通过 `WorkId` 配置机器 ID，启动时由 `Snowflake.ConfigureWorkerId` 完成节点配置
+
+迁移兼容性：当前 Snowflake 时间纪元为 2018-03-15，而历史 `IdHelper 1.4.1` 使用 2010-11-04 01:42:54 UTC。已有 IdHelper 数据迁移到新版本前，必须单独评估时间解析和新旧 ID 数值碰撞风险。
 
 ### 5.2 PostgreSQL 优化
 

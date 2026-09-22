@@ -1,8 +1,8 @@
 using Azrng.Core.Model;
 using Azrng.EFCore;
+using Azrng.Core.Helpers;
 using Azrng.EFCore.PostgresSql;
 using Azrng.EFCore.PostgresSql.Repository;
-using Coldairarrow.Util;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
@@ -70,7 +70,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 dbContextOptionBuild?.Invoke(provider, options);
             });
 
-            new IdHelperBootstrapper().SetWorkderId(config.WorkId).Boot();
+            Snowflake.ConfigureWorkerId(config.WorkId);
 
             // 转发到 AddDbContext<T>() 注册的同一实例，确保 DbContext 和 T 在同一 Scope 内是同一个对象
             services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());
@@ -119,7 +119,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 dbContextOptionBuild?.Invoke(provider, options);
             });
 
-            new IdHelperBootstrapper().SetWorkderId(config.WorkId).Boot();
+            Snowflake.ConfigureWorkerId(config.WorkId);
 
             // 转发到 AddDbContextFactory<T>() 注册的同一实例
             services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());

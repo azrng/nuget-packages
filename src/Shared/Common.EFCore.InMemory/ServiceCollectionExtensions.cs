@@ -1,8 +1,8 @@
 ﻿using Azrng.Core.Model;
 using Azrng.EFCore;
+using Azrng.Core.Helpers;
 using Azrng.EFCore.InMemory;
 using Azrng.EFCore.InMemory.Repository;
-using Coldairarrow.Util;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -44,7 +44,7 @@ namespace Microsoft.Extensions.DependencyInjection
             EfCoreGlobalConfig.SetConfig(DatabaseType.InMemory, false);
             services.AddDbContext<T>(option => option.UseInMemoryDatabase(dataBaseName, builder));
 
-            new IdHelperBootstrapper().SetWorkderId(workId).Boot();
+            Snowflake.ConfigureWorkerId(workId);
 
             // 转发到 AddDbContext<T>() 注册的同一实例，确保 DbContext 和 T 在同一 Scope 内是同一个对象
             services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());
@@ -70,7 +70,7 @@ namespace Microsoft.Extensions.DependencyInjection
             EfCoreGlobalConfig.SetConfig(DatabaseType.InMemory, false);
             services.AddDbContextFactory<T>(option => option.UseInMemoryDatabase(dataBaseName, builder));
 
-            new IdHelperBootstrapper().SetWorkderId(workId).Boot();
+            Snowflake.ConfigureWorkerId(workId);
 
             // 转发到 AddDbContextFactory<T>() 注册的同一实例
             services.AddScoped<DbContext>(sp => sp.GetRequiredService<T>());

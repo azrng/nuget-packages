@@ -1,4 +1,4 @@
-﻿using Coldairarrow.Util;
+using Azrng.Core.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,7 +18,7 @@ namespace Azrng.EFCore
         /// <returns></returns>
         public static IServiceCollection AddIdHelper(this IServiceCollection services, int workId = 1)
         {
-            new IdHelperBootstrapper().SetWorkderId(workId).Boot();
+            Snowflake.ConfigureWorkerId(workId);
             return services;
         }
 

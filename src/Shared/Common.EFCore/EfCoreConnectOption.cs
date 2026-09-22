@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Azrng.Core.Helpers;
+using System;
 
 namespace Azrng.EFCore
 {
@@ -15,7 +16,7 @@ namespace Azrng.EFCore
         /// <summary>
         /// 机器ID(生成标识ID使用)
         /// </summary>
-        public int WorkId { get; set; } = new Random().Next(1, 1024);
+        public int WorkId { get; set; } = Snowflake.WorkerId;
 
         /// <summary>
         /// 是否蛇形命名

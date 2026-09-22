@@ -10,7 +10,7 @@
 - **Unit of Work 模式** - 统一管理事务和数据库操作
 - **多 DbContext 支持** - 可在同一应用中使用多个数据库上下文
 - **实体基类** - 提供常用的基础实体类型（带主键、审计字段等）
-- **ID 生成策略** - 集成分布式 ID 生成器（IdHelper）
+- **ID 生成策略** - 使用 `Azrng.Core.Helpers.Snowflake` 生成分布式 ID
 - **PostgreSQL 优化** - 针对 PostgreSQL 的专门支持和优化
 - **条件批量更新** - .NET 10+ 支持条件属性更新
 - **原生 SQL 支持** - 支持执行任意 SQL 查询
@@ -45,8 +45,8 @@ dotnet add package Common.EFCore.PostgreSQL
 在 `Startup.cs` 或 `Program.cs` 中配置服务：
 
 ```csharp
-// 配置自增ID生成器
-services.AddAutoGenerationId();
+// 配置雪花ID生成器
+services.AddIdHelper(1);
 
 // 配置 EF Core 和 DbContext
 builder.Services.AddEntityFramework<OpenDbContext>(config =>
@@ -529,8 +529,14 @@ var (items, totalCount) = await query.ToPageListAsync(1, 20);
 |---------------------|--------|----------|----------------------|
 | `ConnectionString`  | string | -        | 数据库连接字符串             |
 | `Schema`            | string | "public" | PostgreSQL Schema 名称 |
-| `WorkId`            | int    | 0        | 机器ID，用于分布式ID生成       |
+| `WorkId`            | int    | 随机值   | 机器ID，用于分布式ID生成（0~1023） |
 | `IsSnakeCaseNaming` | bool   | false    | 是否使用蛇形命名             |
+
+### ID 迁移兼容性
+
+当前版本使用 `Azrng.Core.Helpers.Snowflake` 生成 ID，其时间纪元为 2018-03-15；`IdHelper 1.4.1` 使用的时间纪元为 2010-11-04 01:42:54 UTC。两者生成的历史 ID 不能按同一时间规则解析，并且在现行日期范围内存在时间戳字段重叠的可能。
+
+如果数据库已经使用过 `IdHelper` 生成 ID，升级前请先完成历史数据盘点和碰撞评估；不要在未验证的情况下直接让新旧生成器使用相同的 WorkerId 写入同一张表。
 
 ## 常见问题
 

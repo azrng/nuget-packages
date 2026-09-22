@@ -42,9 +42,20 @@ namespace Azrng.Core.Helpers
         private static DateTime StartTimestamp { get; } = new DateTime(2018, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
         /// <summary>
-        /// 机器Id，取10位
+        /// 当前机器Id，范围为0~1023。首次生成Id时未配置则自动生成。
         /// </summary>
-        private static int WorkerId { get; set; }
+        public static int WorkerId
+        {
+            get
+            {
+                Init();
+                return _workerId!.Value;
+            }
+        }
+
+        private static int? _workerId;
+
+        private static bool _hasGeneratedId;
 
         /// <summary>
         /// 当前序列
@@ -67,17 +78,40 @@ namespace Azrng.Core.Helpers
 
         #region 核心方法
 
+        /// <summary>
+        /// 配置机器Id。应在首次生成Id前调用。
+        /// </summary>
+        /// <param name="workerId">机器Id，范围为0~1023。</param>
+        /// <exception cref="ArgumentOutOfRangeException">机器Id超出范围。</exception>
+        /// <exception cref="InvalidOperationException">已经使用其他机器Id生成过Id。</exception>
+        public static void ConfigureWorkerId(int workerId)
+        {
+            if (workerId < 0 || workerId > WorkerIdMask)
+                throw new ArgumentOutOfRangeException(nameof(workerId), "机器Id必须在0到1023之间。");
+
+            lock (SyncRoot)
+            {
+                if (_hasGeneratedId && _workerId != workerId)
+                {
+                    throw new InvalidOperationException(
+                        "雪花Id已经生成，不能切换机器Id。请在首次生成Id前完成配置。");
+                }
+
+                _workerId = workerId;
+            }
+        }
+
         private static void Init()
         {
             lock (SyncRoot)
             {
                 // 初始化WorkerId，取5位实例加上5位进程，确保同一台机器的WorkerId不同
-                if (WorkerId <= 0)
+                if (!_workerId.HasValue)
                 {
                     var nodeId = Next(1, 1024);
                     var pid = Process.GetCurrentProcess().Id;
                     var tid = Thread.CurrentThread.ManagedThreadId;
-                    WorkerId = (nodeId & 0x1F) << 5 | (pid ^ tid) & 0x1F;
+                    _workerId = (nodeId & 0x1F) << 5 | (pid ^ tid) & 0x1F;
                 }
 
                 // 记录此时距离起点的毫秒数以及开机嘀嗒数
@@ -120,7 +154,9 @@ namespace Azrng.Core.Helpers
                     * 而毫秒内的顺序，重要性不大。
                     */
 
-                return CreateId(ms, wid, seq);
+                var id = CreateId(ms, wid, seq);
+                _hasGeneratedId = true;
+                return id;
             }
         }
 
@@ -146,7 +182,9 @@ namespace Azrng.Core.Helpers
                 var wid = WorkerId & WorkerIdMask;
                 var seq = ++_sequence & SequenceMask;
 
-                return CreateId(ms, wid, seq);
+                var id = CreateId(ms, wid, seq);
+                _hasGeneratedId = true;
+                return id;
             }
         }
 

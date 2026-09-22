@@ -22,10 +22,6 @@
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="IdHelper" Version="1.4.1"/>
-    </ItemGroup>
-
     <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.0"/>
     </ItemGroup>

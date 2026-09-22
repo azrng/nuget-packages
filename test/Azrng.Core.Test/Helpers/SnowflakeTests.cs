@@ -6,6 +6,13 @@ namespace Azrng.Core.Test.Helpers;
 
 public class SnowflakeTests
 {
+    private const int ConfiguredWorkerId = 37;
+
+    static SnowflakeTests()
+    {
+        Snowflake.ConfigureWorkerId(ConfiguredWorkerId);
+    }
+
     [Fact]
     public void NewId_ShouldGenerateDifferentValues()
     {
@@ -13,6 +20,37 @@ public class SnowflakeTests
         var id2 = Snowflake.NewId();
 
         id2.Should().NotBe(id1);
+    }
+
+    [Fact]
+    public void ConfigureWorkerId_ShouldEncodeConfiguredWorkerId()
+    {
+        var id = Snowflake.NewId();
+
+        Snowflake.TryParse(id, out _, out var workerId, out _).Should().BeTrue();
+        workerId.Should().Be(ConfiguredWorkerId);
+        Snowflake.WorkerId.Should().Be(ConfiguredWorkerId);
+    }
+
+    [Fact]
+    public void ConfigureWorkerId_ShouldRejectOutOfRangeValues()
+    {
+        var belowMinimum = () => Snowflake.ConfigureWorkerId(-1);
+        var aboveMaximum = () => Snowflake.ConfigureWorkerId(1024);
+
+        belowMinimum.Should().Throw<ArgumentOutOfRangeException>();
+        aboveMaximum.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void ConfigureWorkerId_ShouldNotAllowChangingAfterIdGeneration()
+    {
+        Snowflake.NewId();
+
+        var action = () => Snowflake.ConfigureWorkerId(ConfiguredWorkerId + 1);
+
+        action.Should().Throw<InvalidOperationException>();
+        Snowflake.ConfigureWorkerId(ConfiguredWorkerId);
     }
 
     [Fact]
@@ -64,6 +102,28 @@ public class SnowflakeTests
     }
 
     [Fact]
+    public void NewId_WithLocalTime_ShouldRoundTripAsUtc()
+    {
+        var localTime = new DateTime(2024, 1, 1, 8, 0, 0, 123, DateTimeKind.Local);
+
+        var id = Snowflake.NewId(localTime);
+
+        Snowflake.TryParse(id, out var parsedTime, out _, out _).Should().BeTrue();
+        parsedTime.Should().Be(localTime.ToUniversalTime());
+    }
+
+    [Fact]
+    public void NewId_WithUnspecifiedTime_ShouldTreatTimeAsUtc()
+    {
+        var unspecifiedTime = new DateTime(2024, 1, 1, 0, 0, 0, 123, DateTimeKind.Unspecified);
+
+        var id = Snowflake.NewId(unspecifiedTime);
+
+        Snowflake.TryParse(id, out var parsedTime, out _, out _).Should().BeTrue();
+        parsedTime.Should().Be(DateTime.SpecifyKind(unspecifiedTime, DateTimeKind.Utc));
+    }
+
+    [Fact]
     public void NewId_WithSpecifiedTime_ShouldGenerateUniqueValuesConcurrently()
     {
         var time = new DateTime(2024, 1, 1, 0, 0, 0, 123, DateTimeKind.Utc);
@@ -78,6 +138,37 @@ public class SnowflakeTests
         {
             Snowflake.TryParse(id, out var parsedTime, out _, out _).Should().BeTrue();
             parsedTime.Should().Be(time);
+        }
+    }
+
+    [Fact]
+    public void NewId_ShouldRemainUniqueWhenSequenceRollsOver()
+    {
+        var ids = Enumerable.Range(0, 5000)
+            .AsParallel()
+            .Select(_ => Snowflake.NewId())
+            .ToArray();
+
+        ids.Distinct().Should().HaveCount(ids.Length);
+    }
+
+    [Fact]
+    public void NewId_WithSpecifiedTime_ShouldUseAllSequenceValuesWithoutDuplicates()
+    {
+        var time = new DateTime(2024, 1, 1, 0, 0, 0, 123, DateTimeKind.Utc);
+
+        var ids = Enumerable.Range(0, 1 << 12)
+            .AsParallel()
+            .Select(_ => Snowflake.NewId(time))
+            .ToArray();
+
+        ids.Distinct().Should().HaveCount(ids.Length);
+        foreach (var id in ids)
+        {
+            Snowflake.TryParse(id, out var parsedTime, out var workerId, out var sequence).Should().BeTrue();
+            parsedTime.Should().Be(time);
+            workerId.Should().Be(ConfiguredWorkerId);
+            sequence.Should().BeInRange(0, 4095);
         }
     }
 

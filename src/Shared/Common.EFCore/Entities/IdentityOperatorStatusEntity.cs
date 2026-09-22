@@ -1,4 +1,4 @@
-﻿using Coldairarrow.Util;
+﻿using Azrng.Core.Helpers;
 using System;
 
 namespace Azrng.EFCore.Entities
@@ -10,7 +10,7 @@ namespace Azrng.EFCore.Entities
     {
         public IdentityOperatorStatusEntity()
         {
-            Id = IdHelper.GetLongId();
+            Id = Snowflake.NewId();
         }
     }
 
