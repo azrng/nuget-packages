@@ -12,7 +12,6 @@
 | T148 | Azrng.JSqlParser 同步上游 5.4 第一档缺口（7 项） | 对齐基线更新至 tag jsqlparser-5.4（e847e94b）；实现 GROUPS 非保留字、CREATE INDEX INCLUDE、SET IDENTITY_INSERT/SET 布尔开关、MERGE NOT MATCHED BY TARGET/SOURCE、MERGE RETURNING、INSERT OVERRIDING USER VALUE、递归 CTE CYCLE，补 round-trip 测试并发 1.0.0-rc2 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
 | T147 | 精简根 AGENTS 规则 | 删除重复章节，将模型行为约束与最终输出要求合并到现有流程规则，保留任务、交付和编码约束 | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |
 | T146 | Azrng.JSqlParser 拆分版本变更记录 | 将 README 中的完整版本历史迁移至 CHANGELOG.md，README 保留入口说明并提供 GitHub 变更记录链接，并将拆分规则固化到根 AGENTS.md | 阶段 2 | Codex | DONE | P2 | 2026-09-18 |
-| T145 | Common.HttpClients 版本升级至 4.1.0 | 发布前将包版本、安装示例和版本记录统一升级至 4.1.0，纳入响应 JSON 属性大小写配置 | 阶段 2 | Codex | DOING | P1 | 2026-09-16 |
 | T144 | Common.HttpClients 响应属性大小写配置 | 通过 `HttpClientOptions.PropertyNameCaseInsensitive` 控制响应 JSON 属性匹配，默认忽略大小写；补齐反序列化回归测试与 README 配置说明 | 阶段 2 | Codex | DONE | P1 | 2026-09-16 |
 | T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 阶段 1 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T107 | Azrng.JSqlParser 支持 @ 命名参数及 ANY 数组参数 | 保留 @name 参数名，并支持 PostgreSQL `ANY/ALL/SOME` 接收命名数组参数、数组表达式或子查询，补测试并产出新版包 | 阶段 2 | Codex | DONE | P1 | 2026-08-20 |
@@ -36,10 +35,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T152 | Azrng.NmcWeather 版本升级至 1.1.1 | DONE | 2026-09-22 |
+| T145 | Common.HttpClients 4.1.0 转正 | DONE | 2026-09-22 |
 | T143 | Common.HttpClients 代码审查问题修复（5 项） | DONE | 2026-09-11 |
 | T142 | Common.HttpClients 4.0.0 正式收编 + 去共享框架强依赖 | DONE | 2026-09-11 |
 | T141 | README 版本历史恢复原样（移除 rc1 段） | DONE | 2026-08-21 |
-| T140 | Azrng.JSqlParser 版本升至 1.0.0-rc1 | DONE | 2026-08-21 |
-| T139 | 撤回 T138 版本号收敛（beta10~12 实际均已发布） | DONE | 2026-08-21 |
 
 文件结束。

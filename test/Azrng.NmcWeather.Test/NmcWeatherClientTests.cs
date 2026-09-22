@@ -18,10 +18,9 @@ public class NmcWeatherClientTests
         {
             mock.Setup(helper => helper.GetAsync<NmcWeatherEnvelope>(
                     $"{BaseUrl}/rest/weather?stationid=54433",
-                    string.Empty,
                     null,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expected);
+                .ReturnsAsync(IHttpHelperMockExtensions.CreateSuccessResult(expected));
         });
 
         var weather = await client.GetWeatherByCityCodeAsync("54433");
@@ -37,10 +36,9 @@ public class NmcWeatherClientTests
         {
             mock.Setup(helper => helper.GetAsync<NmcWeatherEnvelope>(
                     $"{BaseUrl}/rest/weather?stationid=Wqsps",
-                    string.Empty,
                     null,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expected);
+                .ReturnsAsync(IHttpHelperMockExtensions.CreateSuccessResult(expected));
         });
 
         var weather = await client.GetWeatherByCityCodeAsync("Wqsps");
@@ -67,10 +65,9 @@ public class NmcWeatherClientTests
         {
             mock.Setup(helper => helper.GetAsync<NmcWeatherEnvelope>(
                     $"{BaseUrl}/rest/weather?stationid=54433",
-                    string.Empty,
                     null,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync((NmcWeatherEnvelope?)null);
+                .ReturnsAsync(IHttpHelperMockExtensions.CreateSuccessResult<NmcWeatherEnvelope>(null));
         });
 
         var weather = await client.GetWeatherByCityCodeAsync("54433");

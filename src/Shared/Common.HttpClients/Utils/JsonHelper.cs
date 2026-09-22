@@ -1,53 +1,125 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
+using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Common.HttpClients.Utils
 {
     /// <summary>
-    /// JSON序列化和反序列化辅助类
+    /// JSON序列化和反序列化辅助类（基于 System.Text.Json），按命名策略缓存 JsonSerializerOptions
     /// </summary>
     internal static class JsonHelper
     {
-        /// <summary>
-        /// 共享的JSON序列化配置，避免重复创建
-        /// </summary>
-        private static readonly JsonSerializerSettings Settings = CreateSettings();
+        private static readonly ConcurrentDictionary<(JsonNamingPolicyType NamingPolicy, bool PropertyNameCaseInsensitive),
+            (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize)> OptionsCache = new();
 
         /// <summary>
-        /// 将对象序列化为JSON字符串（使用驼峰命名）
+        /// 将对象序列化为JSON字符串
         /// </summary>
-        /// <param name="obj">要序列化的对象</param>
-        /// <returns>JSON字符串</returns>
-        public static string ToJson(object obj)
+        public static string ToJson(object obj, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase)
         {
-            return JsonConvert.SerializeObject(obj, Settings);
+            var (serialize, _) = GetOptions(namingPolicy, true);
+            return JsonSerializer.Serialize(obj, serialize);
         }
 
         /// <summary>
         /// 将JSON字符串反序列化为对象
         /// </summary>
-        /// <typeparam name="T">目标类型</typeparam>
-        /// <param name="json">JSON字符串</param>
-        /// <returns>反序列化的对象，输入为null时返回default(T)</returns>
-        public static T ToObject<T>(string json)
+        public static T? ToObject<T>(string? json, JsonNamingPolicyType namingPolicy = JsonNamingPolicyType.CamelCase,
+                                     bool propertyNameCaseInsensitive = true)
         {
-            return json == null ? default : JsonConvert.DeserializeObject<T>(json);
+            if (json == null)
+            {
+                return default;
+            }
+
+            var (_, deserialize) = GetOptions(namingPolicy, propertyNameCaseInsensitive);
+            return JsonSerializer.Deserialize<T>(json, deserialize);
         }
 
-        /// <summary>
-        /// 创建JSON序列化配置
-        /// </summary>
-        /// <returns>配置好的JsonSerializerSettings实例</returns>
-        private static JsonSerializerSettings CreateSettings()
+        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) GetOptions(
+            JsonNamingPolicyType namingPolicy, bool propertyNameCaseInsensitive)
         {
-            var settings = new JsonSerializerSettings
+            return OptionsCache.GetOrAdd((namingPolicy, propertyNameCaseInsensitive), key =>
+                BuildOptions(key.NamingPolicy, key.PropertyNameCaseInsensitive));
+        }
+
+        private static (JsonSerializerOptions Serialize, JsonSerializerOptions Deserialize) BuildOptions(
+            JsonNamingPolicyType namingPolicy, bool propertyNameCaseInsensitive)
+        {
+            JsonNamingPolicy? policy = namingPolicy switch
             {
-                Formatting = Formatting.None,
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                JsonNamingPolicyType.CamelCase => JsonNamingPolicy.CamelCase,
+                JsonNamingPolicyType.PascalCase => PascalCaseNamingPolicy.Instance,
+                JsonNamingPolicyType.SnakeCaseLower => SnakeCaseLowerNamingPolicy.Instance,
+                _ => null
             };
-            settings.Converters.Add(new IsoDateTimeConverter { DateTimeFormat = "yyyy-MM-dd HH:mm:ss" });
-            return settings;
+
+            var serialize = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = policy,
+                DictionaryKeyPolicy = policy,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+                WriteIndented = false
+            };
+
+            var deserialize = new JsonSerializerOptions(serialize);
+            deserialize.PropertyNameCaseInsensitive = propertyNameCaseInsensitive;
+            deserialize.Converters.Add(new JsonStringEnumConverter());
+
+            return (serialize, deserialize);
+        }
+    }
+
+    /// <summary>
+    /// 帕斯卡命名策略：首字母大写（net6/7 无内置，统一自定义实现）
+    /// </summary>
+    internal sealed class PascalCaseNamingPolicy : JsonNamingPolicy
+    {
+        public static readonly PascalCaseNamingPolicy Instance = new();
+
+        public override string ConvertName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
+            return char.ToUpperInvariant(name[0]) + name.Substring(1);
+        }
+    }
+
+    /// <summary>
+    /// 小写下划线命名策略：大小写边界插入下划线并转小写（net6/7 无内置，统一自定义实现）
+    /// </summary>
+    internal sealed class SnakeCaseLowerNamingPolicy : JsonNamingPolicy
+    {
+        public static readonly SnakeCaseLowerNamingPolicy Instance = new();
+
+        public override string ConvertName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
+            var sb = new StringBuilder(name.Length + 4);
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                if (i > 0 && char.IsUpper(c))
+                {
+                    sb.Append('_');
+                }
+
+                sb.Append(char.ToLowerInvariant(c));
+            }
+
+            return sb.ToString();
         }
     }
 }

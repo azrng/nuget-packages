@@ -13,7 +13,6 @@
     <Project Path="src\Shared\Common.Windows.Core\Common.Windows.Core.csproj" />
   </Folder>
   <Folder Name="/Shared/Http/">
-    <Project Path="src/Shared/Common.HttpClients.Next/Common.HttpClients.Next.csproj" />
     <Project Path="src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
     <Project Path="src\Shared\Common.RestSharpClient\Common.RestSharpClient.csproj" />
   </Folder>
@@ -29,7 +28,6 @@
     <Project Path="test\Common.Core.Test\Common.Core.Test.csproj" />
   </Folder>
   <Folder Name="/Test/Http/">
-    <Project Path="test\Common.HttpClients.Test\Common.HttpClients.Test.csproj" />
     <Project Path="test/Common.HttpClients.Next.Test/Common.HttpClients.Next.Test.csproj" />
     <Project Path="test\Common.RestSharpClient.Test\Common.RestSharpClient.Test.csproj" />
   </Folder>

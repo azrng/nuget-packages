@@ -1,3 +1,6 @@
+using Azrng.NmcWeather.Serialization;
+using System.Text.Json.Serialization;
+
 namespace Azrng.NmcWeather.Models;
 
 /// <summary>
@@ -18,5 +21,6 @@ public class NmcForecastWeather
     /// <summary>
     /// 预报温度（摄氏度）。
     /// </summary>
+    [JsonConverter(typeof(NmcStringValueConverter))]
     public string? Temperature { get; set; }
 }

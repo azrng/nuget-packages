@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Shared\Common.HttpClients.Next\Common.HttpClients.Next.csproj" />
+        <ProjectReference Include="..\..\src\Shared\Common.HttpClients\Common.HttpClients.csproj" />
     </ItemGroup>
 
 </Project>

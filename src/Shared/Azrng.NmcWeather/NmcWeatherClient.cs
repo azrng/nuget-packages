@@ -28,9 +28,11 @@ public class NmcWeatherClient : INmcWeatherClient
     public async Task<NmcWeatherEnvelope?> GetWeatherByCityCodeAsync(string cityCode, CancellationToken cancellationToken = default)
     {
         var normalizedCode = NmcClientArgumentHelper.NormalizeRequiredCityCode(cityCode, nameof(cityCode));
-        return await _httpHelper
+        var result = await _httpHelper
             .GetAsync<NmcWeatherEnvelope>(BuildWeatherUrl(normalizedCode), cancellation: cancellationToken)
             .ConfigureAwait(false);
+
+        return result.Data;
     }
 
     /// <summary>

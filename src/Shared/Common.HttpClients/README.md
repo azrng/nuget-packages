@@ -1,27 +1,41 @@
 # Common.HttpClients
 
-一个功能丰富的HTTP客户端库，基于 Microsoft.Extensions.Http.Resilience 和 Polly，提供强大的弹性和韧性功能。
+> 基于 Microsoft.Extensions.Http.Resilience 和 Polly 的 HTTP 客户端库，所有方法返回 `IHttpResult<T>` 结构化结果
 
 ## 主要特性
 
-- 🚀 高性能HTTP客户端
-- 📝 智能日志记录和审计（包含请求前后日志）
-- ⚙️ 灵活的配置管理（支持运行时验证）
-- 🔒 请求/响应拦截
-- 📊 响应内容长度控制
-- 🎯 请求级别的日志控制
-- 🔄 异常或超时自动重试（支持自定义超时时间、重试次数、延迟）
-- 🛡️ 完整的 Polly 弹性策略（降级、并发限制、重试、熔断器、超时）
-- 🔍 分布式追踪支持（X-Trace-Id 自动传播）
-- 🔐 支持忽略不安全的SSL证书（仅建议开发/测试环境使用）
-- ⚡ 401未授权错误可配置重试
-- 🔏 可扩展的日志脱敏（支持自定义敏感头和字段）
+- 所有请求方法返回 `IHttpResult<T>`，包含 `IsSuccess`、`Data`、`ErrorMessage`、`StatusCode`、`RawBody` 等结构化信息；失败统一返回失败结果，需要抛异常可调 `EnsureSuccess()`
+- **统一请求签名**：查询参数与请求头收拢到 `HttpSendOptions`，所有动词方法参数顺序一致，告别"GET 的 query 在第 2 位、POST 的 query 在第 3 位"的记忆负担
+- **多值请求头 `HttpHeaders`**：单值用索引器直接赋字符串，多值用 `Add` 追加，支持多个 `Accept`/`Set-Cookie` 等同名头
+- **可配置 JSON 命名策略**：`JsonNamingPolicy` 支持 CamelCase / PascalCase / SnakeCaseLower / None，适配不同后端字段约定（默认 CamelCase）
+- **大小写不敏感响应匹配**：响应 JSON 属性名默认忽略大小写，可通过 `PropertyNameCaseInsensitive` 关闭
+- 支持通过匿名对象、`IDictionary<string, string>`、`NameValueCollection` 自动构建 URL 查询参数
+- 内置文件下载方法 `DownloadFileAsync`
+- `CreateBearerHeaders` 辅助方法自动构造 Bearer Token 头
+- 智能日志记录和审计（包含请求前后日志）
+- 完整的 Polly 弹性策略（降级、并发限制、重试、熔断器、超时）
+- 分布式追踪支持（X-Trace-Id 自动传播）
+- 可扩展的日志脱敏（支持自定义敏感头和字段）
 
 ## 安装
 
 ```bash
-dotnet add package Common.HttpClients
+dotnet add package Common.HttpClients --version 4.1.0
 ```
+
+## 项目结构
+
+```text
+Common.HttpClients/
+├── Abstractions/        # 接口与抽象类型（IHttpHelper、IHttpResult、HttpClientOptions、HttpSendOptions、HttpHeaders 等）
+├── Client/              # IHttpHelper 默认实现（HttpClientHelper、HttpHelperFactory、HttpResult）
+├── Extensions/          # DI 扩展（AddHttpClientService）、HttpHelperExtensions（CreateBearerHeaders / EnsureSuccess）
+├── Internal/            # 内部常量（HTTP 头名称、请求选项键）
+├── Logging/             # 审计日志处理器与默认脱敏器
+└── Utils/               # JSON 序列化、查询字符串构建等工具
+```
+
+> 所有类型统一位于 `Common.HttpClients` 命名空间，文件夹仅用于按职责组织源码。
 
 ## 快速开始
 
@@ -36,27 +50,52 @@ services.AddHttpClientService(options =>
 {
     options.AuditLog = true;                        // 启用审计日志
     options.EnableLogRedaction = true;              // 启用日志脱敏
-    options.FailThrowException = false;              // 失败时不抛出异常，返回 null
-    options.Timeout = 30;                            // 自定义超时时间（秒），范围：1-3600
-    options.MaxRetryAttempts = 3;                    // 最大重试次数，范围：0-10
-    options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒），范围：1-300
-    options.ConcurrencyLimit = 100;                  // 并发限制，范围：1-10000
-    options.MaxRequestBodyLength = 4096;             // 请求体日志默认保留 4KB
-    options.MaxOutputResponseLength = 4096;          // 响应体日志默认保留 4KB
-    options.IgnoreUntrustedCertificate = false;      // ⚠️ 生产环境建议设为 false
-    options.RetryOnUnauthorized = true;              // 401未授权错误时自动重试
-    options.AdditionalSensitiveHeaders = new[] { "X-Secret" }; // 额外脱敏请求头
-    options.AdditionalSensitiveFields = new[] { "mobile" };    // 额外脱敏字段
+    options.Timeout = 30;                            // 超时时间（秒）
+    options.MaxRetryAttempts = 3;                    // 最大重试次数
+    options.RetryDelaySeconds = 1;                   // 重试基础延迟（秒）
+    options.ConcurrencyLimit = 100;                  // 并发限制
+    options.JsonNamingPolicy = JsonNamingPolicyType.CamelCase; // JSON 命名策略（默认 CamelCase）
+    options.PropertyNameCaseInsensitive = true;      // 响应属性名匹配忽略大小写（默认 true）
 });
-
-// ⚠️ 无效配置将抛出异常
-// services.AddHttpClientService(options =>
-// {
-//     options.Timeout = 5000; // ❌ ArgumentOutOfRangeException: Timeout必须在1-3600秒之间
-// });
 ```
 
-### 2. 使用HTTP客户端
+### 命名客户端与 IHttpHelperFactory（多服务 / 多 BaseAddress）
+
+需要同时对接多个服务端、或为不同服务配置不同弹性策略时，使用命名重载按名注册：
+
+```csharp
+services.AddHttpClientService("user-api", options =>
+{
+    options.BaseAddress = "https://user.example.com/";
+});
+
+services.AddHttpClientService("order-api", options =>
+{
+    options.BaseAddress = "https://order.example.com/";
+    options.Timeout = 10;
+    options.MaxRetryAttempts = 5;
+});
+```
+
+注入 `IHttpHelperFactory`，按名取出对应的 `IHttpHelper`：
+
+```csharp
+public class MyService(IHttpHelperFactory factory)
+{
+    private readonly IHttpHelper _userApi = factory.CreateClient("user-api");
+    private readonly IHttpHelper _orderApi = factory.CreateClient("order-api");
+
+    public async Task RunAsync()
+    {
+        var user = await _userApi.GetAsync<User>("api/users/1");
+        var order = await _orderApi.GetAsync<Order>("api/orders/1");
+    }
+}
+```
+
+> 注：命名重载 `AddHttpClientService(name, configure)` 仅注册命名客户端；若需要默认的 `IHttpHelper`（构造函数直接注入），使用无 name 的 `AddHttpClientService(options)` 或 `AddHttpClientService()` 重载，它们内部注册指向 `"default"` 的 `IHttpHelper`。
+
+### 2. 使用 HTTP 客户端
 
 ```csharp
 public class MyService
@@ -68,392 +107,393 @@ public class MyService
         _httpHelper = httpHelper;
     }
 
-    public async Task<string> GetDataAsync()
+    public async Task GetUserAsync()
     {
-        var result = await _httpHelper.GetAsync<string>(Host + "/get?q1=11&q2=22");
+        var result = await _httpHelper.GetAsync<User>("https://api.example.com/users/1");
 
-        return result;
+        if (result.IsSuccess)
+        {
+            var user = result.Data;
+            Console.WriteLine($"Status: {result.StatusCode}");
+        }
+        else
+        {
+            Console.WriteLine($"Error: {result.ErrorMessage}");
+            Console.WriteLine($"Status: {result.StatusCode}");
+        }
     }
 }
+```
+
+## HttpSendOptions
+
+所有动词方法的查询参数与请求头都收拢到 `HttpSendOptions`，统一了参数顺序：
+
+```csharp
+public sealed class HttpSendOptions
+{
+    public object? Query { get; set; }   // 查询参数（匿名对象 / IDictionary / NameValueCollection）
+    public HttpHeaders? Headers { get; set; } // 请求头（支持同名多值，覆盖客户端默认头）
+}
+```
+
+```csharp
+var result = await _httpHelper.GetAsync<User>("https://api.example.com/users",
+    new HttpSendOptions
+    {
+        Query = new { page = 1, pageSize = 20 },
+        Headers = HttpHelperExtensions.CreateBearerHeaders("your-token")
+    });
+```
+
+## IHttpResult\<T\> 返回值
+
+所有请求方法返回 `IHttpResult<T>`，提供结构化的响应信息：
+
+```csharp
+public interface IHttpResult<T>
+{
+    bool IsSuccess { get; }           // 请求是否成功
+    T? Data { get; }                  // 反序列化后的响应数据
+    string? ErrorMessage { get; }     // 错误信息（失败时）
+    HttpStatusCode StatusCode { get; } // HTTP 状态码
+    string? RawBody { get; }          // 原始响应体
+    bool IsFallbackResponse { get; }  // 是否为 Polly 降级响应
+}
+```
+
+### 判断请求结果
+
+```csharp
+var result = await _httpHelper.GetAsync<User>(url);
+
+// 方式1：直接判断
+if (result.IsSuccess) { var user = result.Data; }
+
+// 方式2：检查状态码
+if (result.StatusCode == HttpStatusCode.NotFound) { /* 处理 404 */ }
+
+// 方式3：需要失败即抛异常的调用风格 —— 显式调用 EnsureSuccess()
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
+
+// 方式4：区分降级响应
+if (!result.IsSuccess && result.IsFallbackResponse) { /* Polly 降级响应（503） */ }
+```
+
+## 请求方法
+
+### GET 请求
+
+```csharp
+var result = await _httpHelper.GetAsync<User>("https://api.example.com/users/1");
+var result = await _httpHelper.GetAsync<string>("https://api.example.com/users/1"); // 返回原始响应体
+var result = await _httpHelper.GetStreamAsync("https://api.example.com/files/1");    // 文件流
+```
+
+### 查询参数
+
+通过 `HttpSendOptions.Query` 自动构建 URL 查询字符串，支持匿名对象、`IDictionary<string, string>`、`NameValueCollection`：
+
+```csharp
+var result = await _httpHelper.GetAsync<List<User>>(
+    "https://api.example.com/users",
+    new HttpSendOptions { Query = new { page = 1, pageSize = 20, keyword = "test" } });
+// => https://api.example.com/users?page=1&pageSize=20&keyword=test
+
+// 集合参数自动展开
+var result = await _httpHelper.GetAsync<string>(
+    "https://api.example.com/filter",
+    new HttpSendOptions { Query = new { ids = new[] { 1, 2, 3 } } });
+// => https://api.example.com/filter?ids=1&ids=2&ids=3
+```
+
+### POST 请求
+
+```csharp
+var result = await _httpHelper.PostAsync<User>("https://api.example.com/users", new { name = "张三", age = 25 });
+var result = await _httpHelper.PostAsync<string>("https://api.example.com/users", "{\"raw\":\"json\"}"); // 原样发送
+```
+
+### POST Form-Data
+
+```csharp
+var data = new Dictionary<string, string> { ["username"] = "admin", ["password"] = "123456" };
+var result = await _httpHelper.PostFormDataAsync<LoginResponse>("https://api.example.com/login", data);
+
+// 上传单个文件
+using var stream = File.OpenRead("photo.jpg");
+var result = await _httpHelper.PostFormDataAsync<UploadResponse>(
+    "https://api.example.com/upload", "file", stream, "photo.jpg");
+
+// 多文件/混合参数
+using var form = new MultipartFormDataContent();
+form.Add(new ByteArrayContent(fileBytes), "file", "document.pdf");
+var result = await _httpHelper.PostFormDataAsync<UploadResponse>("https://api.example.com/upload", form);
+```
+
+### PUT / PATCH / DELETE
+
+```csharp
+var result = await _httpHelper.PutAsync<User>("https://api.example.com/users/1", updatedUser);
+var result = await _httpHelper.PatchAsync<User>("https://api.example.com/users/1", new { name = "李四" });
+var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.com/users/1");
+var result = await _httpHelper.DeleteAsync<string>("https://api.example.com/users/1"); // 原始响应体
+// 携带请求体（批量删除、注明原因等场景）
+var result = await _httpHelper.DeleteAsync<DeleteResponse>("https://api.example.com/users", new { ids = new[] { 1, 2 } });
+```
+
+### 文件下载
+
+```csharp
+var result = await _httpHelper.DownloadFileAsync(
+    "https://api.example.com/files/report.pdf", @"C:\Downloads\report.pdf");
+// 下载失败时自动清理不完整的文件
+```
+
+### SOAP 请求
+
+```csharp
+var result = await _httpHelper.PostSoapAsync<SoapResponse>("https://api.example.com/soap", xml);
+```
+
+### Send（底层逃生舱口）
+
+```csharp
+using var request = new HttpRequestMessage(HttpMethod.Get, url);
+request.Headers.Add("X-Custom", "value");
+HttpResponseMessage response = await _httpHelper.SendAsync(request); // 返回原始响应，自行处理
+```
+
+## 请求头（HttpHeaders）
+
+通过 `HttpSendOptions.Headers`（类型 `HttpHeaders`）传递请求头。单值用索引器直接赋字符串，多值用 `Add` 追加：
+
+```csharp
+// 单值
+var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions
+{
+    Headers = new HttpHeaders
+    {
+        ["X-Trace-Id"] = "custom-trace-id",
+        ["Accept-Language"] = "zh-CN"
+    }
+});
+
+// 同名多值（如多个 Accept）
+var headers = new HttpHeaders { ["Authorization"] = "Bearer xxx" };
+headers.Add("Accept", "application/json");
+headers.Add("Accept", "text/plain");
+// 或一次多值：headers.Add("Accept", new[] { "application/json", "text/plain" });
+
+var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions { Headers = headers });
+```
+
+## 认证
+
+认证统一通过 `HttpSendOptions.Headers` 传递：
+
+```csharp
+// Bearer Token（CreateBearerHeaders 返回 HttpHeaders）
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here") });
+
+// API Key
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = new HttpHeaders { ["X-Api-Key"] = "your-api-key" } });
+
+// Basic Auth
+var basic = "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes("user:pass"));
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Headers = new HttpHeaders { ["Authorization"] = basic } });
+```
+
+### CreateBearerHeaders
+
+`HttpHelperExtensions.CreateBearerHeaders(token)` 自动补全 `"Bearer "` 前缀，返回可直接传入 `HttpSendOptions.Headers` 的 `HttpHeaders`：
+
+```csharp
+var headers = HttpHelperExtensions.CreateBearerHeaders("your-token-here");
+// => Headers["Authorization"] = "Bearer your-token-here"（已带前缀不重复添加）
+
+var result = await _httpHelper.GetAsync<User>(url, new HttpSendOptions { Headers = headers });
 ```
 
 ## 配置选项 HttpClientOptions
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| `BaseAddress` | string? | null | 基础地址，请求 URL 为相对路径时自动拼接 |
+| `DefaultHeaders` | HttpHeaders? | null | 每个请求自动携带的默认请求头（per-request Headers 优先覆盖）；支持同名多值 |
+| `UserAgent` | string? | null | 自定义 User-Agent |
 | `AuditLog` | bool | true | 是否启用审计日志 |
-| `FailThrowException` | bool | false | 失败时是否抛出异常。false 时返回 null，true 时抛出异常 |
 | `EnableLogRedaction` | bool | true | 是否启用日志脱敏 |
-| `Timeout` | int | 100 | 超时时间（秒），范围：1-3600 |
-| `ConcurrencyLimit` | int | 100 | 并发限制，范围：1-10000，建议按下游容量调整 |
+| `JsonNamingPolicy` | JsonNamingPolicyType | CamelCase | JSON 命名策略：CamelCase / PascalCase / SnakeCaseLower / None |
+| `Timeout` | int | 100 | 总超时（秒），覆盖整条重试链；范围：1-3600 |
+| `ConcurrencyLimit` | int | 100 | 并发限制，范围：0-10000；`0` 表示禁用限制 |
 | `MaxRetryAttempts` | int | 3 | 最大重试次数，范围：0-10 |
 | `RetryDelaySeconds` | int | 1 | 重试基础延迟（秒），指数退避，范围：1-300 |
 | `MaxRequestBodyLength` | int | 4096 | 请求体日志最大输出长度，≥0。0 表示不限制 |
 | `MaxOutputResponseLength` | int | 4096 | 响应体日志最大输出长度，≥0。0 表示不限制 |
-| `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书，⚠️ 仅建议开发/测试环境使用 |
+| `IgnoreUntrustedCertificate` | bool | false | 是否忽略不安全的SSL证书，仅建议开发/测试环境使用 |
 | `RetryOnUnauthorized` | bool | false | 401未授权错误时是否重试 |
-| `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头（不区分大小写） |
-| `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名（JSON/key=value，不区分大小写） |
+| `PropertyNameCaseInsensitive` | bool | true | 响应 JSON 属性名匹配是否忽略大小写 |
+| `AdditionalSensitiveHeaders` | ICollection\<string\> | 空 | 额外需要脱敏的请求头 |
+| `AdditionalSensitiveFields` | ICollection\<string\> | 空 | 额外需要脱敏的字段名 |
 
-> **配置验证**：所有参数都有范围限制，超出范围将抛出 `ArgumentOutOfRangeException`。
+> 以上取值范围由内置的 `HttpClientOptionsValidator` 在启动时校验，超出范围会导致 options 校验失败。
 
+### 内置默认脱敏清单
 
-## 请求
+启用日志脱敏（`EnableLogRedaction = true`，默认开启）时，默认脱敏器会自动遮蔽以下内容：
 
-下面示例已经注入IHttpHelper
+- 默认敏感请求头：`Authorization`、`Proxy-Authorization`、`Cookie`、`Set-Cookie`、`X-Api-Key`、`Api-Key`、`X-Auth-Token`
+- 默认敏感字段（JSON key 与 `key=value` 文本）：`password`、`passwd`、`pwd`、`secret`、`token`、`access_token`、`refresh_token`、`client_secret`、`api_key`、`api-key`
+- Bearer Token 值（形如 `Bearer xxx` 的字符串）
 
-### Get
+可通过 `AdditionalSensitiveHeaders` / `AdditionalSensitiveFields` 追加，或注册自定义 `IHttpLogRedactor` 完全替换脱敏逻辑。
 
-```c#
-var result = await _httpHelper.GetAsync<string>(Host + "/get?q1=11&q2=22");
+## 异常处理
+
+4.0 起统一为结果对象模型：失败始终返回 `IHttpResult(IsSuccess=false)`，不再有"抛异常 / 返回结果"双开关。需要抛异常的调用风格，显式调用 `EnsureSuccess()`。传输失败（网络异常、超时）、非 2xx 状态码、响应体反序列化失败均按失败结果返回（`IsFallbackResponse=true` 表示为 Polly 降级合成的 503 响应）。
+
+```csharp
+var result = await _httpHelper.GetAsync<User>(url);
+if (!result.IsSuccess)
+{
+    _logger.LogWarning("请求失败: {StatusCode} - {Error}", result.StatusCode, result.ErrorMessage);
+    return;
+}
+var user = result.Data;
+
+// 或失败即抛异常：
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
 ```
 
-还支持传递token以及传递请求头
+## JSON 序列化
 
-### Post
+请求体序列化与响应反序列化统一基于 `System.Text.Json`：
 
-#### Json格式
+- 默认 `CamelCase` 命名策略，可通过 `HttpClientOptions.JsonNamingPolicy` 切换为 `PascalCase` / `SnakeCaseLower` / `None`
+- 响应 JSON 属性名默认忽略大小写，可通过 `HttpClientOptions.PropertyNameCaseInsensitive = false` 关闭
+- 启用 `UnsafeRelaxedJsonEscaping`（中文等非 ASCII 字符不转义）
+- 反序列化额外启用 `JsonStringEnumConverter`（枚举以字符串形式处理）
+- 容忍注释与尾随逗号
 
-支持传递字符串以及对象
+> 命名策略在 net6/7 上通过内置自定义 `JsonNamingPolicy` 子类实现（PascalCase / SnakeCaseLower），net8+ 行为一致。
 
-```c#
-var content = "{\"q\":\"123456\",\"a\":\"222\"}";
-var result = await _httpHelper.PostAsync<string>(Host + "/post", content);
-```
+## 弹性策略
 
-#### PostFormData
+本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
 
-* Task&lt;T&gt; PostFormDataAsync&lt;T&gt;(string url, MultipartFormDataContent formDataContent);
+1. **降级处理（Fallback）** - 所有策略失败时返回 503 降级响应（`IsFallbackResponse = true`）
+2. **总超时（Timeout）** - 覆盖整条重试链的总耗时上限
+3. **并发限制（Concurrency Limiter）** - 限制同时进行的 HTTP 请求数量（`ConcurrencyLimit = 0` 时跳过）
+4. **熔断器（Circuit Breaker）** - 错误率达到阈值时暂时停止请求
+5. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求
 
-##### 请求示例
-
-```c#
-using var form = new MultipartFormDataContent();
-
-// bytes为文件字节数组
-using var fileContent = new ByteArrayContent(bytes);
-fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
-                                         {
-                                             Name = "file", // 表单字段名称
-                                             FileName = fileName // 文件名
-                                         };
-fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-form.Add(fileContent);
-
-// 其他参数
-using var content = new StringContent("其他参数值");
-form.Add(content, "其他参数名称");
-
-var requestUrl = $"{_difyApiBase}/v1/files/upload";
-var response = await _httpHelper.PostFormDataAsync<FileUploadResponse>(requestUrl, form,
-    new Dictionary<string, string> { { "Authorization", $"Bearer {_difyApiKey}" } });
-```
+> 整个请求链（含所有重试）受单次 `Timeout` 上限约束；超时后由 Fallback 兜底为 503 降级响应。
 
 ## 日志
 
-可以设置配置AuditLog来设置是否启用审计日志，默认为启用状态。
+### 跳过请求日志
 
 ```csharp
-builder.Services.AddHttpClientService();
+var result = await _httpHelper.PostAsync<string>(url, data,
+    new HttpSendOptions { Headers = new HttpHeaders { ["X-Skip-Logger"] = "" } });
 ```
 
-也可以为指定地址请求设置关闭审计日志，例如
+通过设置 `X-Skip-Logger` 或 `X-Logger` 值为 `none`/`skip` 跳过日志。
 
-```csharp
-var result = await _httpHelper.PostAsync<string>(Host + "/anything", list,
-    headers: new Dictionary<string, string>() { { "X-Logger", "skip" } });
-
-var result2 = await _httpHelper.PostAsync<string>(Host + "/anything", list,
-    headers: new Dictionary<string, string>() { { "X-Skip-Logger", "" } });
-```
-
-可以通过在请求头设置`X-Skip-Logger`或者设置`X-Logger`值为none、skip进行跳过日志
-
-### 日志脱敏说明
-
-- 默认脱敏字段包含：`password`、`token`、`access_token`、`refresh_token`、`api_key` 等常见字段
-- 默认脱敏请求头包含：`Authorization`、`Cookie`、`X-Api-Key` 等
-- 可通过 `AdditionalSensitiveFields`、`AdditionalSensitiveHeaders` 扩展脱敏范围
-- JSON 内容会优先按结构化 JSON 解析并递归脱敏，未触发截断时可保持 JSON 格式
-- 非 JSON 内容会回退到 `key=value` 文本和 Bearer Token 脱敏
-- 如需完全自定义脱敏逻辑，可提前注册 `IHttpLogRedactor` 覆盖默认实现
-
-> `GetStreamAsync` 会自动跳过响应体审计，避免流式读取场景下日志提前消费响应流。
-
-#### 自定义日志脱敏器
+### 自定义日志脱敏
 
 ```csharp
 public sealed class CustomHttpLogRedactor : IHttpLogRedactor
 {
-    public string RedactContent(string content)
-    {
-        // 返回自定义脱敏后的内容
-        return content;
-    }
-
-    public IDictionary<string, string> RedactHeaders(IDictionary<string, string> headers)
-    {
-        // 返回自定义脱敏后的请求头/响应头
-        return headers;
-    }
+    public string RedactContent(string content) => content;
+    public IDictionary<string, string> RedactHeaders(IDictionary<string, string>? headers) => headers ?? new Dictionary<string, string>();
 }
 
 services.AddSingleton<IHttpLogRedactor, CustomHttpLogRedactor>();
 services.AddHttpClientService();
 ```
 
-## 弹性策略
+## 目标框架
 
-本库使用 Polly 实现了完整的弹性策略链，按以下顺序执行（从外层到内层）：
-
-### 1. 降级处理（Fallback）
-当所有策略都失败时的最后保障：
-- 如果 `FailThrowException = false`：返回 503 响应，方法返回 `null`
-  - 响应包含 `X-Fallback-Response: true` 头，可区分真实服务端错误
-- 如果 `FailThrowException = true`：重新抛出原始异常
-
-### 2. 并发限制（Concurrency Limiter）
-限制同时进行的HTTP请求数量，默认 `ConcurrencyLimit = 100`，可按业务压测结果调整
-
-### 3. 重试策略（Retry）
-自动重试失败的请求：
-- **重试次数**：`MaxRetryAttempts`（默认 3）
-- **重试延迟**：`RetryDelaySeconds`（默认 1 秒）作为基础值，使用指数退避
-- **重试条件**：
-  - HTTP 5xx 服务器错误
-  - HTTP 408 请求超时
-  - HTTP 401 未授权（如果 `RetryOnUnauthorized = true`）
-  - 超时异常（`TimeoutException`、`TaskCanceledException`、`TimeoutRejectedException`）
-  - HTTP 请求异常（`HttpRequestException`）
-
-### 4. 熔断器（Circuit Breaker）
-当错误率达到阈值时暂时停止请求，保护下游系统
-
-### 5. 超时策略（Timeout）
-防止请求长时间阻塞：
-- 使用配置的 `Timeout` 值（默认 100 秒）
-- 每次重试都会重新应用超时限制
-- 超时后会触发重试机制
-
-> **重要说明**：超时策略放在最内层，每次重试都会应用超时限制。总超时上界约为：`Timeout × (MaxRetryAttempts + 1) + 重试延迟总和`。
-
-## 分布式追踪
-
-本库自动支持分布式追踪，通过 `X-Trace-Id` 请求头传播追踪ID：
-
-### 追踪ID获取优先级
-1. 从当前请求的 `X-Trace-Id` 请求头获取
-2. 从 `HttpContext.Request.Headers` 中获取 `X-Trace-Id`
-3. 使用 ASP.NET Core 的 `HttpContext.TraceIdentifier`
-4. 如果都没有，自动生成新的 GUID
-
-### 日志示例
-所有日志都包含 TraceId，方便追踪整个请求链路：
-
-```
-Http请求开始.TraceId：a1b2c3d4e5f6 Url：https://api.example.com/data Method：GET
-Http请求审计日志.TraceId：a1b2c3d4e5f6 Url：https://api.example.com/data Method：GET StatusCode：OK 耗时：1234.56ms
-```
-
-## 超时与重试说明
-
-### 超时机制
-- **HttpClient.Timeout**：设置为无限，不控制超时
-- **Polly Timeout 策略**：完全控制超时行为，使用配置的 `Timeout` 值
-- **CancellationToken**：用于调用方主动取消请求，不与 Resilience 超时策略冲突
-
-### 重试机制示例
-
-#### 场景1：自定义超时 30 秒
-```csharp
-options.Timeout = 30;
-options.MaxRetryAttempts = 2;
-options.RetryDelaySeconds = 1;
-```
-- 单次请求超过 30 秒 → 触发重试
-- 最多重试 2 次（共 3 次尝试），每次都有 30 秒超时限制
-- 重试延迟：1s → 2s
-- 总耗时：最长约 93 秒（30s×3 + 1s + 2s）
-
-#### 场景2：使用默认超时 100 秒
-```csharp
-// 不设置 Timeout，使用默认值 100 秒
-```
-- 单次请求超过 100 秒 → 触发重试
-- 默认最多重试 3 次（共 4 次尝试），每次都有 100 秒超时限制
-- 默认总耗时：最长约 407 秒（100s×4 + 1s + 2s + 4s）
-
-#### 场景3：401 未授权重试
-```csharp
-options.RetryOnUnauthorized = true;
-```
-- 收到 401 响应 → 触发重试
-- 适用于 token 自动刷新场景
-- 重试延迟：1s → 2s → 4s
-
-## 异常处理
-
-### FailThrowException = false（默认）
-```csharp
-options.FailThrowException = false;
-```
-- 请求失败或超时：返回 `null` 或 `default(T)`
-- 错误信息记录在日志中
-- 适合不需要中断业务流程的场景
-- Fallback 产生的 503 响应包含 `X-Fallback-Response: true` 头，可据此判断是否为 Fallback 响应
-
-### FailThrowException = true
-```csharp
-options.FailThrowException = true;
-```
-- 请求失败或超时：抛出异常
-- 需要业务代码使用 try-catch 处理
-- 适合需要明确处理错误的场景
-
-### 识别 Fallback 响应示例
-
-```csharp
-// 使用原始 SendAsync 获取完整响应
-using var request = new HttpRequestMessage(HttpMethod.Get, url);
-var response = await _httpHelper.SendAsync(request);
-
-if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
-{
-    var isFallback = response.Headers.Contains("X-Fallback-Response");
-    if (isFallback)
-    {
-        // 这是 Fallback 产生的响应，说明所有重试都失败了
-        _logger.LogWarning("All retries failed for {Url}", url);
-    }
-    else
-    {
-        // 这是真实的服务端 503 错误
-        _logger.LogWarning("Service unavailable at {Url}", url);
-    }
-}
-```
-
-## 安全注意事项
-
-### SSL证书验证
-
-⚠️ **生产环境安全警告**：
-
-```csharp
-// ❌ 不要在生产环境使用
-options.IgnoreUntrustedCertificate = true;
-```
-
-`IgnoreUntrustedCertificate` 选项会完全禁用SSL证书验证，这会使您的应用容易受到中间人攻击（MITM）。
-
-**建议做法**：
-- 仅在开发/测试环境使用此选项
-- 生产环境应使用有效的SSL证书
-- 考虑使用环境变量控制：
-  ```csharp
-  #if DEBUG
-  options.IgnoreUntrustedCertificate = true;
-  #else
-  options.IgnoreUntrustedCertificate = false;
-  #endif
-  ```
-
-### 敏感信息日志
-
-默认情况下，库会自动脱敏常见的敏感字段和请求头。但如果您的 API 使用自定义字段名（如 `userSecret`、`apiKey` 等），请务必配置：
-
-```csharp
-options.AdditionalSensitiveFields = new[] { "userSecret", "customToken" };
-options.AdditionalSensitiveHeaders = new[] { "X-Custom-Auth" };
-```
+支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ## 版本更新记录
 
-* 2.1.1
-  * 修复日志脱敏层将中文等非 ASCII 字符转义为 `\uXXXX` 的问题
-  * 脱敏序列化改用 `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`，保留原始字符可读性
-* 2.1.0
-  * 新增 `IHttpLogRedactor`，支持调用方自定义 HTTP 日志脱敏逻辑
-  * 默认日志脱敏改为优先按 JSON 结构递归处理，避免未截断 JSON 在脱敏后格式损坏
-  * 新增 `MaxRequestBodyLength` 配置项，用于限制请求体日志输出长度
-  * `MaxOutputResponseLength` 用于限制响应体日志输出长度
-  * 审计日志默认仅保留请求体和响应体前 4096 个字符
-  * 优化 `LoggingHandler` 的请求体和响应体日志截断逻辑
-* 2.0.0
-  * **[破坏性变更]** 移除 `IHttpHelper` 全部方法中的 `int? timeout` 参数，避免与 Resilience `Timeout` 策略冲突
-  * 请求超时统一由 `AddHttpClientService(options => options.Timeout = xx)` 全局配置控制
-  * 单次请求如需提前终止，请使用 `CancellationToken`
-  * 新增可配置项：
-    * `ConcurrencyLimit`：并发限制数量（默认 100）
-    * `MaxRetryAttempts`：最大重试次数（默认 3）
-    * `RetryDelaySeconds`：重试基础延迟（默认 1 秒）
-    * `AdditionalSensitiveHeaders`：额外脱敏请求头
-    * `AdditionalSensitiveFields`：额外脱敏字段
-  * 日志脱敏支持自定义扩展字段与请求头
-  * 新增配置参数验证（范围限制）
-  * Fallback 响应添加 `X-Fallback-Response` 标识头
-  * 优化 `JsonHelper` 性能（使用静态配置）
-  * 优化 `ResponseStream.DisposeAsync` 释放顺序
-  * 修复流式请求日志审计冲突（`GetStreamAsync` 自动跳过响应体审计）
-* 1.3.3
-  * 传递bearerToken的时候主动判断是否拼接Bearer头
-* 1.3.2
-  * 更新jwtToken命名为bearerToken
-* 1.3.1
-  * 支持.Net10
-  * 支持超时或者错误后自动重试
-* 1.3.1-beta3
-  * 引用.Net10正式包
-* 1.3.1-beta2
-  * 重试测试
-  * 日志输出增加请求耗时
-* 1.3.1-beta1
-    * 支持设置是否忽略不安全的SSL证书
-* 1.3.0-beta9
-    * 更新响应日志输出内容
-    * 增加支持CancellationToken
-    * 移除对.NetStandard2.1支持
-* 1.3.0-beta8
-    * 优化单独请求的日志输出
-* 1.3.0-beta7
-    * 修复调用接口报错在忽略异常的情况下扔抛出错误
-* 1.3.0-beta6
-    * 优化审计日志
-* 1.3.0-beta5
-    * 增加全局设置超时时间以及针对指定请求设置超时时间
-* 1.3.0-beta4
-    * 修改PostFormDataAsync方法，增加直接传递jwtToken入参
-* 1.3.0-beta3
-    * 修复LoggingHandler被错误重用的问题，将其生命周期改为Transient
-* 1.3.0-beta2
-    * 增加流式响应PostGetStreamAsync
-    * 暴漏基础的SendAsync
-* 1.3.0-beta1
-    * 支持.Net9
-    * 增加请求审计日志
-* 1.2.3
-    * 注入的时候支持设置是否异常直接抛出
-* 1.2.2
-    * 增加x-www-form-urlencoded请求方式代码
-    * 升级支持.Net8
-* 1.2.1
-    * 增加get获取文件流的方法
-* 1.2.0
-    * 升级支持.net7
-* 1.1.5
-    * 修改put请求命名问题
-    * 增加patch请求
-* 1.1.4
-    * 处理多个构造函数的报错
-    * 增加更加灵活的请求方式Send
-* 1.1.3
-    * 增加http请求FormData形式去提交文件
-    * 支持框架netstandard2.1、net6.0
-* 1.1.2
-    * 更新post方法同时兼容string和其他类型
-* 1.1.1
-    * 更新post方法,配置多个目标框架
-* 1.1.0
-    * 更新框架版本为5.0
-* 1.0.0
-    * 3.1版本的http请求公共库
+### 4.1.0
+
+- **[新增]** `HttpClientOptions.PropertyNameCaseInsensitive` 配置项，默认忽略响应 JSON 属性名大小写，可按 HTTP 客户端实例关闭
+
+### 4.0.0
+
+- **[变更]** 移除对 `Microsoft.AspNetCore.App` 共享框架的强依赖（`FrameworkReference`），改为引用轻量的 `Microsoft.AspNetCore.Http` 包：Worker Service / 控制台宿主无需再安装 ASP.NET Core 共享框架；Web 宿主下类型由共享框架统一接管，行为不变
+- **[修复]** `IHttpHelper` 内部改为每次请求从 `IHttpClientFactory` 现取 `HttpClient`：此前缓存的客户端会绕过工厂的 handler 轮换，长驻服务无法感知 DNS / 证书变更；`JsonNamingPolicy`、`BaseAddress` 等配置热更新同步即时生效
+- **[修复]** 响应体反序列化失败（非法 JSON / 与 T 不匹配）不再抛出 `JsonException`，统一返回 `IHttpResult(IsSuccess=false)`，`ErrorMessage` 为解析错误信息
+- **[修复]** `DownloadFileAsync` 改为先写临时文件（`<目标路径>.downloading`）再整体替换：下载失败不再误删目标路径已有的文件
+- **[修复]** 查询参数中 `DateTime` / `DateTimeOffset` 的格式化改用 `InvariantCulture`，服务器区域设置不再影响生成的 URL
+- **[说明]** 本版本 API 与 3.1.0 完全一致：下列破坏性变更此前已随 3.1.0 误发（发布时版本号与 README 未同步），4.0.0 为正式版本号收敛，从 3.1.0 升级无需任何代码改动
+- **[破坏性变更]** 统一所有动词方法签名：查询参数与请求头收拢到新增的 `HttpSendOptions`（`Query` / `Headers`），所有方法参数顺序一致
+- **[破坏性变更]** 删除 `FailThrowException` 开关与"失败抛异常 / 返回结果"双错误模型：失败统一返回 `IHttpResult(IsSuccess=false)`；需要抛异常显式调用新增的 `EnsureSuccess()` 扩展方法
+- **[破坏性变更]** 删除所有非泛型 `string` 版方法，统一用泛型版（返回字符串用 `GetAsync<string>()` 等）
+- **[破坏性变更]** 删除 `HttpRequestEnum` 与 `SendAsync(HttpRequestEnum, …)` 重载；保留 `SendAsync(HttpRequestMessage)` 底层逃生舱口
+- **[破坏性变更]** 请求头类型改为 `HttpHeaders`：`HttpSendOptions.Headers` / `HttpClientOptions.DefaultHeaders` / `CreateBearerHeaders` 返回值均改为 `HttpHeaders`，支持同名多值（单值用索引器，多值用 `Add`）
+- **[新增]** `HttpHeaders` 多值请求头集合类型，单值场景不啰嗦、多值场景原生支持
+- **[新增]** `HttpClientOptions.JsonNamingPolicy` 配置项（CamelCase / PascalCase / SnakeCaseLower / None），适配不同后端字段约定
+- **[变更]** Polly Fallback 异常路径统一兜底为 503 降级响应（不再按 `FailThrowException` 分叉）
+
+### 3.1.0
+
+- 本版本为版本号误标发布：实际已包含原计划 4.0.0 的全部破坏性变更（统一 `HttpSendOptions` 签名、删除 `FailThrowException`、删除非泛型 string 版方法、删除 `HttpRequestEnum`、`HttpHeaders` 多值请求头、`JsonNamingPolicy`），且包内 README 误写为 `--version 4.0.0` 安装示例
+- 同时包含：`DeleteAsync(url, data)` 带请求体重载、`DefaultHttpLogRedactor` 脱敏性能优化
+- 该版本 API 与 4.0.0 一致，可直接升级到 4.0.0（4.0.0 额外移除了共享框架强依赖）
+
+### 3.0.1
+
+- **[修复]** 移除 `ServiceCollectionExtensions` 中多余的 `TryAddTransient<LoggingHandler>()` 死注册
+
+### 3.0.0
+
+- **[破坏性变更]** 所有方法返回 `IHttpResult<T>` 包装结果，不再返回 `T`（失败时为 null）
+- **[破坏性变更]** 移除 `bearerToken` 参数，认证统一通过 `headers` 传递
+- 新增 `queryParameters` 参数、`DownloadFileAsync`、`IHttpResult<T>`、命名客户端与 `IHttpHelperFactory`
+
+## 迁移总览（2.x → 3.0 → 4.0）
+
+| 版本 | 关键变化 | 调用方迁移要点 |
+|------|----------|----------------|
+| 2.x → 3.0 | 返回值 `T` → `IHttpResult<T>`；`bearerToken` 参数移除 | `if (user != null)` → `if (result.IsSuccess)`；认证改用 `headers` |
+| 3.0 → 3.1.0 | （误发）`HttpSendOptions` 统一签名；删 `FailThrowException`；删非泛型 string 版；删 `HttpRequestEnum`；请求头改 `HttpHeaders`；新增 `JsonNamingPolicy` | query/headers 收进 `HttpSendOptions`；非泛型 `GetAsync()` → `GetAsync<string>()`；`FailThrowException=true` → `EnsureSuccess()`；`SendAsync(HttpRequestEnum,…)` → `SendAsync(HttpRequestMessage)`；`new Dictionary<string,string>` headers → `new HttpHeaders` |
+| 3.1.0 → 4.0.0 | 仅依赖变化（移除 AspNetCore 共享框架强依赖），API 一致 | 无需代码改动 |
+
+### 从 3.x 迁移到 4.0
+
+```csharp
+// 3.x —— query / headers 是分散的位置参数或命名参数
+var result = await _httpHelper.GetAsync<User>(url, queryParameters: new { page = 1 }, headers: bearHeaders);
+var s = await _httpHelper.GetAsync(url);
+await _httpHelper.SendAsync(HttpRequestEnum.Post, url, content);
+options.FailThrowException = true;
+
+// 4.0 —— query / headers 收拢到 HttpSendOptions，字符串用 <string>，枚举版删除
+var result = await _httpHelper.GetAsync<User>(url,
+    new HttpSendOptions { Query = new { page = 1 }, Headers = bearHeaders /* HttpHeaders */ });
+var s = await _httpHelper.GetAsync<string>(url);
+using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+var resp = await _httpHelper.SendAsync(req);
+var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data; // 失败即抛异常改用 EnsureSuccess()
+```
+
+### 从 2.x 迁移到 3.0
+
+```csharp
+// 2.x - 直接返回 T，失败时为 null
+var user = await _httpHelper.GetAsync<User>(url, bearerToken: "xxx");
+if (user != null) { ... }
+
+// 3.0 - 返回 IHttpResult<T>
+var result = await _httpHelper.GetAsync<User>(url, headers: new Dictionary<string, string> { ["Authorization"] = "Bearer xxx" });
+if (result.IsSuccess) { var user = result.Data; }
+```

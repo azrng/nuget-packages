@@ -27,11 +27,11 @@ public class NmcLocationClient : INmcLocationClient
     /// <inheritdoc />
     public async Task<IReadOnlyList<NmcProvince>> GetProvincesAsync(CancellationToken cancellationToken = default)
     {
-        var provinces = await _httpHelper
+        var result = await _httpHelper
             .GetAsync<List<NmcProvince>>(BuildProvinceUrl(), cancellation: cancellationToken)
             .ConfigureAwait(false);
 
-        return provinces ?? new List<NmcProvince>();
+        return result.Data ?? new List<NmcProvince>();
     }
 
     /// <inheritdoc />
@@ -91,11 +91,11 @@ public class NmcLocationClient : INmcLocationClient
     public async Task<IReadOnlyList<NmcCity>> GetCitiesByProvinceCodeAsync(string provinceCode, CancellationToken cancellationToken = default)
     {
         var normalizedCode = NmcClientArgumentHelper.NormalizeRequiredProvinceCode(provinceCode, nameof(provinceCode));
-        var cities = await _httpHelper
+        var result = await _httpHelper
             .GetAsync<List<NmcCity>>(BuildProvinceUrl(normalizedCode), cancellation: cancellationToken)
             .ConfigureAwait(false);
 
-        return cities ?? new List<NmcCity>();
+        return result.Data ?? new List<NmcCity>();
     }
 
     /// <inheritdoc />

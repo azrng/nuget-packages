@@ -1,3 +1,6 @@
+using Azrng.NmcWeather.Serialization;
+using System.Text.Json.Serialization;
+
 namespace Azrng.NmcWeather.Models;
 
 /// <summary>
@@ -18,5 +21,6 @@ public class NmcWind
     /// <summary>
     /// 风速（米/秒）。
     /// </summary>
+    [JsonConverter(typeof(NmcStringValueConverter))]
     public string? Speed { get; set; }
 }

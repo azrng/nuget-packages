@@ -69,6 +69,6 @@
     <Project Path="test/Azrng.EventBus.InMemory.Test/Azrng.EventBus.InMemory.Test.csproj" />
     <Project Path="test/Azrng.SettingConfig.BasicAuthorization.Test/Azrng.SettingConfig.BasicAuthorization.Test.csproj" />
     <Project Path="test/Common.Core.Test/Common.Core.Test.csproj" />
-    <Project Path="test/Common.HttpClients.Test/Common.HttpClients.Test.csproj" />
+    <Project Path="test/Common.HttpClients.Next.Test/Common.HttpClients.Next.Test.csproj" />
   </Folder>
 </Solution>

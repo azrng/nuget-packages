@@ -12,19 +12,25 @@ public static class IHttpHelperMockExtensions
     {
         mock.Setup(helper => helper.GetAsync<List<NmcProvince>>(
                 $"{BaseUrl}/rest/province",
-                string.Empty,
                 null,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(provinces);
+            .ReturnsAsync(CreateSuccessResult(provinces));
     }
 
     public static void SetupGetCities(this Mock<IHttpHelper> mock, string provinceCode, List<NmcCity> cities)
     {
         mock.Setup(helper => helper.GetAsync<List<NmcCity>>(
                 $"{BaseUrl}/rest/province/{provinceCode}",
-                string.Empty,
                 null,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(cities);
+            .ReturnsAsync(CreateSuccessResult(cities));
+    }
+
+    public static IHttpResult<T> CreateSuccessResult<T>(T? data)
+    {
+        var result = new Mock<IHttpResult<T>>();
+        result.SetupGet(item => item.Data).Returns(data);
+        result.SetupGet(item => item.IsSuccess).Returns(true);
+        return result.Object;
     }
 }
