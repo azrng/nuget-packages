@@ -1,4 +1,3 @@
-﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -6,9 +5,9 @@ using Microsoft.Extensions.Logging;
 namespace Azrng.AspNetCore.Authorization.Default;
 
 /// <summary>
-/// 基于路径和 Endpoint 元数据的权限授权处理器。
+/// 基于 Endpoint 元数据的权限授权处理器。
 /// </summary>
-internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionAuthorizationRequirement>
 {
     private readonly IHttpContextAccessor _accessor;
     private readonly IPermissionEvaluator _evaluator;
@@ -29,7 +28,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
 
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
-        PermissionRequirement requirement)
+        PermissionAuthorizationRequirement requirement)
     {
         var httpContext = _accessor.HttpContext;
         if (httpContext == null)
@@ -39,8 +38,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
             return;
         }
 
-        var requestPath = httpContext.Request.Path;
-        var queryUrl = requestPath.Value?.ToLowerInvariant();
+        var queryUrl = httpContext.Request.Path.Value?.ToLowerInvariant();
         if (string.IsNullOrEmpty(queryUrl))
         {
             _logger.LogWarning(AuthorizationEventIds.EmptyPath, "请求路径为空");
@@ -51,17 +49,6 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
         var endpoint = httpContext.GetEndpoint();
         var permissionMetadata = endpoint?.Metadata.GetOrderedMetadata<IPermissionMetadata>()
             ?? Array.Empty<IPermissionMetadata>();
-
-        // 路径列表是旧 API 的兼容行为。显式 Endpoint 权限声明存在时，不能被路径配置绕过。
-        // 使用 StartsWithSegments 按路径段前缀匹配，避免 Contains 子串匹配导致越权放行。
-        if (permissionMetadata.Count == 0 &&
-            IsAllowAnonymousPath(requestPath, requirement.NormalizedAllowAnonymousPaths))
-        {
-            _logger.LogDebug(AuthorizationEventIds.AnonymousPath, "路径 {Path} 允许匿名访问", requestPath.Value);
-            context.Succeed(requirement);
-            return;
-        }
-
         var permissionContext = new PermissionContext(
             httpContext,
             endpoint,
@@ -112,26 +99,5 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
             context.User.Identity?.Name ?? "Unknown",
             queryUrl);
         context.Succeed(requirement);
-    }
-
-    /// <summary>
-    /// 判断请求路径是否落在允许匿名访问的路径段下。
-    /// </summary>
-    private static bool IsAllowAnonymousPath(PathString requestPath, IEnumerable<string> allowAnonymousPaths)
-    {
-        foreach (var configured in allowAnonymousPaths)
-        {
-            if (string.IsNullOrEmpty(configured))
-            {
-                continue;
-            }
-
-            if (requestPath.StartsWithSegments(new PathString(configured), StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

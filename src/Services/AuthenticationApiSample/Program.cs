@@ -1,3 +1,4 @@
+using AuthenticationApiSample;
 using AuthenticationApiSample.Auths;
 using AuthenticationApiSample.Current;
 using Azrng.Core;
@@ -20,7 +21,7 @@ builder.Services.AddMyAuthentication(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 
-// builder.Services.AddMyAuthorization<PermissionVerifyService>("Path2");
+builder.Services.AddPermissionAuthorization<PermissionEvaluator>();
 
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 

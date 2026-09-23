@@ -41,7 +41,7 @@ public class AuthorizationPipelineTests
     [Fact]
     public async Task ProtectedEndpoint_ShouldReturn200_WhenPermissionIsGranted()
     {
-        using var server = CreateServer(path => path == "/secure");
+        using var server = CreateServer(context => context.Path == "/secure");
         using var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-User", "alice");
 
@@ -50,7 +50,7 @@ public class AuthorizationPipelineTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    private static TestServer CreateServer(Func<string, bool> permission)
+    private static TestServer CreateServer(Func<PermissionContext, bool> permission)
     {
         var builder = new WebHostBuilder()
             .ConfigureServices(services =>
@@ -62,7 +62,7 @@ public class AuthorizationPipelineTests
                     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                         TestAuthenticationHandler.SchemeName,
                         _ => { });
-                services.AddPathBasedAuthorization<TestPermissionVerifyService>();
+                services.AddPermissionAuthorization<TestPermissionEvaluator>();
             })
             .Configure(app =>
             {
@@ -85,26 +85,30 @@ public class AuthorizationPipelineTests
 
     private sealed class PermissionState
     {
-        public PermissionState(Func<string, bool> evaluator)
+        public PermissionState(Func<PermissionContext, bool> evaluator)
         {
             Evaluator = evaluator;
         }
 
-        public Func<string, bool> Evaluator { get; }
+        public Func<PermissionContext, bool> Evaluator { get; }
     }
 
-    private sealed class TestPermissionVerifyService : IPermissionVerifyService
+    private sealed class TestPermissionEvaluator : IPermissionEvaluator
     {
         private readonly PermissionState _state;
 
-        public TestPermissionVerifyService(PermissionState state)
+        public TestPermissionEvaluator(PermissionState state)
         {
             _state = state;
         }
 
-        public Task<bool> HasPermission(string path)
+        public Task<AuthorizationDecision> AuthorizeAsync(
+            PermissionContext context,
+            CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_state.Evaluator(path));
+            return Task.FromResult(_state.Evaluator(context)
+                ? AuthorizationDecision.Allow()
+                : AuthorizationDecision.Deny());
         }
     }
 

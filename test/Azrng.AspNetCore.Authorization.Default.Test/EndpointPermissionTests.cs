@@ -42,13 +42,13 @@ public class EndpointPermissionTests
     }
 
     [Fact]
-    public async Task ExplicitEndpointMetadata_ShouldNotBeBypassedByAnonymousPathConfiguration()
+    public async Task EvaluatorDenial_ShouldFail_WhenEndpointPermissionIsMissing()
     {
         var state = new EvaluationState(_ => false);
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(state);
-        services.AddPermissionAuthorization<TestPermissionEvaluator>("/api");
+        services.AddPermissionAuthorization<TestPermissionEvaluator>();
 
         using var provider = services.BuildServiceProvider();
         var httpContext = CreateHttpContext(provider, "/api/orders", "GET");

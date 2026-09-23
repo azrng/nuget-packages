@@ -1,90 +1,39 @@
-﻿using Azrng.AspNetCore.Authorization.Default;
+using Azrng.AspNetCore.Authorization.Default;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// 基于路径的授权服务扩展
+/// 基于 Endpoint 权限元数据的授权服务扩展。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// 默认授权策略名称
+    /// 默认授权策略名称。
     /// </summary>
     public const string DefaultPolicyName = "DefaultPermissionPolicy";
-
-    /// <summary>
-    /// 添加基于路径的授权服务
-    /// </summary>
-    /// <typeparam name="TPermissionService">自定义权限验证服务类型</typeparam>
-    /// <param name="services">服务集合</param>
-    /// <param name="allowAnonymousPaths">允许匿名访问的路径数组</param>
-    /// <returns>服务集合</returns>
-    /// <remarks>
-    /// 此方法会注册以下服务：
-    /// 1. <typeparamref name="TPermissionService"/> 作为 <see cref="IPermissionVerifyService"/> 的实现
-    /// 2. <see cref="IPermissionEvaluator"/> 的旧接口适配器
-    /// 3. <see cref="PermissionAuthorizationHandler"/> 作为授权处理器
-    /// 4. HTTP 上下文访问器
-    /// </remarks>
-    /// <example>
-    /// 示例：注册授权服务
-    /// <code>
-    /// services.AddPathBasedAuthorization&lt;MyPermissionService&gt;(
-    ///     "/api/login",
-    ///     "/api/register",
-    ///     "/api/health"
-    /// );
-    /// </code>
-    /// </example>
-    public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
-        this IServiceCollection services,
-        params string[] allowAnonymousPaths)
-        where TPermissionService : class, IPermissionVerifyService
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.AddScoped<IPermissionVerifyService, TPermissionService>();
-        services.AddScoped<IPermissionEvaluator, LegacyPermissionEvaluator>();
-
-        return AddPermissionAuthorizationCore(services, allowAnonymousPaths);
-    }
 
     /// <summary>
     /// 添加基于 Endpoint 权限元数据的授权服务。
     /// </summary>
     /// <typeparam name="TPermissionEvaluator">权限评估器类型。</typeparam>
     /// <param name="services">服务集合。</param>
-    /// <param name="allowAnonymousPaths">旧路径模式允许匿名访问的路径数组。</param>
     /// <returns>服务集合。</returns>
     public static IServiceCollection AddPermissionAuthorization<TPermissionEvaluator>(
-        this IServiceCollection services,
-        params string[] allowAnonymousPaths)
+        this IServiceCollection services)
         where TPermissionEvaluator : class, IPermissionEvaluator
     {
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddScoped<IPermissionEvaluator, TPermissionEvaluator>();
-
-        return AddPermissionAuthorizationCore(services, allowAnonymousPaths);
-    }
-
-    private static IServiceCollection AddPermissionAuthorizationCore(
-        IServiceCollection services,
-        string[] allowAnonymousPaths)
-    {
-        ArgumentNullException.ThrowIfNull(allowAnonymousPaths);
-
         services.AddAuthorization(options =>
         {
-            var permissionRequirement = new PermissionRequirement(allowAnonymousPaths);
             var policy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
-                .AddPermissionRequirement(permissionRequirement)
+                .AddPermissionRequirement()
                 .Build();
 
-            // 通过标准 AuthorizationOptions 配置策略，保留宿主已有的动态 Provider 和 FallbackPolicy。
             options.DefaultPolicy = policy;
             options.AddPolicy(DefaultPolicyName, policy);
         });
@@ -98,37 +47,10 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>
-    /// 向授权策略添加权限需求
-    /// </summary>
-    /// <param name="policyBuilder">策略构造器</param>
-    /// <param name="requirement">权限需求</param>
-    /// <returns>策略构造器</returns>
-    /// <exception cref="ArgumentNullException">当 requirement 为 null 时抛出</exception>
     private static AuthorizationPolicyBuilder AddPermissionRequirement(
-        this AuthorizationPolicyBuilder policyBuilder,
-        PermissionRequirement requirement)
+        this AuthorizationPolicyBuilder policyBuilder)
     {
-        if (requirement == null)
-            throw new ArgumentNullException(nameof(requirement));
-
-        policyBuilder.Requirements.Add(requirement);
+        policyBuilder.Requirements.Add(new PermissionAuthorizationRequirement());
         return policyBuilder;
-    }
-
-    /// <summary>
-    /// 添加自定义授权服务（保留旧方法名以保持向后兼容）
-    /// </summary>
-    /// <typeparam name="TPermissionService">自定义权限验证服务类型</typeparam>
-    /// <param name="services">服务集合</param>
-    /// <param name="allowAnonymousPaths">允许匿名访问的路径数组</param>
-    /// <returns>服务集合</returns>
-    [Obsolete("请使用 AddPathBasedAuthorization 方法，此方法仅为向后兼容而保留")]
-    public static IServiceCollection AddMyAuthorization<TPermissionService>(
-        this IServiceCollection services,
-        params string[] allowAnonymousPaths)
-        where TPermissionService : class, IPermissionVerifyService
-    {
-        return services.AddPathBasedAuthorization<TPermissionService>(allowAnonymousPaths);
     }
 }

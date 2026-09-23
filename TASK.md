@@ -36,6 +36,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T155 | Azrng.AspNetCore.Authorization.Default 移除旧路径授权 API | DONE | 2026-09-23 |
 | T154 | Azrng.AspNetCore.Authorization.Default 授权模型优化 | DONE | 2026-09-23 |
 | T152 | Azrng.NmcWeather 版本升级至 1.1.1 | DONE | 2026-09-22 |
 | T145 | Common.HttpClients 4.1.0 转正 | DONE | 2026-09-22 |
