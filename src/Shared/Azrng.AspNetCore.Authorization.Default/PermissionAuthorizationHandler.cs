@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Azrng.AspNetCore.Authorization.Default;
 
 /// <summary>
-/// 基于 Endpoint 元数据的权限授权处理器。
+/// 基于 Endpoint 元数据的权限授权处理器，由授权中间件调用，早于业务代码执行。
 /// </summary>
 internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionAuthorizationRequirement>
 {
@@ -26,10 +26,25 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
         _logger = logger;
     }
 
+    /// <summary>
+    /// 授权服务失败后不短路后续 handler（InvokeHandlersAfterFailure 默认 true），
+    /// 匿名请求仍会进入本方法，故在此短路，避免匿名流量触发评估器。
+    /// </summary>
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionAuthorizationRequirement requirement)
     {
+        // 任意一个 identity 已认证即视为已认证，与框架 DenyAnonymousAuthorizationRequirement 判定一致
+        if (!context.User.Identities.Any(static identity => identity.IsAuthenticated))
+        {
+            _logger.LogWarning(
+                AuthorizationEventIds.Unauthenticated,
+                "未认证用户访问路径 {Path}，跳过权限评估直接拒绝",
+                _accessor.HttpContext?.Request.Path.Value ?? "Unknown");
+            context.Fail();
+            return;
+        }
+
         var httpContext = _accessor.HttpContext;
         if (httpContext == null)
         {

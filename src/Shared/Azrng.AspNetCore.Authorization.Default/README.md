@@ -89,7 +89,7 @@ app.MapGet("/orders/export", () => Results.Ok())
 - 默认策略：供不指定策略名的 `[Authorize]` 使用
 - `DefaultPermissionPolicy`：供 `RequirePermissionAttribute` 和 `RequirePermission` 使用
 
-两者都要求已认证用户，并执行一次 `IPermissionEvaluator`。本包通过 `AuthorizationOptions` 配置策略，不替换宿主的 `IAuthorizationPolicyProvider`。未认证请求由 ASP.NET Core 返回 401；已认证但权限评估失败返回 403；评估器异常按 fail-closed 处理并记录结构化日志。
+两者都要求已认证用户，并执行一次 `IPermissionEvaluator`。本包通过 `AuthorizationOptions` 配置策略，不替换宿主的 `IAuthorizationPolicyProvider`。未认证请求直接拒绝并返回 401，不会调用 `IPermissionEvaluator`（避免匿名流量触发数据库或远程 ACL 等昂贵调用）；已认证但权限评估失败返回 403；评估器异常按 fail-closed 处理并记录结构化日志。
 
 ## API 参考
 

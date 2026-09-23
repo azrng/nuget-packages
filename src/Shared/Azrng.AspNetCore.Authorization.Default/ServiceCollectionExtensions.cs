@@ -29,11 +29,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPermissionEvaluator, TPermissionEvaluator>();
         services.AddAuthorization(options =>
         {
+            // 策略由两类 requirement 组成（须全部满足）：
+            // 1. RequireAuthenticatedUser：要求已认证，匿名请求由框架返回 401；
+            // 2. PermissionAuthorizationRequirement：由 PermissionAuthorizationHandler
+            //    调用 IPermissionEvaluator 做业务权限判断。
             var policy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
                 .AddPermissionRequirement()
                 .Build();
 
+            // DefaultPolicy 供 [Authorize] / RequireAuthorization()，DefaultPermissionPolicy 供 [RequirePermission]
             options.DefaultPolicy = policy;
             options.AddPolicy(DefaultPolicyName, policy);
         });

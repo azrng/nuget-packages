@@ -52,7 +52,7 @@ DefaultPermissionPolicy = 同一策略
 ## 请求处理流程
 
 1. ASP.NET Core 根据 Endpoint 元数据合并授权策略。
-2. 默认策略先要求用户完成认证；未认证请求由认证处理器产生挑战。
+2. 默认策略先要求用户完成认证；未认证请求由认证处理器产生挑战，处理器的匿名短路使其不会进入权限评估。
 3. 授权服务调用 `PermissionAuthorizationHandler`。
 4. 处理器读取 `HttpContext`、Endpoint、路由参数、HTTP 方法和用户，并复制 Endpoint 上的 `IPermissionMetadata`。
 5. 处理器调用 `IPermissionEvaluator.AuthorizeAsync`，传入请求取消令牌。

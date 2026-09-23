@@ -27,6 +27,33 @@ public class AuthorizationPipelineTests
     }
 
     [Fact]
+    public async Task Evaluator_ShouldNotBeInvoked_WhenUserIsNotAuthenticated()
+    {
+        // 匿名请求即使授权结果注定 401，也不应触发业务评估器（数据库 / 远程 ACL 等昂贵调用）
+        using var server = CreateServer(_ => true);
+
+        using var response = await server.CreateClient().GetAsync("/secure");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var state = server.Host.Services.GetRequiredService<PermissionState>();
+        Assert.Equal(0, state.CallCount);
+    }
+
+    [Fact]
+    public async Task Evaluator_ShouldBeInvoked_WhenUserIsAuthenticated()
+    {
+        using var server = CreateServer(context => context.Path == "/secure");
+        using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "alice");
+
+        using var response = await client.GetAsync("/secure");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var state = server.Host.Services.GetRequiredService<PermissionState>();
+        Assert.Equal(1, state.CallCount);
+    }
+
+    [Fact]
     public async Task ProtectedEndpoint_ShouldReturn403_WhenPermissionIsDenied()
     {
         using var server = CreateServer(_ => false);
@@ -91,6 +118,13 @@ public class AuthorizationPipelineTests
         }
 
         public Func<PermissionContext, bool> Evaluator { get; }
+
+        public int CallCount { get; private set; }
+
+        public void RecordCall()
+        {
+            CallCount++;
+        }
     }
 
     private sealed class TestPermissionEvaluator : IPermissionEvaluator
@@ -106,6 +140,7 @@ public class AuthorizationPipelineTests
             PermissionContext context,
             CancellationToken cancellationToken = default)
         {
+            _state.RecordCall();
             return Task.FromResult(_state.Evaluator(context)
                 ? AuthorizationDecision.Allow()
                 : AuthorizationDecision.Deny());
