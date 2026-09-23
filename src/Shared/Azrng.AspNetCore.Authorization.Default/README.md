@@ -8,7 +8,7 @@
 dotnet add package Azrng.AspNetCore.Authorization.Default --prerelease
 ```
 
-当前版本：`2.0.0-beta1`。
+当前版本：`2.0.0-beta2`。
 
 ## 快速开始
 
@@ -105,7 +105,7 @@ app.MapGet("/orders/export", () => Results.Ok())
 
 ## 升级到 2.0
 
-2.0.0-beta1 是破坏性版本。1.x 的路径权限兼容层已移除，应用需要：
+2.0.0 系列是破坏性版本。1.x 的路径权限兼容层已移除，应用需要：
 
 1. 将权限服务改为实现 `IPermissionEvaluator`。
 2. 使用 `PermissionContext` 读取请求路径、方法、路由、用户和权限元数据。

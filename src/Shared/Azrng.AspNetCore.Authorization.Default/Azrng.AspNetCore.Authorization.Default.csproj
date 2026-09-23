@@ -7,7 +7,7 @@
         <Authors>Azrng</Authors>
         <Description>基于 Endpoint 权限元数据的 ASP.NET Core 授权处理库</Description>
         <Copyright>版权归Azrng所有</Copyright>
-        <Version>2.0.0-beta1</Version>
+        <Version>2.0.0-beta2</Version>
         <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <PackageId>Azrng.AspNetCore.Authorization.Default</PackageId>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
