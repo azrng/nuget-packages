@@ -28,7 +28,7 @@ AuthorizationResult → 401 / 403 / Endpoint
 | --- | --- |
 | `ServiceCollectionExtensions` | 注册 Scoped 评估器、默认策略、HTTP 上下文访问器和处理器 |
 | `PermissionAuthorizationHandler` | 从当前 HTTP 请求创建上下文并执行评估器 |
-| `PermissionContext` | 保存请求、用户、Endpoint、路由参数和权限元数据快照 |
+| `PermissionContext` | 保存请求、用户和权限元数据快照 |
 | `IPermissionEvaluator` | 承担业务权限判断 |
 | `AuthorizationDecision` | 返回结构化授权结果 |
 | `RequirePermissionAttribute` | MVC 权限声明 |
@@ -54,7 +54,7 @@ DefaultPermissionPolicy = 同一策略
 1. ASP.NET Core 根据 Endpoint 元数据合并授权策略。
 2. 默认策略先要求用户完成认证；未认证请求由认证处理器产生挑战，处理器的匿名短路使其不会进入权限评估。
 3. 授权服务调用 `PermissionAuthorizationHandler`。
-4. 处理器读取 `HttpContext`、Endpoint、路由参数、HTTP 方法和用户，并复制 Endpoint 上的 `IPermissionMetadata`。
+4. 处理器读取 `HttpContext`、Endpoint、请求路径、HTTP 方法和用户，并复制 Endpoint 上的 `IPermissionMetadata`。
 5. 处理器调用 `IPermissionEvaluator.AuthorizeAsync`，传入请求取消令牌。
 6. `Allowed` 调用 `context.Succeed`；其他结果调用 `context.Fail`。
 7. 评估器异常按拒绝处理并写入固定 EventId 的结构化日志；请求取消异常按原语义继续抛出。
@@ -63,16 +63,14 @@ DefaultPermissionPolicy = 同一策略
 
 ### PermissionContext
 
-`PermissionContext` 是一次授权评估的不可替换上下文快照。`RouteValues` 和 `RequiredPermissions` 在构造时复制，避免评估器持有的集合被后续 Endpoint 或请求代码修改。
+`PermissionContext` 是一次授权评估的不可替换上下文快照。`Path` 与 `Method` 共同标识被请求的操作，`User` 标识请求者，`RequiredPermissions` 在构造时复制，避免评估器持有的集合被后续 Endpoint 或请求代码修改；路由参数、查询参数等其余信息经 `HttpContext` 获取。
 
 ```csharp
 public sealed class PermissionContext
 {
     public HttpContext HttpContext { get; }
-    public Endpoint? Endpoint { get; }
     public string Path { get; }
     public string Method { get; }
-    public RouteValueDictionary RouteValues { get; }
     public ClaimsPrincipal User { get; }
     public IReadOnlyList<IPermissionMetadata> RequiredPermissions { get; }
 }

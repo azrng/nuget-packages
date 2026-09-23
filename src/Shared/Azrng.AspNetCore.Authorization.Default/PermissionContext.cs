@@ -1,13 +1,16 @@
 using System.Collections.ObjectModel;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
 namespace Azrng.AspNetCore.Authorization.Default;
 
 /// <summary>
-/// 权限评估所需的 HTTP 请求上下文。
+/// 权限评估所需的请求上下文快照。
 /// </summary>
+/// <remarks>
+/// Path + Method 标识“请求什么操作”，User 标识“谁在请求”，
+/// RequiredPermissions 是 Endpoint 声明的权限码；其余请求信息（租户头、查询参数等）经 <see cref="HttpContext"/> 获取。
+/// </remarks>
 public sealed class PermissionContext
 {
     /// <summary>
@@ -15,53 +18,38 @@ public sealed class PermissionContext
     /// </summary>
     public PermissionContext(
         HttpContext httpContext,
-        Endpoint? endpoint,
         string path,
         string method,
-        RouteValueDictionary routeValues,
         ClaimsPrincipal user,
         IEnumerable<IPermissionMetadata>? requiredPermissions = null)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(method);
-        ArgumentNullException.ThrowIfNull(routeValues);
         ArgumentNullException.ThrowIfNull(user);
 
         HttpContext = httpContext;
-        Endpoint = endpoint;
         Path = path;
         Method = method;
-        RouteValues = new RouteValueDictionary(routeValues);
         User = user;
         RequiredPermissions = new ReadOnlyCollection<IPermissionMetadata>(
             (requiredPermissions ?? Array.Empty<IPermissionMetadata>()).ToArray());
     }
 
     /// <summary>
-    /// 当前 HTTP 上下文。
+    /// 当前 HTTP 上下文，用于获取路由参数、查询参数、请求头等其余信息。
     /// </summary>
     public HttpContext HttpContext { get; }
 
     /// <summary>
-    /// 当前 Endpoint，手动调用授权服务时可能为空。
-    /// </summary>
-    public Endpoint? Endpoint { get; }
-
-    /// <summary>
-    /// 请求路径，保持与旧接口一致，已转换为小写。
+    /// 请求路径，已转换为小写。
     /// </summary>
     public string Path { get; }
 
     /// <summary>
-    /// HTTP 方法。
+    /// HTTP 方法，与 <see cref="Path"/> 共同标识被请求的操作。
     /// </summary>
     public string Method { get; }
-
-    /// <summary>
-    /// 路由参数快照。
-    /// </summary>
-    public RouteValueDictionary RouteValues { get; }
 
     /// <summary>
     /// 当前用户。

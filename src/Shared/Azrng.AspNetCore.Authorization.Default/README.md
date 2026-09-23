@@ -49,8 +49,8 @@ public sealed class MyPermissionEvaluator : IPermissionEvaluator
 
 `PermissionContext` 提供以下信息：
 
-- `HttpContext` 和当前 `Endpoint`
-- 小写请求路径、HTTP 方法和路由参数快照
+- `HttpContext`：其余请求信息（路由参数、查询参数、请求头等）的入口
+- 小写请求路径和 HTTP 方法，共同标识被请求的操作
 - 当前用户 `ClaimsPrincipal`
 - Endpoint 上全部 `IPermissionMetadata`
 

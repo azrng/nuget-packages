@@ -21,7 +21,6 @@ public class EndpointPermissionTests
 
         using var provider = services.BuildServiceProvider();
         var httpContext = CreateHttpContext(provider, "/API/orders/42", "POST");
-        httpContext.Request.RouteValues["id"] = "42";
         httpContext.SetEndpoint(CreateEndpoint(new PermissionMetadata(
             PermissionMatchMode.Any,
             "orders.read",
@@ -34,7 +33,6 @@ public class EndpointPermissionTests
         state.Context.Should().NotBeNull();
         state.Context!.Path.Should().Be("/api/orders/42");
         state.Context.Method.Should().Be("POST");
-        state.Context.RouteValues["id"].Should().Be("42");
         state.Context.RequiredPermissions.Should().ContainSingle();
         state.Context.RequiredPermissions[0].MatchMode.Should().Be(PermissionMatchMode.Any);
         state.Context.RequiredPermissions[0].Permissions.Should()

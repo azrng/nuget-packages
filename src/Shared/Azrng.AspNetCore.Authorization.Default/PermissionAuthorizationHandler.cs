@@ -66,10 +66,8 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
             ?? Array.Empty<IPermissionMetadata>();
         var permissionContext = new PermissionContext(
             httpContext,
-            endpoint,
             queryUrl,
             httpContext.Request.Method,
-            httpContext.Request.RouteValues,
             context.User,
             permissionMetadata);
 
