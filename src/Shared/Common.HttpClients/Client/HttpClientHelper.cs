@@ -1,6 +1,7 @@
 using Common.HttpClients.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,9 +19,11 @@ namespace Common.HttpClients
     /// </summary>
     public class HttpClientHelper : IHttpHelper
     {
-        private readonly Func<HttpClient> _clientAccessor;
-        private readonly Func<JsonNamingPolicyType> _namingPolicyAccessor;
-        private readonly Func<bool> _propertyNameCaseInsensitiveAccessor;
+        private readonly HttpClient? _client;
+        private readonly IHttpClientFactory? _httpClientFactory;
+        private readonly string? _clientName;
+        private readonly IOptions<HttpClientOptions>? _httpOptions;
+        private readonly IOptionsMonitor<HttpClientOptions>? _optionsMonitor;
         private readonly ILogger<HttpClientHelper> _logger;
 
         /// <summary>
@@ -34,10 +37,8 @@ namespace Common.HttpClients
             }
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            var options = httpConfig ?? throw new ArgumentNullException(nameof(httpConfig));
-            _clientAccessor = () => client;
-            _namingPolicyAccessor = () => options.Value.JsonNamingPolicy;
-            _propertyNameCaseInsensitiveAccessor = () => options.Value.PropertyNameCaseInsensitive;
+            _client = client;
+            _httpOptions = httpConfig ?? throw new ArgumentNullException(nameof(httpConfig));
         }
 
         /// <summary>
@@ -63,9 +64,9 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(optionsMonitor));
             }
 
-            _clientAccessor = () => httpClientFactory.CreateClient(name);
-            _namingPolicyAccessor = () => optionsMonitor.Get(name).JsonNamingPolicy;
-            _propertyNameCaseInsensitiveAccessor = () => optionsMonitor.Get(name).PropertyNameCaseInsensitive;
+            _clientName = name;
+            _httpClientFactory = httpClientFactory;
+            _optionsMonitor = optionsMonitor;
         }
 
         public async Task<IHttpResult<Stream>> GetStreamAsync(string url, HttpSendOptions? opt = null,
@@ -74,7 +75,7 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, opt?.Headers);
             request.Options.Set(HttpClientRequestOptionKeys.SkipResponseBodyAudit, true);
-            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead)
+            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead, opt)
                 .ConfigureAwait(false);
 
             try
@@ -104,7 +105,7 @@ namespace Common.HttpClients
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, opt?.Headers);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -112,10 +113,10 @@ namespace Common.HttpClients
                                                        CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, GetOptions().JsonNamingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -125,8 +126,48 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var httpContent = new FormUrlEncodedContent(data);
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, httpContent);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
+        }
+
+        public Task<IHttpResult<T>> PostFormUrlEncodedAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                               HttpSendOptions? opt = null, CancellationToken cancellation = default)
+        {
+            return PostFormDataAsync<T>(url, data, opt, cancellation);
+        }
+
+        public async Task<IHttpResult<Stream>> PostStreamAsync(string url, object data, HttpSendOptions? opt = null,
+                                                               CancellationToken cancellation = default)
+        {
+            var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, GetOptions().JsonNamingPolicy);
+            using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
+            using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
+            request.Options.Set(HttpClientRequestOptionKeys.SkipResponseBodyAudit, true);
+            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead, opt)
+                .ConfigureAwait(false);
+
+            try
+            {
+                var isFallback = IsFallbackResponse(response);
+                var statusCode = response.StatusCode;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellation).ConfigureAwait(false);
+                    _logger.LogError("API:{Url} error: {StatusCode} - {ErrorContent}", fullUrl, (int)statusCode, errorContent);
+                    response.Dispose();
+                    return HttpResult<Stream>.Fail(errorContent, statusCode, errorContent, isFallback);
+                }
+
+                var stream = await response.Content.ReadAsStreamAsync(cancellation).ConfigureAwait(false);
+                return HttpResult<Stream>.Success(new ResponseStream(stream, response), statusCode, null);
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
         }
 
         public async Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, HttpSendOptions? opt = null,
@@ -134,7 +175,7 @@ namespace Common.HttpClients
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, data);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -144,7 +185,7 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var content = new StringContent(xmlData ?? string.Empty, Encoding.UTF8, "application/soap+xml");
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, content);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -161,7 +202,7 @@ namespace Common.HttpClients
             formData.Add(byteContent);
 
             using var request = CreateRequestMessage(HttpMethod.Post, fullUrl, opt?.Headers, formData);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -169,10 +210,10 @@ namespace Common.HttpClients
                                                       CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, GetOptions().JsonNamingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Put, fullUrl, opt?.Headers, content);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -180,7 +221,7 @@ namespace Common.HttpClients
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, opt?.Headers);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -188,10 +229,10 @@ namespace Common.HttpClients
                                                          CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, GetOptions().JsonNamingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Delete, fullUrl, opt?.Headers, content);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -199,10 +240,10 @@ namespace Common.HttpClients
                                                         CancellationToken cancellation = default)
         {
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
-            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, _namingPolicyAccessor());
+            var jsonData = data is string ? data.ToString() : JsonHelper.ToJson(data, GetOptions().JsonNamingPolicy);
             using var content = new StringContent(jsonData ?? string.Empty, Encoding.UTF8, "application/json");
             using var request = CreateRequestMessage(HttpMethod.Patch, fullUrl, opt?.Headers, content);
-            using var response = await SendCoreAsync(request, cancellation).ConfigureAwait(false);
+            using var response = await SendCoreAsync(request, cancellation, opt: opt).ConfigureAwait(false);
             return await ConvertResponseResult<T>(response, fullUrl, cancellation).ConfigureAwait(false);
         }
 
@@ -213,7 +254,7 @@ namespace Common.HttpClients
                 throw new ArgumentNullException(nameof(request));
             }
 
-            return await _clientAccessor().SendAsync(request, cancellation).ConfigureAwait(false);
+            return await GetClient().SendAsync(request, cancellation).ConfigureAwait(false);
         }
 
         public async Task<IHttpResult<DownloadResult>> DownloadFileAsync(string url, string filePath, HttpSendOptions? opt = null,
@@ -222,7 +263,7 @@ namespace Common.HttpClients
             var fullUrl = QueryStringBuilder.AppendQuery(url, opt?.Query);
             using var request = CreateRequestMessage(HttpMethod.Get, fullUrl, opt?.Headers);
             request.Options.Set(HttpClientRequestOptionKeys.SkipResponseBodyAudit, true);
-            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead)
+            var response = await SendCoreAsync(request, cancellation, HttpCompletionOption.ResponseHeadersRead, opt)
                 .ConfigureAwait(false);
 
             var isFallback = IsFallbackResponse(response);
@@ -312,7 +353,8 @@ namespace Common.HttpClients
             // 仅捕获 JsonException，T 不受支持等编码错误仍抛出
             try
             {
-                var data = JsonHelper.ToObject<T>(rawBody, _namingPolicyAccessor(), _propertyNameCaseInsensitiveAccessor());
+                var options = GetOptions();
+                var data = JsonHelper.ToObject<T>(rawBody, options.JsonNamingPolicy, options.PropertyNameCaseInsensitive);
                 return HttpResult<T>.Success(data, statusCode, rawBody);
             }
             catch (JsonException ex)
@@ -357,11 +399,63 @@ namespace Common.HttpClients
         }
 
         private Task<HttpResponseMessage> SendCoreAsync(HttpRequestMessage request, CancellationToken cancellation,
-                                                        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
+                                                        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
+                                                        HttpSendOptions? opt = null)
         {
             // 每次请求现取客户端（工厂以 disposeHandler:false 包装，由工厂统一管理 handler 生命周期）；
             // 缓存客户端会使工厂的 handler 轮换失效，长驻服务将无法感知 DNS / 证书变更
-            return _clientAccessor().SendAsync(request, completionOption, cancellation);
+            if (opt?.EnableRetry == false)
+            {
+                return SendWithoutRetryAsync(request, completionOption, cancellation);
+            }
+
+            return GetClient().SendAsync(request, completionOption, cancellation);
+        }
+
+        private HttpClient GetClient()
+        {
+            if (_client != null)
+            {
+                return _client;
+            }
+
+            // 命名客户端必须每次从工厂获取，以保留 handler 轮换能力。
+            return _httpClientFactory!.CreateClient(_clientName!);
+        }
+
+        private HttpClientOptions GetOptions()
+        {
+            if (_httpOptions != null)
+            {
+                return _httpOptions.Value;
+            }
+
+            // 命名客户端读取 monitor，确保 options 热更新即时生效。
+            return _optionsMonitor!.Get(_clientName);
+        }
+
+        /// <summary>
+        /// 调用点级禁用重试：预置携带 SuppressRetry 标记的 ResilienceContext，
+        /// ResilienceHandler（8.0.0 与 9.0+ 行为一致）复用预置 context 且不归还，
+        /// 重试谓词经 args.Context 读到标记后跳过重试；context 由此处负责归还
+        /// </summary>
+        private async Task<HttpResponseMessage> SendWithoutRetryAsync(HttpRequestMessage request,
+                                                                      HttpCompletionOption completionOption,
+                                                                      CancellationToken cancellation)
+        {
+            var context = ResilienceContextPool.Shared.Get(cancellation);
+            context.Properties.Set(HttpClientResilienceKeys.SuppressRetry, true);
+            request.SetResilienceContext(context);
+
+            try
+            {
+                return await GetClient().SendAsync(request, completionOption, cancellation).ConfigureAwait(false);
+            }
+            finally
+            {
+                request.SetResilienceContext(null);
+                ResilienceContextPool.Shared.Return(context);
+            }
         }
 
         private static bool IsFallbackResponse(HttpResponseMessage response)

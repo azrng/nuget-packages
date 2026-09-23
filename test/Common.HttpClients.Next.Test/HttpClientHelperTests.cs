@@ -244,6 +244,117 @@ namespace Common.HttpClients.Next.Test
         }
 
         [Fact]
+        public async Task PostFormUrlEncodedAsync_ShouldSendFormUrlEncoded()
+        {
+            string? mediaType = null;
+            string? payload = null;
+            using var client = NewClient(async r =>
+            {
+                mediaType = r.Content?.Headers.ContentType?.MediaType;
+                payload = await r.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"accessToken\":\"tk\"}")
+                };
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.PostFormUrlEncodedAsync<TokenResponse>("https://unit.test/oauth/token",
+                new Dictionary<string, string>
+                {
+                    ["grant_type"] = "client_credentials",
+                    ["client_id"] = "sea",
+                    ["client_secret"] = "s3cret"
+                });
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("application/x-www-form-urlencoded", mediaType);
+            Assert.Contains("grant_type=client_credentials", payload);
+            Assert.Contains("client_id=sea", payload);
+            Assert.Contains("client_secret=s3cret", payload);
+            Assert.Equal("tk", result.Data?.AccessToken);
+        }
+
+        [Fact]
+        public async Task PostStreamAsync_ObjectData_ShouldReturnReadableStream()
+        {
+            HttpMethod? method = null;
+            string? mediaType = null;
+            string? payload = null;
+            using var client = NewClient(async r =>
+            {
+                method = r.Method;
+                mediaType = r.Content?.Headers.ContentType?.MediaType;
+                payload = await r.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"page\":3,\"items\":[1,2,3]}")
+                };
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.PostStreamAsync("https://unit.test/audit/search", new { cursor = 2, size = 100 });
+
+            Assert.Equal(HttpMethod.Post, method);
+            Assert.Equal("application/json", mediaType);
+            Assert.Contains("\"cursor\":2", payload);
+            Assert.True(result.IsSuccess);
+            using (var reader = new StreamReader(result.Data!))
+            {
+                var body = await reader.ReadToEndAsync();
+                Assert.Contains("\"page\":3", body);
+                Assert.Contains("\"items\":[1,2,3]", body);
+            }
+            result.Data!.Dispose();
+        }
+
+        [Fact]
+        public async Task PostStreamAsync_StringData_ShouldSendRawJson()
+        {
+            string? payload = null;
+            using var client = NewClient(async r =>
+            {
+                payload = await r.Content!.ReadAsStringAsync();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("raw")
+                };
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.PostStreamAsync("https://unit.test/audit/search", "{\"cursor\":2}");
+
+            Assert.Equal("{\"cursor\":2}", payload);
+            using (var reader = new StreamReader(result.Data!))
+            {
+                Assert.Equal("raw", await reader.ReadToEndAsync());
+            }
+            result.Data!.Dispose();
+        }
+
+        [Fact]
+        public async Task PostStreamAsync_ServerError_ShouldReturnFailedResult()
+        {
+            using var client = NewClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("audit busy")
+            });
+            var helper = CreateHelper(client);
+
+            var result = await helper.PostStreamAsync("https://unit.test/audit/search", new { cursor = 2 });
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(HttpStatusCode.InternalServerError, result.StatusCode);
+            Assert.Equal("audit busy", result.ErrorMessage);
+            Assert.Null(result.Data);
+        }
+
+        private sealed class TokenResponse
+        {
+            public string? AccessToken { get; set; }
+        }
+
+        [Fact]
         public async Task PostSoapAsync_ShouldUseSoapContentType()
         {
             string? mediaType = null;

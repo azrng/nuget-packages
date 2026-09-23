@@ -9,7 +9,7 @@ namespace Common.HttpClients.Next.Test.Integration;
 /// <summary>
 /// IHttpHelper 针对 Apifox Echo（https://echo.apifox.com）的集成测试。
 /// 覆盖 IHttpHelper 全部成员：5 种 HTTP 方法、Query/JSON/Form/文件上传/Soap、
-/// 自定义 Header、GetStreamAsync 流式读取、SendAsync（原始请求）、DownloadFileAsync 下载、
+/// PostStreamAsync/GetStreamAsync 流式读取、SendAsync（原始请求）、DownloadFileAsync 下载、
 /// 以及 /delay 触发的超时（由 Fallback 兜底为 503）。
 /// 这些测试会发起真实网络请求，需在联网环境执行；
 /// 离线环境可通过 <c>--filter Category!=Integration</c> 跳过。
@@ -143,6 +143,24 @@ public class ApifoxEchoIntegrationTests
     }
 
     [Fact]
+    public async Task PostFormUrlEncodedAsync_ShouldEchoForm()
+    {
+        var form = new List<KeyValuePair<string, string>>
+        {
+            new("grant_type", "client_credentials"),
+            new("scope", "orders.read")
+        };
+
+        var result = await _http.PostFormUrlEncodedAsync<EchoResponse>("post", form);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+        result.Data.Should().NotBeNull();
+        result.Data!.Form.Should().ContainKey("grant_type").WhoseValue.Should().Be("client_credentials");
+        result.Data.Form.Should().ContainKey("scope").WhoseValue.Should().Be("orders.read");
+    }
+
+    [Fact]
     public async Task PostFormDataAsync_AsString_ShouldReturnEchoBody()
     {
         var form = new List<KeyValuePair<string, string>> { new("field1", "value1") };
@@ -263,6 +281,25 @@ public class ApifoxEchoIntegrationTests
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer);
         buffer.Length.Should().Be(bytes);
+    }
+
+    [Fact]
+    public async Task PostStreamAsync_ShouldReadActualResponseStream()
+    {
+        var result = await _http.PostStreamAsync("post", new { cursor = 2, size = 100 });
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+        result.Data.Should().NotBeNull();
+
+        await using var stream = result.Data!;
+        using var reader = new StreamReader(stream);
+        var body = await reader.ReadToEndAsync();
+
+        using var document = JsonDocument.Parse(body);
+        var json = document.RootElement.GetProperty("json");
+        json.GetProperty("cursor").GetInt32().Should().Be(2);
+        json.GetProperty("size").GetInt32().Should().Be(100);
     }
 
     // ========== 文件下载（DownloadFileAsync）==========

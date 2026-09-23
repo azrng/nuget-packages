@@ -20,7 +20,7 @@
 ## 安装
 
 ```bash
-dotnet add package Common.HttpClients --version 4.1.0
+dotnet add package Common.HttpClients --version 4.2.0
 ```
 
 ## 项目结构
@@ -134,6 +134,7 @@ public sealed class HttpSendOptions
 {
     public object? Query { get; set; }   // 查询参数（匿名对象 / IDictionary / NameValueCollection）
     public HttpHeaders? Headers { get; set; } // 请求头（支持同名多值，覆盖客户端默认头）
+    public bool? EnableRetry { get; set; } // 本次请求是否启用重试；null 跟随客户端全局配置
 }
 ```
 
@@ -144,6 +145,15 @@ var result = await _httpHelper.GetAsync<User>("https://api.example.com/users",
         Query = new { page = 1, pageSize = 20 },
         Headers = HttpHelperExtensions.CreateBearerHeaders("your-token")
     });
+```
+
+### 调用点级关闭重试（非幂等场景）
+
+客户端默认开启重试（`MaxRetryAttempts = 3`）。token 换发、委托授权等非幂等端点重试会放大请求，可在调用点单独关闭，不影响同一客户端上的其他幂等调用：
+
+```csharp
+var token = await _httpHelper.PostFormUrlEncodedAsync<TokenResponse>("https://sso.example.com/oauth/token", form,
+    new HttpSendOptions { EnableRetry = false });
 ```
 
 ## IHttpResult\<T\> 返回值
@@ -214,12 +224,20 @@ var result = await _httpHelper.PostAsync<User>("https://api.example.com/users", 
 var result = await _httpHelper.PostAsync<string>("https://api.example.com/users", "{\"raw\":\"json\"}"); // 原样发送
 ```
 
-### POST Form-Data
+### POST 表单
+
+**x-www-form-urlencoded**（OAuth token 端点、标准 HTML 表单）——键值对重载 `PostFormDataAsync` 与显式命名的 `PostFormUrlEncodedAsync` 等价：
 
 ```csharp
 var data = new Dictionary<string, string> { ["username"] = "admin", ["password"] = "123456" };
 var result = await _httpHelper.PostFormDataAsync<LoginResponse>("https://api.example.com/login", data);
+// 等价显式写法（推荐，Content-Type 一目了然）
+var result = await _httpHelper.PostFormUrlEncodedAsync<LoginResponse>("https://api.example.com/login", data);
+```
 
+**multipart/form-data**（文件上传）：
+
+```csharp
 // 上传单个文件
 using var stream = File.OpenRead("photo.jpg");
 var result = await _httpHelper.PostFormDataAsync<UploadResponse>(
@@ -229,6 +247,24 @@ var result = await _httpHelper.PostFormDataAsync<UploadResponse>(
 using var form = new MultipartFormDataContent();
 form.Add(new ByteArrayContent(fileBytes), "file", "document.pdf");
 var result = await _httpHelper.PostFormDataAsync<UploadResponse>("https://api.example.com/upload", form);
+```
+
+### 流式读取大响应体
+
+`GetStreamAsync` / `PostStreamAsync` 在响应头到达即返回，响应体以流交给调用方按需读取，不整体缓冲进内存（适合审计分页拉取等大响应体场景）；流释放时自动释放底层响应：
+
+```csharp
+// GET 流式
+var result = await _httpHelper.GetStreamAsync("https://api.example.com/audits/export");
+// POST 流式（分页游标、过滤条件放请求体）
+var result = await _httpHelper.PostStreamAsync("https://api.example.com/audits/search", new { cursor = 2, size = 100 });
+
+if (result.IsSuccess)
+{
+    await using var stream = result.Data!;
+    using var reader = new StreamReader(stream);
+    // 按行 / 按块处理，避免整页载入内存
+}
 ```
 
 ### PUT / PATCH / DELETE
@@ -389,9 +425,10 @@ var user = (await _httpHelper.GetAsync<User>(url)).EnsureSuccess().Data;
 2. **总超时（Timeout）** - 覆盖整条重试链的总耗时上限
 3. **并发限制（Concurrency Limiter）** - 限制同时进行的 HTTP 请求数量（`ConcurrencyLimit = 0` 时跳过）
 4. **熔断器（Circuit Breaker）** - 错误率达到阈值时暂时停止请求
-5. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求
+5. **重试策略（Retry）** - 自动重试 5xx、408、超时等失败请求；调用点可通过 `HttpSendOptions.EnableRetry = false` 单独关闭（非幂等场景）
 
 > 整个请求链（含所有重试）受单次 `Timeout` 上限约束；超时后由 Fallback 兜底为 503 降级响应。
+> 全局默认 `MaxRetryAttempts = 3` 对所有请求生效；token 换发等非幂等端点建议在调用点设置 `EnableRetry = false`，或为该服务单独注册客户端并配置 `MaxRetryAttempts = 0`。
 
 ## 日志
 
@@ -422,6 +459,13 @@ services.AddHttpClientService();
 支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ## 版本更新记录
+
+### 4.2.0
+
+- **[新增]** `IHttpHelper.PostFormUrlEncodedAsync`：`application/x-www-form-urlencoded` 表单的显式命名方法（与 `PostFormDataAsync` 键值对重载等价），OAuth token 端点等标准表单场景不再与 multipart 语义混淆
+- **[新增]** `IHttpHelper.PostStreamAsync`：POST + 流式读取响应体（响应头到达即返回，响应体不整体缓冲），补齐 `GetStreamAsync` 覆盖不了的 POST 分页拉取场景
+- **[新增]** `HttpSendOptions.EnableRetry`：调用点级重试开关（默认 null 跟随客户端全局配置），token 换发等非幂等端点可按请求关闭重试而不影响同一客户端上的幂等调用
+- **[修复]** 修正三个 `PostFormDataAsync` 重载的 XML 注释，逐个标明实际 Content-Type（键值对重载为 x-www-form-urlencoded，文件与 MultipartFormDataContent 重载为 multipart/form-data）
 
 ### 4.1.0
 

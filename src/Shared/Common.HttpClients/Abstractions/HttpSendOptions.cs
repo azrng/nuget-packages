@@ -14,5 +14,11 @@ namespace Common.HttpClients
         /// 请求头（per-request，覆盖客户端默认头）；支持同名多值
         /// </summary>
         public HttpHeaders? Headers { get; set; }
+
+        /// <summary>
+        /// 本次请求是否启用重试；默认 null 跟随客户端全局 <c>MaxRetryAttempts</c> 配置。
+        /// token 换发、委托授权等非幂等端点应显式设置为 <c>false</c>，避免超时/5xx 后重发放大请求
+        /// </summary>
+        public bool? EnableRetry { get; set; }
     }
 }

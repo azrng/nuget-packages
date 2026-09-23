@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Common.HttpClients;
 
 namespace Common.HttpClients.Next.Test.Samples;
@@ -37,6 +38,27 @@ public class ApifoxEchoSamples
         using var reader = new StreamReader(stream);
         var body = await reader.ReadToEndAsync();
         body.Should().Contain("headers");
+    }
+
+    /// <summary>
+    /// PostStreamAsync 示例：POST JSON 并按流读取真实响应，适合大响应体场景
+    /// </summary>
+    [Fact]
+    public async Task PostStreamExample()
+    {
+        var result = await _httpHelper.PostStreamAsync(Host + "/post", new { cursor = 2, size = 100 });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+
+        await using var stream = result.Data!;
+        using var reader = new StreamReader(stream);
+        var body = await reader.ReadToEndAsync();
+        using var document = JsonDocument.Parse(body);
+
+        var json = document.RootElement.GetProperty("json");
+        json.GetProperty("cursor").GetInt32().Should().Be(2);
+        json.GetProperty("size").GetInt32().Should().Be(100);
     }
 
     /// <summary>
@@ -82,6 +104,25 @@ public class ApifoxEchoSamples
 
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().Contain("value1");
+    }
+
+    /// <summary>
+    /// PostFormUrlEncodedAsync 示例：发送 application/x-www-form-urlencoded 表单，适合 OAuth token 等标准表单端点
+    /// </summary>
+    [Fact]
+    public async Task PostFormUrlEncodedExample()
+    {
+        var form = new List<KeyValuePair<string, string>>
+        {
+            new("grant_type", "client_credentials"),
+            new("scope", "orders.read")
+        };
+
+        var result = await _httpHelper.PostFormUrlEncodedAsync<string>(Host + "/post", form);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().Contain("client_credentials");
+        result.Data.Should().Contain("orders.read");
     }
 
     /// <summary>

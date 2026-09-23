@@ -121,6 +121,13 @@ namespace Common.HttpClients
                                          BackoffType = DelayBackoffType.Exponential,
                                          ShouldHandle = args =>
                                          {
+                                             // 调用点级禁用重试：HttpSendOptions.EnableRetry=false 时由客户端预置 context 传入
+                                             if (args.Context.Properties.TryGetValue(HttpClientResilienceKeys.SuppressRetry, out var suppressRetry)
+                                                 && suppressRetry)
+                                             {
+                                                 return ValueTask.FromResult(false);
+                                             }
+
                                              if (args.Context.CancellationToken.IsCancellationRequested)
                                              {
                                                  return ValueTask.FromResult(false);

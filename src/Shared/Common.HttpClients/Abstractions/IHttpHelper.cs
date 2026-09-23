@@ -12,7 +12,7 @@ namespace Common.HttpClients
     public interface IHttpHelper
     {
         /// <summary>
-        /// Get请求获取文件流
+        /// Get请求获取文件流（响应头到达即返回，响应体不整体缓冲，适用于大响应体；流释放时自动释放响应）
         /// </summary>
         /// <param name="url">请求地址</param>
         /// <param name="opt">请求选项（查询参数、请求头）</param>
@@ -43,7 +43,7 @@ namespace Common.HttpClients
         Task<IHttpResult<T>> PostAsync<T>(string url, object data, HttpSendOptions? opt = null, CancellationToken cancellation = default);
 
         /// <summary>
-        /// post传递form-data文本参数
+        /// post传递application/x-www-form-urlencoded表单文本参数
         /// </summary>
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
@@ -51,12 +51,25 @@ namespace Common.HttpClients
         /// <param name="opt">请求选项（查询参数、请求头）</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        /// <remarks>postman=>body=>form-data</remarks>
+        /// <remarks>postman=>body=>x-www-form-urlencoded；OAuth token 端点等标准表单场景</remarks>
         Task<IHttpResult<T>> PostFormDataAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
                                                   HttpSendOptions? opt = null, CancellationToken cancellation = default);
 
         /// <summary>
-        /// post传递form-data文件(特定场景，参数只有一个文件)
+        /// post传递application/x-www-form-urlencoded表单文本参数（<see cref="PostFormDataAsync{T}"/> 键值对重载的显式命名版本）
+        /// </summary>
+        /// <typeparam name="T">返回的结果</typeparam>
+        /// <param name="url">请求地址</param>
+        /// <param name="data">请求的数据</param>
+        /// <param name="opt">请求选项（查询参数、请求头）</param>
+        /// <param name="cancellation"></param>
+        /// <returns>包含反序列化对象的HttpResult</returns>
+        /// <remarks>postman=>body=>x-www-form-urlencoded；与 multipart 的 PostFormDataAsync 重载区分，OAuth token 端点等标准表单场景</remarks>
+        Task<IHttpResult<T>> PostFormUrlEncodedAsync<T>(string url, IEnumerable<KeyValuePair<string, string>> data,
+                                                        HttpSendOptions? opt = null, CancellationToken cancellation = default);
+
+        /// <summary>
+        /// post传递multipart/form-data文件(特定场景，参数只有一个文件)
         /// </summary>
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
@@ -66,12 +79,12 @@ namespace Common.HttpClients
         /// <param name="opt">请求选项（查询参数、请求头）</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        /// <remarks>postman=>body=>form-data</remarks>
+        /// <remarks>postman=>body=>form-data（multipart）</remarks>
         Task<IHttpResult<T>> PostFormDataAsync<T>(string url, string parameter, Stream stream, string fileName,
                                                   HttpSendOptions? opt = null, CancellationToken cancellation = default);
 
         /// <summary>
-        /// post传递form-data参数(支持上传文件)
+        /// post传递multipart/form-data参数(支持上传文件)
         /// </summary>
         /// <typeparam name="T">返回的结果</typeparam>
         /// <param name="url">请求地址</param>
@@ -79,7 +92,7 @@ namespace Common.HttpClients
         /// <param name="opt">请求选项（查询参数、请求头）</param>
         /// <param name="cancellation"></param>
         /// <returns>包含反序列化对象的HttpResult</returns>
-        /// <remarks>postman=>body=>form-data</remarks>
+        /// <remarks>postman=>body=>form-data（multipart）</remarks>
         Task<IHttpResult<T>> PostFormDataAsync<T>(string url, MultipartFormDataContent data, HttpSendOptions? opt = null,
                                                   CancellationToken cancellation = default);
 
@@ -94,6 +107,17 @@ namespace Common.HttpClients
         /// <remarks>postman=>body=>xml</remarks>
         Task<IHttpResult<T>> PostSoapAsync<T>(string url, string xmlData, HttpSendOptions? opt = null,
                                               CancellationToken cancellation = default);
+
+        /// <summary>
+        /// POST 请求以流式读取响应体（分页拉取大响应体场景：响应头到达即返回，响应体由调用方按需读取，不整体缓冲）
+        /// </summary>
+        /// <param name="url">请求地址</param>
+        /// <param name="data">请求的数据（字符串按原始 JSON 发送、对象序列化为 JSON）</param>
+        /// <param name="opt">请求选项（查询参数、请求头）</param>
+        /// <param name="cancellation"></param>
+        /// <returns>包含流的HttpResult</returns>
+        Task<IHttpResult<Stream>> PostStreamAsync(string url, object data, HttpSendOptions? opt = null,
+                                                  CancellationToken cancellation = default);
 
         /// <summary>
         /// PUT请求返回自定义内容

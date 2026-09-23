@@ -107,6 +107,80 @@ namespace Common.HttpClients.Next.Test
             Assert.Equal(1, attempts);
         }
 
+        [Fact]
+        public async Task Retry_EnableRetryFalse_ShouldSuppressRetryPerRequest()
+        {
+            // 全局开启重试的前提下，调用点 EnableRetry=false 只禁用本次请求（token 换发等非幂等场景）
+            int attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async ctx =>
+            {
+                attempts++;
+                await ScriptedHttpListenerServer.WriteResponseAsync(ctx, HttpStatusCode.InternalServerError, "token-busy");
+            });
+
+            using var provider = BuildProvider(o =>
+            {
+                o.MaxRetryAttempts = 3;
+                o.RetryDelaySeconds = 1;
+            });
+
+            var helper = provider.GetRequiredService<IHttpHelper>();
+            var result = await helper.PostAsync<string>($"{server.BaseUrl}oauth/token", new { grant_type = "client_credentials" },
+                new HttpSendOptions { EnableRetry = false });
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(1, attempts);
+        }
+
+        [Fact]
+        public async Task Retry_EnableRetryFalse_OnSuccess_ShouldReturnNormally()
+        {
+            // 预置 ResilienceContext 不应影响正常成功路径
+            int attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async ctx =>
+            {
+                attempts++;
+                await ScriptedHttpListenerServer.WriteResponseAsync(ctx, HttpStatusCode.OK, "{\"token\":\"tk\"}");
+            });
+
+            using var provider = BuildProvider(o =>
+            {
+                o.MaxRetryAttempts = 3;
+                o.RetryDelaySeconds = 1;
+            });
+
+            var helper = provider.GetRequiredService<IHttpHelper>();
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}ok", new HttpSendOptions { EnableRetry = false });
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("{\"token\":\"tk\"}", result.Data);
+            Assert.Equal(1, attempts);
+        }
+
+        [Fact]
+        public async Task Retry_EnableRetryTrueOrNull_ShouldFollowGlobalRetry()
+        {
+            // EnableRetry=true / 不设置 均跟随全局配置，行为与历史版本一致
+            int attempts = 0;
+            await using var server = new ScriptedHttpListenerServer(async ctx =>
+            {
+                attempts++;
+                await ScriptedHttpListenerServer.WriteResponseAsync(ctx, HttpStatusCode.InternalServerError, "fail");
+            });
+
+            using var provider = BuildProvider(o =>
+            {
+                o.MaxRetryAttempts = 2;
+                o.RetryDelaySeconds = 1;
+            });
+
+            var helper = provider.GetRequiredService<IHttpHelper>();
+            var result = await helper.GetAsync<string>($"{server.BaseUrl}follow", new HttpSendOptions { EnableRetry = true });
+
+            Assert.False(result.IsSuccess);
+            Assert.True(attempts >= 2);
+        }
+
         private static ServiceProvider BuildProvider(Action<HttpClientOptions> setup)
         {
             var services = new ServiceCollection();

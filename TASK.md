@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T153 | Common.HttpClients 非幂等场景适配（form 表单 / POST 流式 / 调用点级重试开关） | 消费方迁移反馈三项：新增 PostFormUrlEncodedAsync 显式别名并修正表单重载文档；新增 PostStreamAsync（POST + ResponseHeadersRead 流式读大响应体）；HttpSendOptions 增加 EnableRetry 调用点级重试开关（false 时经预置 ResilienceContext 传递 SuppressRetry 标记短路重试谓词），版本升至 4.2.0 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |
 | T151 | Common.EFCore 系列包版本升级 | 将本次 Snowflake 替换涉及的 Azrng.Core、Common.EFCore 及五个 Provider 各升级一个补丁版本，并同步 README 版本记录与打包验证 | 阶段 2 | Codex | DONE | P1 | 2026-09-22 |
 | T150 | Common.EFCore 使用 Azrng.Core Snowflake 替换 IdHelper | 移除 Common.EFCore 的 IdHelper 依赖，补齐 Snowflake WorkerId 配置与边界能力，替换各 Provider 和实体生成链路，增加单元测试并记录历史 ID 纪元兼容风险 | 阶段 2 | Codex | DONE | P1 | 2026-09-22 |
 | T149 | Azrng.JSqlParser 同步上游 5.4 第二/三档全部缺口 | 清完基线 e847e94b 剩余能力：PG/MySQL DDL 族（USER/ROLE/DOMAIN/EXTENSION/PUBLICATION/SUBSCRIPTION/TRIGGER/EVENT/DO 块/COMMENT 多目标）、ClickHouse（ARRAY JOIN/WITH FILL/INTERPOLATE/COLUMNS 变换）、BigQuery（UNNEST WITH OFFSET/EXPORT·LOAD DATA/ASSERT）、DuckDB（ANTI JOIN/COPY/ATTACH/PRAGMA/MACRO）、三元 ?:、MATCH_RECOGNIZE、IntervalQualifier/Precision 结构化，，与 T148 同发 1.0.0-rc2 | 阶段 2 | ZCode | DONE | P1 | 2026-09-18 |
