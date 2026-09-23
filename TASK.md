@@ -36,10 +36,10 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T154 | Azrng.AspNetCore.Authorization.Default 授权模型优化 | DONE | 2026-09-23 |
 | T152 | Azrng.NmcWeather 版本升级至 1.1.1 | DONE | 2026-09-22 |
 | T145 | Common.HttpClients 4.1.0 转正 | DONE | 2026-09-22 |
 | T143 | Common.HttpClients 代码审查问题修复（5 项） | DONE | 2026-09-11 |
 | T142 | Common.HttpClients 4.0.0 正式收编 + 去共享框架强依赖 | DONE | 2026-09-11 |
-| T141 | README 版本历史恢复原样（移除 rc1 段） | DONE | 2026-08-21 |
 
 文件结束。

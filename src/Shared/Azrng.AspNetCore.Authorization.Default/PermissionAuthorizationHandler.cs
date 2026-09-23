@@ -1,43 +1,35 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Azrng.AspNetCore.Authorization.Default;
 
 /// <summary>
-/// 基于路径的权限授权处理器
+/// 基于路径和 Endpoint 元数据的权限授权处理器。
 /// </summary>
-/// <remarks>
-/// 此处理器实现了以下功能：
-/// 1. 检查用户是否已认证
-/// 2. 检查请求路径是否在允许匿名访问的列表中
-/// 3. 通过 IPermissionVerifyService 验证用户是否有访问权限
-/// </remarks>
-internal class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
-    private readonly IAuthenticationSchemeProvider _schemes;
     private readonly IHttpContextAccessor _accessor;
+    private readonly IPermissionEvaluator _evaluator;
     private readonly ILogger<PermissionAuthorizationHandler> _logger;
 
     /// <summary>
-    /// 初始化 <see cref="PermissionAuthorizationHandler"/> 的新实例
+    /// 初始化 <see cref="PermissionAuthorizationHandler"/> 的新实例。
     /// </summary>
-    /// <param name="schemes">认证方案提供器</param>
-    /// <param name="httpContextAccessor">HTTP 上下文访问器</param>
-    /// <param name="logger">日志记录器</param>
     public PermissionAuthorizationHandler(
-        IAuthenticationSchemeProvider schemes,
         IHttpContextAccessor httpContextAccessor,
+        IPermissionEvaluator evaluator,
         ILogger<PermissionAuthorizationHandler> logger)
     {
-        _schemes = schemes;
         _accessor = httpContextAccessor;
+        _evaluator = evaluator;
         _logger = logger;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        PermissionRequirement requirement)
     {
         var httpContext = _accessor.HttpContext;
         if (httpContext == null)
@@ -48,78 +40,83 @@ internal class PermissionAuthorizationHandler : AuthorizationHandler<PermissionR
         }
 
         var requestPath = httpContext.Request.Path;
-
-        // 如果访问的是允许匿名访问的路径，直接通过
-        // 使用 StartsWithSegments 按路径段前缀匹配，避免 Contains 子串匹配导致越权放行
-        // 例如配置 "/api/login" 时，"/api/login" 与 "/api/login/callback" 命中，
-        // 但 "/admin/api/login/delete"、"/api/login-export" 这类仅含子串的路径不会被放行
-        if (IsAllowAnonymousPath(requestPath, requirement.NormalizedAllowAnonymousPaths))
+        var queryUrl = requestPath.Value?.ToLowerInvariant();
+        if (string.IsNullOrEmpty(queryUrl))
         {
-            _logger.LogDebug("路径 {Path} 允许匿名访问", requestPath.Value);
+            _logger.LogWarning(AuthorizationEventIds.EmptyPath, "请求路径为空");
+            context.Fail();
+            return;
+        }
+
+        var endpoint = httpContext.GetEndpoint();
+        var permissionMetadata = endpoint?.Metadata.GetOrderedMetadata<IPermissionMetadata>()
+            ?? Array.Empty<IPermissionMetadata>();
+
+        // 路径列表是旧 API 的兼容行为。显式 Endpoint 权限声明存在时，不能被路径配置绕过。
+        // 使用 StartsWithSegments 按路径段前缀匹配，避免 Contains 子串匹配导致越权放行。
+        if (permissionMetadata.Count == 0 &&
+            IsAllowAnonymousPath(requestPath, requirement.NormalizedAllowAnonymousPaths))
+        {
+            _logger.LogDebug(AuthorizationEventIds.AnonymousPath, "路径 {Path} 允许匿名访问", requestPath.Value);
             context.Succeed(requirement);
             return;
         }
 
-        // 验证用户是否已登录
-        if (context.User.Identity?.IsAuthenticated != true)
+        var permissionContext = new PermissionContext(
+            httpContext,
+            endpoint,
+            queryUrl,
+            httpContext.Request.Method,
+            httpContext.Request.RouteValues,
+            context.User,
+            permissionMetadata);
+
+        AuthorizationDecision decision;
+        try
         {
-            _logger.LogWarning("用户未认证");
+            decision = await _evaluator.AuthorizeAsync(
+                permissionContext,
+                httpContext.RequestAborted);
+        }
+        catch (OperationCanceledException) when (httpContext.RequestAborted.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                AuthorizationEventIds.EvaluatorError,
+                exception,
+                "权限评估器执行异常，路径 {Path}，Endpoint {Endpoint}",
+                queryUrl,
+                endpoint?.DisplayName ?? "Unknown");
             context.Fail();
             return;
         }
 
-        // 验证认证方案
-        var defaultAuthenticate = await _schemes.GetDefaultAuthenticateSchemeAsync();
-        if (defaultAuthenticate == null)
+        if (!decision.IsAllowed)
         {
-            _logger.LogWarning("未找到默认认证方案");
+            _logger.LogWarning(
+                AuthorizationEventIds.Denied,
+                "用户 {UserName} 对路径 {Path} 没有访问权限，结果 {DecisionKind}",
+                context.User.Identity?.Name ?? "Unknown",
+                queryUrl,
+                decision.Kind);
             context.Fail();
             return;
         }
 
-        var result = await httpContext.AuthenticateAsync(defaultAuthenticate.Name);
-        if (result?.Succeeded != true)
-        {
-            _logger.LogWarning("认证失败");
-            context.Fail();
-            return;
-        }
-
-        // 验证用户权限
-        // 传给权限验证服务的路径保持小写约定（接口契约要求传入小写路径）
-        var queryUrl = requestPath.Value?.ToLowerInvariant();
-        if (string.IsNullOrEmpty(queryUrl))
-        {
-            _logger.LogWarning("请求路径为空");
-            context.Fail();
-            return;
-        }
-
-        var permissionVerifyService = httpContext.RequestServices.GetRequiredService<IPermissionVerifyService>();
-        var hasPermission = await permissionVerifyService.HasPermission(queryUrl);
-        if (!hasPermission)
-        {
-            _logger.LogWarning("用户 {UserName} 对路径 {Path} 没有访问权限",
-                context.User.Identity?.Name ?? "Unknown", queryUrl);
-            context.Fail();
-            return;
-        }
-
-        _logger.LogDebug("用户 {UserName} 对路径 {Path} 授权成功",
-            context.User.Identity?.Name ?? "Unknown", queryUrl);
+        _logger.LogDebug(
+            AuthorizationEventIds.Allowed,
+            "用户 {UserName} 对路径 {Path} 授权成功",
+            context.User.Identity?.Name ?? "Unknown",
+            queryUrl);
         context.Succeed(requirement);
     }
 
     /// <summary>
-    /// 判断请求路径是否落在允许匿名访问的路径段下
+    /// 判断请求路径是否落在允许匿名访问的路径段下。
     /// </summary>
-    /// <param name="requestPath">当前请求路径</param>
-    /// <param name="allowAnonymousPaths">允许匿名访问的路径集合</param>
-    /// <returns>命中返回 true，否则返回 false</returns>
-    /// <remarks>
-    /// 使用 <see cref="PathString.StartsWithSegments(PathString, StringComparison)"/> 进行路径段边界匹配，
-    /// 而非 <c>string.Contains</c>，避免子串命中导致越权放行
-    /// </remarks>
     private static bool IsAllowAnonymousPath(PathString requestPath, IEnumerable<string> allowAnonymousPaths)
     {
         foreach (var configured in allowAnonymousPaths)

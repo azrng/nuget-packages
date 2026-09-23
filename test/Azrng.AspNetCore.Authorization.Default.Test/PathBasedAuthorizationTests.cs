@@ -4,11 +4,11 @@ using Azrng.AspNetCore.Authorization.Default;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using Xunit;
 
 namespace Azrng.AspNetCore.Authorization.Default.Test;
@@ -16,7 +16,7 @@ namespace Azrng.AspNetCore.Authorization.Default.Test;
 public class PathBasedAuthorizationTests
 {
     [Fact]
-    public async Task AddPathBasedAuthorization_ShouldRegisterPolicyProviderAndDefaultPolicy()
+    public async Task AddPathBasedAuthorization_ShouldConfigureDefaultAndNamedPolicies()
     {
         using var provider = CreateServiceProvider(_ => true, "/api/login");
 
@@ -28,11 +28,15 @@ public class PathBasedAuthorizationTests
         namedPolicy.Should().NotBeNull();
         defaultPolicy.Should().NotBeNull();
         fallbackPolicy.Should().BeNull();
-        namedPolicy!.Requirements.Should().ContainSingle();
-        namedPolicy.Requirements.Single().Should().BeOfType<PermissionRequirement>()
+        namedPolicy!.Requirements.Should().HaveCount(2);
+        namedPolicy.Requirements.OfType<PermissionRequirement>().Should().ContainSingle()
             .Which.AllowAnonymousPaths.Should().ContainSingle().Which.Should().Be("/api/login");
-        defaultPolicy.Requirements.Should().ContainSingle();
-        defaultPolicy.Requirements.Single().Should().BeOfType<PermissionRequirement>();
+        namedPolicy.Requirements.Should().ContainSingle(requirement =>
+            requirement is DenyAnonymousAuthorizationRequirement);
+        defaultPolicy.Requirements.Should().HaveCount(2);
+        defaultPolicy.Requirements.OfType<PermissionRequirement>().Should().ContainSingle();
+        defaultPolicy.Requirements.Should().ContainSingle(requirement =>
+            requirement is DenyAnonymousAuthorizationRequirement);
     }
 
     [Fact]
@@ -40,7 +44,7 @@ public class PathBasedAuthorizationTests
     {
         using var provider = CreateServiceProvider(_ => false, "/api/login");
         var httpContext = CreateHttpContext(provider, "/api/login");
-        var user = new ClaimsPrincipal(new ClaimsIdentity());
+        var user = CreateAuthenticatedUser();
 
         var result = await provider.GetRequiredService<IAuthorizationService>()
             .AuthorizeAsync(user, null, ServiceCollectionExtensions.DefaultPolicyName);
@@ -113,7 +117,7 @@ public class PathBasedAuthorizationTests
         // 权限服务恒拒绝，验证唯一放行路径是匿名匹配
         using var provider = CreateServiceProvider(_ => false, configured);
         CreateHttpContext(provider, requested);
-        var user = new ClaimsPrincipal(new ClaimsIdentity());
+        var user = CreateAuthenticatedUser();
 
         var result = await provider.GetRequiredService<IAuthorizationService>()
             .AuthorizeAsync(user, null, ServiceCollectionExtensions.DefaultPolicyName);
@@ -127,7 +131,7 @@ public class PathBasedAuthorizationTests
     {
         using var provider = CreateServiceProvider(_ => false, "/api/login", "/health", "/swagger");
         CreateHttpContext(provider, "/swagger/index.html");
-        var user = new ClaimsPrincipal(new ClaimsIdentity());
+        var user = CreateAuthenticatedUser();
 
         var result = await provider.GetRequiredService<IAuthorizationService>()
             .AuthorizeAsync(user, null, ServiceCollectionExtensions.DefaultPolicyName);
@@ -138,18 +142,11 @@ public class PathBasedAuthorizationTests
     // ===== 认证分支回归 =====
 
     [Fact]
-    public async Task AuthorizeAsync_ShouldFail_WhenNoDefaultAuthenticateScheme()
+    public async Task AuthorizeAsync_ShouldNotRequireDefaultAuthenticateScheme_WhenUserIsAuthenticated()
     {
-        // 模拟认证方案提供器存在、但没有默认认证方案（GetDefaultAuthenticateSchemeAsync 返回 null）
-        var schemeProviderMock = new Mock<IAuthenticationSchemeProvider>();
-        schemeProviderMock
-            .Setup(x => x.GetDefaultAuthenticateSchemeAsync())
-            .ReturnsAsync((AuthenticationScheme?)null);
-
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(new PermissionState(_ => true));
-        services.AddSingleton(schemeProviderMock.Object);
         services.AddPathBasedAuthorization<TestPermissionVerifyService>("/api/login");
         using var provider = services.BuildServiceProvider();
         CreateHttpContext(provider, "/api/secure");
@@ -158,7 +155,7 @@ public class PathBasedAuthorizationTests
         var result = await provider.GetRequiredService<IAuthorizationService>()
             .AuthorizeAsync(user, null, ServiceCollectionExtensions.DefaultPolicyName);
 
-        result.Succeeded.Should().BeFalse();
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]

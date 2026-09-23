@@ -12,10 +12,12 @@ dotnet add package Azrng.AspNetCore.Authorization.Default
 
 - ✅ 基于请求路径的权限验证
 - ✅ 支持自定义权限验证逻辑
+- ✅ 支持 Endpoint Metadata 和 MVC / Minimal API 声明式权限
+- ✅ 支持权限上下文、权限结果和请求取消令牌
 - ✅ 内置结构化日志记录
 - ✅ 支持允许匿名访问的路径配置
 - ✅ 可空引用类型支持
-- ✅ 支持 .NET 6.0+
+- ✅ 支持 .NET 6.0 / 7.0 / 8.0 / 9.0 / 10.0
 
 ## 快速开始
 
@@ -94,6 +96,47 @@ services.AddPathBasedAuthorization<MyPermissionService>(
 );
 ```
 
+`allowAnonymousPaths` 是旧路径模式的兼容配置：已认证请求命中后可以跳过权限评估，但不会绕过默认策略的认证要求。需要真正允许未认证访问时，请使用 `[AllowAnonymous]` 或不要为该 Endpoint 添加授权策略。
+
+旧接口会自动适配为 `IPermissionEvaluator`。新代码可以直接实现上下文评估器：
+
+```csharp
+public sealed class MyPermissionEvaluator : IPermissionEvaluator
+{
+    public Task<AuthorizationDecision> AuthorizeAsync(
+        PermissionContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var allowed = context.User.IsInRole("Admin")
+            || context.RequiredPermissions.Any(permission =>
+                permission.Permissions.Contains("orders.read"));
+
+        return Task.FromResult(allowed
+            ? AuthorizationDecision.Allow()
+            : AuthorizationDecision.Deny());
+    }
+}
+
+services.AddPermissionAuthorization<MyPermissionEvaluator>();
+```
+
+MVC 和 Minimal API 都可以声明权限元数据：
+
+```csharp
+[RequirePermission("orders.read")]
+public IActionResult GetOrders() => Ok();
+
+app.MapGet("/orders", () => Results.Ok())
+    .RequirePermission("orders.read");
+```
+
+多个权限码默认全部满足，也可以指定任意一个满足：
+
+```csharp
+app.MapGet("/orders", () => Results.Ok())
+    .RequirePermission(PermissionMatchMode.Any, "orders.read", "orders.manage");
+```
+
 ### 4. 使用授权
 
 在 Controller 或 Action 上使用 `[Authorize]` 特性：
@@ -112,7 +155,7 @@ public class UserController : ControllerBase
         return Ok(new { UserId = userId });
     }
 
-    // 允许匿名访问（因为配置在 allowAnonymousPaths 中）
+    // 公共接口：不添加 [Authorize] 即可访问
     [HttpGet("public")]
     public IActionResult GetPublicData()
     {
@@ -192,40 +235,9 @@ public class RoleBasedPermissionService : IPermissionVerifyService
 }
 ```
 
-### 使用缓存优化性能
+### 缓存权限结果
 
-```csharp
-public class CachedPermissionService : IPermissionVerifyService
-{
-    private readonly IPermissionVerifyService _innerService;
-    private readonly IMemoryCache _cache;
-
-    public CachedPermissionService(
-        IPermissionVerifyService innerService,
-        IMemoryCache cache)
-    {
-        _innerService = innerService;
-        _cache = cache;
-    }
-
-    public async Task<bool> HasPermission(string path)
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        var userId = httpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userId))
-            return false;
-
-        var cacheKey = $"permissions:{userId}:{path}";
-
-        return await _cache.GetOrCreateAsync(cacheKey, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return _innerService.HasPermission(path);
-        });
-    }
-}
-```
+缓存属于业务评估器或 ACL 适配层，不由本包固定缓存实现、缓存键或过期时间。使用旧接口时，请在 `IPermissionVerifyService` 实现内部缓存；使用新接口时，请在 `IPermissionEvaluator` 实现内部按用户、权限码、Endpoint 和租户等业务维度设计缓存。
 
 ## API 参考
 
@@ -234,12 +246,27 @@ public class CachedPermissionService : IPermissionVerifyService
 | 方法 | 说明 |
 |------|------|
 | `AddPathBasedAuthorization<TPermissionService>(services, allowAnonymousPaths)` | 添加基于路径的授权服务 |
+| `AddPermissionAuthorization<TPermissionEvaluator>(services, allowAnonymousPaths)` | 添加基于权限上下文的授权服务 |
 
 ### IPermissionVerifyService
 
 | 方法 | 说明 |
 |------|------|
 | `HasPermission(string path)` | 验证当前用户是否有访问指定路径的权限 |
+
+### IPermissionEvaluator
+
+| 方法 | 说明 |
+|------|------|
+| `AuthorizeAsync(PermissionContext, CancellationToken)` | 基于请求、Endpoint 和权限元数据返回授权决策 |
+
+### Endpoint 权限声明
+
+| 类型 / 方法 | 说明 |
+|------|------|
+| `RequirePermissionAttribute` | MVC Controller / Action 权限特性 |
+| `RequirePermission(...)` | Minimal API Endpoint 权限扩展 |
+| `PermissionMatchMode` | 多权限码的 `All` / `Any` 匹配方式 |
 
 ### PermissionRequirement
 
@@ -249,15 +276,23 @@ public class CachedPermissionService : IPermissionVerifyService
 
 ## 工作原理
 
-1. **请求到达** → 当一个请求到达需要授权的 Controller 或 Action
-2. **匿名检查** → 首先检查请求路径是否在 `AllowAnonymousPaths` 列表中
-3. **认证检查** → 检查用户是否已通过认证（如 JWT Token 验证）
-4. **权限检查** → 调用 `IPermissionVerifyService.HasPermission()` 验证用户权限
-5. **授权结果** → 返回授权成功或失败
+1. **请求到达** → Authentication Middleware 根据 Endpoint 策略完成认证
+2. **策略合并** → ASP.NET Core 使用默认策略和 Endpoint Metadata 合并授权需求
+3. **权限上下文** → 包构造 `PermissionContext`，包含路径、方法、路由参数、用户和权限元数据
+4. **权限检查** → 调用 `IPermissionEvaluator.AuthorizeAsync()`；旧接口通过适配器继续按路径判断
+5. **授权结果** → 认证失败由框架返回 401，权限拒绝返回 403，依赖异常默认 fail-closed
 
 ## 版本历史
 
-### 1.2.0 (最新)
+### 1.3.0 (最新)
+- 🔒 修复：默认策略显式要求认证，处理器不再重复调用默认认证 Scheme
+- 🔒 修复：不再覆盖宿主的 `IAuthorizationPolicyProvider`，保留命名策略和 `FallbackPolicy`
+- 🆕 新增：`IPermissionEvaluator`、`PermissionContext` 和 `AuthorizationDecision`
+- 🆕 新增：MVC `RequirePermissionAttribute` 与 Minimal API `RequirePermission` 扩展
+- ✅ 兼容：旧 `IPermissionVerifyService` 和 `AddPathBasedAuthorization` 自动适配
+- ✅ 补充：TestServer 401 / 403 / 200 管道测试和 Endpoint Metadata 回归测试
+
+### 1.2.0
 - 🔒 **安全修复**：匿名路径匹配从 `string.Contains` 子串匹配改为 `PathString.StartsWithSegments` 路径段前缀匹配，修复子串命中导致越权放行的缺陷（例如配置 `/api/login` 时 `/admin/api/login/delete` 不再被放行）
 - 🐛 修复：二次认证检查改用 `AuthenticateResult.Succeeded` 判断，原 `result.Principal == null` 语义不严谨
 - 🔒 收紧：`PermissionRequirement.AllowAnonymousPaths` 保持 `string[]` 公开 API 兼容，内部做防御性拷贝和路径规范化，避免运行期被外部修改

@@ -1,5 +1,6 @@
 ﻿using Azrng.AspNetCore.Authorization.Default;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -23,8 +24,8 @@ public static class ServiceCollectionExtensions
     /// <remarks>
     /// 此方法会注册以下服务：
     /// 1. <typeparamref name="TPermissionService"/> 作为 <see cref="IPermissionVerifyService"/> 的实现
-    /// 2. <see cref="PermissionAuthorizationHandler"/> 作为授权处理器
-    /// 3. <see cref="DefaultPolicyProvider"/> 作为授权策略提供器
+    /// 2. <see cref="IPermissionEvaluator"/> 的旧接口适配器
+    /// 3. <see cref="PermissionAuthorizationHandler"/> 作为授权处理器
     /// 4. HTTP 上下文访问器
     /// </remarks>
     /// <example>
@@ -42,16 +43,57 @@ public static class ServiceCollectionExtensions
         params string[] allowAnonymousPaths)
         where TPermissionService : class, IPermissionVerifyService
     {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<IPermissionVerifyService, TPermissionService>();
+        services.AddScoped<IPermissionEvaluator, LegacyPermissionEvaluator>();
+
+        return AddPermissionAuthorizationCore(services, allowAnonymousPaths);
+    }
+
+    /// <summary>
+    /// 添加基于 Endpoint 权限元数据的授权服务。
+    /// </summary>
+    /// <typeparam name="TPermissionEvaluator">权限评估器类型。</typeparam>
+    /// <param name="services">服务集合。</param>
+    /// <param name="allowAnonymousPaths">旧路径模式允许匿名访问的路径数组。</param>
+    /// <returns>服务集合。</returns>
+    public static IServiceCollection AddPermissionAuthorization<TPermissionEvaluator>(
+        this IServiceCollection services,
+        params string[] allowAnonymousPaths)
+        where TPermissionEvaluator : class, IPermissionEvaluator
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<IPermissionEvaluator, TPermissionEvaluator>();
+
+        return AddPermissionAuthorizationCore(services, allowAnonymousPaths);
+    }
+
+    private static IServiceCollection AddPermissionAuthorizationCore(
+        IServiceCollection services,
+        string[] allowAnonymousPaths)
+    {
+        ArgumentNullException.ThrowIfNull(allowAnonymousPaths);
+
         services.AddAuthorization(options =>
         {
             var permissionRequirement = new PermissionRequirement(allowAnonymousPaths);
-            options.AddPolicy(DefaultPolicyName, policy => policy.AddPermissionRequirement(permissionRequirement));
+            var policy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddPermissionRequirement(permissionRequirement)
+                .Build();
+
+            // 通过标准 AuthorizationOptions 配置策略，保留宿主已有的动态 Provider 和 FallbackPolicy。
+            options.DefaultPolicy = policy;
+            options.AddPolicy(DefaultPolicyName, policy);
         });
 
-        services.AddSingleton<IAuthorizationPolicyProvider, DefaultPolicyProvider>();
         services.AddHttpContextAccessor();
-        services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddScoped<IPermissionVerifyService, TPermissionService>();
+        services.TryAddEnumerable(new ServiceDescriptor(
+            typeof(IAuthorizationHandler),
+            typeof(PermissionAuthorizationHandler),
+            ServiceLifetime.Scoped));
 
         return services;
     }

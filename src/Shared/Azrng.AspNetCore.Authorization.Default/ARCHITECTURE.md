@@ -19,6 +19,8 @@
 
 `Azrng.AspNetCore.Authorization.Default` 是一个基于路径的 ASP.NET Core 授权库，提供了灵活的权限验证机制。它通过实现 ASP.NET Core 的授权接口，实现了基于请求路径的访问控制。
 
+> **1.3.0 当前实现说明**：默认策略通过 `AuthorizationOptions` 配置，不再注册或覆盖宿主的 `IAuthorizationPolicyProvider`。认证由 ASP.NET Core 的策略和认证中间件负责；权限处理器只构造 `PermissionContext` 并调用 `IPermissionEvaluator`。`IPermissionVerifyService` 通过内部适配器继续兼容旧的路径权限实现。Endpoint 上的 `IPermissionMetadata` 优先于旧的匿名路径列表。
+
 ### 特点
 
 - ✅ **基于路径的权限验证** - 根据请求的 URL 路径进行权限判断
@@ -42,51 +44,24 @@
 ### 分层架构
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   ASP.NET Core MVC                       │
-│              Controller / Action 层                        │
-│         [Authorize] 特性应用在这里                          │
-└──────────────────────┬──────────────────────────────────┘
-                       │ 触发授权检查
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│              ASP.NET Core Authorization 中间件             │
-│                   Authorization Middleware                  │
-└──────────────────────┬──────────────────────────────────┘
-                       │ 调用授权服务
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│              IAuthorizationService 接口                    │
-│                   (授权服务入口)                           │
-│              调用 Authorization Policy Provider            │
-└──────────────────────┬──────────────────────────────────┘
-                       │ 获取策略
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│           DefaultPolicyProvider (策略提供器)               │
-│   - GetDefaultPolicyAsync()  → DefaultPermissionPolicy    │
-│   - GetPolicyAsync(name)      → NamedPolicy              │
-│   - GetFallbackPolicyAsync() → null                     │
-└──────────────────────┬──────────────────────────────────┘
-                       │ 返回策略（包含 PermissionRequirement）
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│         PermissionAuthorizationHandler (授权处理器)         │
-│                    HandleRequirementAsync()                │
-│   1. 检查匿名路径                                         │
-│   2. 检查用户认证                                         │
-│   3. 调用 IPermissionVerifyService 验证权限                 │
-│   4. 返回授权结果                                         │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                       ↓
-┌─────────────────────────────────────────────────────────┐
-│         IPermissionVerifyService (权限验证服务)            │
-│              HasPermission(string path)                    │
-│                  └──> 用户自定义实现                        │
-│                  └──> 数据库 / 缓存 / Web API              │
-└─────────────────────────────────────────────────────────┘
+Endpoint / Controller Metadata
+            │ [Authorize] / RequirePermission
+            ▼
+ASP.NET Core Authentication + Authorization Middleware
+            │ 标准 DefaultPolicy / NamedPolicy
+            ▼
+PermissionAuthorizationHandler
+            │ PermissionContext + RequestAborted
+            ▼
+IPermissionEvaluator
+       ┌────┴────┐
+       │         │
+旧接口适配器    业务评估器
+IPermission     Endpoint、用户、路由和业务资源
+VerifyService
 ```
+
+认证失败和授权挑战由 ASP.NET Core 处理器负责，权限评估器只返回 `AuthorizationDecision`。`DependencyError`、`NotConfigured` 和 `Denied` 均默认 fail-closed。
 
 ### 设计模式
 
@@ -98,9 +73,9 @@
    - `PermissionAuthorizationHandler` 实现 `IAuthorizationHandler`
    - 处理 `PermissionRequirement` 授权需求
 
-3. **提供器模式 (Provider Pattern)**
-   - `DefaultPolicyProvider` 实现 `IAuthorizationPolicyProvider`
-   - 提供默认授权策略
+3. **标准策略配置**
+   - 通过 `AuthorizationOptions.DefaultPolicy` 配置默认权限策略
+   - 不覆盖宿主的 `IAuthorizationPolicyProvider`
 
 4. **依赖注入 (Dependency Injection)**
    - 所有核心组件都注册到 DI 容器
@@ -113,7 +88,7 @@
 ### 1. PermissionRequirement (授权需求)
 
 **职责**：
-- 定义允许匿名访问的路径列表
+- 定义旧路径模式允许匿名访问的路径列表
 - 实现 `IAuthorizationRequirement` 接口
 
 **代码**：
@@ -126,8 +101,7 @@ public class PermissionRequirement : IAuthorizationRequirement
     }
 
     /// <summary>
-    /// 允许匿名访问的路径数组
-    /// 路径匹配使用包含匹配（Contains），不区分大小写
+    /// 允许匿名访问的路径数组，读取和设置时防御性复制并规范化
     /// </summary>
     public string[] AllowAnonymousPaths { get; set; }
 }
@@ -136,63 +110,40 @@ public class PermissionRequirement : IAuthorizationRequirement
 **特点**：
 - 是一个简单的数据载体（POCO）
 - 包含允许匿名访问的路径列表
-- 路径匹配使用 `Contains`，不区分大小写
+- 路径匹配使用 `StartsWithSegments`，按路径段边界且不区分大小写
 
 ### 2. PermissionAuthorizationHandler (授权处理器)
 
 **职责**：
 - 实现授权逻辑
-- 检查用户认证状态
-- 调用权限验证服务
+- 构造 `PermissionContext`
+- 调用构造函数注入的 `IPermissionEvaluator`
 - 返回授权结果
 
 **核心流程**：
 ```csharp
-protected override async Task HandleRequirementAsync(
-    AuthorizationHandlerContext context,
-    PermissionRequirement requirement)
-{
-    // 1. 获取 HTTP 上下文
-    var httpContext = _accessor.HttpContext;
+var permissionContext = new PermissionContext(
+    httpContext,
+    httpContext.GetEndpoint(),
+    requestPath.Value!.ToLowerInvariant(),
+    httpContext.Request.Method,
+    httpContext.Request.RouteValues,
+    context.User,
+    permissionMetadata);
 
-    // 2. 获取请求路径
-    var requestPath = httpContext.Request.Path;
+var decision = await _evaluator.AuthorizeAsync(
+    permissionContext,
+    httpContext.RequestAborted);
 
-    // 3. 检查是否为匿名路径
-    if (requirement.AllowAnonymousPaths.Any(t =>
-        requestPath.StartsWithSegments(new PathString(t), StringComparison.OrdinalIgnoreCase)))
-    {
-        context.Succeed(requirement); // 授权成功
-        return;
-    }
-
-    // 4. 检查用户是否已认证
-    if (context.User.Identity?.IsAuthenticated != true)
-    {
-        context.Fail(); // 授权失败
-        return;
-    }
-
-    // 5. 验证用户权限
-    var permissionVerifyService = httpContext.RequestServices
-        .GetRequiredService<IPermissionVerifyService>();
-    var queryUrl = requestPath.Value?.ToLowerInvariant();
-    var hasPermission = await permissionVerifyService.HasPermission(queryUrl);
-
-    if (!hasPermission)
-    {
-        context.Fail(); // 授权失败
-        return;
-    }
-
-    // 6. 授权成功
+if (decision.IsAllowed)
     context.Succeed(requirement);
-}
+else
+    context.Fail();
 ```
 
 **依赖注入**：
 ```csharp
-services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 ```
 
 ### 3. IPermissionVerifyService (权限验证服务接口)
@@ -246,48 +197,15 @@ public class MyPermissionService : IPermissionVerifyService
 services.AddScoped<IPermissionVerifyService, MyPermissionService>();
 ```
 
-### 4. DefaultPolicyProvider (策略提供器)
+### 4. AuthorizationOptions (标准策略配置)
 
-**职责**：
-- 实现 `IAuthorizationPolicyProvider` 接口
-- 提供默认授权策略
-- 支持命名策略
+本包不再注册自定义 `IAuthorizationPolicyProvider`。`AddPermissionAuthorization` 通过标准 `AuthorizationOptions` 配置 `DefaultPolicy` 和 `DefaultPermissionPolicy` 命名策略，因此宿主已有的命名策略、动态策略 Provider 和 `FallbackPolicy` 不会被包覆盖。
 
-**核心方法**：
-```csharp
-public class DefaultPolicyProvider : IAuthorizationPolicyProvider
-{
-    private readonly AuthorizationOptions _options;
+默认策略包含：
 
-    // 获取默认策略（使用 [Authorize] 时）
-    public Task<AuthorizationPolicy> GetDefaultPolicyAsync()
-    {
-        return Task.FromResult(
-            _options.GetPolicy(ServiceCollectionExtensions.DefaultPolicyName)
-            ?? new AuthorizationPolicyBuilder()
-                .RequireAuthenticatedUser()
-                .Build()
-        );
-    }
-
-    // 获取指定名称的策略
-    public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
-    {
-        return Task.FromResult(_options.GetPolicy(policyName));
-    }
-
-    // 获取回退策略
-    public Task<AuthorizationPolicy?> GetFallbackPolicyAsync()
-    {
-        return Task.FromResult<AuthorizationPolicy?>(null);
-    }
-}
-```
-
-**注册为 Singleton 服务**：
-```csharp
-services.AddSingleton<IAuthorizationPolicyProvider, DefaultPolicyProvider>();
-```
+- `RequireAuthenticatedUser()`，未认证请求由框架挑战并返回 401；
+- `PermissionRequirement`，负责调用权限评估器；
+- 旧路径模式的匿名路径兼容行为。
 
 ### 5. ServiceCollectionExtensions (服务扩展)
 
@@ -303,27 +221,27 @@ public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
     params string[] allowAnonymousPaths)
     where TPermissionService : class, IPermissionVerifyService
 {
-    // 1. 配置授权策略
+    // 1. 注册旧接口适配器
+    services.AddScoped<IPermissionVerifyService, TPermissionService>();
+    services.AddScoped<IPermissionEvaluator, LegacyPermissionEvaluator>();
+
+    // 新接口使用 AddPermissionAuthorization<TPermissionEvaluator>() 注册评估器
     services.AddAuthorization(options =>
     {
         var permissionRequirement = new PermissionRequirement(allowAnonymousPaths);
-        options.AddPolicy(
-            ServiceCollectionExtensions.DefaultPolicyName,
-            policy => policy.AddPermissionRequirement(permissionRequirement)
-        );
+        var policy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .AddPermissionRequirement(permissionRequirement)
+            .Build();
+        options.DefaultPolicy = policy;
+        options.AddPolicy(ServiceCollectionExtensions.DefaultPolicyName, policy);
     });
 
-    // 2. 注册策略提供器
-    services.AddSingleton<IAuthorizationPolicyProvider, DefaultPolicyProvider>();
-
-    // 3. 注册 HTTP 上下文访问器
+    // 2. 注册 HTTP 上下文访问器
     services.AddHttpContextAccessor();
 
-    // 4. 注册授权处理器
-    services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-
-    // 5. 注册权限验证服务
-    services.AddScoped<IPermissionVerifyService, TPermissionService>();
+    // 3. 注册 Scoped 授权处理器
+    services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
     return services;
 }
@@ -365,8 +283,8 @@ public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
                        │
                        ↓
 ┌─────────────────────────────────────────────────────────┐
-│ 5. DefaultPolicyProvider                                │
-│    - 返回包含 PermissionRequirement 的策略              │
+│ 5. 标准 AuthorizationOptions                             │
+│    - 返回 DefaultPolicy 和命名策略                      │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ↓
@@ -384,15 +302,15 @@ public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
          ┌─────────────┴──────────────┐
          ↓                            ↓
 ┌──────────────────────┐    ┌──────────────────────────────┐
-│ 8. 匿名路径检查        │    │ 9. 认证检查                   │
-│ StartsWithSegments() │    │ User.Identity.IsAuthenticated │
+│ 8. Endpoint / 路径元数据 │    │ 9. 策略认证需求                │
+│ PermissionMetadata    │    │ RequireAuthenticatedUser()     │
 │                      │    │                              │
 │ [是] ────────────────┼────┼──> [是]                      │
 │   │                  │    │   │                         │
 │   │                  │    │   ↓                         │
-│   │                  │    │ 10. 权限检查                │
-│   │                  │    │ IPermissionVerifyService    │
-│   │                  │    │ .HasPermission(queryUrl)    │
+│   │                  │    │ 10. 权限上下文评估            │
+│   │                  │    │ IPermissionEvaluator         │
+│   │                  │    │ .AuthorizeAsync(context)     │
 │   ↓                  │    │   │                         │
 │ 授权成功              │    │   [有权限]                  │
 │ context.Succeed()    │    │     │                       │
@@ -416,19 +334,20 @@ public static IServiceCollection AddPathBasedAuthorization<TPermissionService>(
 ```
 开始
   │
-  ├─> 路径在 AllowAnonymousPaths 中？
-  │    │
-  │    ├─ Yes ──> 授权成功 ✓
-  │    │
-  │    └─ No ──> 用户已认证？
-  │              │
-  │              ├─ No ──> 授权失败 ✗ (401 Unauthorized)
-  │              │
-  │              └─ Yes ──> 用户有权限？
-  │                        │
-  │                        ├─ No ──> 授权失败 ✗ (403 Forbidden)
-  │                        │
-  │                        └─ Yes ──> 授权成功 ✓
+  ├─> Endpoint 有 [AllowAnonymous]？ ── Yes ──> 框架跳过授权 ✓
+  │
+  └─> 默认策略要求认证？
+       │
+       ├─ No ──> 授权失败 ✗ (401 Unauthorized)
+       │
+       └─ Yes ──> 有显式权限元数据？
+                    │
+                    ├─ No 且命中旧路径列表 ──> 权限需求通过 ✓
+                    │
+                    └─ 否 ──> 调用 IPermissionEvaluator
+                                  │
+                                  ├─ 拒绝 / 异常 ──> 403 Forbidden
+                                  └─ 允许 ──> 授权成功 ✓
   │
 ```
 
@@ -635,31 +554,7 @@ public class RoleBasedPermissionService : IPermissionVerifyService
 
 ### 4. 使用缓存优化性能
 
-```csharp
-public class CachedPermissionService : IPermissionVerifyService
-{
-    private readonly IPermissionVerifyService _innerService;
-    private readonly IMemoryCache _cache;
-
-    public async Task<bool> HasPermission(string path)
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        var userId = httpContext?.User
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userId))
-            return false;
-
-        var cacheKey = $"permissions:{userId}:{path}";
-
-        return await _cache.GetOrCreateAsync(cacheKey, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return _innerService.HasPermission(path);
-        });
-    }
-}
-```
+缓存应由业务权限评估器或 ACL 适配层实现。本包不固定缓存 SDK、缓存键或过期时间，避免将通用授权基础设施与具体业务权限服务耦合。
 
 ---
 
