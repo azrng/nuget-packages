@@ -42,7 +42,7 @@ public sealed class MyPermissionEvaluator : IPermissionEvaluator
 
         return Task.FromResult(isAdmin || hasOrderPermission
             ? AuthorizationDecision.Allow()
-            : AuthorizationDecision.Deny("permission-denied"));
+            : AuthorizationDecision.Deny());
     }
 }
 ```
@@ -98,7 +98,7 @@ app.MapGet("/orders/export", () => Results.Ok())
 | `AddPermissionAuthorization<TPermissionEvaluator>()` | 注册默认权限策略、处理器和评估器 |
 | `IPermissionEvaluator` | 实现业务权限判断 |
 | `PermissionContext` | 提供请求、用户和 Endpoint 权限上下文 |
-| `AuthorizationDecision` | 表示允许、拒绝、未配置或依赖异常 |
+| `AuthorizationDecision` | 表示允许或拒绝 |
 | `RequirePermissionAttribute` | 为 MVC Controller / Action 声明权限 |
 | `RequirePermission(...)` | 为 Minimal API Endpoint 声明权限 |
 | `PermissionMetadata` | 表示 Endpoint 上的权限元数据 |

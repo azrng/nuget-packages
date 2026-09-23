@@ -11,17 +11,7 @@ public enum AuthorizationDecisionKind
     Allowed,
 
     /// <summary>
-    /// 明确拒绝访问。
+    /// 拒绝访问（含未配置、依赖故障等一切不允许的场景）。
     /// </summary>
-    Denied,
-
-    /// <summary>
-    /// 未找到可用的权限配置。
-    /// </summary>
-    NotConfigured,
-
-    /// <summary>
-    /// 权限依赖发生异常，默认按拒绝处理。
-    /// </summary>
-    DependencyError
+    Denied
 }

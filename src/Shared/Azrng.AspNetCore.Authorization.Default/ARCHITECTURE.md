@@ -93,13 +93,11 @@ public interface IPermissionEvaluator
 
 ### AuthorizationDecision
 
-`Allowed` 以外的结果均不会通过授权。`DiagnosticCode` 只用于日志和指标，不应把内部诊断信息直接写入 HTTP 响应。
+只区分允许与拒绝：`Denied` 涵盖未配置、依赖故障等一切不允许场景；依赖故障也可直接抛异常，由处理器按 fail-closed 拒绝并记录 `EvaluatorError` 日志。需要区分拒绝原因时，由评估器自行打日志。
 
 ```csharp
 AuthorizationDecision.Allow();
-AuthorizationDecision.Deny("permission-denied");
-AuthorizationDecision.NotConfigured("permission-not-configured");
-AuthorizationDecision.DependencyError("acl-unavailable");
+AuthorizationDecision.Deny();
 ```
 
 ## Endpoint 权限声明
