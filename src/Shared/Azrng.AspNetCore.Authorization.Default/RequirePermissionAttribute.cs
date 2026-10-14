@@ -18,7 +18,7 @@ public sealed class RequirePermissionAttribute : AuthorizeAttribute, IPermission
     {
         _permissions = new System.Collections.ObjectModel.ReadOnlyCollection<string>(
             PermissionMetadata.Normalize(permissions));
-        Policy = Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.DefaultPolicyName;
+        Policy = Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.PermissionPolicyName;
     }
 
     /// <inheritdoc />

@@ -16,8 +16,12 @@ public class PermissionEvaluator : IPermissionEvaluator
         PermissionContext context,
         CancellationToken cancellationToken = default)
     {
-        var isAllowed = _currentUser.UserId == "1"
-            && context.Path.Contains("path1", StringComparison.OrdinalIgnoreCase);
+        var grantedPermissions = _currentUser.UserId == "1"
+            ? new[] { "path1" }
+            : Array.Empty<string>();
+        var isAllowed = PermissionMetadataMatcher.IsSatisfiedBy(
+            context.RequiredPermissions,
+            grantedPermissions);
 
         return Task.FromResult(isAllowed
             ? AuthorizationDecision.Allow()

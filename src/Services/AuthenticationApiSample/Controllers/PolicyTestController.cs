@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Azrng.AspNetCore.Authorization.Default;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthenticationApiSample.Controllers
@@ -15,7 +16,7 @@ namespace AuthenticationApiSample.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [RequirePermission("path1")]
         public string Path1()
         {
             _logger.LogInformation($"Path1 我被请求了  {DateTime.Now}");

@@ -27,12 +27,12 @@ public class EndpointPermissionTests
             "orders.write")));
 
         var result = await provider.GetRequiredService<IAuthorizationService>()
-            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.DefaultPolicyName);
+            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.PermissionPolicyName);
 
         result.Succeeded.Should().BeTrue();
         state.Context.Should().NotBeNull();
-        state.Context!.Path.Should().Be("/api/orders/42");
-        state.Context.Method.Should().Be("POST");
+        state.Context!.HttpContext.Request.Path.Value.Should().Be("/API/orders/42");
+        state.Context.HttpContext.Request.Method.Should().Be("POST");
         state.Context.RequiredPermissions.Should().ContainSingle();
         state.Context.RequiredPermissions[0].MatchMode.Should().Be(PermissionMatchMode.Any);
         state.Context.RequiredPermissions[0].Permissions.Should()
@@ -53,68 +53,41 @@ public class EndpointPermissionTests
         httpContext.SetEndpoint(CreateEndpoint(new PermissionMetadata("orders.read")));
 
         var result = await provider.GetRequiredService<IAuthorizationService>()
-            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.DefaultPolicyName);
+            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.PermissionPolicyName);
 
         result.Succeeded.Should().BeFalse();
         state.Context.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task MissingPermissionMetadata_ShouldFailBeforeEvaluator_WhenStrictModeIsEnabled()
+    public async Task MissingPermissionMetadata_ShouldAlwaysFailBeforeEvaluator()
     {
         var state = new EvaluationState(_ => true);
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton(state);
-        services.AddPermissionAuthorization<TestPermissionEvaluator>(options =>
-            options.DenyWhenPermissionMetadataMissing = true);
-
-        using var provider = services.BuildServiceProvider();
-        var httpContext = CreateHttpContext(provider, "/api/orders", "GET");
-        httpContext.SetEndpoint(CreateEndpoint());
-
-        var result = await provider.GetRequiredService<IAuthorizationService>()
-            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.DefaultPolicyName);
-
-        result.Succeeded.Should().BeFalse();
-        state.CallCount.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task AuthenticatedOnlyPolicy_ShouldNotInvokePermissionEvaluator()
-    {
-        var state = new EvaluationState(_ => false);
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(state);
         services.AddPermissionAuthorization<TestPermissionEvaluator>();
 
         using var provider = services.BuildServiceProvider();
-        var authorization = provider.GetRequiredService<IAuthorizationService>();
+        var httpContext = CreateHttpContext(provider, "/api/orders", "GET");
+        httpContext.SetEndpoint(CreateEndpoint());
 
-        var authenticatedResult = await authorization.AuthorizeAsync(
-            CreateAuthenticatedUser(),
-            null,
-            ServiceCollectionExtensions.AuthenticatedOnlyPolicyName);
-        var anonymousResult = await authorization.AuthorizeAsync(
-            new ClaimsPrincipal(new ClaimsIdentity()),
-            null,
-            ServiceCollectionExtensions.AuthenticatedOnlyPolicyName);
+        var result = await provider.GetRequiredService<IAuthorizationService>()
+            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.PermissionPolicyName);
 
-        authenticatedResult.Succeeded.Should().BeTrue();
-        anonymousResult.Succeeded.Should().BeFalse();
+        result.Succeeded.Should().BeFalse();
         state.CallCount.Should().Be(0);
     }
 
     [Fact]
-    public void RequirePermissionAttribute_ShouldUseDefaultPermissionPolicy()
+    public void RequirePermissionAttribute_ShouldUsePermissionPolicy()
     {
         var attribute = new RequirePermissionAttribute("orders.read", "orders.write")
         {
             MatchMode = PermissionMatchMode.Any
         };
 
-        attribute.Policy.Should().Be(ServiceCollectionExtensions.DefaultPolicyName);
+        attribute.Policy.Should().Be(ServiceCollectionExtensions.PermissionPolicyName);
         attribute.MatchMode.Should().Be(PermissionMatchMode.Any);
         attribute.Permissions.Should().Equal("orders.read", "orders.write");
     }

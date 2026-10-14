@@ -10,21 +10,7 @@ namespace Microsoft.AspNetCore.Builder;
 public static class PermissionEndpointConventionBuilderExtensions
 {
     /// <summary>
-    /// 为 Endpoint 添加仅要求用户已认证的授权策略，不执行权限评估。
-    /// </summary>
-    /// <typeparam name="TBuilder">Endpoint 构建器类型。</typeparam>
-    /// <param name="builder">Endpoint 构建器。</param>
-    /// <returns>原 Endpoint 构建器。</returns>
-    public static TBuilder RequireAuthenticated<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        return builder.RequireAuthorization(
-            Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.AuthenticatedOnlyPolicyName);
-    }
-
-    /// <summary>
-    /// 为 Endpoint 添加默认权限策略和权限元数据。
+    /// 为 Endpoint 添加命名权限策略和权限元数据。
     /// </summary>
     /// <typeparam name="TBuilder">Endpoint 构建器类型。</typeparam>
     /// <param name="builder">Endpoint 构建器。</param>
@@ -39,7 +25,7 @@ public static class PermissionEndpointConventionBuilderExtensions
     }
 
     /// <summary>
-    /// 为 Endpoint 添加默认权限策略和权限元数据。
+    /// 为 Endpoint 添加命名权限策略和权限元数据。
     /// </summary>
     /// <typeparam name="TBuilder">Endpoint 构建器类型。</typeparam>
     /// <param name="builder">Endpoint 构建器。</param>
@@ -59,7 +45,7 @@ public static class PermissionEndpointConventionBuilderExtensions
         {
             endpointBuilder.Metadata.Add(metadata);
             endpointBuilder.Metadata.Add(new AuthorizeAttribute(
-                Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.DefaultPolicyName));
+                Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.PermissionPolicyName));
         });
 
         return builder;

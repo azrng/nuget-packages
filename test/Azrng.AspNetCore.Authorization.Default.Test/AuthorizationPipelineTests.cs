@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Azrng.AspNetCore.Authorization.Default;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -42,7 +43,7 @@ public class AuthorizationPipelineTests
     [Fact]
     public async Task Evaluator_ShouldBeInvoked_WhenUserIsAuthenticated()
     {
-        using var server = CreateServer(context => context.Path == "/secure");
+        using var server = CreateServer(context => context.HttpContext.Request.Path.Value == "/secure");
         using var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-User", "alice");
 
@@ -54,9 +55,12 @@ public class AuthorizationPipelineTests
     }
 
     [Fact]
-    public async Task AuthenticatedOnlyEndpoint_ShouldNotInvokePermissionEvaluator()
+    public async Task AuthorizeEndpoint_ShouldNotInvokePermissionEvaluator()
     {
-        using var server = CreateServer(_ => false, authenticatedOnly: true);
+        using var server = CreateServer(
+            _ => false,
+            permissionRequired: false,
+            customDefaultPolicy: true);
         using var client = server.CreateClient();
 
         using var anonymousResponse = await client.GetAsync("/secure");
@@ -65,7 +69,7 @@ public class AuthorizationPipelineTests
         client.DefaultRequestHeaders.Add("X-Test-User", "alice");
         using var authenticatedResponse = await client.GetAsync("/secure");
 
-        Assert.Equal(HttpStatusCode.OK, authenticatedResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, authenticatedResponse.StatusCode);
         var state = server.Host.Services.GetRequiredService<PermissionState>();
         Assert.Equal(0, state.CallCount);
     }
@@ -85,7 +89,7 @@ public class AuthorizationPipelineTests
     [Fact]
     public async Task ProtectedEndpoint_ShouldReturn200_WhenPermissionIsGranted()
     {
-        using var server = CreateServer(context => context.Path == "/secure");
+        using var server = CreateServer(context => context.HttpContext.Request.Path.Value == "/secure");
         using var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-User", "alice");
 
@@ -96,7 +100,8 @@ public class AuthorizationPipelineTests
 
     private static TestServer CreateServer(
         Func<PermissionContext, bool> permission,
-        bool authenticatedOnly = false)
+        bool permissionRequired = true,
+        bool customDefaultPolicy = false)
     {
         var builder = new WebHostBuilder()
             .ConfigureServices(services =>
@@ -108,6 +113,16 @@ public class AuthorizationPipelineTests
                     .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                         TestAuthenticationHandler.SchemeName,
                         _ => { });
+                if (customDefaultPolicy)
+                {
+                    services.AddAuthorization(options =>
+                    {
+                        options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                            .RequireAuthenticatedUser()
+                            .RequireAssertion(_ => false)
+                            .Build();
+                    });
+                }
                 services.AddPermissionAuthorization<TestPermissionEvaluator>();
             })
             .Configure(app =>
@@ -123,9 +138,9 @@ public class AuthorizationPipelineTests
                         await context.Response.WriteAsync("ok");
                     });
 
-                    if (authenticatedOnly)
+                    if (permissionRequired)
                     {
-                        endpoint.RequireAuthenticated();
+                        endpoint.RequirePermission("secure.read");
                     }
                     else
                     {

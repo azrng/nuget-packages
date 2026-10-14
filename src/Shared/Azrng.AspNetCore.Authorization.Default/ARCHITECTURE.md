@@ -8,25 +8,24 @@
 
 ```text
 Controller / Minimal API
-        │ [Authorize] / RequirePermission
-        ▼
-ASP.NET Core AuthorizationService
-        │ DefaultPolicy / DefaultPermissionPolicy
-        ▼
-PermissionAuthorizationHandler
-        │ PermissionContext
-        ▼
-IPermissionEvaluator
-        │ AuthorizationDecision
-        ▼
-AuthorizationResult → 401 / 403 / Endpoint
+        ├─ [Authorize] / RequireAuthorization → ASP.NET Core DefaultPolicy
+        └─ [RequirePermission] / RequirePermission → PermissionPolicy
+                                                │
+                                                ▼
+                                  PermissionAuthorizationHandler
+                                                │ PermissionContext
+                                                ▼
+                                      IPermissionEvaluator
+                                                │ AuthorizationDecision
+                                                ▼
+                            AuthorizationResult → 401 / 403 / Endpoint
 ```
 
 主要类型：
 
 | 类型 | 职责 |
 | --- | --- |
-| `ServiceCollectionExtensions` | 注册 Scoped 评估器、默认策略、HTTP 上下文访问器和处理器 |
+| `ServiceCollectionExtensions` | 注册 Scoped 评估器、命名权限策略、HTTP 上下文访问器和处理器 |
 | `PermissionAuthorizationHandler` | 从当前 HTTP 请求创建上下文并执行评估器 |
 | `PermissionContext` | 保存请求、用户和权限元数据快照 |
 | `IPermissionEvaluator` | 承担业务权限判断 |
@@ -44,20 +43,19 @@ services.AddPermissionAuthorization<MyPermissionEvaluator>();
 注册方法通过标准 `AuthorizationOptions` 设置：
 
 ```text
-DefaultPolicy = RequireAuthenticatedUser + PermissionAuthorizationRequirement
-DefaultPermissionPolicy = 同一策略
-AuthenticatedOnlyPolicy = RequireAuthenticatedUser
+DefaultPolicy = 保持 ASP.NET Core 或宿主原有配置
+PermissionPolicy = RequireAuthenticatedUser + PermissionAuthorizationRequirement
 ```
 
 处理器需求类型是包内部实现细节，不作为应用扩展契约公开。注册过程不添加自定义 `IAuthorizationPolicyProvider`，因此宿主已有的命名策略、动态策略和回退策略不会被本包替换。
 
 ## 请求处理流程
 
-1. ASP.NET Core 根据 Endpoint 元数据合并授权策略。
-2. 默认策略先要求用户完成认证；未认证请求由认证处理器产生挑战，处理器的匿名短路使其不会进入权限评估。
-3. 授权服务调用 `PermissionAuthorizationHandler`。
-4. 处理器读取 `HttpContext`、Endpoint、请求路径、HTTP 方法和用户，并复制 Endpoint 上的 `IPermissionMetadata`。
-5. 处理器调用 `IPermissionEvaluator.AuthorizeAsync`，传入请求取消令牌。
+1. ASP.NET Core 根据 Endpoint 元数据合并宿主默认策略或命名权限策略。
+2. 普通 `[Authorize]` 使用宿主的 `DefaultPolicy`，不进入本包的权限评估流程。
+3. `PermissionPolicy` 要求用户完成认证并调用 `PermissionAuthorizationHandler`；匿名请求被短路，不会进入权限评估。
+4. 处理器读取 Endpoint 上的 `IPermissionMetadata`；缺少权限元数据时直接拒绝。
+5. 处理器将 `HttpContext`、用户和权限元数据传给 `IPermissionEvaluator.AuthorizeAsync`，并传入请求取消令牌。
 6. `Allowed` 调用 `context.Succeed`；其他结果调用 `context.Fail`。
 7. 评估器异常按拒绝处理并写入固定 EventId 的结构化日志；请求取消异常按原语义继续抛出。
 
@@ -65,14 +63,12 @@ AuthenticatedOnlyPolicy = RequireAuthenticatedUser
 
 ### PermissionContext
 
-`PermissionContext` 是一次授权评估的不可替换上下文快照。`Path` 与 `Method` 共同标识被请求的操作，`User` 标识请求者，`RequiredPermissions` 在构造时复制，避免评估器持有的集合被后续 Endpoint 或请求代码修改；路由参数、查询参数等其余信息经 `HttpContext` 获取。
+`PermissionContext` 是一次授权评估的上下文快照。请求路径、HTTP 方法及其他请求数据都可经 `HttpContext` 获取；`User` 标识请求者，`RequiredPermissions` 在构造时复制，避免评估器持有的集合被后续 Endpoint 或请求代码修改。
 
 ```csharp
 public sealed class PermissionContext
 {
     public HttpContext HttpContext { get; }
-    public string Path { get; }
-    public string Method { get; }
     public ClaimsPrincipal User { get; }
     public IReadOnlyList<IPermissionMetadata> RequiredPermissions { get; }
 }
@@ -118,9 +114,9 @@ app.MapGet("/orders", () => Results.Ok())
 
 `PermissionMetadata` 保存权限码和 `PermissionMatchMode`。权限匹配的具体用户、租户和资源规则属于评估器，不由本包解释。
 
-`PermissionMetadataMatcher` 提供可选的标准组合方式：每个声明内部按 `All` / `Any` 匹配，不同声明之间按 AND 组合；空声明集合拒绝。仅认证 Endpoint 使用 `AuthenticatedOnlyPolicy` / `.RequireAuthenticated()`，匿名 Endpoint 使用框架的 `AllowAnonymous`。
+`PermissionMetadataMatcher` 提供可选的标准组合方式：每个声明内部按 `All` / `Any` 匹配，不同声明之间按 AND 组合；空声明集合拒绝。普通 `[Authorize]` / `.RequireAuthorization()` 由 ASP.NET Core 默认策略处理，不会调用本包的权限评估器；匿名 Endpoint 使用框架的 `AllowAnonymous`。
 
-默认情况下，缺少权限元数据仍会传给评估器，以兼容按路径授权的应用。迁移到 Endpoint 元数据后，可设置 `DenyWhenPermissionMetadataMissing`，在调用评估器前直接拒绝未声明权限的 Endpoint。
+`[RequirePermission]` / `.RequirePermission(...)` 使用 `PermissionPolicy`，并要求 Endpoint 至少声明一项权限元数据。元数据缺失时在调用评估器前直接拒绝，不提供按路径兜底或可选严格模式。
 
 ## 生命周期和失败边界
 
@@ -136,10 +132,13 @@ app.MapGet("/orders", () => Results.Ok())
 测试项目覆盖：
 
 - TestServer 未认证 401、无权限 403、授权通过 200。
-- Endpoint 权限元数据、匹配模式、HTTP 方法、路由参数和用户上下文传递。
-- MVC 特性和 Minimal API 扩展使用默认权限策略。
+- Endpoint 权限元数据、匹配模式和 `HttpContext` 请求信息传递。
+- MVC 特性和 Minimal API 扩展使用命名权限策略。
+- 普通 `RequireAuthorization()` 不调用权限评估器。
 - 评估器拒绝时授权失败。
 
 ## 2.0 迁移说明
 
 2.0.0-beta1 移除了 1.x 路径字符串授权模型、旧兼容适配器、匿名路径配置和自定义策略提供器实现。应用必须迁移到 `IPermissionEvaluator` 与 Endpoint 权限元数据；公开接口改用 ASP.NET Core 原生匿名元数据。
+
+2.0.0-beta3 将普通 `[Authorize]` 恢复为 ASP.NET Core 默认认证语义。只有使用 `PermissionPolicy` 的权限声明才调用评估器；该策略缺少权限元数据时始终拒绝。评估器可从 `PermissionContext.HttpContext.Request` 读取路径和 HTTP 方法。

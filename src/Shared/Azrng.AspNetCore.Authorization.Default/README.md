@@ -1,6 +1,6 @@
 # Azrng.AspNetCore.Authorization.Default
 
-为 ASP.NET Core 提供基于 Endpoint 权限元数据的默认授权策略。权限业务由应用实现 `IPermissionEvaluator`，本包负责把认证、Endpoint 元数据和请求上下文交给评估器，并将结果接入标准授权管道。
+为 ASP.NET Core 提供基于 Endpoint 权限元数据的权限授权集成。权限业务由应用实现 `IPermissionEvaluator`，本包负责把认证、Endpoint 元数据和请求上下文交给评估器，并将结果接入标准授权管道。
 
 ## 安装
 
@@ -8,7 +8,7 @@
 dotnet add package Azrng.AspNetCore.Authorization.Default --prerelease
 ```
 
-当前版本：`2.0.0-beta2`。
+当前版本：`2.0.0-beta3`。
 
 ## 快速开始
 
@@ -51,8 +51,7 @@ public sealed class MyPermissionEvaluator : IPermissionEvaluator
 
 `PermissionContext` 提供以下信息：
 
-- `HttpContext`：其余请求信息（路由参数、查询参数、请求头等）的入口
-- 小写请求路径和 HTTP 方法，共同标识被请求的操作
+- `HttpContext`：请求路径、HTTP 方法、路由参数、查询参数和请求头等请求信息
 - 当前用户 `ClaimsPrincipal`
 - Endpoint 上全部 `IPermissionMetadata`
 
@@ -87,59 +86,53 @@ app.MapGet("/orders/export", () => Results.Ok())
 
 `PermissionMetadataMatcher` 可直接按该契约匹配：不同声明之间要求全部满足，单个声明内部按 `All` 或 `Any` 判断；默认以不区分大小写的序号比较权限码。没有权限声明时返回拒绝。用户、租户等权限来源仍由应用评估器负责。
 
-仅要求登录的接口使用认证专用策略，不要用空权限声明表示：
+只要求用户登录的接口使用 ASP.NET Core 默认授权策略：
 
 ```csharp
-[Authorize(Policy = ServiceCollectionExtensions.AuthenticatedOnlyPolicyName)]
+[Authorize]
 public IActionResult GetProfile() => Ok();
 
 app.MapGet("/profile", () => Results.Ok())
-    .RequireAuthenticated();
+    .RequireAuthorization();
 ```
 
-权限策略的 Endpoint 缺少权限元数据时，默认仍交给评估器处理，以兼容按路径判断的应用。迁移到 Endpoint 权限声明后，可启用严格拒绝，避免漏标 Endpoint 被评估器误放行：
+`[RequirePermission]` 和 `.RequirePermission(...)` 使用包注册的 `PermissionPolicy`，并调用权限评估器。该策略对应的 Endpoint 必须声明至少一项 `IPermissionMetadata`；缺少元数据时会在调用评估器前拒绝请求。
 
-```csharp
-builder.Services.AddPermissionAuthorization<MyPermissionEvaluator>(options =>
-    options.DenyWhenPermissionMetadataMissing = true);
-```
+普通 `[Authorize]` / `.RequireAuthorization()` 不会调用权限评估器，仍按应用配置的 ASP.NET Core `DefaultPolicy` 处理。公开接口使用 ASP.NET Core 原生 `[AllowAnonymous]` 或 `.AllowAnonymous()`。
 
-不需要认证的接口使用 ASP.NET Core 原生 `[AllowAnonymous]` 或 `.AllowAnonymous()`，本包不再提供路径白名单配置。
+评估器需要请求路径、HTTP 方法等信息时，可从 `PermissionContext.HttpContext.Request` 读取。本包不再隐式按所有受 `[Authorize]` 保护的路径执行权限判断。
 
 ## 授权行为
 
-`AddPermissionAuthorization` 配置两个相同的权限策略和一个认证专用策略：
+`AddPermissionAuthorization` 只注册命名权限策略 `PermissionPolicy`：
 
-- 默认策略：供不指定策略名的 `[Authorize]` 使用
-- `DefaultPermissionPolicy`：供 `RequirePermissionAttribute` 和 `RequirePermission` 使用
-- `AuthenticatedOnlyPolicy`：仅要求已认证，不执行权限评估
+- `PermissionPolicy`：供 `RequirePermissionAttribute` 和 `RequirePermission` 使用
 
-默认策略和 `DefaultPermissionPolicy` 都要求已认证用户，并执行一次 `IPermissionEvaluator`；`AuthenticatedOnlyPolicy` 只要求已认证。本包通过 `AuthorizationOptions` 配置策略，不替换宿主的 `IAuthorizationPolicyProvider`。未认证请求直接拒绝并返回 401，不会调用 `IPermissionEvaluator`（避免匿名流量触发数据库或远程 ACL 等昂贵调用）；已认证但权限评估失败返回 403；评估器异常按 fail-closed 处理并记录结构化日志。
+普通 `[Authorize]` 使用 ASP.NET Core 的默认策略；本包不修改 `AuthorizationOptions.DefaultPolicy`，也不替换宿主的 `IAuthorizationPolicyProvider`。`PermissionPolicy` 要求用户已认证并执行一次 `IPermissionEvaluator`。权限元数据缺失、已认证但评估拒绝或评估器异常都会 fail-closed；未认证请求不会调用评估器。
 
 ## API 参考
 
 | API | 用途 |
 | --- | --- |
-| `AddPermissionAuthorization<TPermissionEvaluator>(...)` | 注册默认权限策略、处理器和评估器，可选配置缺少权限元数据时拒绝 |
-| `PermissionAuthorizationOptions` | 配置缺少权限元数据时是否直接拒绝 |
+| `AddPermissionAuthorization<TPermissionEvaluator>()` | 注册命名权限策略、处理器和评估器 |
+| `ServiceCollectionExtensions.PermissionPolicyName` | 命名权限策略名称 |
 | `IPermissionEvaluator` | 实现业务权限判断 |
-| `PermissionContext` | 提供请求、用户和 Endpoint 权限上下文 |
+| `PermissionContext` | 提供 `HttpContext`、用户和 Endpoint 权限上下文 |
 | `AuthorizationDecision` | 表示允许或拒绝 |
 | `RequirePermissionAttribute` | 为 MVC Controller / Action 声明权限 |
 | `RequirePermission(...)` | 为 Minimal API Endpoint 声明权限 |
 | `PermissionMetadata` | 表示 Endpoint 上的权限元数据 |
 | `PermissionMetadataMatcher` | 按声明的 Any/All 匹配模式检查已授予权限 |
-| `RequireAuthenticated()` | 为 Minimal API Endpoint 添加仅认证策略 |
 
 ## 升级到 2.0
 
 2.0.0 系列是破坏性版本。1.x 的路径权限兼容层已移除，应用需要：
 
 1. 将权限服务改为实现 `IPermissionEvaluator`。
-2. 使用 `PermissionContext` 读取请求路径、方法、路由、用户和权限元数据。
+2. 使用 `PermissionContext.HttpContext` 读取请求路径、方法和路由，使用 `User` 与 `RequiredPermissions` 读取用户和权限元数据。
 3. 返回 `AuthorizationDecision`，并将注册方式改为 `AddPermissionAuthorization<TPermissionEvaluator>()`。
 4. 使用 `[AllowAnonymous]` 或 `.AllowAnonymous()` 声明公开接口。
-5. 将旧路径映射逐条对应到 Endpoint；多菜单权限显式选择 `Any` 或 `All`，仅登录接口使用 `AuthenticatedOnlyPolicy`。迁移期间可启用 `DenyWhenPermissionMetadataMissing` 检查遗漏。
+5. 仅需要认证的接口改用普通 `[Authorize]` / `.RequireAuthorization()`；需要业务权限评估的接口使用 `[RequirePermission]` / `.RequirePermission(...)` 声明权限。每个权限策略 Endpoint 都必须带权限元数据，多项声明之间要求全部满足，单个声明内部按 `Any` 或 `All` 匹配。
 
 完整变更记录见 [CHANGELOG.md](https://github.com/azrng/nuget-packages/blob/main/src/Shared/Azrng.AspNetCore.Authorization.Default/CHANGELOG.md)。
 

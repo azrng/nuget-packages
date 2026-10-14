@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2.0.0-beta3
+
+- 普通 `[Authorize]` 保留 ASP.NET Core 默认策略语义；本包只为 `[RequirePermission]` / `.RequirePermission(...)` 注册并应用命名权限策略 `PermissionPolicy`。
+- 权限策略对应的 Endpoint 缺少 `IPermissionMetadata` 时始终拒绝；移除可选严格模式和 `PermissionAuthorizationOptions`。
+- 移除 `AuthenticatedOnlyPolicy` / `.RequireAuthenticated()`；仅要求登录的接口改用框架默认 `[Authorize]` / `.RequireAuthorization()`。
+- `PermissionContext` 移除独立的 `Path`、`Method` 属性，改由评估器从 `HttpContext.Request` 获取；权限策略常量改名为 `PermissionPolicyName`。
+
 ## 2.0.0-beta2
 
 - 未认证请求在处理器内直接拒绝，不再调用 `IPermissionEvaluator`，避免匿名流量触发评估器中的数据库或远程 ACL 调用。
