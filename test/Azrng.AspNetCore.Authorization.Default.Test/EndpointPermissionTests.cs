@@ -60,6 +60,53 @@ public class EndpointPermissionTests
     }
 
     [Fact]
+    public async Task MissingPermissionMetadata_ShouldFailBeforeEvaluator_WhenStrictModeIsEnabled()
+    {
+        var state = new EvaluationState(_ => true);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(state);
+        services.AddPermissionAuthorization<TestPermissionEvaluator>(options =>
+            options.DenyWhenPermissionMetadataMissing = true);
+
+        using var provider = services.BuildServiceProvider();
+        var httpContext = CreateHttpContext(provider, "/api/orders", "GET");
+        httpContext.SetEndpoint(CreateEndpoint());
+
+        var result = await provider.GetRequiredService<IAuthorizationService>()
+            .AuthorizeAsync(CreateAuthenticatedUser(), null, ServiceCollectionExtensions.DefaultPolicyName);
+
+        result.Succeeded.Should().BeFalse();
+        state.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AuthenticatedOnlyPolicy_ShouldNotInvokePermissionEvaluator()
+    {
+        var state = new EvaluationState(_ => false);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(state);
+        services.AddPermissionAuthorization<TestPermissionEvaluator>();
+
+        using var provider = services.BuildServiceProvider();
+        var authorization = provider.GetRequiredService<IAuthorizationService>();
+
+        var authenticatedResult = await authorization.AuthorizeAsync(
+            CreateAuthenticatedUser(),
+            null,
+            ServiceCollectionExtensions.AuthenticatedOnlyPolicyName);
+        var anonymousResult = await authorization.AuthorizeAsync(
+            new ClaimsPrincipal(new ClaimsIdentity()),
+            null,
+            ServiceCollectionExtensions.AuthenticatedOnlyPolicyName);
+
+        authenticatedResult.Succeeded.Should().BeTrue();
+        anonymousResult.Succeeded.Should().BeFalse();
+        state.CallCount.Should().Be(0);
+    }
+
+    [Fact]
     public void RequirePermissionAttribute_ShouldUseDefaultPermissionPolicy()
     {
         var attribute = new RequirePermissionAttribute("orders.read", "orders.write")
@@ -112,6 +159,8 @@ public class EndpointPermissionTests
         public Func<PermissionContext, bool> Evaluator { get; }
 
         public PermissionContext? Context { get; set; }
+
+        public int CallCount { get; set; }
     }
 
     private sealed class TestPermissionEvaluator : IPermissionEvaluator
@@ -127,6 +176,7 @@ public class EndpointPermissionTests
             PermissionContext context,
             CancellationToken cancellationToken = default)
         {
+            _state.CallCount++;
             _state.Context = context;
             return Task.FromResult(_state.Evaluator(context)
                 ? AuthorizationDecision.Allow()

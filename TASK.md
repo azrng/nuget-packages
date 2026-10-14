@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T160 | Azrng.AspNetCore.Authorization.Default 接入反馈改进 | 增加仅认证策略、Any/All 标准匹配 helper 与缺少元数据严格拒绝选项；同步测试和文档 | 阶段 1 | Codex | REVIEW | P1 | 2026-10-14 |
 | T156 | Azrng.AspNetCore.Authorization.Default 未认证请求短路权限评估 | PermissionAuthorizationHandler 增加未认证守卫：匿名请求直接 Fail 不再调用 IPermissionEvaluator（对齐 ARCHITECTURE 声明的"先认证后评估"语义），并在包关键位置补充管道注释，补测试与文档，随 2.0.0-beta1 发布 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |
 | T157 | Azrng.AspNetCore.Authorization.Default 决策结果瘦身 | AuthorizationDecision 收敛为 Allowed/Denied 两态（保留类形状便于后续非破坏性扩展）：删除 NotConfigured/DependencyError 枚举值与工厂、DiagnosticCode 属性及 Deny 诊断码参数，依赖故障统一走拰异常 → handler fail-closed 路径，同步测试与文档，随 2.0.0-beta1 发布 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |
 | T158 | Azrng.AspNetCore.Authorization.Default 权限上下文精简 | PermissionContext 按语义必要性收敛为 HttpContext/Path/Method/User/RequiredPermissions 五件套：删除 Endpoint（框架对象泄漏无语义增量）与 RouteValues（资源级细粒度不属本包操作级模型）及防御性复制，同步 handler、测试与文档，随 2.0.0-beta1 发布 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |

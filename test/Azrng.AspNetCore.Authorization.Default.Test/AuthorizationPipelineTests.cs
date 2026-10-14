@@ -54,6 +54,23 @@ public class AuthorizationPipelineTests
     }
 
     [Fact]
+    public async Task AuthenticatedOnlyEndpoint_ShouldNotInvokePermissionEvaluator()
+    {
+        using var server = CreateServer(_ => false, authenticatedOnly: true);
+        using var client = server.CreateClient();
+
+        using var anonymousResponse = await client.GetAsync("/secure");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousResponse.StatusCode);
+
+        client.DefaultRequestHeaders.Add("X-Test-User", "alice");
+        using var authenticatedResponse = await client.GetAsync("/secure");
+
+        Assert.Equal(HttpStatusCode.OK, authenticatedResponse.StatusCode);
+        var state = server.Host.Services.GetRequiredService<PermissionState>();
+        Assert.Equal(0, state.CallCount);
+    }
+
+    [Fact]
     public async Task ProtectedEndpoint_ShouldReturn403_WhenPermissionIsDenied()
     {
         using var server = CreateServer(_ => false);
@@ -77,7 +94,9 @@ public class AuthorizationPipelineTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    private static TestServer CreateServer(Func<PermissionContext, bool> permission)
+    private static TestServer CreateServer(
+        Func<PermissionContext, bool> permission,
+        bool authenticatedOnly = false)
     {
         var builder = new WebHostBuilder()
             .ConfigureServices(services =>
@@ -98,12 +117,20 @@ public class AuthorizationPipelineTests
                 app.UseAuthorization();
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapGet("/secure", async context =>
+                    var endpoint = endpoints.MapGet("/secure", async context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         await context.Response.WriteAsync("ok");
-                    })
-                        .RequireAuthorization();
+                    });
+
+                    if (authenticatedOnly)
+                    {
+                        endpoint.RequireAuthenticated();
+                    }
+                    else
+                    {
+                        endpoint.RequireAuthorization();
+                    }
                 });
             });
 

@@ -15,6 +15,11 @@ public static class ServiceCollectionExtensions
     public const string DefaultPolicyName = "DefaultPermissionPolicy";
 
     /// <summary>
+    /// 仅要求用户已认证的授权策略名称。
+    /// </summary>
+    public const string AuthenticatedOnlyPolicyName = "AuthenticatedOnlyPolicy";
+
+    /// <summary>
     /// 添加基于 Endpoint 权限元数据的授权服务。
     /// </summary>
     /// <typeparam name="TPermissionEvaluator">权限评估器类型。</typeparam>
@@ -24,8 +29,25 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
         where TPermissionEvaluator : class, IPermissionEvaluator
     {
-        ArgumentNullException.ThrowIfNull(services);
+        return services.AddPermissionAuthorization<TPermissionEvaluator>(_ => { });
+    }
 
+    /// <summary>
+    /// 添加基于 Endpoint 权限元数据的授权服务，并配置权限授权选项。
+    /// </summary>
+    /// <typeparam name="TPermissionEvaluator">权限评估器类型。</typeparam>
+    /// <param name="services">服务集合。</param>
+    /// <param name="configureOptions">权限授权选项配置。</param>
+    /// <returns>服务集合。</returns>
+    public static IServiceCollection AddPermissionAuthorization<TPermissionEvaluator>(
+        this IServiceCollection services,
+        Action<PermissionAuthorizationOptions> configureOptions)
+        where TPermissionEvaluator : class, IPermissionEvaluator
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configureOptions);
+
+        services.Configure(configureOptions);
         services.AddScoped<IPermissionEvaluator, TPermissionEvaluator>();
         services.AddAuthorization(options =>
         {
@@ -38,9 +60,11 @@ public static class ServiceCollectionExtensions
                 .AddPermissionRequirement()
                 .Build();
 
-            // DefaultPolicy 供 [Authorize] / RequireAuthorization()，DefaultPermissionPolicy 供 [RequirePermission]
+            // 默认策略和 DefaultPermissionPolicy 执行权限评估；AuthenticatedOnlyPolicy 只要求认证。
             options.DefaultPolicy = policy;
             options.AddPolicy(DefaultPolicyName, policy);
+            options.AddPolicy(AuthenticatedOnlyPolicyName, authenticatedPolicy =>
+                authenticatedPolicy.RequireAuthenticatedUser());
         });
 
         services.AddHttpContextAccessor();

@@ -36,11 +36,13 @@ public sealed class MyPermissionEvaluator : IPermissionEvaluator
         CancellationToken cancellationToken = default)
     {
         var isAdmin = context.User.IsInRole("Admin");
-        var hasOrderPermission = context.RequiredPermissions
-            .SelectMany(metadata => metadata.Permissions)
-            .Contains("orders.read", StringComparer.OrdinalIgnoreCase);
+        // 示例权限码；实际应用应从权限存储读取当前用户的权限。
+        IReadOnlyList<string> grantedPermissions = new[] { "orders.read" };
+        var hasRequiredPermissions = PermissionMetadataMatcher.IsSatisfiedBy(
+            context.RequiredPermissions,
+            grantedPermissions);
 
-        return Task.FromResult(isAdmin || hasOrderPermission
+        return Task.FromResult(isAdmin || hasRequiredPermissions
             ? AuthorizationDecision.Allow()
             : AuthorizationDecision.Deny());
     }
@@ -63,6 +65,9 @@ MVC Controller 或 Action 使用特性：
 ```csharp
 [RequirePermission("orders.read")]
 public IActionResult GetOrders() => Ok();
+
+[RequirePermission("orders.read", "orders.export", MatchMode = PermissionMatchMode.Any)]
+public IActionResult ExportOrders() => Ok();
 ```
 
 Minimal API 使用 Endpoint 扩展：
@@ -80,28 +85,51 @@ app.MapGet("/orders/export", () => Results.Ok())
 
 同一个声明中的权限码默认要求全部满足，`PermissionMatchMode.Any` 表示满足任意一个即可。多个权限声明由 ASP.NET Core 按授权策略合并。
 
+`PermissionMetadataMatcher` 可直接按该契约匹配：不同声明之间要求全部满足，单个声明内部按 `All` 或 `Any` 判断；默认以不区分大小写的序号比较权限码。没有权限声明时返回拒绝。用户、租户等权限来源仍由应用评估器负责。
+
+仅要求登录的接口使用认证专用策略，不要用空权限声明表示：
+
+```csharp
+[Authorize(Policy = ServiceCollectionExtensions.AuthenticatedOnlyPolicyName)]
+public IActionResult GetProfile() => Ok();
+
+app.MapGet("/profile", () => Results.Ok())
+    .RequireAuthenticated();
+```
+
+权限策略的 Endpoint 缺少权限元数据时，默认仍交给评估器处理，以兼容按路径判断的应用。迁移到 Endpoint 权限声明后，可启用严格拒绝，避免漏标 Endpoint 被评估器误放行：
+
+```csharp
+builder.Services.AddPermissionAuthorization<MyPermissionEvaluator>(options =>
+    options.DenyWhenPermissionMetadataMissing = true);
+```
+
 不需要认证的接口使用 ASP.NET Core 原生 `[AllowAnonymous]` 或 `.AllowAnonymous()`，本包不再提供路径白名单配置。
 
 ## 授权行为
 
-`AddPermissionAuthorization` 配置两个相同的策略：
+`AddPermissionAuthorization` 配置两个相同的权限策略和一个认证专用策略：
 
 - 默认策略：供不指定策略名的 `[Authorize]` 使用
 - `DefaultPermissionPolicy`：供 `RequirePermissionAttribute` 和 `RequirePermission` 使用
+- `AuthenticatedOnlyPolicy`：仅要求已认证，不执行权限评估
 
-两者都要求已认证用户，并执行一次 `IPermissionEvaluator`。本包通过 `AuthorizationOptions` 配置策略，不替换宿主的 `IAuthorizationPolicyProvider`。未认证请求直接拒绝并返回 401，不会调用 `IPermissionEvaluator`（避免匿名流量触发数据库或远程 ACL 等昂贵调用）；已认证但权限评估失败返回 403；评估器异常按 fail-closed 处理并记录结构化日志。
+默认策略和 `DefaultPermissionPolicy` 都要求已认证用户，并执行一次 `IPermissionEvaluator`；`AuthenticatedOnlyPolicy` 只要求已认证。本包通过 `AuthorizationOptions` 配置策略，不替换宿主的 `IAuthorizationPolicyProvider`。未认证请求直接拒绝并返回 401，不会调用 `IPermissionEvaluator`（避免匿名流量触发数据库或远程 ACL 等昂贵调用）；已认证但权限评估失败返回 403；评估器异常按 fail-closed 处理并记录结构化日志。
 
 ## API 参考
 
 | API | 用途 |
 | --- | --- |
-| `AddPermissionAuthorization<TPermissionEvaluator>()` | 注册默认权限策略、处理器和评估器 |
+| `AddPermissionAuthorization<TPermissionEvaluator>(...)` | 注册默认权限策略、处理器和评估器，可选配置缺少权限元数据时拒绝 |
+| `PermissionAuthorizationOptions` | 配置缺少权限元数据时是否直接拒绝 |
 | `IPermissionEvaluator` | 实现业务权限判断 |
 | `PermissionContext` | 提供请求、用户和 Endpoint 权限上下文 |
 | `AuthorizationDecision` | 表示允许或拒绝 |
 | `RequirePermissionAttribute` | 为 MVC Controller / Action 声明权限 |
 | `RequirePermission(...)` | 为 Minimal API Endpoint 声明权限 |
 | `PermissionMetadata` | 表示 Endpoint 上的权限元数据 |
+| `PermissionMetadataMatcher` | 按声明的 Any/All 匹配模式检查已授予权限 |
+| `RequireAuthenticated()` | 为 Minimal API Endpoint 添加仅认证策略 |
 
 ## 升级到 2.0
 
@@ -111,6 +139,7 @@ app.MapGet("/orders/export", () => Results.Ok())
 2. 使用 `PermissionContext` 读取请求路径、方法、路由、用户和权限元数据。
 3. 返回 `AuthorizationDecision`，并将注册方式改为 `AddPermissionAuthorization<TPermissionEvaluator>()`。
 4. 使用 `[AllowAnonymous]` 或 `.AllowAnonymous()` 声明公开接口。
+5. 将旧路径映射逐条对应到 Endpoint；多菜单权限显式选择 `Any` 或 `All`，仅登录接口使用 `AuthenticatedOnlyPolicy`。迁移期间可启用 `DenyWhenPermissionMetadataMissing` 检查遗漏。
 
 完整变更记录见 [CHANGELOG.md](https://github.com/azrng/nuget-packages/blob/main/src/Shared/Azrng.AspNetCore.Authorization.Default/CHANGELOG.md)。
 

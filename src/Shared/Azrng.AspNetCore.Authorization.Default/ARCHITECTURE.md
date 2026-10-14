@@ -33,6 +33,7 @@ AuthorizationResult → 401 / 403 / Endpoint
 | `AuthorizationDecision` | 返回结构化授权结果 |
 | `RequirePermissionAttribute` | MVC 权限声明 |
 | `RequirePermission` | Minimal API 权限声明 |
+| `PermissionMetadataMatcher` | 按声明的匹配模式检查权限码 |
 
 ## 注册和策略
 
@@ -45,6 +46,7 @@ services.AddPermissionAuthorization<MyPermissionEvaluator>();
 ```text
 DefaultPolicy = RequireAuthenticatedUser + PermissionAuthorizationRequirement
 DefaultPermissionPolicy = 同一策略
+AuthenticatedOnlyPolicy = RequireAuthenticatedUser
 ```
 
 处理器需求类型是包内部实现细节，不作为应用扩展契约公开。注册过程不添加自定义 `IAuthorizationPolicyProvider`，因此宿主已有的命名策略、动态策略和回退策略不会被本包替换。
@@ -115,6 +117,10 @@ app.MapGet("/orders", () => Results.Ok())
 ```
 
 `PermissionMetadata` 保存权限码和 `PermissionMatchMode`。权限匹配的具体用户、租户和资源规则属于评估器，不由本包解释。
+
+`PermissionMetadataMatcher` 提供可选的标准组合方式：每个声明内部按 `All` / `Any` 匹配，不同声明之间按 AND 组合；空声明集合拒绝。仅认证 Endpoint 使用 `AuthenticatedOnlyPolicy` / `.RequireAuthenticated()`，匿名 Endpoint 使用框架的 `AllowAnonymous`。
+
+默认情况下，缺少权限元数据仍会传给评估器，以兼容按路径授权的应用。迁移到 Endpoint 元数据后，可设置 `DenyWhenPermissionMetadataMissing`，在调用评估器前直接拒绝未声明权限的 Endpoint。
 
 ## 生命周期和失败边界
 

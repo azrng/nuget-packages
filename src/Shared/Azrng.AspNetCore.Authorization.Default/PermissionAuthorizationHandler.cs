@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Azrng.AspNetCore.Authorization.Default;
 
@@ -12,6 +13,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
     private readonly IHttpContextAccessor _accessor;
     private readonly IPermissionEvaluator _evaluator;
     private readonly ILogger<PermissionAuthorizationHandler> _logger;
+    private readonly PermissionAuthorizationOptions _options;
 
     /// <summary>
     /// 初始化 <see cref="PermissionAuthorizationHandler"/> 的新实例。
@@ -19,11 +21,13 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
     public PermissionAuthorizationHandler(
         IHttpContextAccessor httpContextAccessor,
         IPermissionEvaluator evaluator,
-        ILogger<PermissionAuthorizationHandler> logger)
+        ILogger<PermissionAuthorizationHandler> logger,
+        IOptions<PermissionAuthorizationOptions> options)
     {
         _accessor = httpContextAccessor;
         _evaluator = evaluator;
         _logger = logger;
+        _options = options.Value;
     }
 
     /// <summary>
@@ -64,6 +68,17 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
         var endpoint = httpContext.GetEndpoint();
         var permissionMetadata = endpoint?.Metadata.GetOrderedMetadata<IPermissionMetadata>()
             ?? Array.Empty<IPermissionMetadata>();
+        if (_options.DenyWhenPermissionMetadataMissing && permissionMetadata.Count == 0)
+        {
+            _logger.LogWarning(
+                AuthorizationEventIds.MissingPermissionMetadata,
+                "权限策略对应的 Endpoint 缺少权限元数据，请求已拒绝：{Path}，Endpoint {Endpoint}",
+                queryUrl,
+                endpoint?.DisplayName ?? "Unknown");
+            context.Fail();
+            return;
+        }
+
         var permissionContext = new PermissionContext(
             httpContext,
             queryUrl,
