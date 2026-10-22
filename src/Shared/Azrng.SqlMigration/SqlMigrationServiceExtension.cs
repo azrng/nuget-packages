@@ -5,13 +5,13 @@ using System.Data;
 
 namespace Azrng.SqlMigration
 {
+    /// <summary>
+    /// 迁移注册名标记，注册进容器用于枚举当前 host 的迁移，替代静态全局状态
+    /// </summary>
+    internal sealed record SqlMigrationName(string Name);
+
     public static class SqlMigrationServiceExtension
     {
-        /// <summary>
-        /// 迁移名字
-        /// </summary>
-        public static readonly List<string> DbNames = new List<string>();
-
         /// <summary>
         /// 添加sql迁移服务
         /// </summary>
@@ -44,14 +44,15 @@ namespace Azrng.SqlMigration
                 throw new ArgumentException("迁移名字不能为空");
             }
 
-            if (DbNames.Any(t => t == migrationDbName))
+            if (services.Any(d => d.ServiceType == typeof(SqlMigrationName) &&
+                                  (d.ImplementationInstance is SqlMigrationName name && name.Name == migrationDbName)))
             {
-                throw new ArgumentException("迁移名字不能重复");
+                throw new ArgumentException($"迁移名字不能重复：{migrationDbName}");
             }
 
             services.AddOptions().Configure(migrationDbName, action);
 
-            DbNames.Add(migrationDbName);
+            services.AddSingleton(new SqlMigrationName(migrationDbName));
 
             var option = new SqlMigrationOption();
             action(option);
@@ -74,7 +75,7 @@ namespace Azrng.SqlMigration
         /// <returns></returns>
         public static IServiceCollection AddAutoMigration(this IServiceCollection services)
         {
-            if (DbNames.Count == 0)
+            if (!services.Any(d => d.ServiceType == typeof(SqlMigrationName)))
             {
                 throw new ArgumentException("请先添加迁移配置");
             }

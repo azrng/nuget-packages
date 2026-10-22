@@ -49,6 +49,40 @@ namespace Azrng.SqlMigration.Service
             return ret?.ToString() ?? SqlMigrationConst.FirstVersionStr;
         }
 
+        public async Task WriteVersionLogIfAbsentAsync(string migrationName, string version)
+        {
+            var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);
+            var config = GetMigrationOption(migrationName);
+            var versionLog = GetVersionLogInfo(config);
+            var initSql = GetInitTableSql(config, versionLog);
+
+            if (!string.IsNullOrWhiteSpace(initSql))
+            {
+                await conn.ExecuteAsync(initSql);
+            }
+
+            if (await HasLegacyCreatedTimeColumnAsync(conn, config, versionLog, transaction: null))
+            {
+                var legacySql =
+                    $"insert into {versionLog.QualifiedTableName}({versionLog.QuotedVersionColumn}, \"created_time\") " +
+                    $"select @version, @time where not exists " +
+                    $"(select 1 from {versionLog.QualifiedTableName} where {versionLog.QuotedVersionColumn} = @version);";
+                var legacyParam = new
+                {
+                    version,
+                    time = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified).AddHours(8)
+                };
+                await conn.ExecuteAsync(legacySql, legacyParam);
+                return;
+            }
+
+            var writeSql =
+                $"insert into {versionLog.QualifiedTableName}({versionLog.QuotedVersionColumn}) " +
+                $"select @version where not exists " +
+                $"(select 1 from {versionLog.QualifiedTableName} where {versionLog.QuotedVersionColumn} = @version);";
+            await conn.ExecuteAsync(writeSql, new { version });
+        }
+
         public Task WriteVersionLogAsync(string migrationName, string version)
         {
             var conn = _serviceProvider.GetRequiredKeyedService<IDbConnection>(migrationName);

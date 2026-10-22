@@ -31,13 +31,15 @@ builder.Services.AddSqlMigrationService("default", config =>
 
 #### 支持的版本号格式
 
-支持以下格式：
+支持以下格式（每段必须是 0-999 的整数）：
 
 * `1.0.0`
 * `1.2.3`
 * `1.0.0.1`
 * `111.111.111`
 * `111.111.111.111`
+
+版本号非法（段数不是 3 或 4、每段超出 0-999、混入非数字内容）时迁移会直接抛出 `InvalidOperationException`，不再静默跳过脚本。
 
 支持的脚本扩展名：
 
@@ -133,6 +135,7 @@ builder.Services.AddSqlMigrationService("default", config =>
     config.SetInitVersionSetter<CustomInitVersionSetter>();
 }).AddAutoMigration();
 ```
+基线版本会在迁移时幂等写入版本日志表（已存在相同版本时不重复写入），保证版本表能反映当前基线，避免每次启动重复执行初始化查询。
 
 #### 迁移回调
 
@@ -220,11 +223,16 @@ builder.Services.AddSqlMigrationService("default", config =>
 
 * 脚本版本号必须递增，否则不会被识别为待执行脚本
 * 默认只会扫描当前目录下以 `VersionPrefix` 开头、后缀为 `.sql` 或 `.txt` 的文件
+* 当 `VersionPrefix` 配置为空字符串时会扫描目录下全部 `.sql`/`.txt` 文件，文件名必须是合法版本号（如 `1.0.0.sql`），混入其他命名的文件会导致迁移启动失败
 * 每个版本脚本会在独立事务中执行，脚本执行和版本日志写入会在同一个事务中提交
 * 如果自定义了 `OrderByColumn`，请确保该列的排序结果能够稳定表示“最新版本”
 
 ### 版本更新记录
 
+* 0.6.0
+  * 版本号解析改为 fail-fast：非法版本号（段数不为 3/4、段超出 0-999、非数字）直接抛出 `InvalidOperationException`，不再静默返回 0 导致脚本被跳过或重复执行
+  * 初始化版本设置器返回的基线版本会幂等写入版本日志表
+  * 移除静态 `SqlMigrationServiceExtension.DbNames`，迁移注册名保存到各容器中（破坏性变更）：同一进程构建多个 host 不会再互相串扰或因重名抛错
 * 0.5.0
   * 支持自定义版本日志表名、主键列、版本列和排序列
   * 默认版本日志表不再依赖 `created_time`

@@ -43,6 +43,12 @@ namespace Azrng.SqlMigration.Service
                     var setter = _serviceProvider.GetRequiredKeyedService<IInitVersionSetter>(migrationName);
                     oldVersion = await setter.GetCurrentVersionAsync();
                     latestVersion = oldVersion;
+
+                    // 把基线版本幂等写入版本日志表，让版本表反映当前基线，避免每次启动重复执行 setter 查询
+                    if (dbVersionService is ITransactionalDbVersionService transactionalDbVersionService)
+                    {
+                        await transactionalDbVersionService.WriteVersionLogIfAbsentAsync(migrationName, oldVersion);
+                    }
                 }
 
                 if (!await CallbackAsync(migrationName, SqlMigrationStep.Prepare, oldVersion, oldVersion))
@@ -193,33 +199,32 @@ namespace Azrng.SqlMigration.Service
         /// <param name="versionNumber">版本</param>
         /// <param name="versionPrefix">版本前缀</param>
         /// <returns></returns>
-        private long GetVersionNum(string migrationName, string versionNumber, string versionPrefix)
+        private static long GetVersionNum(string migrationName, string versionNumber, string versionPrefix)
         {
             versionNumber = versionNumber.ToLowerInvariant()
                                          .ReplaceIfNotNullOrWhiteSpace(versionPrefix, string.Empty)
                                          .Replace(".sql", string.Empty, StringComparison.OrdinalIgnoreCase)
                                          .Replace(".txt", string.Empty, StringComparison.OrdinalIgnoreCase);
-            var arr = versionNumber.Split('.').ToList();
-
-            try
+            var arr = versionNumber.Split('.');
+            if (arr.Length is not (3 or 4))
             {
-                var str = arr.Count switch
+                throw new InvalidOperationException(
+                    $"迁移{migrationName}存在非法的版本格式：{versionNumber}，仅支持 3 段或 4 段版本号（如 1.2.3、1.2.3.0）");
+            }
+
+            long result = 0;
+            foreach (var segment in arr)
+            {
+                if (!int.TryParse(segment, out var num) || num is < 0 or > 999)
                 {
-                    4 =>
-                        $"{Convert.ToInt32(arr[0]):000}{Convert.ToInt32(arr[1]):000}{Convert.ToInt32(arr[2]):000}{Convert.ToInt32(arr[3]):000}",
-                    3 => $"{Convert.ToInt32(arr[0]):000}{Convert.ToInt32(arr[1]):000}{Convert.ToInt32(arr[2]):000}",
-                    _ => throw new NotSupportedException($"不支持的版本格式：{versionNumber}")
-                };
+                    throw new InvalidOperationException(
+                        $"迁移{migrationName}存在非法的版本格式：{versionNumber}，每一段必须是 0-999 的整数");
+                }
 
-                return Convert.ToInt64(str);
+                result = result * 1000 + num;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "{MigrationName} SQL迁移脚本-获取版本号异常-存在非法的版本信息,versionNumber:{VersionNumber},message:{Message}",
-                    migrationName, versionNumber, ex.Message);
-                return 0;
-            }
+
+            return result;
         }
 
         /// <summary>

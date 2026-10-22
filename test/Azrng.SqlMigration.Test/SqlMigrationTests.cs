@@ -12,17 +12,8 @@ using Xunit;
 
 namespace Azrng.SqlMigration.Test;
 
-public class SqlMigrationTests : IDisposable
+public class SqlMigrationTests
 {
-    public SqlMigrationTests()
-    {
-        SqlMigrationServiceExtension.DbNames.Clear();
-    }
-
-    public void Dispose()
-    {
-        SqlMigrationServiceExtension.DbNames.Clear();
-    }
 
     [Fact]
     public void AddSqlMigrationService_ThrowsForBlankAndDuplicateMigrationNames()
@@ -238,6 +229,139 @@ public class SqlMigrationTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task MigrateAsync_WhenFileNameNotVersioned_ThrowsInsteadOfSilentSkip()
+    {
+        var state = new FakeDbState
+        {
+            CurrentVersion = "1.0.0",
+            VersionTableExists = true
+        };
+        var sqlRoot = CreateSqlDirectory(("backup.sql", "select 'not a version';"));
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSqlMigrationService("main", options =>
+            {
+                options.ConnectionBuilder = _ => new FakeDbConnection(state);
+                options.SqlRootPath = sqlRoot;
+                options.VersionPrefix = string.Empty;
+            }).AddAutoMigration();
+
+            using var provider = services.BuildServiceProvider();
+            var filter = provider.GetRequiredService<IStartupFilter>();
+            var appBuilder = new ApplicationBuilder(provider);
+
+            var act = () => Task.Run(() => filter.Configure(_ => { })(appBuilder));
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                     .WithMessage("*backup*");
+            state.CommitCount.Should().Be(0);
+        }
+        finally
+        {
+            Directory.Delete(sqlRoot, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("1.2.3.1000")]
+    [InlineData("1.2")]
+    [InlineData("a.b.c")]
+    [InlineData("-1.2.3")]
+    public async Task MigrateAsync_WhenVersionSegmentInvalid_Throws(string fileName)
+    {
+        var state = new FakeDbState
+        {
+            CurrentVersion = "0.0.0",
+            VersionTableExists = true
+        };
+        var sqlRoot = CreateSqlDirectory(($"{fileName}.sql", "select 1;"));
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSqlMigrationService("main", options =>
+            {
+                options.ConnectionBuilder = _ => new FakeDbConnection(state);
+                options.SqlRootPath = sqlRoot;
+                options.VersionPrefix = string.Empty;
+            }).AddAutoMigration();
+
+            using var provider = services.BuildServiceProvider();
+            var filter = provider.GetRequiredService<IStartupFilter>();
+            var appBuilder = new ApplicationBuilder(provider);
+
+            var act = () => Task.Run(() => filter.Configure(_ => { })(appBuilder));
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            state.CommitCount.Should().Be(0);
+        }
+        finally
+        {
+            Directory.Delete(sqlRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task MigrateAsync_WhenInitVersionSetterUsed_WritesBaselineIdempotently()
+    {
+        var state = new FakeDbState
+        {
+            CurrentVersion = "0.0.0",
+            VersionTableExists = false,
+            EnforceUniqueVersion = true
+        };
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSqlMigrationService<TestMigrationHandler>("main", options =>
+        {
+            options.ConnectionBuilder = _ => new FakeDbConnection(state);
+            options.SqlRootPath = "not-exists-dir";
+            options.SetInitVersionSetter<TestInitVersionSetter>();
+        }).AddAutoMigration();
+
+        await using var provider = services.BuildServiceProvider();
+        var filter = provider.GetRequiredService<IStartupFilter>();
+        var appBuilder = new ApplicationBuilder(provider);
+
+        // 连续两次迁移：第二次版本表已有基线，幂等写入不得抛唯一键冲突
+        filter.Configure(_ => { })(appBuilder);
+        filter.Configure(_ => { })(appBuilder);
+
+        state.InsertedVersions.Should().Equal("1.0.0");
+    }
+
+    [Fact]
+    public void AddSqlMigrationService_TwoHostsDoNotShareRegistrationState()
+    {
+        var services1 = new ServiceCollection();
+        services1.AddLogging();
+        services1.AddSqlMigrationService("host1", options =>
+        {
+            options.ConnectionBuilder = _ => new FakeDbConnection(new FakeDbState());
+        });
+
+        var services2 = new ServiceCollection();
+        services2.AddLogging();
+        services2.AddSqlMigrationService("host1", options =>
+        {
+            options.ConnectionBuilder = _ => new FakeDbConnection(new FakeDbState());
+        });
+
+        using var provider1 = services1.BuildServiceProvider();
+        using var provider2 = services2.BuildServiceProvider();
+
+        // 同名注册在不同容器互不冲突；各自能解析出自己的迁移服务即为隔离成立
+        provider1.GetRequiredKeyedService<IDbVersionService>("host1").Should().NotBeNull();
+        provider2.GetRequiredKeyedService<IDbVersionService>("host1").Should().NotBeNull();
+        provider1.GetService<IStartupFilter>().Should().BeNull();
+        provider2.GetService<IStartupFilter>().Should().BeNull();
+    }
+
     private static string CreateSqlDirectory(params (string FileName, string Content)[] files)
     {
         var root = Path.Combine(Path.GetTempPath(), "Azrng.SqlMigration.Test", Guid.NewGuid().ToString("N"));
@@ -353,6 +477,11 @@ internal sealed class FakeDbState
     public List<string> ExecutedCommands { get; } = [];
 
     public List<string> InsertedVersions { get; } = [];
+
+    /// <summary>
+    /// 模拟版本列唯一索引：重复版本插入时抛异常
+    /// </summary>
+    public bool EnforceUniqueVersion { get; set; }
 
     public int CommitCount { get; set; }
 
@@ -527,6 +656,20 @@ internal sealed class FakeDbCommand(FakeDbConnection connection, FakeDbState sta
 
             if (!string.IsNullOrWhiteSpace(version))
             {
+                if (state.InsertedVersions.Contains(version))
+                {
+                    if (CommandText.Contains("where not exists", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 幂等插入：版本已存在时 0 行受影响，不重复记录
+                        return;
+                    }
+
+                    if (state.EnforceUniqueVersion)
+                    {
+                        throw new InvalidOperationException($"duplicate key: {version}");
+                    }
+                }
+
                 state.InsertedVersions.Add(version);
             }
         }

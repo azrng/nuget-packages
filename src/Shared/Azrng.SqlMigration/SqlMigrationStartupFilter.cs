@@ -37,7 +37,9 @@ public class SqlMigrationStartupFilter : IStartupFilter
         var optionsSnapshot = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SqlMigrationOption>>();
 
         // 循环执行迁移操作
-        foreach (var migrationName in SqlMigrationServiceExtension.DbNames)
+        foreach (var migrationName in scope.ServiceProvider.GetServices<SqlMigrationName>()
+                                                     .Select(x => x.Name)
+                                                     .Distinct())
         {
             var migrateService = scope.ServiceProvider.GetRequiredKeyedService<ISqlMigrationService>(migrationName);
             var config = optionsSnapshot.Get(migrationName);

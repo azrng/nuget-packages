@@ -8,4 +8,9 @@ namespace Azrng.SqlMigration.Service;
 internal interface ITransactionalDbVersionService
 {
     Task WriteVersionLogAsync(string migrationName, string version, IDbConnection connection, IDbTransaction? transaction);
+
+    /// <summary>
+    /// 幂等写入版本记录，已存在相同版本时不重复写入（用于基线版本落库）
+    /// </summary>
+    Task WriteVersionLogIfAbsentAsync(string migrationName, string version);
 }
