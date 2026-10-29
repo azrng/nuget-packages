@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前阶段 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T162 | Azrng.S3Store 1.1.0 补齐对象级 API 缺口（6 项） | 响应消费方反馈：新增 DoesObjectExistAsync/GetObjectMetadataAsync/DownloadToFileAsync；DownLoadFileAsync 对象不存在改为返回 null（不再吞成 ArgumentNullException）；新增 ConfigBucketPolicyAsync 只公开读策略；S3StoreConfig 增加 AllowInsecureTls 开关；修复删除/策略成功判定（S3 返回 204 被误判失败）；版本升 1.1.0，17 项测试经真实 MinIO 全过 | 阶段 2 | omp | DONE | P1 | 2026-10-29 |
 | T161 | Azrng.SqlMigration 通读评审修复（4 项） | 修复通读发现的四项问题：版本号解析 fail-fast（非法版本号不再静默返回 0 导致脚本被跳过/重复执行，段数与每段 0-999 校验）；初始化版本设置器基线幂等写入版本日志表；移除静态 DbNames 改为容器内注册（多 host 隔离，破坏性变更）；锁方案按用户指示维持现有 LockProvider 不内置。版本升至 0.6.0 | 阶段 2 | ZCode | DONE | P1 | 2026-10-22 |
 | T156 | Azrng.AspNetCore.Authorization.Default 未认证请求短路权限评估 | PermissionAuthorizationHandler 增加未认证守卫：匿名请求直接 Fail 不再调用 IPermissionEvaluator（对齐 ARCHITECTURE 声明的"先认证后评估"语义），并在包关键位置补充管道注释，补测试与文档，随 2.0.0-beta1 发布 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |
 | T157 | Azrng.AspNetCore.Authorization.Default 决策结果瘦身 | AuthorizationDecision 收敛为 Allowed/Denied 两态（保留类形状便于后续非破坏性扩展）：删除 NotConfigured/DependencyError 枚举值与工厂、DiagnosticCode 属性及 Deny 诊断码参数，依赖故障统一走拰异常 → handler fail-closed 路径，同步测试与文档，随 2.0.0-beta1 发布 | 阶段 2 | ZCode | DONE | P1 | 2026-09-23 |
@@ -41,6 +42,7 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
+| T162 | Azrng.S3Store 1.1.0 补齐对象级 API 缺口（6 项） | DONE | 2026-10-29 |
 | T161 | Azrng.SqlMigration 通读评审修复（4 项） | DONE | 2026-10-22 |
 | T155 | Azrng.AspNetCore.Authorization.Default 移除旧路径授权 API | DONE | 2026-09-23 |
 | T154 | Azrng.AspNetCore.Authorization.Default 授权模型优化 | DONE | 2026-09-23 |

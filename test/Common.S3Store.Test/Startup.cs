@@ -19,9 +19,9 @@ public class Startup
 
         services.AddS3Store(x =>
         {
-            x.Url = "https://172.16.110.40:39900/";
-            x.AccessKey = "415WK7QG60FJHUGCE3TO";
-            x.SecretKey = "904nqDB1kcmPrzLWTNkjA4n3t77AU2JRJyqAKkNo";
+            x.Url = "http://s3.sy";
+            x.AccessKey = "LZRD2CEDD3V1I1OIOWGW";
+            x.SecretKey = "p2mx7MVURaCsEsA2lJNYo9JkPOdZt71alromYfqP";
         });
 
     }

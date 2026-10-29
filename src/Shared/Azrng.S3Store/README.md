@@ -7,7 +7,8 @@
 - 支持兼容 S3 协议的各种对象存储服务
 - 简化的 API 接口，易于使用
 - 支持桶（Bucket）管理操作
-- 支持文件上传、下载、删除等操作
+- 支持文件上传、下载、删除、对象存在性与元数据查询等操作
+- 支持下载直接落盘（临时文件原子替换）
 - 支持预签名 URL 生成
 - 支持桶策略配置
 - 支持 HTTPS 连接
@@ -112,15 +113,19 @@ public class FileService
 
 ### 文件操作
 
-- [UploadFileAsync]()(string bucketName, string fileName, string filePath, string? fileContentType = null): 上传文件
+- [UploadFileAsync]()(string bucketName, string fileName, string filePath, string? fileContentType = null): 上传文件（失败抛异常，HTTP 非 200 返回 false）
 - [UploadFileAsync]()(string bucketName, string fileName, Stream steamData, string fileContentType): 上传文件流
-- [DownLoadFileAsync]()(string bucketName, string fileName): 下载文件
+- [DownLoadFileAsync]()(string bucketName, string fileName): 下载文件（对象不存在返回 null，真实故障抛异常）
+- [DownloadToFileAsync]()(string bucketName, string fileName, string localPath, CancellationToken): 下载文件到本地路径（对象不存在返回 false，临时文件原子替换落盘）
+- [DoesObjectExistAsync]()(string bucketName, string fileName): 检查对象是否存在（HEAD 查询）
+- [GetObjectMetadataAsync]()(string bucketName, string fileName): 获取对象元数据 Size/ETag/ContentType/LastModified（不存在返回 null）
 - [DeleteFileAsync]()(string bucketName, string fileName): 删除文件
 
 ### URL 和策略操作
 
 - [GetFileUrlAsync]()(string bucketName, string fileName, int expiresInt = 7 * 24 * 3600): 获取文件预签名 URL
-- [ConfigBucketReadAndWritePolicyAsync]()(string bucketName): 配置桶读写策略
+- [ConfigBucketPolicyAsync]()(string bucketName, BucketReadAccess access): 配置桶匿名访问策略（ReadOnly 仅公开读 / ReadWrite 公开可读写）
+- [ConfigBucketReadAndWritePolicyAsync]()(string bucketName): 配置桶读写策略（任何人可读写删，公开下载场景请改用 ReadOnly）
 - [GetBucketPolicyAsync]()(string bucketName): 获取桶策略
 
 ## 配置选项
@@ -132,6 +137,7 @@ public class FileService
 - `Url`: S3 服务地址
 - `AccessKey`: 访问密钥
 - `SecretKey`: 密钥
+- `AllowInsecureTls`: 使用 https 时是否接受不受信任的 TLS 证书，默认 `true`（保持历史行为）；生产环境使用受信证书时建议显式设为 `false` 启用标准证书校验
 
 ### GlobalConfig
 
@@ -154,6 +160,21 @@ public class FileService
 4. 在生产环境中建议使用 HTTPS 连接
 5. 注意桶和文件名的命名规范
 6. 大文件操作时注意内存使用情况
+7. 使用 https 且证书不受信任时默认接受所有证书（`AllowInsecureTls = true` 保持历史行为），生产环境使用受信证书时建议显式关闭
+8. `ConfigBucketReadAndWritePolicyAsync` 会让任何人可读取、覆盖、删除桶内对象，公开下载类桶请改用 `ConfigBucketPolicyAsync(bucketName, BucketReadAccess.ReadOnly)`
+
+## 变更记录
+
+### 1.1.0
+
+- 新增 `DoesObjectExistAsync`：单对象 HEAD 存在性查询
+- 新增 `GetObjectMetadataAsync`：返回 `S3ObjectMetadata`（Size/ETag/ContentType/LastModified），对象不存在返回 null
+- 新增 `DownloadToFileAsync`：下载直接落盘，先写临时文件再原子替换，对象不存在返回 false
+- 新增 `ConfigBucketPolicyAsync` 与 `BucketReadAccess`：支持仅公开读（ReadOnly）与公开可读写（ReadWrite）两档匿名策略
+- `S3StoreConfig` 新增 `AllowInsecureTls`（默认 true 保持历史行为），显式 false 时启用标准 TLS 证书校验
+- 行为修正：`DownLoadFileAsync` 对象不存在改为返回 null（此前会把所有失败统一抛为 `ArgumentNullException`）；网络/权限等真实故障改为原样抛出 SDK 异常（`AmazonServiceException`/`AmazonClientException`），调用方可据此区分「未命中」与「故障」
+- 行为修正：`DeleteBucketAsync`/`DeleteFileAsync`/策略配置的成功判定从 HTTP 200 改为 2xx（S3 对 Delete/PutBucketPolicy 成功返回 204 NoContent，此前这些方法成功时也返回 false）
+- 注意：`IStore` 接口新增成员，自行实现该接口的下游需要补齐实现
 
 ## 支持的对象存储服务
 

@@ -56,7 +56,7 @@ namespace Azrng.S3Store
                 //提供awsAccessKeyId和awsSecretAccessKey构造凭证
                 var credentials = new BasicAWSCredentials(s3Config.AccessKey, s3Config.SecretKey);
                 var clientConfig = new AmazonS3Config { ServiceURL = s3Config.Url, ForcePathStyle = true, };
-                if (useHttps)
+                if (useHttps && s3Config.AllowInsecureTls)
                     clientConfig.HttpClientFactory = new HttpClientFactoryAcceptAllSsl();
 
                 return new AmazonS3Client(credentials, clientConfig);
