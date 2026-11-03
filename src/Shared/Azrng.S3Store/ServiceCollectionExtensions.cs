@@ -49,9 +49,11 @@ namespace Azrng.S3Store
 
             s3Config.ParamVerify();
 
-            var useHttps = s3Config.Url!.Contains("https");
+            // StartsWith 精确判断协议，避免 Url 含 "https" 字样的 http 地址被误判（如 http://https-mirror.local:9000）
+            var useHttps = s3Config.Url!.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-            services.AddScoped<IAmazonS3>(_ =>
+            // AmazonS3Client 官方线程安全且设计为长期复用；S3Store 无状态，全局单例避免每请求新建客户端与 HttpClient
+            services.AddSingleton<IAmazonS3>(_ =>
             {
                 //提供awsAccessKeyId和awsSecretAccessKey构造凭证
                 var credentials = new BasicAWSCredentials(s3Config.AccessKey, s3Config.SecretKey);
@@ -62,8 +64,12 @@ namespace Azrng.S3Store
                 return new AmazonS3Client(credentials, clientConfig);
             });
 
-            services.AddScoped<IStore, S3Store>();
-            services.AddSingleton<GlobalConfig>(_ => new GlobalConfig { UseHttps = useHttps });
+            services.AddSingleton<IStore, S3Store>();
+            services.AddSingleton<GlobalConfig>(_ => new GlobalConfig
+            {
+                UseHttps = useHttps,
+                AutoCreateBucket = s3Config.AutoCreateBucket
+            });
             return services;
         }
     }

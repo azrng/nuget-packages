@@ -32,6 +32,13 @@ namespace Azrng.S3Store
         public bool AllowInsecureTls { get; set; } = true;
 
         /// <summary>
+        /// 上传时是否自动创建不存在的桶。
+        /// 默认 true 保持历史行为；桶由运维统一管理的环境建议设为 false，
+        /// 上传到不存在的桶将直接失败（NoSuchBucket），不再隐式建桶。
+        /// </summary>
+        public bool AutoCreateBucket { get; set; } = true;
+
+        /// <summary>
         /// 参数校验
         /// </summary>
         /// <exception cref="ArgumentNullException"></exception>

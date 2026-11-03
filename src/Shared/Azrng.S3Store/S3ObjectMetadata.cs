@@ -24,5 +24,10 @@ namespace Azrng.S3Store
         /// 最后修改时间(UTC)
         /// </summary>
         public DateTime LastModifiedUtc { get; init; }
+
+        /// <summary>
+        /// 自定义用户元数据（x-amz-meta-*，键已去前缀并统一小写）
+        /// </summary>
+        public IReadOnlyDictionary<string, string>? UserMetadata { get; init; }
     }
 }
