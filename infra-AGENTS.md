@@ -1,7 +1,7 @@
 ---
 rule_id: infra-agents
-version: 1.12.1
-last_updated: 2026-09-11
+version: 3.0.0
+last_updated: 2026-11-03
 dependencies: [agents-root]
 ---
 
@@ -28,14 +28,14 @@ dependencies: [agents-root]
 
 ### 技术选择原则
 如果仓库已经有真实实现，以现有代码为准，不要强行重构或替换技术栈。
-技术债务与重构判断遵循根 `AGENTS.md` 的全局规则。
+技术债务与重构判断遵循 `collaboration-AGENTS.md` 的「纠错、回退与重构」。
 
 ---
 
 ## 主动建议规则
 - 发现环境变量、端口、Docker、构建脚本、启动命令或部署链路存在不一致、不可复现或文档缺失时，应主动提醒
 - 涉及清理环境、删除数据、停止未知进程、修改部署配置等高风险操作时，只能提出建议，必须等待明确确认后执行
-- 复用、查证优先级等共性规则见根 `AGENTS.md`「模型行为约束与主动建议」
+- 不确定端口占用、外部服务地址、密钥来源或包版本号时，应按根 `AGENTS.md` 的查证优先级处理，禁止凭经验写死配置
 
 ---
 
@@ -46,7 +46,7 @@ dependencies: [agents-root]
 - 发布前核对三处一致：csproj `<Version>`、README 安装示例 `--version`、README 版本更新记录的最新版本号
 - nuget.org 包不可覆盖：发布后发现内容失实，只能在下一版本修正，并在版本更新记录中说明误发情况
 
-> 背景：2026-08 连续出现版本序列事故（JSqlParser beta 序号排序误判、Common.HttpClients 3.1.0 误含 4.0 的 README 与破坏性变更），按根规则「重复错误回顾机制」固化本节。
+> 背景：2026-08 连续出现版本序列事故（JSqlParser beta 序号排序误判、Common.HttpClients 3.1.0 误含 4.0 的 README 与破坏性变更），按 `collaboration-AGENTS.md`「重复问题回顾」固化本节。
 
 ---
 

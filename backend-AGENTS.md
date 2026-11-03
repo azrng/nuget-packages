@@ -1,7 +1,7 @@
 ---
 rule_id: backend-agents
-version: 1.12.0
-last_updated: 2026-08-14
+version: 3.0.0
+last_updated: 2026-11-03
 dependencies: [agents-root]
 ---
 
@@ -35,6 +35,10 @@ dependencies: [agents-root]
 - `Common.Cache.Redis`：Redis 缓存封装（基于 StackExchange.Redis）
 - `Common.Cache.MemoryCache`：内存缓存封装（基于 `IMemoryCacheProvider`）
 - `Common.HttpClients`：HTTP 客户端封装（基于 `IHttpClientFactory`，支持依赖注入和弹性策略）
+- 外部 HTTP 调用默认走 `Common.HttpClients`（`IHttpHelper`，当前核对 4.2.0，按项目锁定的 4.x 版本为准），不为单次调用重复封装 HttpClient；只有需要包未暴露的底层控制时才使用原生 `HttpClient` / `IHttpClientFactory`；无外部调用时不引入该包。
+- 存量例外：既有代码库从未引入 `Common.HttpClients` 且既有外部调用均为原生 `HttpClient`（如静态共享实例 + 显式超时）时，新增同类外部调用沿用仓库现状（原生 `HttpClient`，须有共享实例与超时设置），不强制引包迁移；新仓库或已引入该包的仓库按默认口径执行。两类口径并存时（同仓库既有 `IHttpHelper` 又有裸 `HttpClient`），以仓库主导口径为准并保持一致，不在同一服务内混用。
+- 引入 `Common.HttpClients` 时宿主须在组合根显式调用其 `AddHttpClientService` 注册运行时依赖：包不随工程引用自动注册，调用方编译通过不代表 `IHttpHelper` 运行时已可注入。
+- `IHttpHelper` 默认开启自动重试（`MaxRetryAttempts=3`，重试 5xx / 408 / 超时）：token 换发、委托授权、扣款等**非幂等端点**必须在调用点传 `HttpSendOptions { EnableRetry = false }` 单独关闭（4.2.0+），或为该服务单独注册命名客户端并配 `MaxRetryAttempts = 0`，不得让自动重试放大非幂等请求。
 
 ### 数据库访问库
 - `Common.EFCore`：EF Core 基础封装（必须安装，所有 Provider 都依赖它）
@@ -52,14 +56,14 @@ dependencies: [agents-root]
 - 测试环境可使用 `Common.EFCore.InMemory` 内存数据库
 
 如果仓库已经有真实实现，以现有代码为准，不要强行重构或替换技术栈。
-技术债务与重构判断遵循根 `AGENTS.md` 的全局规则。
+技术债务与重构判断遵循 `collaboration-AGENTS.md` 的「纠错、回退与重构」。
 
 ---
 
 ## 主动建议规则
 - 发现业务逻辑放错层、Controller 与 AppService 职责混杂、文件夹依赖方向被破坏、权限校验缺失、事务边界不清或异常处理不一致时，应主动提醒
 - 发现接口契约、DTO、存储结构、缓存策略或状态流转可能影响历史数据、兼容性或权限安全时，必须先说明风险，不得直接扩大修改
-- 复用、查证优先级等共性规则见根 `AGENTS.md`「模型行为约束与主动建议」
+- 不确定业务规则、权限规则、数据含义或外部接口行为时，应按根 `AGENTS.md` 的查证优先级处理，禁止按通用经验补写规则
 
 ---
 
@@ -155,7 +159,7 @@ Controllers → Application → Domain ← Infrastructure
 - 核心接口路径已可通过 Swagger 独立验证。
 - 影响行为的后端改动已补测试或在交付说明中解释未补原因。
 - 文件夹依赖方向未被破坏。
-- 后续实现发现契约缺口时，按根 `AGENTS.md` 的纠错与回退机制回到 DTO / 接口定义变更流程，不在实现层绕过契约。
+- 后续实现发现契约缺口时，按 `collaboration-AGENTS.md` 的「纠错、回退与重构」回到 DTO / 接口定义变更流程，不在实现层绕过契约。
 
 ---
 
@@ -193,7 +197,7 @@ Controllers → Application → Domain ← Infrastructure
 - 优先形式：`foreach`、`if / else`、中间变量、明确命名的临时集合、显式排序 / 裁剪 / 显式异常。
 - 谨慎使用：多层嵌套 LINQ、一次性 `GroupBy + Select + ToDictionary + ToList` 链、只为“看起来干净”而拆的 helper。
 - helper / 拆分只在降低认知负担时才成立：让职责边界更清楚、真正复用、让调用方少理解细节；若拆完读者要在多个位置来回跳，或用 helper 隐藏本该直说的业务判断，就退回直白写法。
-- 共性的“先读再写”“范围最小扰动”见根 `AGENTS.md`「理解检查清单」与「全局工作规则」
+- 共性的“先读再写”“范围最小扰动”见根 `AGENTS.md`「全局工作规则」与 `collaboration-AGENTS.md`「纠错、回退与重构」
 
 ### 数据模型规则
 - 实体类继承自 Azrng 基类（如 `IdentityOperatorStatusEntity`，自带雪花 Id、审计与软删除字段），放 `Domain/Entities/`。
@@ -280,9 +284,23 @@ Controllers → Application → Domain ← Infrastructure
 - 接口已注释时，实现方法不重复注释，也不加 `/// <inheritdoc />`。
 - 默认不写 `<remarks>`：实现类、实现方法上的 `<remarks>` 多为实现细节，按"不写实现细节"原则省略。
   - 例外：Controller action 需要向调用方暴露事件格式、鉴权要求、分页约定等对外契约信息时，可保留精简后的 `<remarks>`，但不写内部实现说明。
+- 涉及时间字段的 DTO / 接口注释必须写明转换责任方：入参是本地墙钟还是 UTC、由哪一层完成转换（如“本地墙钟（服务层统一转换）”），而不是只标存储单位。
 - 优先补行内注释的位置：涉及权限、状态流转、事务、缓存、幂等或降级的复杂业务分支，说明“为什么这样做”——包括 fail fast 的原因、为什么跳过某类脏数据、为什么保留某一层结构。
 - 不要补的注释：普通属性的 get / set、简单 `if` / `return`、"返回结果"这类复述代码的低价值注释。
 - 注释统一使用中文，不在注释里泄露密钥、token、连接串或真实生产地址。
+
+### 时间字段转换链路规则
+- 修改时间字段的 DTO、接口、映射、持久化或调用链路前，先检索该字段的全链路转换次数，确认同一方向的转换位置有且只有一处再动手。
+
+### 日志安全基线
+- 密码、令牌、密钥、认证头、完整请求体等敏感数据禁止写入日志，包括异常文本、脱敏不彻底的差异内容与导出文件。
+- 需要记录可归因操作（审计类）时，在服务端可信的业务操作入口记录事件，操作者从已认证身份解析，不信任浏览器或客户端上报的操作者与结果。
+- 日志内容超出预期敏感面时先修日志入口，不用放宽脱敏或调低级别的方式绕过。
+
+### 服务端授权边界
+- 权限校验必须落在服务端入口（应用服务、API 端点、资源读写入口）；前端隐藏按钮、路由保护、客户端缓存的角色信息只改善交互，不构成安全边界。
+- 不信任客户端提交的角色、权限、用户 ID、资源范围等身份与授权信息；服务端从已认证身份和当前授权数据重新解析并校验。
+- 末位管理员保护、内置角色不可删等关键业务约束必须在所有写入入口统一执行，不能只靠前端禁用控件。
 
 ### 反模式与修根因清单
 - 这是根 `AGENTS.md`「修 Bug 必须定位根因」在 .NET 中的具体禁止项，禁止用下列方式掩盖问题：
@@ -324,7 +342,13 @@ Controllers → Application → Domain ← Infrastructure
 - Controller 测试：验证状态码、响应结构、参数校验
 - AppService / DomainService 测试：验证业务流程编排与核心业务规则，使用 mock 隔离外部依赖
 - 数据访问测试：使用 In-Memory 数据库或 Testcontainers
+- 涉及 PostgreSQL 时间语义、JSON 映射或 SQL 方言相关的查询逻辑，优先用 Testcontainers 连真实数据库验证；In-Memory 无法暴露此类差异
 - 集成测试：使用 `WebApplicationFactory` 测试完整请求管道
+
+### .NET 并行隔离
+- 多会话并行时构建 / 测试输出落到任务独立目录：`dotnet build <测试项目.csproj> -o artifacts/test/<任务名>` 后 `dotnet vstest <测试程序集.dll>`；运行验收：`dotnet build <入口项目.csproj> -p:OutputPath=artifacts/run/<任务名>/`（`-p:OutputPath` 相对项目文件目录解析，需落仓库根时改用绝对路径）；`dotnet publish -o` 仍写默认 `bin`，不能绕过输出锁。隔离只改输出目录（`-o` / `OutputPath`），保持项目默认 `obj` 中间目录，不自定义 `BaseIntermediateOutputPath`（会引发重复生成代码）。
+- 启动隔离实例时确认 `ContentRoot` 与迁移脚本等按物理路径读取的资源指向预期；直接 `dotnet <dll>` 时 `ContentRoot` 默认为当前工作目录。
+- NuGet 打包验证同样用 `-o artifacts/packages/<任务名>` 独立输出，不与其他会话共用输出目录。
 
 ### 外部依赖与数据
 - 测试中不要真实调用第三方服务，统一使用 mock。

@@ -359,3 +359,4 @@ NUL
 # ZCode agent internals
 .zcode/
 tmp
+.ai-rule-feedback.md
