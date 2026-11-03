@@ -9,10 +9,12 @@ dependencies: [agents-root]
 
 ## 适用范围
 
-- 作用域：服务端实现、接口、服务、数据访问、缓存、异常处理与后端测试
-- 触发场景：涉及接口、AppService、数据访问、缓存、权限、异常处理或测试时阅读
+- 作用域：NuGet 包实现（`src/Shared/` 类库）、宿主服务（`src/Services/` 示例 / Sample）、接口、服务、数据访问、缓存、异常处理与测试（`test/`）
+- 本仓库主体是多包单仓库：多数改动对象是无宿主的类库包，其“契约”即公开 API（公开接口、DTO、Options、扩展方法）；本文件中的分层、Controller、Swagger 等宿主类规则只适用于带宿主的 Sample / Web API 项目，包改动以公开 API 设计 + 测试项目验证为主
+- 触发场景：涉及包公开 API、接口、AppService、数据访问、缓存、权限、异常处理或测试时阅读
 
 ### 常见任务入口
+- 改包公开 API：先看契约变更同步链（根 `AGENTS.md`「NuGet 包变更记录」）与 `infra-AGENTS.md`「发布纪律」版本号口径
 - 改接口响应或状态码：先看 Controller 规则、统一响应格式与异常处理规范
 - 改业务流程或状态流转：先看 AppService / DomainService 规则与权限约束
 - 改查询、分页、缓存、迁移：先看数据访问规则与验证要求
@@ -150,16 +152,17 @@ Controllers → Application → Domain ← Infrastructure
 **入场要求**：阶段 0 设计文档或接口契约已明确；若为例外情况任务，可直接进入实现
 
 **工作内容**：
-1. 先根据需求定位涉及的文件夹层级，再在正确层内实现对应职责。
+1. 先根据需求定位涉及的包与文件夹层级，再在正确层内实现对应职责。
 2. 保持依赖方向约定，禁止跨层直接引用规避边界。
-3. 所有增删改必须真实生效，并能通过 Swagger 或测试独立验证。
+3. 所有增删改必须真实生效，并能通过测试项目独立验证；带宿主的接口通过 Swagger 验证。
 4. 涉及数据库结构变更时，同步补齐迁移脚本和初始化说明。
+5. 包公开 API 变化时，同步 csproj `<Version>`、README 安装示例与 CHANGELOG 版本记录（见根 `AGENTS.md`「NuGet 包变更记录」与 `infra-AGENTS.md`「发布纪律」）。
 
 **门控规则**：
-- 核心接口路径已可通过 Swagger 独立验证。
+- 包改动：受影响测试项目全部通过，且 `dotnet pack` 产物验证通过（独立输出目录，见「.NET 并行隔离」）；带宿主的接口路径已可通过 Swagger 独立验证。
 - 影响行为的后端改动已补测试或在交付说明中解释未补原因。
-- 文件夹依赖方向未被破坏。
-- 后续实现发现契约缺口时，按 `collaboration-AGENTS.md` 的「纠错、回退与重构」回到 DTO / 接口定义变更流程，不在实现层绕过契约。
+- 依赖方向（文件夹层或多项目引用）未被破坏。
+- 后续实现发现契约缺口时，按 `collaboration-AGENTS.md` 的「纠错、回退与重构」回到 DTO / 公开接口定义变更流程，不在实现层绕过契约。
 
 ---
 
@@ -269,7 +272,7 @@ Controllers → Application → Domain ← Infrastructure
 - 项目必须启用 XML 文档生成：`<GenerateDocumentationFile>true</GenerateDocumentationFile>`。
 - Controller 和公开方法必须添加 XML 注释，Swagger 会自动展示；XML 注释内容统一使用中文。
 - AppService / DomainService 的方法 XML 注释按 `代码注释规范` 处理（不依赖 Swagger 自动展示，但需保证可读与可维护）。
-- 接口需通过 Swagger UI 独立验证，确保请求 / 响应结构正确。
+- 接口需通过 Swagger UI 独立验证，确保请求 / 响应结构正确；仅适用于带宿主的 Web API 项目，纯类库包改由测试项目 / 示例项目真实调用验证（见「阶段 1 门控」）。
 
 ### 字段命名约定
 - C# 属性：PascalCase
