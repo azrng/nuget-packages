@@ -1,6 +1,6 @@
 ---
 rule_id: infra-agents
-version: 3.0.0
+version: 3.1.0
 last_updated: 2026-11-03
 dependencies: [agents-root]
 ---
@@ -9,33 +9,40 @@ dependencies: [agents-root]
 
 ## 适用范围
 
-- 作用域：端口、环境变量、Docker、构建发布与交付验证规则
-- 触发场景：涉及 Docker、端口、环境变量、启动方式、构建打包、部署链路时阅读
+- 作用域：打包与发布链路、CI 工作流、环境变量、版本号交付与验证规则
+- 本仓库没有容器化部署链路：交付物是 nuget.org 上的包与 GitHub Pages 文档站，不涉及 Docker、端口映射或常驻服务运行
+- 触发场景：涉及打包、发布、版本号、CI、环境变量或交付链路时阅读
 
 ### 常见任务入口
-- 改容器或构建配置：先看 Docker / 构建规则
-- 改端口、环境变量、连接串：先看默认端口与配置约束
-- 改启动命令、发布或打包链路：先看交付规则与验证要求
-- 补交付回归：先看 `提交前最小回归`
+- 改打包脚本或 CI 工作流：先看发布链路与 `提交前最小回归`
+- 改环境变量、连接串或测试配置：先看环境变量约定
+- 改包公开 API、版本号或 README：先看发布纪律与 `提交前最小回归`
 
 ---
 
-## 部署方式
-
-- 默认部署方式：Docker + Docker Compose
-- 生产镜像优先采用多阶段构建
-- 部署链路要可追踪，可定位到镜像版本和配置来源
-
-### 技术选择原则
+## 技术选择原则
 如果仓库已经有真实实现，以现有代码为准，不要强行重构或替换技术栈。
 技术债务与重构判断遵循 `collaboration-AGENTS.md` 的「纠错、回退与重构」。
 
 ---
 
-## 主动建议规则
-- 发现环境变量、端口、Docker、构建脚本、启动命令或部署链路存在不一致、不可复现或文档缺失时，应主动提醒
-- 涉及清理环境、删除数据、停止未知进程、修改部署配置等高风险操作时，只能提出建议，必须等待明确确认后执行
-- 不确定端口占用、外部服务地址、密钥来源或包版本号时，应按根 `AGENTS.md` 的查证优先级处理，禁止凭经验写死配置
+## 发布链路
+
+### CI 发布（主链路）
+- 触发：push 到 `master` → `.github/workflows/nuget-publish.yml`（windows-latest）
+- 流程：`dotnet restore / build / pack PackPackages.slnx --configuration Release` → `NuGet/login@v1` 用 GitHub OIDC 换取 nuget.org 短时 API 密钥 → `dotnet nuget push **/*.nupkg --skip-duplicate`
+- 前置条件：nuget.org Trusted Publishing 已登记策略（Owner=azrng / Repository=nuget-packages / Workflow=nuget-publish.yml）；GitHub Secrets 配置 `NUGET_USER`
+- 新包要走 CI 发布，必须已加入 `PackPackages.slnx`
+
+### 本地批量打包（备用链路）
+- `push-packer.sh`：依赖环境变量 `NUGET_API_KEY`（长期密钥，仅本地使用，禁止提交）；只打包 csproj 中含 `<GeneratePackageOnBuild>true</GeneratePackageOnBuild>` 的项目，Debug 配置，输出 `packer/`，逐个 `dotnet nuget push --skip-duplicate`，单个失败继续
+- 与 CI 的差异：不经过 `PackPackages.slnx`、用长期密钥；发布正式版本优先走 CI
+
+### 文档站
+- `.github/workflows/generate-docs.yml`：push `src/**` 或 `docs-generator/**` 触发，构建 PackPackages（生成 XML 文档）→ Node 20 `docs-generator` 生成静态站 → GitHub Pages 部署
+
+### 技术选择原则
+- 修改发布链路（slnx 成员、workflow、脚本）时，必须能说明发布产物来源与推送目标，不允许出现"打包了但没人推"或"推了但版本来源不明"的断链。
 
 ---
 
@@ -50,44 +57,26 @@ dependencies: [agents-root]
 
 ---
 
-## 默认端口
+## 环境变量
 
-| 服务 | 容器内端口 | 宿主机映射端口 |
-| --- | --- | --- |
-| 后端（.NET） | 8080 | 8080 |
-| 数据库（PostgreSQL） | 5432 | 5432 |
-| 缓存（Redis，启用时） | 6379 | 6379 |
-
-- Redis 仅在项目实际启用 `Common.Cache.Redis` 时才纳入 Compose 编排，并同样补充健康检查或启动等待策略。
-- 若宿主机端口冲突，优先调整 Compose 映射端口（宿主机侧），容器内端口保持不变。
+- 仓库无统一 `.env` 体系：测试与工具按需读取进程环境变量，命名沿用现有前缀约定（如 `COMMON_CACHE_REDIS_TEST_CONNECTION`、`AZRNG_LOCK_PG_CONN`、`QUACK_PROTOCOL_CONNECTION_STRING`、`MAXCOMPUTE_TEST_*`）
+- 新增环境变量：在读取它的测试项目内注释或对应包 README 中说明用途、取值来源与缺省行为（通常未设置即跳过对应用例）；禁止把连接串、密钥写入仓库文件
+- `NUGET_API_KEY` 仅本地 `push-packer.sh` 使用；CI 用 OIDC 短时密钥，不落任何长期密钥到仓库或 workflow 明文
 
 ---
 
-## Docker 规则
+## 主动建议规则
+- 发现打包脚本、CI 工作流、版本号或 README 之间存在不一致、不可复现或文档缺失时，应主动提醒
+- 涉及清理环境、删除数据、停止未知进程、修改发布配置等高风险操作时，只能提出建议，必须等待明确确认后执行
+- 不确定外部服务地址、密钥来源或包版本号时，应按根 `AGENTS.md` 的查证优先级处理，禁止凭经验写死配置
 
-### 总体要求
-- 优先复用现有 Docker 与 Compose 文件。
-- 首次创建 `Dockerfile`、`docker-compose.yml`、`.dockerignore` 或其他部署文件前，必须把"将新增部署文件"作为独立一项向用户确认并获得同意；不得因为方案骨架或阶段计划里提及过就默认生成，用户确认后再创建。
-- 不要把密钥写入镜像。
-- 清理旧镜像时要保留最小回滚窗口。
-- 依赖数据库或其他基础服务时，应补充健康检查或等价启动等待策略。
+---
 
-### Docker 交付规则
-- 只要本次任务新增或修改了 Dockerfile、`docker-compose.yml`、运行端口、环境变量或启动命令，完成实现后应主动执行一次镜像构建和容器化启动验证；若因环境限制无法执行，必须明确说明。
-- 容器化验证至少包括：
-  - 镜像构建是否成功
-  - Compose 服务是否成功启动
-  - 关键服务是否处于可用状态
-  - API 核心接口是否可访问
-- 若发现宿主机端口冲突，不要直接停止未知本地进程；优先调整 Compose 映射端口，并同步更新文档。
-- 新增镜像构建链路时，应同步补充 `.dockerignore`。
-
-
-### 提交前最小回归
-- 修改 Dockerfile、Compose、启动命令、打包脚本或端口映射时：至少执行一次构建与启动验证
+## 提交前最小回归
+- 修改 workflow、打包脚本或 slnx 成员时：核对触发分支与推送目标语法正确，并至少执行一次 `dotnet pack`（独立输出目录，见 `backend-AGENTS.md`「.NET 并行隔离」）等价验证产物可生成
 - 修改包公开 API、版本号或 README 时：执行 `dotnet pack`（独立输出目录）确认产物可生成，并核对 csproj `<Version>`、README 安装示例 `--version`、CHANGELOG / 版本记录最新版本三处一致
-- 修改环境变量、配置项或连接串时：确认示例配置、文档和运行方式同步更新
+- 修改环境变量、配置项或连接串时：确认读取处的测试缺省行为（未设置即跳过）与文档说明同步更新
 - 修改数据库、仓储、依赖注入或外部服务集成时：至少补一项真实链路或等价验证
-- 若本次改动同时影响应用访问链路，应至少补一次核心链路检查
+- CI 工作流无法本地完整复现（OIDC、Pages）时，说明未覆盖项，用 workflow_dispatch 或推送到验证分支的方式补验
 
 ---

@@ -1,6 +1,6 @@
 ---
 rule_id: backend-agents
-version: 3.0.0
+version: 3.1.0
 last_updated: 2026-11-03
 dependencies: [agents-root]
 ---
@@ -9,24 +9,22 @@ dependencies: [agents-root]
 
 ## 适用范围
 
-- 作用域：NuGet 包实现（`src/Shared/` 类库）、宿主服务（`src/Services/` 示例 / Sample）、接口、服务、数据访问、缓存、异常处理与测试（`test/`）
-- 本仓库主体是多包单仓库：多数改动对象是无宿主的类库包，其“契约”即公开 API（公开接口、DTO、Options、扩展方法）；本文件中的分层、Controller、Swagger 等宿主类规则只适用于带宿主的 Sample / Web API 项目，包改动以公开 API 设计 + 测试项目验证为主
-- 触发场景：涉及包公开 API、接口、AppService、数据访问、缓存、权限、异常处理或测试时阅读
+- 作用域：NuGet 包实现（`src/Shared/` 类库）、示例宿主（`src/Services/`）、数据访问、缓存、异常处理与测试（`test/`）
+- 本仓库主体是多包单仓库：多数改动对象是无宿主的类库包，其“契约”即公开 API（公开接口、DTO、Options、扩展方法）；包改动以公开 API 设计 + 测试项目验证为主。`src/Services/` 示例项目是包的真实消费方，结构保持最小（`Program.cs` / `Startup.cs` + 少量 Controller），不套用额外分层模板
+- 触发场景：涉及包公开 API、数据访问、缓存、权限、异常处理或测试时阅读
 
 ### 常见任务入口
 - 改包公开 API：先看契约变更同步链（根 `AGENTS.md`「NuGet 包变更记录」）与 `infra-AGENTS.md`「发布纪律」版本号口径
-- 改接口响应或状态码：先看 Controller 规则、统一响应格式与异常处理规范
-- 改业务流程或状态流转：先看 AppService / DomainService 规则与权限约束
+- 改示例宿主接口响应或状态码：先看 Controller 规则、统一响应格式与异常处理规范
 - 改查询、分页、缓存、迁移：先看数据访问规则与验证要求
-- 补服务端回归：先看 `提交前最小回归` 与测试规则
+- 补回归测试：先看 `提交前最小回归` 与测试规则
 
 ---
 
 ## 技术栈
 
 ### 后端
-- .NET 10（2025 年已发布正式版）+ ASP.NET Core Web API
-- 单项目整洁架构：一个 Web API 项目内以文件夹划分层（Domain / Application / Infrastructure / 宿主入口），层职责与依赖方向和多项目模板 `dotnetLayered` 保持一致
+- .NET 10 + ASP.NET Core（示例宿主项目）；类库包按 csproj 目标框架多目标构建
 
 ### 核心库
 - `Azrng.Core`：基础类库（实体基类、扩展方法、工具类、结果包装、异常体系）
@@ -63,106 +61,9 @@ dependencies: [agents-root]
 ---
 
 ## 主动建议规则
-- 发现业务逻辑放错层、Controller 与 AppService 职责混杂、文件夹依赖方向被破坏、权限校验缺失、事务边界不清或异常处理不一致时，应主动提醒
+- 发现包公开 API 与实现职责混杂、包内依赖越界、示例宿主把业务逻辑写进 Controller、权限校验缺失、事务边界不清或异常处理不一致时，应主动提醒
 - 发现接口契约、DTO、存储结构、缓存策略或状态流转可能影响历史数据、兼容性或权限安全时，必须先说明风险，不得直接扩大修改
 - 不确定业务规则、权限规则、数据含义或外部接口行为时，应按根 `AGENTS.md` 的查证优先级处理，禁止按通用经验补写规则
-
----
-
-## 单项目整洁架构
-
-### 推荐目录结构
-
-若仓库尚未形成稳定结构，可优先参考以下组织方式；若仓库已有实现，以现状为准，不强制迁移。
-
-```text
-project-root/
-├── src/
-│   └── YourProject/
-│       ├── Domain/                    # 领域层（最内层业务）
-│       │   ├── Entities/              # EF Core 实体
-│       │   ├── Enums/                 # 跨模块枚举
-│       │   ├── Adapters/              # 外部服务适配器接口（按需）
-│       │   └── {业务域}/              # 领域服务接口与实现（按需）
-│       ├── Application/               # 应用层
-│       │   └── {业务域}/              # 应用服务接口与实现
-│       │       └── Dto/               # 请求 / 响应 / 查询参数
-│       ├── Infrastructure/            # 基础设施层
-│       │   ├── Data/                  # DbContext、EF Core 实体配置
-│       │   ├── Adapters/              # 外部服务适配器实现（按需）
-│       │   └── Storage/               # 文件 / 对象存储封装（按需）
-│       ├── Controllers/               # 宿主入口：API 控制器
-│       ├── Middleware/                # 中间件（按需）
-│       ├── Extensions/                # 扩展方法、DI 注册扩展
-│       ├── MigrationSql/              # SQL 迁移脚本（Azrng.SqlMigration）
-│       ├── Program.cs
-│       ├── appsettings.json
-│       └── YourProject.csproj
-├── tests/
-│   └── YourProject.Tests/
-└── ...
-```
-
-### 文件夹职责与命名
-
-按业务职责将类放到对应文件夹，文件命名与类名保持一致；与本文件 `代码组织规范`、`数据模型规则` 中的约定保持统一。
-
-| 文件夹 | 放什么类 | 命名约定 |
-| --- | --- | --- |
-| `Domain/Entities/` | EF Core 实体，继承 Azrng 基类，一个实体一个文件 | `{实体名}.cs` |
-| `Domain/Enums/` | 跨模块复用的枚举；仅服务单个 DTO 的可随主类型 | `{枚举名}.cs` |
-| `Domain/Adapters/` | 外部服务适配器接口 | `I{名称}Adapter.cs` |
-| `Domain/{业务域}/` | 领域服务接口与实现（被多个 AppService 复用的公共领域操作） | `I{X}DomainService.cs`、`{X}DomainService.cs` |
-| `Application/{业务域}/` | 应用服务接口与实现（用例编排、DTO 与实体映射） | `I{业务域}AppService.cs`、`{业务域}AppService.cs` |
-| `Application/{业务域}/Dto/` | 请求 / 响应 / 查询参数，Request 与 Response 各自独立文件 | `CreateOrderRequest.cs`、`OrderDetailResponse.cs`、`OrderQuery.cs` |
-| `Infrastructure/Data/` | DbContext、EF Core 实体配置 | `{项目名}DbContext.cs`、`{实体名}Etc.cs`（继承 Azrng 配置基类） |
-| `Infrastructure/Adapters/` | 适配器实现（HTTP 调用、第三方 SDK 封装） | `{名称}Adapter.cs` |
-| `Infrastructure/Storage/` | 文件 / 对象存储封装 | `{名称}Storage.cs` |
-| `Controllers/` | API 控制器，仅做 HTTP 编排，不含业务逻辑 | `{资源}Controller.cs` |
-| `Middleware/` | 中间件 | `{名称}Middleware.cs` |
-| `Extensions/` | 扩展方法、DI 注册扩展 | `{类型}Extensions.cs` |
-| `MigrationSql/` | SQL 迁移脚本 | `版本号.sql` / `版本号.txt`（如 `1.0.0.sql`、`1.1.0.txt`，不含描述文字） |
-
-### 依赖方向约定（单项目关键防线）
-
-```text
-Controllers → Application → Domain ← Infrastructure
-```
-
-单项目内没有项目引用做编译期隔离，依赖方向完全靠约定维持。AI 每次新增或修改类时必须自查引用方向，阶段 1 门控包含此项：
-
-- `Domain/`：只引用本文件夹内类型与基础 NuGet 包（`Azrng.Core`、`Common.EFCore` 的实体基类、`IBaseRepository<T>`、`IUnitOfWork`）；禁止引用 `Application/`、`Infrastructure/`、`Controllers/` 的类型
-- `Application/`：可引用 `Domain/`；禁止引用 `Controllers/`、`Middleware/`，禁止出现 `HttpContext` 等 HTTP 相关类型
-- `Infrastructure/`：可引用 `Domain/`（实体、适配器接口）；禁止引用 `Application/`、`Controllers/`
-- `Controllers/`：只注入 `Application/` 的 `I*AppService`；禁止注入 DbContext、`IBaseRepository<T>` 或 Infrastructure 实现类
-- 实体只在 AppService / DomainService 与数据访问之间流动，禁止作为 API 返回值
-
-### 按需使用与演进
-- 小型 CRUD 不强制建满所有文件夹：`Domain/{业务域}/`（领域服务）、`Domain/Adapters/`、`Infrastructure/Adapters/`、`Infrastructure/Storage/` 都按需出现，不为架构仪式感创建空文件夹
-- 单一用例、不复用的逻辑直接写在 AppService；被多个 AppService 复用或领域规则复杂时，才下沉为 DomainService
-- 出现以下信号时，考虑按 `dotnetLayered` 模板拆分为多项目：多个宿主（Web API + Worker）、领域逻辑需要被其他服务复用、团队并行开发频繁冲突、需要编译期强制依赖方向
-- 文件夹与 `dotnetLayered` 各层一一对应（`Domain/` → IDomain / Domain、`Application/` → IApplication / Application、`Infrastructure/Data/` → EntityFramework、`Infrastructure/Adapters/` → Adapter、`Controllers/` → Service），拆分时可平滑迁移
-
----
-
-## 阶段 1 — 后端实现
-
-**触发条件**：用户发出「开始开发」或「开始后端开发」指令
-
-**入场要求**：阶段 0 设计文档或接口契约已明确；若为例外情况任务，可直接进入实现
-
-**工作内容**：
-1. 先根据需求定位涉及的包与文件夹层级，再在正确层内实现对应职责。
-2. 保持依赖方向约定，禁止跨层直接引用规避边界。
-3. 所有增删改必须真实生效，并能通过测试项目独立验证；带宿主的接口通过 Swagger 验证。
-4. 涉及数据库结构变更时，同步补齐迁移脚本和初始化说明。
-5. 包公开 API 变化时，同步 csproj `<Version>`、README 安装示例与 CHANGELOG 版本记录（见根 `AGENTS.md`「NuGet 包变更记录」与 `infra-AGENTS.md`「发布纪律」）。
-
-**门控规则**：
-- 包改动：受影响测试项目全部通过，且 `dotnet pack` 产物验证通过（独立输出目录，见「.NET 并行隔离」）；带宿主的接口路径已可通过 Swagger 独立验证。
-- 影响行为的后端改动已补测试或在交付说明中解释未补原因。
-- 依赖方向（文件夹层或多项目引用）未被破坏。
-- 后续实现发现契约缺口时，按 `collaboration-AGENTS.md` 的「纠错、回退与重构」回到 DTO / 公开接口定义变更流程，不在实现层绕过契约。
 
 ---
 
@@ -172,25 +73,13 @@ Controllers → Application → Domain ← Infrastructure
 - Controller 只负责 HTTP 处理，不包含业务逻辑。
 - 使用 `[ApiController]` 特性，自动处理 400 响应。
 - 使用 `[Route("api/[controller]")]` 统一路由前缀。
-- 通过构造函数注入 `I*AppService`；禁止直接操作 DbContext 或 `IBaseRepository<T>`。
-- Controller action 直接返回 `Task<T>` 并一行转发 AppService；不写 `Ok()`，不手动构造 `ResultModel`，统一包装由全局过滤器与异常中间件完成（见 `统一响应格式`）。
-
-### AppService（应用服务）规则
-- 接口 `I{业务域}AppService` 与实现放 `Application/{业务域}/`，方法必须是异步的（返回 `Task<T>`）。
-- 承担用例编排与 DTO / 实体映射；使用 DTO 传递数据，不暴露实体。
-- 可注入 `IBaseRepository<T>` / `IUnitOfWork` 做数据访问，注入 `I*DomainService` / `I*Adapter` 复用领域与外部能力。
-- 成功直接返回业务对象，失败抛出 Azrng 业务异常（见 `统一响应格式` 与 `异常处理规范`）。
-- 实现类实现标记接口（`ITransientDependency` / `IScopedDependency` / `ISingletonDependency`）以自动注册。
-- 禁止在 Controller、AppService、DomainService、Entity、DTO 等 C# 类中使用主构造函数（Primary Constructor），统一使用显式构造函数。
-
-### DomainService（领域服务）规则
-- 封装被多个 AppService 复用的公共领域操作或稳定领域规则；接口与实现放 `Domain/{业务域}/`。
-- 返回实体或领域对象，不做 DTO 映射，不接触 HTTP。
-- 可注入 `IBaseRepository<T>` / `IUnitOfWork` 与适配器接口。
+- 通过构造函数注入服务；禁止直接操作 DbContext 或 `IBaseRepository<T>`。
+- Controller action 直接返回 `Task<T>` 并一行转发服务实现；不写 `Ok()`，不手动构造 `ResultModel`，统一包装由全局过滤器与异常中间件完成（见 `统一响应格式`）。
 
 ### 代码组织规范
 - 一个文件只放一个主类型：Entity、DTO、Request、Response、枚举等公开契约类，默认一个类一个文件，文件名与类名一致。
-- DTO 目录组织：请求 / 响应 / 查询参数按业务域归入 `Application/{业务域}/Dto/`，Request 与 Response 分别独立文件，不合并到 `Dtos.cs` 或 `{模块}Dto.cs`。
+- DTO 目录组织：包内请求 / 响应 / 查询参数 DTO 按所属包既有目录归组；示例宿主中按业务域或用途独立文件，Request 与 Response 分别独立文件，不合并到 `Dtos.cs` 或 `{模块}Dto.cs`。
+- 禁止在 Controller、实体、DTO 等 C# 类中使用主构造函数（Primary Constructor），统一使用显式构造函数。
 - 触发拆分的信号：职责混杂、同文件出现多个主类型、参数或字段持续堆叠、方法跨多个不相关业务时，应主动拆分。
 - 允许例外：`private` / `internal` 且只服务当前文件的小辅助类型、与主类型强绑定的局部 mapping extension、测试文件中只服务当前测试类的小型 fixture。
 - 反模式：`Dtos.cs` 长期堆放十几个 Request / Response；把 Controller 专用 request 内联写在 Controller 文件里。
@@ -203,9 +92,9 @@ Controllers → Application → Domain ← Infrastructure
 - 共性的“先读再写”“范围最小扰动”见根 `AGENTS.md`「全局工作规则」与 `collaboration-AGENTS.md`「纠错、回退与重构」
 
 ### 数据模型规则
-- 实体类继承自 Azrng 基类（如 `IdentityOperatorStatusEntity`，自带雪花 Id、审计与软删除字段），放 `Domain/Entities/`。
+- 实体类继承自 Azrng 基类（如 `IdentityOperatorStatusEntity`，自带雪花 Id、审计与软删除字段），放在所属包或示例项目既有数据模型目录。
 - DTO 按用途区分（查询参数、创建请求、更新请求、响应结果），文件组织见 `代码组织规范`。
-- 跨模块枚举放 `Domain/Enums/` 目录。
+- 跨模块复用枚举独立成文件，放所属包既有目录；仅服务单个 DTO 的可随主类型。
 - 禁止在 DTO 中暴露数据库内部字段。
 
 ### 数据访问规则
@@ -214,14 +103,14 @@ Controllers → Application → Domain ← Infrastructure
 - 多步原子写操作优先使用 `IUnitOfWork` 事务，不直接操作 `IDbContextTransaction`。
 - 分页列表查询使用 `GetPageRequest` + `ToPageListAsync` + `GetQueryPageResult<T>`，不手写 `CountAsync()` + `Skip().Take()`。
 - 软删除统一使用实体基类的 `Deleted` 字段；包不自动做全局过滤，默认在查询中显式过滤 `!x.Deleted`，或在实体配置类中统一配置查询过滤器。
-- DbContext 与 EF Core 实体配置类（`{实体名}Etc.cs`）放 `Infrastructure/Data/`，DbContext 通过 `ApplyConfigurationsFromAssembly` 扫描应用配置。
+- DbContext 与 EF Core 实体配置类（`{实体名}Etc.cs`）放所属包或示例项目既有数据访问目录，DbContext 通过 `ApplyConfigurationsFromAssembly` 扫描应用配置。
 
 ### 统一响应格式
 - 所有 API 响应统一为 `ResultModel<T>` 结构，由框架三件套自动完成，业务代码不手动包装：
   - `services.AddMvcResultPackFilter("/swagger")`：成功路径自动把 action 返回值包成 `ResultModel<T>`
   - `services.AddMvcModelVerifyFilter()`：模型校验失败统一转为失败 `ResultModel`
   - `app.UseGlobalException()`：业务异常与未处理异常统一映射为失败 `ResultModel`，必须放在中间件管道最外层
-- AppService 成功直接返回业务对象（`Task<T>`），失败抛出 Azrng 业务异常；新代码禁止手写 `ResultModel<T>.Success / Error` 手动包装（该写法仅存量代码迁移期可容忍）。
+- 服务实现成功直接返回业务对象（`Task<T>`），失败抛出 Azrng 业务异常；新代码禁止手写 `ResultModel<T>.Success / Error` 手动包装（该写法仅存量代码迁移期可容忍）。
 - HTTP 状态码默认按异常类型返回真实状态码（400 / 401 / 404 / 500）；`ResultModel` 的 `code` 字段承载业务码。
 
 ### 依赖注入规范
@@ -271,8 +160,8 @@ Controllers → Application → Domain ← Infrastructure
 - 中间件启用：`app.UseDefaultSwagger(onlyDevelopmentEnabled: true)`。
 - 项目必须启用 XML 文档生成：`<GenerateDocumentationFile>true</GenerateDocumentationFile>`。
 - Controller 和公开方法必须添加 XML 注释，Swagger 会自动展示；XML 注释内容统一使用中文。
-- AppService / DomainService 的方法 XML 注释按 `代码注释规范` 处理（不依赖 Swagger 自动展示，但需保证可读与可维护）。
-- 接口需通过 Swagger UI 独立验证，确保请求 / 响应结构正确；仅适用于带宿主的 Web API 项目，纯类库包改由测试项目 / 示例项目真实调用验证（见「阶段 1 门控」）。
+- 非 Controller 的公开接口方法 XML 注释按 `代码注释规范` 处理（不依赖 Swagger 自动展示，但需保证可读与可维护）。
+- 接口需通过 Swagger UI 独立验证，确保请求 / 响应结构正确；仅适用于带宿主的 Web API 项目，纯类库包改由测试项目 / 示例项目真实调用验证。
 
 ### 字段命名约定
 - C# 属性：PascalCase
@@ -282,7 +171,7 @@ Controllers → Application → Domain ← Infrastructure
 ### 代码注释规范
 - 必须补 XML 注释的位置：
   - Controller action：用 `<summary>` 说明接口用途、关键参数、返回结果（Swagger 会消费这些说明）。
-  - AppService / DomainService / Adapter 接口方法：说明该能力做什么，不写实现细节。
+  - 公开接口方法（包公开接口、Adapter 接口等）：说明该能力做什么，不写实现细节。
   - 不来自接口的实现类自有方法（接口未约束的核心方法）：同上，补 `<summary>` 说明该能力做什么。
 - 接口已注释时，实现方法不重复注释，也不加 `/// <inheritdoc />`。
 - 默认不写 `<remarks>`：实现类、实现方法上的 `<remarks>` 多为实现细节，按"不写实现细节"原则省略。
@@ -343,9 +232,8 @@ Controllers → Application → Domain ← Infrastructure
 ### 后端测试
 - 测试框架：xUnit + Moq
 - Controller 测试：验证状态码、响应结构、参数校验
-- AppService / DomainService 测试：验证业务流程编排与核心业务规则，使用 mock 隔离外部依赖
-- 数据访问测试：使用 In-Memory 数据库或 Testcontainers
-- 涉及 PostgreSQL 时间语义、JSON 映射或 SQL 方言相关的查询逻辑，优先用 Testcontainers 连真实数据库验证；In-Memory 无法暴露此类差异
+- 核心服务测试：验证核心业务规则与公开 API 行为，使用 mock 隔离外部依赖
+- 数据访问测试：In-Memory 数据库仅覆盖基础行为；涉及 PostgreSQL 时间语义、JSON 映射或 SQL 方言差异的查询逻辑优先连真实数据库验证（现有 `Common.EFCore.PostgreSql.Test` 等通过环境变量连接真实库），In-Memory 无法暴露此类差异
 - 集成测试：使用 `WebApplicationFactory` 测试完整请求管道
 
 ### .NET 并行隔离
