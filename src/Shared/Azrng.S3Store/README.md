@@ -153,6 +153,7 @@ public class FileService
 - 新增取消传播：`IStore` 全部方法增加 `CancellationToken` 参数并透传到 SDK 调用（桶创建低频管理操作除外，SDK 未提供 ct 重载）
 - 新增建桶开关：`S3StoreConfig.AutoCreateBucket`（默认 true 保持历史行为），设为 false 时上传不再隐式建桶，契合「桶由运维管理」的部署契约
 - `GetPreSignedUrlRequest.Expires` 由本地时钟改为 `DateTime.UtcNow`（SDK 内部本就转 UTC，此为语义化修正，无行为变化）
+- 升级依赖：`AWSSDK.S3` 3.7.101.39 → 4.0.104.8（SDK v4 强制 SigV4 签名；移除的 `DoesS3BucketExistAsync` 已改用 `DoesS3BucketExistV2Async` 统一桶存在性判断；`LastModified` 为 DateTime? 且反序列化即 UTC）
 - 注意：`IStore` 接口全部方法签名有变（追加可选参数），自行实现该接口的下游需要补齐实现
 
 ### 1.1.0

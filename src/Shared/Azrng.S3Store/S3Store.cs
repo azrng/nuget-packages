@@ -42,9 +42,8 @@ public class S3Store : IStore
 
     public Task<bool> CheckBucketExistAsync(string bucketName, CancellationToken cancellationToken = default)
     {
-        return _globalConfig.UseHttps
-            ? Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, bucketName)
-            : _s3Client.DoesS3BucketExistAsync(bucketName);
+        // AWS SDK v4 移除了 ICoreAmazonS3.DoesS3BucketExistAsync（其始终走 HTTP），统一用 V2 版本（HEAD GetBucketLocation）
+        return Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, bucketName);
     }
 
     public async Task<bool> CheckBucketFolderExistAsync(string bucketName, string folderPath,
@@ -57,7 +56,8 @@ public class S3Store : IStore
         // 要检查的文件夹路径。请注意末尾的斜杠是必需的，以确保只匹配文件夹而不会误判同名的文件。
         var request = new ListObjectsRequest { BucketName = bucketName, Prefix = folderPath + "/", MaxKeys = 1 };
         var response = await _s3Client.ListObjectsAsync(request, cancellationToken).ConfigureAwait(false);
-        return response.S3Objects.Count != 0;
+        // SDK v4 起响应集合属性默认为 null（不再自动初始化空集合），列举无命中时 S3Objects 为 null
+        return response.S3Objects?.Count > 0;
     }
 
     public async Task<bool> CreateBucketIfNotExistsAsync(string bucketName, CancellationToken cancellationToken = default)
@@ -255,9 +255,12 @@ public class S3Store : IStore
             {
                 Size = response.ContentLength,
                 ETag = response.ETag,
-                // HEAD 响应无独立 ContentType/LastModifiedUtc 属性：内容类型取响应头，最后修改时间为本地时区需转 UTC
+                // HEAD 响应无独立 ContentType/LastModifiedUtc 属性：内容类型取响应头；
+                // SDK v4 起 LastModified 为 DateTime? 且反序列化即为 UTC，判空后标记 UTC 兜底
                 ContentType = GetHeaderSafe(response, "Content-Type"),
-                LastModifiedUtc = response.LastModified == default ? default : response.LastModified.ToUniversalTime(),
+                LastModifiedUtc = response.LastModified.HasValue
+                    ? DateTime.SpecifyKind(response.LastModified.Value, DateTimeKind.Utc)
+                    : default,
                 // UserMetadata 键已由 S3 自动去掉 x-amz-meta- 前缀并统一小写
                 UserMetadata = ReadUserMetadataSafe(response)
             };
