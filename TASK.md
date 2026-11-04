@@ -18,6 +18,6 @@
 | T164 | 按 LogAnalyzer v3 参考升级 AI 规则 | DONE | 2026-11-03 |
 | T163 | Azrng.S3Store 1.2.0 bug 修复与四项 API 扩展 | DONE | 2026-11-03 |
 | T162 | Azrng.S3Store 1.1.0 补齐对象级 API 缺口（6 项） | DONE | 2026-10-29 |
-| T161 | Azrng.SqlMigration 通读评审修复（4 项） | DONE | 2026-10-22 |
+| T166 | Tika 各包职责说明文档 | DONE | 2026-11-04 |
 
 文件结束。
