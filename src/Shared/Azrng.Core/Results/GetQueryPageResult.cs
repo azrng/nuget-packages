@@ -56,7 +56,8 @@ namespace Azrng.Core.Results
             PageIndex = vm.PageIndex;
             PageSize = vm.PageSize;
             Total = totalCount;
-            TotalPage = totalCount == 0 ? 0 : (long)Math.Ceiling(totalCount * 1.0 / vm.PageSize);
+            //PageSize<=0 时除法产生 Infinity/负数垃圾值，防御性返回 0 页
+            TotalPage = totalCount == 0 || vm.PageSize <= 0 ? 0 : (long)Math.Ceiling(totalCount * 1.0 / vm.PageSize);
         }
 
         public GetQueryPageResult(int pageIndex, int pageSize, long totalCount)
@@ -64,7 +65,8 @@ namespace Azrng.Core.Results
             PageIndex = pageIndex;
             PageSize = pageSize;
             Total = totalCount;
-            TotalPage = totalCount == 0 ? 0 : (long)Math.Ceiling(totalCount * 1.0 / pageSize);
+            //PageSize<=0 时除法产生 Infinity/负数垃圾值，防御性返回 0 页
+            TotalPage = totalCount == 0 || pageSize <= 0 ? 0 : (long)Math.Ceiling(totalCount * 1.0 / pageSize);
         }
 
         /// <summary>

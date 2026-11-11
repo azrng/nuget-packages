@@ -32,7 +32,7 @@ namespace Azrng.Core.Exceptions
             Throw(paramName);
         }
 
-        private static void Throw(string paramName) => throw new ParameterException(paramName);
+        private static void Throw(string paramName) => throw new RetryMarkException(paramName);
 
         #endregion
     }

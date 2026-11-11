@@ -3,15 +3,15 @@ using System;
 namespace Azrng.Core.Exceptions
 {
     /// <summary>
-    /// 认证失败
+    /// 禁止访问（已认证但无权限），对应 HTTP 403
     /// </summary>
     public class ForbiddenException : BaseException
     {
-        public ForbiddenException() : base("401", "权限不通过") { }
+        public ForbiddenException() : base("403", "权限不通过") { }
 
-        public ForbiddenException(string message) : base("401", message) { }
+        public ForbiddenException(string message) : base("403", message) { }
 
-        public ForbiddenException(string message, Exception innerException) : base(message, innerException) { }
+        public ForbiddenException(string message, Exception innerException) : base("403", message, innerException) { }
 
         #region 私有方法
 

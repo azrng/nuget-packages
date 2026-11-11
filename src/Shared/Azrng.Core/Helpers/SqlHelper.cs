@@ -305,7 +305,7 @@ namespace Azrng.Core.Helpers
                 "OLE AUTOMATION PROCEDURES",
                 "sp_OACreate",
                 "sp_OAMethod",
-                "sp_executeexternalcript"
+                "sp_execute_external_script"
             };
 
             foreach (var pattern in highRiskPatterns)

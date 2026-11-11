@@ -53,11 +53,7 @@ namespace Azrng.Core.Extension
                 return 0;
             }
 
-            //如果传入的字节数组长度大于4,需要进行处理
-            if (data.Length < 4)
-            {
-                return 0;
-            }
+            //如果传入的字节数组长度大于4,取前4字节转换
 
             //创建一个临时缓冲区
             var tempBuffer = new byte[4];
@@ -147,7 +143,8 @@ namespace Azrng.Core.Extension
             {
                 return null;
             }
-            return bytes[0].ToString(CultureInfo.InvariantCulture) + bytes[1];
+            //两字节均用 InvariantCulture，否则阿拉伯-印度数字文化下产出 "٢١٦" 类键值永远匹配不到登记表
+            return bytes[0].ToString(CultureInfo.InvariantCulture) + bytes[1].ToString(CultureInfo.InvariantCulture);
         }
     }
 }

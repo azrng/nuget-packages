@@ -22,12 +22,19 @@ namespace Azrng.Core.Helpers
         };
 
         /// <summary>
-        /// 设置网络时间接口地址。返回文本需为 UTF-8 时间戳秒值位于第 20-29 字符的格式，否则解析返回 null
+        /// 设置网络时间接口地址（须为 http/https 绝对地址）。返回文本需为 UTF-8 时间戳秒值位于第 20-29 字符的格式，否则解析返回 null
         /// </summary>
         public static void SetNetworkTimeUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("网络时间接口地址不能为空。", nameof(url));
+
+            //非法地址会使 GetStringAsync 抛 UriFormatException，不在 GetNetworkTime 的捕获范围内，前置拦截 fail-fast
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new ArgumentException("网络时间接口地址必须是 http/https 绝对地址。", nameof(url));
+            }
 
             _networkTimeUrl = url;
         }
@@ -72,7 +79,8 @@ namespace Azrng.Core.Helpers
             switch (timeType)
             {
                 case TimeType.Week:
-                    return now.AddDays(0 - (int)now.DayOfWeek + 1).Date;
+                    //周一为一周开始；周日属于当周，需回退到本周一（原实现把周日推进到下周一）
+                    return now.AddDays(now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1 - (int)now.DayOfWeek).Date;
 
                 case TimeType.CurrentMonth:
                     return now.AddDays(-now.Day + 1).Date;
@@ -108,7 +116,8 @@ namespace Azrng.Core.Helpers
             switch (timeType)
             {
                 case TimeType.Week:
-                    return now.Date.AddDays((double)(7 - now.DayOfWeek)).AddDays(1).AddSeconds(-1);
+                    //周结束 = 本周一零点 + 7 天 - 1 秒；周日属于当周，不再平移到下周
+                    return now.AddDays(now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1 - (int)now.DayOfWeek).Date.AddDays(7).AddSeconds(-1);
 
                 case TimeType.CurrentMonth:
                     return now.Date.AddMonths(1).AddDays(-now.AddMonths(1).Day + 1).AddSeconds(-1);

@@ -36,11 +36,12 @@ public class DecimalExtensionTests
     [Fact]
     public void ToStandardString_Nullable_WithValue_ShouldBehaveLikeNonNullable()
     {
-        ((decimal?)1.005).ToStandardString(2).Should().Be("1.00");
-        ((decimal?)1.555).ToStandardString(2).Should().Be("1.56");
-        ((decimal?)-1.234).ToStandardString(2).Should().Be("-1.23");
-        ((decimal?)123.456).ToStandardString(1).Should().Be("123.5");
-        ((decimal?)0).ToStandardString(2).Should().Be("0");
+        // 字面量必须用 m 后缀：double 字面量经显式转换会带上二进制误差（1.555d → 1.554999...），任何舍入模式都得不到 1.56
+        ((decimal?)1.005m).ToStandardString(2).Should().Be("1.00");
+        ((decimal?)1.555m).ToStandardString(2).Should().Be("1.56");
+        ((decimal?)-1.234m).ToStandardString(2).Should().Be("-1.23");
+        ((decimal?)123.456m).ToStandardString(1).Should().Be("123.5");
+        ((decimal?)0m).ToStandardString(2).Should().Be("0");
     }
 
     [Fact]

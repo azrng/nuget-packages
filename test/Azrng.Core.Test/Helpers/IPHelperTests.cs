@@ -60,4 +60,17 @@ public class IPHelperTests
 
         result.Should().Be(ipLong);
     }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("300.1.1.1")]
+    [InlineData("1.2.3")]
+    [InlineData("")]
+    [InlineData("::1")]
+    public void ToLongFromIp_InvalidIp_ShouldThrowArgumentException(string ip)
+    {
+        var action = () => IpHelper.ToLongFromIp(ip);
+
+        action.Should().Throw<ArgumentException>().WithMessage("*IPv4*");
+    }
 }

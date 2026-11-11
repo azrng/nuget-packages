@@ -88,16 +88,15 @@ public class DateTimeHelperTests
     }
 
     [Fact]
-    public void GetTargetTimeStart_Week_WhenSunday_ShouldReturnNextMonday()
+    public void GetTargetTimeStart_Week_WhenSunday_ShouldReturnCurrentWeekMonday()
     {
         // 2026-06-28 is Sunday (DayOfWeek=0 in C#)
         var now = new DateTime(2026, 6, 28, 10, 0, 0);
 
         var result = DateTimeHelper.GetTargetTimeStart(now, TimeType.Week);
 
-        // Source formula: 0 - (int)DayOfWeek + 1 = 0 - 0 + 1 = 1
-        // Sunday is treated as start of NEXT week, so Monday is 2026-06-29
-        result.Should().Be(new DateTime(2026, 6, 29));
+        // 周一为一周开始，周日属于当周，应返回本周一 2026-06-22
+        result.Should().Be(new DateTime(2026, 6, 22));
         result.DayOfWeek.Should().Be(DayOfWeek.Monday);
     }
 
@@ -240,15 +239,15 @@ public class DateTimeHelperTests
     }
 
     [Fact]
-    public void GetTargetTimeEnd_Week_WhenSunday_ShouldReturnEndOfNextSunday()
+    public void GetTargetTimeEnd_Week_WhenSunday_ShouldReturnEndOfCurrentSunday()
     {
         // 2026-06-28 is Sunday (DayOfWeek=0 in C#)
         var now = new DateTime(2026, 6, 28, 10, 0, 0);
 
         var result = DateTimeHelper.GetTargetTimeEnd(now, TimeType.Week);
 
-        // Sunday is treated as start of NEXT week, so week ends on 2026-07-05
-        result.Should().Be(new DateTime(2026, 7, 5, 23, 59, 59));
+        // 周日属于当周，本周结束于当天 23:59:59
+        result.Should().Be(new DateTime(2026, 6, 28, 23, 59, 59));
     }
 
     [Fact]
@@ -657,6 +656,28 @@ public class DateTimeHelperTests
         var action = () => DateTimeHelper.SetNetworkTimeUrl(url!);
 
         action.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData("not-a-url")]
+    [InlineData("ftp://example.com/time")]
+    [InlineData("/relative/path")]
+    public void SetNetworkTimeUrl_InvalidUrl_ShouldThrow(string url)
+    {
+        //非法地址若不在此拦截，GetNetworkTime 会抛未捕获的 UriFormatException 打穿"失败返回 null"契约
+        var action = () => DateTimeHelper.SetNetworkTimeUrl(url);
+
+        action.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void SetNetworkTimeUrl_ValidHttpsUrl_ShouldNotThrow()
+    {
+        var action = () => DateTimeHelper.SetNetworkTimeUrl("https://example.com/api/time");
+
+        action.Should().NotThrow();
+        //还原默认地址，避免静态状态影响后续用例
+        DateTimeHelper.SetNetworkTimeUrl("https://cn.apihz.cn/api/time/getapi.php?id=88888888&key=88888888&type=1");
     }
 
     #endregion

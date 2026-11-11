@@ -65,6 +65,23 @@ public class TaskHelperTests
     }
 
     [Fact]
+    public async Task TryWaitAsync_WithShortTimeout_ShouldExecuteAtLeastOnce()
+    {
+        //超时窗口小于一个周期(1s)时，原实现一次都不执行 func 直接返回超时
+        var count = 0;
+
+        var result = await TaskHelper.TryWaitAsync(() =>
+        {
+            count++;
+            return Task.FromResult(ResultModel<int>.Success(42));
+        }, TimeSpan.FromMilliseconds(200));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().Be(42);
+        count.Should().Be(1);
+    }
+
+    [Fact]
     public async Task ExecuteFuncWithRetryAsync_ShouldRetryUntilSuccess()
     {
         var count = 0;

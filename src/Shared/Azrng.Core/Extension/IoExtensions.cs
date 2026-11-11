@@ -1,6 +1,7 @@
-﻿using System.IO;
+	﻿using System.IO;
 using System.Threading.Tasks;
 using System;
+using System.Globalization;
 
 namespace Azrng.Core.Extension
 {
@@ -95,13 +96,13 @@ namespace Azrng.Core.Extension
                 return null;
             var formatResult = string.Empty;
             if (factSize < 1024.00)
-                formatResult = factSize.Value.ToString("F2") + " Byte";
+                formatResult = factSize.Value.ToString("F2", CultureInfo.InvariantCulture) + " Byte";
             else if (factSize >= 1024.00 && factSize < 1048576)
-                formatResult = (factSize / 1024.00).Value.ToString("F2") + " K";
+                formatResult = (factSize / 1024.00).Value.ToString("F2", CultureInfo.InvariantCulture) + " K";
             else if (factSize is >= 1048576 and < 1073741824)
-                formatResult = (factSize / 1024.00 / 1024.00).Value.ToString("F2") + " M";
+                formatResult = (factSize / 1024.00 / 1024.00).Value.ToString("F2", CultureInfo.InvariantCulture) + " M";
             else if (factSize >= 1073741824)
-                formatResult = (factSize / 1024.00 / 1024.00 / 1024.00).Value.ToString("F2") + " G";
+                formatResult = (factSize / 1024.00 / 1024.00 / 1024.00).Value.ToString("F2", CultureInfo.InvariantCulture) + " G";
             return formatResult;
         }
 

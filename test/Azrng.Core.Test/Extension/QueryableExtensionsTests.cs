@@ -158,12 +158,13 @@ public class QueryableExtensionsTests
 
         var result = data.OrderBy(sorts).ToList();
 
+        //首键 Name 为主、Age 为次级排序：A(35), A(25), B(30), B(20)
         result[0].Name.Should().Be("A");
         result[0].Age.Should().Be(35);
-        result[1].Name.Should().Be("B");
-        result[1].Age.Should().Be(30);
-        result[2].Name.Should().Be("A");
-        result[2].Age.Should().Be(25);
+        result[1].Name.Should().Be("A");
+        result[1].Age.Should().Be(25);
+        result[2].Name.Should().Be("B");
+        result[2].Age.Should().Be(30);
         result[3].Name.Should().Be("B");
         result[3].Age.Should().Be(20);
     }

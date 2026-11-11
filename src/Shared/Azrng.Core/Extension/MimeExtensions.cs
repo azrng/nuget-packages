@@ -149,7 +149,7 @@ namespace Azrng.Core.Extension
             { ".inf", "application/octet-stream" },
             { ".ins", "application/x-internet-signup" },
             { ".isp", "application/x-internet-signup" },
-            { ".IVF", "video/x-ivf" },
+            { ".ivf", "video/x-ivf" },
             { ".jar", "application/java-archive" },
             { ".java", "application/octet-stream" },
             { ".jck", "application/liquidmotion" },

@@ -111,17 +111,6 @@ namespace Azrng.Core.Helpers
             return null;
         }
 
-        /// <summary>
-        /// 获取成员信息的 Description
-        /// </summary>
-        /// <param name="fieldInfo">成员信息</param>
-        /// <returns>Description</returns>
-        private static string GetDescription(MemberInfo fieldInfo)
-        {
-            var customAttribute = Attribute.GetCustomAttribute(fieldInfo, typeof(DescriptionAttribute), true);
-            return customAttribute == null ? string.Empty : ((DescriptionAttribute)customAttribute).Description;
-        }
-
         #endregion 私有方法
     }
 }

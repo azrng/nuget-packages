@@ -21,23 +21,24 @@ namespace Azrng.Core.Helpers
         public static async Task<T> RunTimeLimitAsync<T>(Func<Task<T>> func, TimeSpan timeout)
         {
             // WhenAny 等待替代 task.Wait 同步阻塞：避免调用线程死锁、保留原始异常（而非 AggregateException）
-            using var tokenSource = new CancellationTokenSource();
+            var task = Task.Run(func);
 
-            var task = Task.Run(func, tokenSource.Token);
-
-            var completed = await Task.WhenAny(task, Task.Delay(timeout)).ConfigureAwait(false);
+            // 超时计时器在任务先完成时立即取消释放，不再占用计时器直至超时满
+            using var delayCts = new CancellationTokenSource();
+            var completed = await Task.WhenAny(task, Task.Delay(timeout, delayCts.Token)).ConfigureAwait(false);
             if (completed != task)
             {
                 // 超时后放弃等待；func 未支持协作取消时任务仍会在后台跑完，其结果与异常被丢弃
                 throw new TimeoutException("操作超时");
             }
 
+            delayCts.Cancel();
             return await task.ConfigureAwait(false);
         }
 
 #if NET6_0_OR_GREATER
         /// <summary>
-        /// 尝试等待指定时间 直到成功或者超时
+        /// 尝试等待指定时间 直到成功或者超时（首次执行不等周期，保证 func 至少执行一次）
         /// </summary>
         /// <param name="func"></param>
         /// <param name="timeout"></param>
@@ -48,11 +49,15 @@ namespace Azrng.Core.Helpers
             using var time = new PeriodicTimer(TimeSpan.FromSeconds(1));
 
             var endTimeUtc = DateTime.UtcNow.Add(timeout);
-            while (DateTime.UtcNow < endTimeUtc && await time.WaitForNextTickAsync())
+            while (true)
             {
+                //先执行再等待：原实现在超时窗口小于一个周期(1s)时一次都不执行 func 直接返回超时
                 var result = await func();
                 if (result.IsSuccess)
                     return result;
+
+                if (DateTime.UtcNow >= endTimeUtc || !await time.WaitForNextTickAsync())
+                    break;
             }
 
             return ResultModel<T>.Error("超时", "408");

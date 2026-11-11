@@ -1,11 +1,30 @@
 using Azrng.Core.Extension;
 using FluentAssertions;
+using System.Globalization;
 using Xunit;
 
 namespace Azrng.Core.Test.Extension;
 
 public class DateTimeExtensionTests
 {
+    [Fact]
+    public void ToStandardString_ShouldUseInvariantTimeSeparator_RegardlessOfCurrentCulture()
+    {
+        // it-IT 等文化的时间分隔符是"."，格式串中的":"是占位符，随文化漂移会输出 10.20.30
+        var time = new DateTime(2024, 3, 5, 10, 20, 30);
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("it-IT");
+
+            time.ToStandardString().Should().Be("2024-03-05 10:20:30");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
     [Fact]
     public void FormattingHelpers_ShouldReturnExpectedStrings()
     {

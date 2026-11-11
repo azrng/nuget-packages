@@ -14,10 +14,9 @@
 
 | ID | 任务名称 | 状态 | 更新时间 |
 |----|----------|------|----------|
-| T164 | 按 LogAnalyzer v3 参考升级 AI 规则 | DONE | 2026-11-03 |
-| T163 | Azrng.S3Store 1.2.0 bug 修复与四项 API 扩展 | DONE | 2026-11-03 |
 | T166 | Tika 各包职责说明文档 | DONE | 2026-11-04 |
 | T167 | Azrng.Core/AspNetCore.Core 审查问题批次1修复 | DONE | 2026-11-11 |
 | T168 | Azrng.Core 审查问题批次2修复（P1） | DONE | 2026-11-11 |
+| T169 | Azrng.Core 审查问题批次3修复（P2 语义与清理） | DONE | 2026-11-12 |
 
 文件结束。

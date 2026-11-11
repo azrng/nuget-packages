@@ -46,10 +46,11 @@ namespace Azrng.Core.Helpers
         /// <param name="dayOfWeek">星期几开始，默认从星期一点开始</param>
         /// <param name="hour">第几小时开始，默认从1点开始</param>
         /// <param name="minute">第几分钟开始，默认从第1分钟开始</param>
-        /// <returns></returns>
+        /// <returns>Quartz 6 字段格式（秒 分 时 日 月 周）；周数字按 Quartz 约定 1=周日 … 7=周六</returns>
         public static string Week(DayOfWeek dayOfWeek = DayOfWeek.Monday, int hour = 1, int minute = 1)
         {
-            return $"{minute} {hour} * * {(int)dayOfWeek}";
+            //与其他方法统一为 Quartz 6 字段；.NET DayOfWeek(周一=1) 与 Quartz(周一=2) 偏移一位需 +1
+            return $"1 {minute} {hour} ? * {(int)dayOfWeek + 1}";
         }
 
         /// <summary>
@@ -58,10 +59,10 @@ namespace Azrng.Core.Helpers
         /// <param name="day">几号开始，默认从一号开始</param>
         /// <param name="hour">第几小时开始，默认从1点开始</param>
         /// <param name="minute">第几分钟开始，默认从第1分钟开始</param>
-        /// <returns></returns>
+        /// <returns>Quartz 6 字段格式（秒 分 时 日 月 周）</returns>
         public static string Month(int day = 1, int hour = 1, int minute = 1)
         {
-            return $"{minute} {hour} {day} * *";
+            return $"1 {minute} {hour} {day} * ?";
         }
 
         /// <summary>
@@ -71,10 +72,10 @@ namespace Azrng.Core.Helpers
         /// <param name="day">几号开始，默认从一号开始</param>
         /// <param name="hour">第几小时开始，默认从1点开始</param>
         /// <param name="minute">第几分钟开始，默认从第1分钟开始</param>
-        /// <returns></returns>
+        /// <returns>Quartz 6 字段格式（秒 分 时 日 月 周）</returns>
         public static string Year(int month = 1, int day = 1, int hour = 1, int minute = 1)
         {
-            return $"{minute} {hour} {day} {month} *";
+            return $"1 {minute} {hour} {day} {month} ?";
         }
     }
 }

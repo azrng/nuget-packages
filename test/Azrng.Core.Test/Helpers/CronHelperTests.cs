@@ -71,15 +71,15 @@ public class CronHelperTests
     {
         var result = CronHelper.Week();
 
-        result.Should().Be("1 1 * * 1");
+        result.Should().Be("1 1 1 ? * 2");
     }
 
     [Theory]
-    [InlineData(DayOfWeek.Monday, 1, 1, "1 1 * * 1")]
-    [InlineData(DayOfWeek.Sunday, 8, 30, "30 8 * * 0")]
-    [InlineData(DayOfWeek.Friday, 23, 59, "59 23 * * 5")]
-    [InlineData(DayOfWeek.Wednesday, 0, 0, "0 0 * * 3")]
-    [InlineData(DayOfWeek.Saturday, 12, 15, "15 12 * * 6")]
+    [InlineData(DayOfWeek.Monday, 1, 1, "1 1 1 ? * 2")]
+    [InlineData(DayOfWeek.Sunday, 8, 30, "1 30 8 ? * 1")]
+    [InlineData(DayOfWeek.Friday, 23, 59, "1 59 23 ? * 6")]
+    [InlineData(DayOfWeek.Wednesday, 0, 0, "1 0 0 ? * 4")]
+    [InlineData(DayOfWeek.Saturday, 12, 15, "1 15 12 ? * 7")]
     public void Week_CustomParams_ReturnsCorrectCron(DayOfWeek dayOfWeek, int hour, int minute, string expected)
     {
         var result = CronHelper.Week(dayOfWeek, hour, minute);
@@ -92,14 +92,14 @@ public class CronHelperTests
     {
         var result = CronHelper.Month();
 
-        result.Should().Be("1 1 1 * *");
+        result.Should().Be("1 1 1 1 * ?");
     }
 
     [Theory]
-    [InlineData(1, 1, 1, "1 1 1 * *")]
-    [InlineData(15, 8, 30, "30 8 15 * *")]
-    [InlineData(28, 23, 59, "59 23 28 * *")]
-    [InlineData(31, 0, 0, "0 0 31 * *")]
+    [InlineData(1, 1, 1, "1 1 1 1 * ?")]
+    [InlineData(15, 8, 30, "1 30 8 15 * ?")]
+    [InlineData(28, 23, 59, "1 59 23 28 * ?")]
+    [InlineData(31, 0, 0, "1 0 0 31 * ?")]
     public void Month_CustomParams_ReturnsCorrectCron(int day, int hour, int minute, string expected)
     {
         var result = CronHelper.Month(day, hour, minute);
@@ -112,14 +112,14 @@ public class CronHelperTests
     {
         var result = CronHelper.Year();
 
-        result.Should().Be("1 1 1 1 *");
+        result.Should().Be("1 1 1 1 1 ?");
     }
 
     [Theory]
-    [InlineData(1, 1, 1, 1, "1 1 1 1 *")]
-    [InlineData(6, 15, 8, 30, "30 8 15 6 *")]
-    [InlineData(12, 31, 23, 59, "59 23 31 12 *")]
-    [InlineData(3, 1, 0, 0, "0 0 1 3 *")]
+    [InlineData(1, 1, 1, 1, "1 1 1 1 1 ?")]
+    [InlineData(6, 15, 8, 30, "1 30 8 15 6 ?")]
+    [InlineData(12, 31, 23, 59, "1 59 23 31 12 ?")]
+    [InlineData(3, 1, 0, 0, "1 0 0 1 3 ?")]
     public void Year_CustomParams_ReturnsCorrectCron(int month, int day, int hour, int minute, string expected)
     {
         var result = CronHelper.Year(month, day, hour, minute);

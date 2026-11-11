@@ -981,6 +981,16 @@ public IResultModel<bool> Save()
 - `LocalLogHelper` 写盘链路全量 `ConfigureAwait(false)`，消除同步日志 API（`WriteMyLogs`/`LogTrace` 等）在同步上下文下的死锁风险
 - `TaskHelper.RunTimeLimitAsync` 由 `task.Wait` 同步阻塞改为 `Task.WhenAny` 异步等待，失败传播原始异常（行为变更：不再包装为 `AggregateException`），修复超时后 `CancellationTokenSource` 不释放
 - 重试任务（`Retry`/`HandleAsDefaultWhenException`）耗尽后携带原始异常作为 `InnerException`（原仅拼接消息文本）；取消异常（`OperationCanceledException`）不再被 `WhenCatch<Exception>` 吞掉转默认值或参与重试（行为变更：显式声明 `WhenCatch<OperationCanceledException>` 不受影响）
+- 语义统一（行为变更）：`OrderBy(params SortContent[])` 多字段排序改为首键为主、后续 ThenBy（原为最后一个键为主，与 `FiledOrderParam[]` 版语义相反）；`GetTargetTimeStart/End` 的 Week 周日归入当周（原平移到下周一/下周日）；`CronHelper.Week/Month/Year` 统一输出 Quartz 6 字段（原为 5 字段，周数字按 Quartz 约定 1=周日）
+- 异常 ErrorCode 统一（行为变更）：`ForbiddenException` 全部构造为 403（原无参 401）；`LogicBusinessException`/`ParameterException` 带 inner 构造为 400（原 500）；`NotFoundException` 全部构造为 404（原无参 500）；`BaseException` 新增 `(code, message, innerException)` 三参构造；`RetryMarkException.ThrowIfNull` 改抛自身类型（原误抛 `ParameterException`）
+- 文化稳定性：`ToFormatString` 统一 InvariantCulture（it-IT 等文化下时间分隔符不再漂移为 "."）；`DoubleExtension.ToNoZeroString`、`GetFileFormatSize`、`GetFileCode` 补 InvariantCulture
+- 舍入文档如实化：`ToStandardString` 明确为银行家舍入（四舍六入五成双），并修复测试用例中 double 字面量精度问题（该问题曾导致历史版本 1 例测试失败）
+- `CodeTimerHelper`：`iteration<1` 抛 `ArgumentOutOfRangeException`（原除零崩溃）；非 Windows 平台跳过 kernel32 CPU 采样（原 `DllNotFoundException`）；移除静态构造中设置进程 High 优先级且从不恢复的副作用；`IAction` 重载委托 `ActionDelegate` 版消除重复实现
+- `IpHelper.ToLongFromIp` 改用 `IPAddress.TryParse` + 四段校验，非法输入抛 `ArgumentException`（原对 null/段数不足/非数字分别抛 NRE/IndexOutOfRange/FormatException）
+- `SqlHelper` 高风险模式拼写修正：`sp_executeexternalcript` → `sp_execute_external_script`（该项检测原本永不命中）
+- `GetQueryPageResult` 对 `PageSize<=0` 防御性返回 `TotalPage=0`（原产生 Infinity/负数垃圾值）
+- `TaskHelper.TryWaitAsync` 先执行后等待，超时窗口小于 1 秒时保证 func 至少执行一次（原一次不执行直接返回超时）
+- 清理死代码：`ChinaDateHelper.Lunar`（与 `CalElement` 重复且含必抛构造）、`EnumHelper` 私有 `GetDescription`、`ByteExtensions.ToInt32` 重复长度检查、`MimeExtensions` 大写 `.IVF` 死条目；`GetTimestamp` 的 Obsolete 补充提示消息
 - 补充上述修复的单元测试
 
 ### 1.20.0

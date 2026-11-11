@@ -62,6 +62,14 @@ public class CodeTimerHelperTests
     }
 
     [Fact]
+    public void Time_ShouldThrow_WhenIterationLessThanOne()
+    {
+        var action = () => CodeTimerHelper.Time("test", 0, (CodeTimerHelper.ActionDelegate)(() => { }));
+
+        action.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void Time_IAction_WithEmptyName_ShouldReturnEarly()
     {
         var callCount = 0;

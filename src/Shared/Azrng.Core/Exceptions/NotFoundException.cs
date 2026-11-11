@@ -5,7 +5,7 @@ namespace Azrng.Core.Exceptions
     /// </summary>
     public class NotFoundException : BaseException
     {
-        public NotFoundException() : base("未找到对象") { }
+        public NotFoundException() : base("404", "未找到对象") { }
 
         public NotFoundException(string errorMessage)
             : base("404", errorMessage) { }
@@ -14,7 +14,7 @@ namespace Azrng.Core.Exceptions
             : base(code, message) { }
 
         public NotFoundException(string message, System.Exception innerException)
-            : base(message, innerException) { }
+            : base("404", message, innerException) { }
 
         #region 私有方法
 

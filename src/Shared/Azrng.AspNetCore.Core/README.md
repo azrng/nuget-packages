@@ -610,6 +610,8 @@ ForbiddenException
 
 * 1.5.0
   * 审计日志安全与内存加固：请求头全量记录改为敏感头脱敏（`SensitiveHeaders` 名单 + `SensitiveHeaderMask` 掩码，默认覆盖 `Authorization`/`Cookie`/`Set-Cookie`/`Proxy-Authorization`）；响应体由整包内存缓冲改为限量捕获（`MaxResponseBodySize`，客户端不受影响）；新增请求体上限 `MaxRequestBodySize`（默认 1MB），`multipart/` 与 `application/octet-stream` 请求体不再进日志（行为变更：请求体日志默认新增截断与跳过）
+  * 审计日志日志等级按状态码段映射：2xx/3xx 记 Information、4xx 记 Warning、5xx 记 Error（原仅 200 记 Information，201/204 等正常响应全部误报为 Error）；`IgnoreRoutePrefix` 改为前缀匹配（原为子串包含，配置 /health 会连带忽略 /api/monitor/healthcheck）（行为变更）
+  * `MinValueAttribute` 对 null 值校验失败（行为变更：原 null 直接通过，与 remarks 声称的“已经包含了Required”不符）
   * `RequestIdMiddleware` 加固：入站 `X-RequestId` 增加长度上限与字符白名单校验（防日志注入与伪造关联）；无合法入站头时沿用宿主 `TraceIdentifier`，与诊断 traceId 体系对齐（行为变更：不再重新生成 N 格式 GUID）；多值头取第一个值；移除 .NET 3.0 起已失效的 `IHttpRequestIdentifierFeature` 死代码
   * 新增反向代理真实客户端 IP 支持：`UseForwardedHeaders()` 转发头中间件封装（可信代理列表 + 防伪造）与 `HttpContext.GetClientIp()` 扩展
   * **破坏性变更**：移除 `AddCorsPolicy()`，该方法与框架原生 `services.AddCors(o => o.AddPolicy(name, builder => ...))` 完全等价；高级场景请直接使用原生写法，`AddAnyCors()` 与 `AddCorsByOrigins()` 保持不变

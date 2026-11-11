@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 
 namespace Azrng.Core.Extension
@@ -104,7 +105,8 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string ToFormatString(this DateTime time, string? format)
         {
-            return time.ToString(format ?? "yyyy-MM-dd HH:mm:ss");
+            //自定义格式串中":"是时间分隔符占位符，随当前文化漂移（it-IT 输出 20.57.51），公共库统一 InvariantCulture
+            return time.ToString(format ?? "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         }
 
         #endregion
@@ -136,7 +138,7 @@ namespace Azrng.Core.Extension
         /// <param name="dateTime">时间</param>
         /// <param name="isSecond">是否是秒</param>
         /// <returns></returns>
-        [Obsolete]
+        [Obsolete("请改用 ToTimestamp，两者实现完全相同")]
         public static long GetTimestamp(this DateTime dateTime, bool isSecond = false)
         {
             var dateTimeOffset = new DateTimeOffset(dateTime);

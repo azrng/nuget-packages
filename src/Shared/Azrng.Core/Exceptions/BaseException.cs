@@ -30,6 +30,12 @@ namespace Azrng.Core.Exceptions
             ErrorCode = "500";
         }
 
+        public BaseException(string code, string message, Exception innerException)
+            : base(message, innerException)
+        {
+            ErrorCode = code;
+        }
+
         public virtual HttpStatusCode HttpCode { get; set; } = HttpStatusCode.InternalServerError;
 
         /// <summary>

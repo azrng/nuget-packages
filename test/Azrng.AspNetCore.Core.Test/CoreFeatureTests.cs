@@ -55,6 +55,15 @@ public class CoreFeatureTests
     }
 
     [Fact]
+    public void MinValueAttribute_NullValue_ShouldFailValidation()
+    {
+        //remarks 承诺“已经包含了Required”，null 必须校验失败
+        var attribute = new MinValueAttribute(1);
+
+        attribute.IsValid(null).Should().BeFalse();
+    }
+
+    [Fact]
     public void LongToStringConverter_SerializesAndDeserializesAsExpected()
     {
         var options = new JsonSerializerOptions();
@@ -493,6 +502,63 @@ public class CoreFeatureTests
 
         logger.Log.Should().NotBeNull();
         logger.Log!.RequestBody.Should().Contain("二进制内容");
+    }
+
+    [Theory]
+    [InlineData(StatusCodes.Status201Created, Microsoft.Extensions.Logging.LogLevel.Information)]
+    [InlineData(StatusCodes.Status204NoContent, Microsoft.Extensions.Logging.LogLevel.Information)]
+    [InlineData(StatusCodes.Status404NotFound, Microsoft.Extensions.Logging.LogLevel.Warning)]
+    [InlineData(StatusCodes.Status500InternalServerError, Microsoft.Extensions.Logging.LogLevel.Error)]
+    public async Task AuditLogMiddleware_MapsLogLevelByStatusCodeRange(int statusCode, Microsoft.Extensions.Logging.LogLevel expected)
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        var middleware = new AuditLogMiddleware(next =>
+        {
+            next.Response.StatusCode = statusCode;
+            return Task.CompletedTask;
+        });
+
+        await middleware.Invoke(context);
+        await responseFeature.InvokeCompletedAsync();
+
+        logger.Log.Should().NotBeNull();
+        logger.Log!.LogLevel.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task AuditLogMiddleware_IgnoreRoutePrefix_ShouldMatchPrefixNotContains()
+    {
+        //配置 /health 时不应连带忽略 /api/monitor/healthcheck（子串包含匹配缺陷）
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/monitor/healthcheck";
+        var options = new AuditLogOptions { IgnoreRoutePrefix = ["/health"] };
+        var middleware = new AuditLogMiddleware(_ => Task.CompletedTask, Options.Create(options));
+
+        await middleware.Invoke(context);
+        await responseFeature.InvokeCompletedAsync();
+
+        logger.Log.Should().NotBeNull();
     }
 
     [Fact]

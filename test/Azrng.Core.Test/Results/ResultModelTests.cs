@@ -1,4 +1,5 @@
 using Azrng.Core.Exceptions;
+using Azrng.Core.Requests;
 using Azrng.Core.Results;
 using FluentAssertions;
 using Xunit;
@@ -154,5 +155,17 @@ public class ResultModelTests
         var data = result.DataOrDefault("default");
 
         data.Should().Be("default");
+    }
+
+    [Fact]
+    public void GetQueryPageResult_WithNonPositivePageSize_ShouldReturnZeroTotalPage()
+    {
+        //PageSize<=0 时除法会产生 Infinity/负数垃圾值，防御性返回 0 页
+        var vm = new GetPageRequest { PageIndex = 1, PageSize = 0 };
+
+        var result = new GetQueryPageResult(vm, 100);
+
+        result.TotalPage.Should().Be(0);
+        new GetQueryPageResult(1, -5, 100).TotalPage.Should().Be(0);
     }
 }

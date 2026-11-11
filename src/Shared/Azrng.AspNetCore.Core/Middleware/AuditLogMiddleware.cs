@@ -41,10 +41,10 @@ public class AuditLogMiddleware
             return;
         }
 
-        // 检查是否需要忽略的路由
+        // 检查是否需要忽略的路由（前缀匹配，避免配置 /health 连带忽略 /api/monitor/healthcheck）
         if (_options.IgnoreRoutePrefix.Count > 0)
         {
-            if (_options.IgnoreRoutePrefix.Any(p => path.Contains(p, StringComparison.CurrentCultureIgnoreCase)))
+            if (_options.IgnoreRoutePrefix.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
             {
                 await _next(context);
                 return;
@@ -94,7 +94,13 @@ public class AuditLogMiddleware
                     ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
                     StartTime = startTime,
                     EndTime = endTime,
-                    LogLevel = context.Response.StatusCode == 200 ? LogLevel.Information : LogLevel.Error,
+                    //按状态码段分级：2xx/3xx 记信息、4xx 记警告、5xx 记错误，避免 201/204 正常响应污染错误告警
+                    LogLevel = context.Response.StatusCode switch
+                    {
+                        >= 200 and < 400 => LogLevel.Information,
+                        >= 400 and < 500 => LogLevel.Warning,
+                        _ => LogLevel.Error,
+                    },
                     Route = request.Path,
                     HttpMethod = request.Method,
                     RequestBody = reqBody,

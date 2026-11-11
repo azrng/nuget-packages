@@ -98,7 +98,7 @@ namespace Azrng.Core.Extension
         }
 
         /// <summary>
-        /// 排序
+        /// 排序（多字段，首个排序键为主键，后续为次级排序，与 FiledOrderParam 版语义一致）
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="query"></param>
@@ -111,9 +111,54 @@ namespace Azrng.Core.Extension
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
-            return orderContent.Length == 0
-                ? query
-                : orderContent.Aggregate(query, (current, item) => current.OrderBy(item));
+            if (orderContent.Length == 0)
+                return query;
+
+            //首键 OrderBy，后续 ThenBy；原实现逐个套 OrderBy 导致最后一个键反而成为主键
+            var ordered = (IOrderedQueryable<TEntity>)query.OrderBy(
+                orderContent[0].SortName, orderContent[0].Sort == SortEnum.Asc);
+            for (var i = 1; i < orderContent.Length; i++)
+            {
+                ordered = ordered.ThenBy(
+                    orderContent[i].SortName, orderContent[i].Sort == SortEnum.Asc);
+            }
+
+            return ordered;
+        }
+
+        /// <summary>
+        /// 根据string名称进行次级排序（多字段场景，需先 OrderBy）
+        /// </summary>
+        /// <typeparam name="T">泛型列</typeparam>
+        /// <param name="queryable">已排序的queryable</param>
+        /// <param name="sortField">排序列</param>
+        /// <param name="isAsc">true正序 false倒序</param>
+        /// <returns></returns>
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> queryable, string sortField,
+                                                     bool isAsc = true)
+            where T : class
+        {
+            var parameter = Expression.Parameter(typeof(T), sortField);
+            var property = typeof(T).GetProperty(sortField);
+            if (property == null)
+                throw new ArgumentNullException($"无效的属性 {sortField}");
+
+            var memberExpression = Expression.Property(parameter, property);
+            var orderByExpression = Expression.Lambda(memberExpression, new ParameterExpression[]
+                                                                        {
+                                                                            parameter
+                                                                        });
+
+            var orderMethod = isAsc ? "ThenBy" : "ThenByDescending";
+            var resultExpression = Expression.Call(typeof(Queryable), orderMethod,
+                new[]
+                {
+                    queryable.ElementType,
+                    property.PropertyType
+                }, queryable.Expression,
+                Expression.Quote(orderByExpression));
+
+            return (IOrderedQueryable<T>)queryable.Provider.CreateQuery<T>(resultExpression);
         }
 
         /// <summary>

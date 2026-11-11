@@ -11,7 +11,7 @@ namespace Azrng.Core.Exceptions
 
         public ParameterException(string message) : base("400", message) { }
 
-        public ParameterException(string message, Exception innerException) : base(message, innerException) { }
+        public ParameterException(string message, Exception innerException) : base("400", message, innerException) { }
 
         #region 私有方法
 

@@ -23,9 +23,9 @@ namespace Azrng.Core.Extension
         }
 
         /// <summary>
-        /// 自定义格式，默认返回返回格式：1.01
+        /// 自定义格式（银行家舍入：五后非零进一、五后皆零取偶），默认返回格式：1.01
         /// </summary>
-        /// <param name="dec">decimal值</param>
+        /// <param name="dec">double值</param>
         /// <param name="number">保留的小数位数</param>
         /// <returns></returns>
         public static string ToStandardString(this double dec, int number = 2)
@@ -57,7 +57,7 @@ namespace Azrng.Core.Extension
         /// <returns></returns>
         public static string ToNoZeroString(this double dec, int number = 2)
         {
-            return dec.ToString("0.".PadRight(number + 2, '#'));
+            return dec.ToString("0.".PadRight(number + 2, '#'), CultureInfo.InvariantCulture);
         }
 
         /// <summary>

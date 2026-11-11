@@ -9,9 +9,9 @@ namespace Azrng.Core.Exceptions
     {
         public LogicBusinessException() : base("400", "业务逻辑异常") { }
 
-        public LogicBusinessException(string message) : base(message) { }
+        public LogicBusinessException(string message) : base("400", message) { }
 
-        public LogicBusinessException(string message, Exception innerException) : base(message, innerException) { }
+        public LogicBusinessException(string message, Exception innerException) : base("400", message, innerException) { }
 
         #region 私有方法
 
