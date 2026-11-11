@@ -212,7 +212,7 @@ public class SnowflakeTests
     [Fact]
     public void DeriveDefaultWorkerId_ShouldUseProcessIdInLowBits()
     {
-        var expected = System.Diagnostics.Process.GetCurrentProcess().Id & 0x1F;
+        var expected = (System.Diagnostics.Process.GetCurrentProcess().Id >> 2) & 0x1F;
 
         (Snowflake.DeriveDefaultWorkerId() & 0x1F).Should().Be(expected);
     }

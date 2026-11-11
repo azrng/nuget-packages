@@ -18,8 +18,9 @@ namespace Azrng.Core.Helpers
         第一位不使用，主要是为了避免部分场景变成负数；
         41位时间戳，也就是2的41次方，毫秒为单位，足够保存69年。这里一般存储1970年以来的毫秒数，建议各个系统根据需要自定义这个开始日期；
         10位机器码，理论上可以表示1024台机器。默认自动派生：高5位取本机标识（非回环IPv4地址，无则机器名）的稳定哈希，
-        低5位取进程Id，保证机房内不同机器、相同机器上的不同进程派生出不同的机器码；
-        分布式部署建议通过 ConfigureWorkerId 显式配置，彻底避免自动派生的哈希碰撞。
+        低5位取进程Id右移2位（Windows进程Id按4对齐，直接取低5位只有8个有效值）。
+        自动派生只能降低撞号概率（同机不同进程进程Id模128相同、不同机器哈希落入同一桶时仍会撞号），
+        不能保证唯一；分布式部署应通过 ConfigureWorkerId 显式配置。
         12位序列号，表示范围0~4095，一直递增，即使毫秒数加一，这里也不会归零，避免被恶意用户轻易猜测得到前后订单号；
          */
 
@@ -228,12 +229,13 @@ namespace Azrng.Core.Helpers
         }
 
         /// <summary>
-        /// 默认 WorkerId 派生：高5位取机器标识的稳定哈希，低5位取进程Id。
+        /// 默认 WorkerId 派生：高5位取机器标识的稳定哈希，低5位取进程Id右移2位。
         /// </summary>
         internal static int DeriveDefaultWorkerId()
         {
             var machinePart = GetMachineIdentityHash() & 0x1F;
-            var processPart = Process.GetCurrentProcess().Id & 0x1F;
+            //右移2位：Windows进程Id按4对齐，直接 & 0x1F 只有8个有效值（同机撞号约1/8）；右移后恢复满32槽，降到约1/32
+            var processPart = (Process.GetCurrentProcess().Id >> 2) & 0x1F;
             return machinePart << 5 | processPart;
         }
 
