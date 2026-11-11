@@ -1,4 +1,4 @@
-	﻿using Azrng.Core.CommonDto;
+﻿using Azrng.Core.CommonDto;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -53,8 +53,10 @@ namespace Azrng.Core.RetryTask
                 return result;
             }
 
-            //携带最后一次原始异常，保留其类型与堆栈便于排障
-            throw new InternalServerException($"超出最大重试{_maxRetryCount} 错误信息：{inner?.Message}", inner);
+            //携带最后一次原始异常，保留其类型与堆栈便于排障；能到达此处必经至少一次 catch，inner 非空，兜底仅防御
+            throw new InternalServerException(
+                $"超出最大重试{_maxRetryCount} 错误信息：{inner?.Message}",
+                inner ?? throw new InvalidOperationException("重试耗尽但未记录到原始异常，流程状态异常。"));
         }
 
         /// <summary>

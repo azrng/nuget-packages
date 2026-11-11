@@ -217,7 +217,7 @@ public class AuditLogMiddleware
         {
             var body = Encoding.UTF8.GetString(stream.CapturedBytes);
             return stream.CaptureTruncated
-                ? $"[响应体过大，仅记录前 {_options.MaxResponseBodySize} 字符]\n" + FormatBody(body)
+                ? $"[响应体过大，仅记录前 {_options.MaxResponseBodySize} 字节]\n" + FormatBody(body)
                 : FormatBody(body);
         }
         catch

@@ -18,5 +18,6 @@
 | T167 | Azrng.Core/AspNetCore.Core 审查问题批次1修复 | DONE | 2026-11-11 |
 | T168 | Azrng.Core 审查问题批次2修复（P1） | DONE | 2026-11-11 |
 | T169 | Azrng.Core 审查问题批次3修复（P2 语义与清理） | DONE | 2026-11-12 |
+| T170 | Azrng.Core 审查后续单点修复（D1-D6） | DONE | 2026-11-12 |
 
 文件结束。

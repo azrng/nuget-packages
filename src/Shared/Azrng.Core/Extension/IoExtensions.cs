@@ -1,4 +1,4 @@
-	﻿using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using System;
 using System.Globalization;
@@ -63,7 +63,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static async Task<byte[]?>? ToBytesFromFileAsync(this string fileName)
+        public static async Task<byte[]?> ToBytesFromFileAsync(this string fileName)
         {
             if (!File.Exists(fileName))
                 return null;
@@ -128,7 +128,7 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="stream"></param>
         /// <returns></returns>
-        public static async Task<byte[]>? ToBytesAsync(this Stream? stream)
+        public static async Task<byte[]> ToBytesAsync(this Stream? stream)
         {
             if (stream is null || stream.Length == 0)
                 return Array.Empty<byte>();

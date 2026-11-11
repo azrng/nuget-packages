@@ -974,12 +974,13 @@ public IResultModel<bool> Save()
 - 修复表达式合并工具（`Expressionable`/`PredicateExtensions`/`ExpressExtensions.MergeAnd`/`MergeOr`）参数替换器会错误替换嵌套 lambda（如 `Any`/`Where` 内层）参数导致表达式树非法的问题；`PredicateExpressionVisitor` 构造函数变更为 `(来源参数, 目标参数)` 或 `(来源参数集合, 目标参数)`（**破坏性变更**，同仓库 `Common.Db.Core` 内副本已同步修复）
 - `ChinaDateHelper.GetChinaDate` 增加 1900-2049 支持范围校验，越界抛 `ArgumentOutOfRangeException`（原为索引崩溃）
 - 修复 `RandomGenerator.GenerateIdCard` 指定女性时顺序码 999 加一产出 19 位非法身份证的问题
-- `DateTimeHelper.GetNetworkTime` 改用共享 `HttpClient`（10 秒超时），避免每次调用新建实例导致 socket 耗尽；新增 `SetNetworkTimeUrl` 支持更换接口地址
+- `DateTimeHelper.GetNetworkTime` 改用共享 `HttpClient`（10 秒超时），避免每次调用新建实例导致 socket 耗尽；新增 `SetNetworkTimeUrl` 支持更换接口地址（仅接受 http/https 绝对地址，非法地址前置抛 `ArgumentException`，避免 `GetNetworkTime` 被未捕获的 `UriFormatException` 打穿）
 - `TimerHelper.GetNetworkTime` 修复 NTP socket 异常路径句柄泄漏与 DNS 首地址为 IPv6 时的崩溃
 - 修复 `CsvHelper.DateTableToCsv` 写入异常时 `StreamWriter` 句柄泄漏
 - 修复 `IoExtensions.ToBytes`/`ToBytesAsync`/`ToFile`/`ToFileAsync` 单次 `Read` 当完整读取导致部分读流（网络流）数据截断的问题，改为循环读满
+- `IoExtensions.ToBytesFromFileAsync`/`ToBytesAsync` 返回类型由可空 `Task<T>?` 修正为 `Task<T>`（async 方法不会返回 null 任务，仅可空性标注修正，无行为变更），消除调用方 `await` 处的可空警告
 - `LocalLogHelper` 写盘链路全量 `ConfigureAwait(false)`，消除同步日志 API（`WriteMyLogs`/`LogTrace` 等）在同步上下文下的死锁风险
-- `TaskHelper.RunTimeLimitAsync` 由 `task.Wait` 同步阻塞改为 `Task.WhenAny` 异步等待，失败传播原始异常（行为变更：不再包装为 `AggregateException`），修复超时后 `CancellationTokenSource` 不释放
+- `TaskHelper.RunTimeLimitAsync` 由 `task.Wait` 同步阻塞改为 `Task.WhenAny` 异步等待，失败传播原始异常（行为变更：不再包装为 `AggregateException`），修复超时后 `CancellationTokenSource` 不释放；任务先完成时立即取消释放超时计时器（原 `Task.Delay` 悬空占用计时器直至超时满），并移除对 func 不可达的取消令牌传递
 - 重试任务（`Retry`/`HandleAsDefaultWhenException`）耗尽后携带原始异常作为 `InnerException`（原仅拼接消息文本）；取消异常（`OperationCanceledException`）不再被 `WhenCatch<Exception>` 吞掉转默认值或参与重试（行为变更：显式声明 `WhenCatch<OperationCanceledException>` 不受影响）
 - 语义统一（行为变更）：`OrderBy(params SortContent[])` 多字段排序改为首键为主、后续 ThenBy（原为最后一个键为主，与 `FiledOrderParam[]` 版语义相反）；`GetTargetTimeStart/End` 的 Week 周日归入当周（原平移到下周一/下周日）；`CronHelper.Week/Month/Year` 统一输出 Quartz 6 字段（原为 5 字段，周数字按 Quartz 约定 1=周日）
 - 异常 ErrorCode 统一（行为变更）：`ForbiddenException` 全部构造为 403（原无参 401）；`LogicBusinessException`/`ParameterException` 带 inner 构造为 400（原 500）；`NotFoundException` 全部构造为 404（原无参 500）；`BaseException` 新增 `(code, message, innerException)` 三参构造；`RetryMarkException.ThrowIfNull` 改抛自身类型（原误抛 `ParameterException`）
