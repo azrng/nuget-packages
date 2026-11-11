@@ -25,7 +25,7 @@ namespace Azrng.Core.Helpers
             }
 
             var parameter = _exp.Parameters[0];
-            var visitor = new PredicateExpressionVisitor(parameter);
+            var visitor = new PredicateExpressionVisitor(exp.Parameters[0], parameter);
             var rightBody = visitor.Visit(exp.Body);
             _exp = Expression.Lambda<Func<T, bool>>(Expression.AndAlso(_exp.Body, rightBody), parameter);
             return this;
@@ -47,7 +47,7 @@ namespace Azrng.Core.Helpers
             }
 
             var parameter = _exp.Parameters[0];
-            var visitor = new PredicateExpressionVisitor(parameter);
+            var visitor = new PredicateExpressionVisitor(exp.Parameters[0], parameter);
             var rightBody = visitor.Visit(exp.Body);
             _exp = Expression.Lambda<Func<T, bool>>(Expression.OrElse(_exp.Body, rightBody), parameter);
             return this;

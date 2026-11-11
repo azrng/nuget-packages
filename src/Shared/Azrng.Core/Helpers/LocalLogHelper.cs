@@ -63,8 +63,8 @@ namespace Azrng.Core.Helpers
             {
                 while (true)
                 {
-                    await Task.Delay(_flushInterval);
-                    await ProcessLogQueueAsync();
+                    await Task.Delay(_flushInterval).ConfigureAwait(false);
+                    await ProcessLogQueueAsync().ConfigureAwait(false);
                 }
             });
         }
@@ -80,18 +80,18 @@ namespace Azrng.Core.Helpers
                 {
                     try
                     {
-                        await CleanupLogsAsync();
+                        await CleanupLogsAsync().ConfigureAwait(false);
 
                         // 等待到下一天的凌晨2点执行清理
                         var now = DateTime.Now;
                         var nextRun = now.Date.AddDays(1).AddHours(2);
                         var delay = nextRun - now;
-                        await Task.Delay(delay);
+                        await Task.Delay(delay).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
-                        await LogErrorAsync(ex);
-                        await Task.Delay(CleanupInterval);
+                        await LogErrorAsync(ex).ConfigureAwait(false);
+                        await Task.Delay(CleanupInterval).ConfigureAwait(false);
                     }
                 }
             });
@@ -164,7 +164,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogTraceAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Trace)
-                await WriteMyLogsAsync(nameof(LogLevel.Trace), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Trace), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogDebugAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Debug)
-                await WriteMyLogsAsync(nameof(LogLevel.Debug), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Debug), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogInformationAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Information)
-                await WriteMyLogsAsync(nameof(LogLevel.Information), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Information), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogWarningAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Warning)
-                await WriteMyLogsAsync(nameof(LogLevel.Warning), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Warning), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -204,7 +204,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogErrorAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Error)
-                await WriteMyLogsAsync(nameof(LogLevel.Error), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Error), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -214,7 +214,7 @@ namespace Azrng.Core.Helpers
         public static async Task LogCriticalAsync(string logInfo)
         {
             if (CoreGlobalConfig.MinimumLevel <= LogLevel.Critical)
-                await WriteMyLogsAsync(nameof(LogLevel.Critical), logInfo);
+                await WriteMyLogsAsync(nameof(LogLevel.Critical), logInfo).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -240,7 +240,7 @@ namespace Azrng.Core.Helpers
             // 如果队列超过最大大小，触发立即处理
             if (Volatile.Read(ref _queuedLogCount) >= _maxQueueSize)
             {
-                await ProcessLogQueueAsync();
+                await ProcessLogQueueAsync().ConfigureAwait(false);
             }
         }
 
@@ -300,23 +300,23 @@ namespace Azrng.Core.Helpers
                         if (sw == null ||
                             !string.Equals(currentLogFilePath, logFilePath, StringComparison.OrdinalIgnoreCase))
                         {
-                            await FlushAndDisposeAsync(sw);
+                            await FlushAndDisposeAsync(sw).ConfigureAwait(false);
                             sw = new StreamWriter(logFilePath, true, Encoding.UTF8, 8192);
                             currentLogFilePath = logFilePath;
                         }
 
                         var logMessage = FormatLogMessage(logEntry);
-                        await sw.WriteLineAsync(logMessage);
+                        await sw.WriteLineAsync(logMessage).ConfigureAwait(false);
                     }
                 }
                 finally
                 {
-                    await FlushAndDisposeAsync(sw);
+                    await FlushAndDisposeAsync(sw).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
-                await LogErrorAsync(ex);
+                await LogErrorAsync(ex).ConfigureAwait(false);
             }
             finally
             {
@@ -326,7 +326,7 @@ namespace Azrng.Core.Helpers
 
         private static async Task<bool> WaitForProcessingAsync()
         {
-            await _processSemaphore.WaitAsync();
+            await _processSemaphore.WaitAsync().ConfigureAwait(false);
             return true;
         }
 
@@ -337,8 +337,8 @@ namespace Azrng.Core.Helpers
                 return;
             }
 
-            await writer.FlushAsync();
-            await writer.DisposeAsync();
+            await writer.FlushAsync().ConfigureAwait(false);
+            await writer.DisposeAsync().ConfigureAwait(false);
         }
 
         private static string FormatLogMessage(LogEntry entry)
@@ -358,8 +358,8 @@ namespace Azrng.Core.Helpers
 
                 var errorLogPath = Path.Combine(logPath, "error.log");
                 await using var sw = new StreamWriter(errorLogPath, true, Encoding.UTF8);
-                await sw.WriteLineAsync($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} ==> Error: {ex.Message}");
-                await sw.WriteLineAsync($"StackTrace: {ex.StackTrace}");
+                await sw.WriteLineAsync($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} ==> Error: {ex.Message}").ConfigureAwait(false);
+                await sw.WriteLineAsync($"StackTrace: {ex.StackTrace}").ConfigureAwait(false);
             }
             catch
             {
@@ -398,12 +398,12 @@ namespace Azrng.Core.Helpers
                             }
 
                             file.Delete();
-                            await LogInformationAsync($"已删除过期日志文件: {file.Name}");
+                            await LogInformationAsync($"已删除过期日志文件: {file.Name}").ConfigureAwait(false);
                         }
                     }
                     catch (Exception ex)
                     {
-                        await LogErrorAsync(new Exception($"清理日志文件 {file.Name} 失败", ex));
+                        await LogErrorAsync(new Exception($"清理日志文件 {file.Name} 失败", ex)).ConfigureAwait(false);
                     }
                 }
 
@@ -412,7 +412,7 @@ namespace Azrng.Core.Helpers
             }
             catch (Exception ex)
             {
-                await LogErrorAsync(new Exception("执行日志清理任务时发生错误", ex));
+                await LogErrorAsync(new Exception("执行日志清理任务时发生错误", ex)).ConfigureAwait(false);
             }
         }
 

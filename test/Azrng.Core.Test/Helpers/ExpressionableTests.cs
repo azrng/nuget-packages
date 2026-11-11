@@ -226,10 +226,50 @@ public class ExpressionableTests
         result.Should().BeSameAs(expressionable);
     }
 
+    [Fact]
+    public void And_WithNestedLambda_ShouldPreserveInnerParameter()
+    {
+        var expression = Expressionable.Create<NestedEntity>()
+            .And(x => x.Children.Any(c => c.Age > 10))
+            .And(x => x.Age >= 18)
+            .ToExpression()
+            .Compile();
+
+        expression(new NestedEntity { Age = 20, Children = [new NestedEntity.ChildEntity { Age = 11 }] }).Should().BeTrue();
+        expression(new NestedEntity { Age = 10, Children = [new NestedEntity.ChildEntity { Age = 11 }] }).Should().BeFalse();
+        expression(new NestedEntity { Age = 20, Children = [new NestedEntity.ChildEntity { Age = 5 }] }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void And_WithNestedLambdaClosureOverOuterParameter_ShouldPreserveBothParameters()
+    {
+        var expression = Expressionable.Create<NestedEntity>()
+            .And(x => x.Children.Any(c => c.Age > x.MinChildAge))
+            .ToExpression()
+            .Compile();
+
+        expression(new NestedEntity { MinChildAge = 10, Children = [new NestedEntity.ChildEntity { Age = 11 }] }).Should().BeTrue();
+        expression(new NestedEntity { MinChildAge = 20, Children = [new NestedEntity.ChildEntity { Age = 11 }] }).Should().BeFalse();
+    }
+
     private sealed class TestEntity
     {
         public int Age { get; set; }
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+    }
+
+    private sealed class NestedEntity
+    {
+        public int Age { get; set; }
+
+        public int MinChildAge { get; set; }
+
+        public List<ChildEntity> Children { get; set; } = [];
+
+        public sealed class ChildEntity
+        {
+            public int Age { get; set; }
+        }
     }
 }

@@ -645,4 +645,19 @@ public class DateTimeHelperTests
     }
 
     #endregion
+
+    #region SetNetworkTimeUrl
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void SetNetworkTimeUrl_EmptyUrl_ShouldThrow(string? url)
+    {
+        var action = () => DateTimeHelper.SetNetworkTimeUrl(url!);
+
+        action.Should().Throw<ArgumentException>();
+    }
+
+    #endregion
 }

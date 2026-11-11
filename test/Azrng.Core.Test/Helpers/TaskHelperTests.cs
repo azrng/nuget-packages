@@ -32,6 +32,21 @@ public class TaskHelperTests
     }
 
     [Fact]
+    public async Task RunTimeLimitAsync_ShouldThrowOriginalException_WhenFuncFails()
+    {
+        // 失败时应传播原始异常，而不是 Wait 包装出的 AggregateException
+        Func<Task<int>> action = () => TaskHelper.RunTimeLimitAsync<int>(async () =>
+        {
+            await Task.Delay(10);
+            throw new InvalidOperationException("原始异常");
+            return 42;
+        }, TimeSpan.FromSeconds(5));
+
+        (await action.Should().ThrowAsync<InvalidOperationException>())
+            .And.Message.Should().Be("原始异常");
+    }
+
+    [Fact]
     public async Task TryWaitAsync_ShouldReturnSuccessBeforeTimeout()
     {
         var count = 0;

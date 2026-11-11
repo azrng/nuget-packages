@@ -60,10 +60,25 @@ public class ExpressionAndPredicateTests
         expression(new SampleItem()).Should().BeTrue();
     }
 
+    [Fact]
+    public void PredicateAnd_WithNestedLambda_ShouldPreserveInnerParameter()
+    {
+        Expression<Func<SampleItem, bool>> left = x => x.Age >= 18;
+        Expression<Func<SampleItem, bool>> right = x => x.Tags.Any(t => t.StartsWith("A"));
+
+        var andFunc = left.And(right).Compile();
+
+        andFunc(new SampleItem { Age = 20, Name = "Alice", Tags = ["Admin"] }).Should().BeTrue();
+        andFunc(new SampleItem { Age = 10, Name = "Alice", Tags = ["Admin"] }).Should().BeFalse();
+        andFunc(new SampleItem { Age = 20, Name = "Alice", Tags = ["User"] }).Should().BeFalse();
+    }
+
     private sealed class SampleItem
     {
         public int Age { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public List<string> Tags { get; set; } = [];
     }
 }

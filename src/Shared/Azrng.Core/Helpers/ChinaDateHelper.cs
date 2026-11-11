@@ -12,6 +12,14 @@ namespace Azrng.Core.Helpers
         /// </summary>
         public static CNDate GetChinaDate(DateTime dt)
         {
+            //农历位表从 1900 年起共 150 年数据，越界会直接索引崩溃，提前给出明确错误
+            var minYear = 1900;
+            var maxYear = minYear + lunarInfo.Length - 1;
+            if (dt.Year < minYear || dt.Year > maxYear)
+            {
+                throw new ArgumentOutOfRangeException(nameof(dt), $"仅支持 {minYear} 年到 {maxYear} 年的公历日期。");
+            }
+
             var cd = new CNDate();
             var year = dt.Year;
             var month = dt.Month;

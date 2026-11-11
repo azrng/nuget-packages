@@ -971,6 +971,16 @@ public IResultModel<bool> Save()
 - 修复 `ByteExtensions.GetContentType`/`GetFileSuffix`/`GetRandomFileName` 遇未登记文件头抛 `InvalidOperationException` 的问题，统一返回 null（行为变更：`GetRandomFileName` 返回类型改为 `string?`）
 - 修复 `ToFileByBytes`/`ToFile`/`ToFileAsync` 使用 `FileMode.OpenOrCreate` 不截断旧文件导致输出损坏的问题，改为 `FileMode.Create`
 - 修复 `FromBase64Decode` 非法输入抛 `FormatException` 的问题，按容错契约返回空串
+- 修复表达式合并工具（`Expressionable`/`PredicateExtensions`/`ExpressExtensions.MergeAnd`/`MergeOr`）参数替换器会错误替换嵌套 lambda（如 `Any`/`Where` 内层）参数导致表达式树非法的问题；`PredicateExpressionVisitor` 构造函数变更为 `(来源参数, 目标参数)` 或 `(来源参数集合, 目标参数)`（**破坏性变更**，同仓库 `Common.Db.Core` 内副本已同步修复）
+- `ChinaDateHelper.GetChinaDate` 增加 1900-2049 支持范围校验，越界抛 `ArgumentOutOfRangeException`（原为索引崩溃）
+- 修复 `RandomGenerator.GenerateIdCard` 指定女性时顺序码 999 加一产出 19 位非法身份证的问题
+- `DateTimeHelper.GetNetworkTime` 改用共享 `HttpClient`（10 秒超时），避免每次调用新建实例导致 socket 耗尽；新增 `SetNetworkTimeUrl` 支持更换接口地址
+- `TimerHelper.GetNetworkTime` 修复 NTP socket 异常路径句柄泄漏与 DNS 首地址为 IPv6 时的崩溃
+- 修复 `CsvHelper.DateTableToCsv` 写入异常时 `StreamWriter` 句柄泄漏
+- 修复 `IoExtensions.ToBytes`/`ToBytesAsync`/`ToFile`/`ToFileAsync` 单次 `Read` 当完整读取导致部分读流（网络流）数据截断的问题，改为循环读满
+- `LocalLogHelper` 写盘链路全量 `ConfigureAwait(false)`，消除同步日志 API（`WriteMyLogs`/`LogTrace` 等）在同步上下文下的死锁风险
+- `TaskHelper.RunTimeLimitAsync` 由 `task.Wait` 同步阻塞改为 `Task.WhenAny` 异步等待，失败传播原始异常（行为变更：不再包装为 `AggregateException`），修复超时后 `CancellationTokenSource` 不释放
+- 重试任务（`Retry`/`HandleAsDefaultWhenException`）耗尽后携带原始异常作为 `InnerException`（原仅拼接消息文本）；取消异常（`OperationCanceledException`）不再被 `WhenCatch<Exception>` 吞掉转默认值或参与重试（行为变更：显式声明 `WhenCatch<OperationCanceledException>` 不受影响）
 - 补充上述修复的单元测试
 
 ### 1.20.0

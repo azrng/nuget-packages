@@ -237,8 +237,8 @@ namespace Azrng.Core.Helpers
             var birthDay = NextInt32(1, DateTime.DaysInMonth(birthYear, birthMonth) + 1);
             var birthDate = $"{birthYear:D4}{birthMonth:D2}{birthDay:D2}";
 
-            // 顺序码（15-17位）
-            var sequence = NextInt32(100, 1000);
+            // 顺序码（15-17位），上界取 999 保证性别调整 +1 后仍为 3 位
+            var sequence = NextInt32(100, 999);
 
             // 性别码（第17位）
             int genderCode;

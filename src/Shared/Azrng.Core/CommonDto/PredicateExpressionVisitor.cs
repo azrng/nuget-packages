@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Azrng.Core.CommonDto
@@ -9,27 +10,45 @@ namespace Azrng.Core.CommonDto
     public class PredicateExpressionVisitor : ExpressionVisitor
     {
         /// <summary>
-        /// 要用于替换的参数表达式。
+        /// 待替换的来源参数集合（引用相等匹配）。
         /// </summary>
-        private ParameterExpression Parameter { get; set; }
+        private readonly HashSet<ParameterExpression> _sources;
 
         /// <summary>
-        /// 构造函数，初始化要替换的参数。
+        /// 替换后的目标参数表达式。
         /// </summary>
-        /// <param name="parameter">用于替换的参数表达式</param>
-        public PredicateExpressionVisitor(ParameterExpression parameter)
+        private readonly ParameterExpression _target;
+
+        /// <summary>
+        /// 构造函数，把单个来源参数替换为目标参数。
+        /// </summary>
+        /// <param name="source">待替换的来源参数表达式</param>
+        /// <param name="target">替换后的目标参数表达式</param>
+        public PredicateExpressionVisitor(ParameterExpression source, ParameterExpression target)
+            : this([source], target)
         {
-            Parameter = parameter;
         }
 
         /// <summary>
-        /// 重写 VisitParameter 方法，将所有参数表达式替换为指定的 Parameter。
+        /// 构造函数，把多个来源参数替换为同一目标参数。
+        /// </summary>
+        /// <param name="sources">待替换的来源参数表达式集合</param>
+        /// <param name="target">替换后的目标参数表达式</param>
+        public PredicateExpressionVisitor(IEnumerable<ParameterExpression> sources, ParameterExpression target)
+        {
+            _sources = [.. sources];
+            _target = target;
+        }
+
+        /// <summary>
+        /// 重写 VisitParameter 方法，仅替换来源参数集合中的参数表达式。
         /// </summary>
         /// <param name="p">当前遍历到的参数表达式</param>
         /// <returns>替换后的参数表达式</returns>
         protected override Expression VisitParameter(ParameterExpression p)
         {
-            return Parameter;
+            //嵌套 lambda（如 Any/Where 内层）声明的参数保持原样，避免构建出非法表达式树
+            return _sources.Contains(p) ? _target : p;
         }
 
         /// <summary>

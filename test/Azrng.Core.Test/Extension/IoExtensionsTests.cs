@@ -417,4 +417,71 @@ public class IoExtensionsTests : IDisposable
     }
 
     #endregion
+
+    #region 部分读流（Stream.Read 允许部分读，单次 Read 会截断数据）
+
+    [Fact]
+    public void ToBytes_ShouldReadFullContent_WhenStreamReturnsPartialReads()
+    {
+        var data = Enumerable.Range(0, 1000).Select(i => (byte)(i % 256)).ToArray();
+        using var stream = new PartialReadStream(data, maxChunkSize: 7);
+
+        stream.ToBytes().Should().Equal(data);
+    }
+
+    [Fact]
+    public async Task ToBytesAsync_ShouldReadFullContent_WhenStreamReturnsPartialReads()
+    {
+        var data = Enumerable.Range(0, 1000).Select(i => (byte)(i % 256)).ToArray();
+        using var stream = new PartialReadStream(data, maxChunkSize: 11);
+
+        (await stream.ToBytesAsync()).Should().Equal(data);
+    }
+
+    [Fact]
+    public void ToFile_ShouldWriteFullContent_WhenStreamReturnsPartialReads()
+    {
+        var data = Enumerable.Range(0, 1000).Select(i => (byte)(i % 256)).ToArray();
+        using var stream = new PartialReadStream(data, maxChunkSize: 13);
+        var filePath = Path.Combine(_tempDir, "partial_read.bin");
+
+        var result = stream.ToFile(filePath);
+
+        result.Should().BeTrue();
+        File.ReadAllBytes(filePath).Should().Equal(data);
+    }
+
+    [Fact]
+    public async Task ToFileAsync_ShouldWriteFullContent_WhenStreamReturnsPartialReads()
+    {
+        var data = Enumerable.Range(0, 1000).Select(i => (byte)(i % 256)).ToArray();
+        using var stream = new PartialReadStream(data, maxChunkSize: 17);
+        var filePath = Path.Combine(_tempDir, "partial_read_async.bin");
+
+        var result = await stream.ToFileAsync(filePath);
+
+        result.Should().BeTrue();
+        File.ReadAllBytes(filePath).Should().Equal(data);
+    }
+
+    /// <summary>
+    /// 每次最多返回 maxChunkSize 字节的流，模拟网络流的部分读行为
+    /// </summary>
+    private sealed class PartialReadStream : MemoryStream
+    {
+        private readonly int _maxChunkSize;
+
+        public PartialReadStream(byte[] buffer, int maxChunkSize) : base(buffer)
+        {
+            _maxChunkSize = maxChunkSize;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+            => base.Read(buffer, offset, Math.Min(count, _maxChunkSize));
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => base.ReadAsync(buffer, offset, Math.Min(count, _maxChunkSize), cancellationToken);
+    }
+
+    #endregion
 }

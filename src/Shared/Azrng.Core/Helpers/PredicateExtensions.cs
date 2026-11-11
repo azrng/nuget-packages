@@ -8,9 +8,12 @@ namespace Azrng.Core.Helpers
     /// </summary>
     internal class ParameterReplacer : ExpressionVisitor
     {
-        public ParameterReplacer(ParameterExpression paramExpr)
+        private readonly ParameterExpression _source;
+
+        public ParameterReplacer(ParameterExpression source, ParameterExpression target)
         {
-            ParameterExpression = paramExpr;
+            _source = source;
+            ParameterExpression = target;
         }
 
         public ParameterExpression ParameterExpression { get; }
@@ -22,7 +25,8 @@ namespace Azrng.Core.Helpers
 
         protected override Expression VisitParameter(ParameterExpression p)
         {
-            return ParameterExpression;
+            //仅替换来源参数；嵌套 lambda（如 Any/Where 内层）声明的参数保持原样
+            return p == _source ? ParameterExpression : p;
         }
     }
 
@@ -49,10 +53,9 @@ namespace Azrng.Core.Helpers
             Expression<Func<T, bool>> exp_right)
         {
             var candidateExpr = Expression.Parameter(typeof(T), "candidate");
-            var parameterReplacer = new ParameterReplacer(candidateExpr);
-
-            var left = parameterReplacer.Replace(exp_left.Body);
-            var right = parameterReplacer.Replace(exp_right.Body);
+            //各来源 lambda 的顶层参数单独映射，嵌套 lambda 内层参数保持原样
+            var left = new ParameterReplacer(exp_left.Parameters[0], candidateExpr).Replace(exp_left.Body);
+            var right = new ParameterReplacer(exp_right.Parameters[0], candidateExpr).Replace(exp_right.Body);
             var body = Expression.And(left, right);
 
             return Expression.Lambda<Func<T, bool>>(body, candidateExpr);
@@ -62,10 +65,8 @@ namespace Azrng.Core.Helpers
             Expression<Func<T, bool>> exp_right)
         {
             var candidateExpr = Expression.Parameter(typeof(T), "candidate");
-            var parameterReplacer = new ParameterReplacer(candidateExpr);
-
-            var left = parameterReplacer.Replace(exp_left.Body);
-            var right = parameterReplacer.Replace(exp_right.Body);
+            var left = new ParameterReplacer(exp_left.Parameters[0], candidateExpr).Replace(exp_left.Body);
+            var right = new ParameterReplacer(exp_right.Parameters[0], candidateExpr).Replace(exp_right.Body);
             var body = Expression.Or(left, right);
 
             return Expression.Lambda<Func<T, bool>>(body, candidateExpr);

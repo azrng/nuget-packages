@@ -418,4 +418,19 @@ public class ChinaDateHelperTests
     }
 
     #endregion
+
+    #region GetChinaDate - 支持范围
+
+    [Theory]
+    [InlineData(1899, 6, 1)]
+    [InlineData(2050, 6, 1)]
+    public void GetChinaDate_OutOfSupportedRange_ShouldThrow(int year, int month, int day)
+    {
+        var action = () => ChinaDateHelper.GetChinaDate(new DateTime(year, month, day));
+
+        action.Should().Throw<ArgumentOutOfRangeException>()
+            .WithMessage("*1900*2049*");
+    }
+
+    #endregion
 }

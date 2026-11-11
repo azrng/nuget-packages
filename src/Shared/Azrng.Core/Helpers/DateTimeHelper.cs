@@ -9,17 +9,38 @@ namespace Azrng.Core.Helpers
     public class DateTimeHelper
     {
         /// <summary>
+        /// 网络时间接口地址，默认为公共演示接口；生产环境建议通过 SetNetworkTimeUrl 换成自有接口
+        /// </summary>
+        private static string _networkTimeUrl = "https://cn.apihz.cn/api/time/getapi.php?id=88888888&key=88888888&type=1";
+
+        /// <summary>
+        /// 共享 HttpClient：每次调用新建实例会大量产生 TIME_WAIT 直至 socket 耗尽
+        /// </summary>
+        private static readonly HttpClient NetworkTimeClient = new()
+        {
+            Timeout = TimeSpan.FromSeconds(10)
+        };
+
+        /// <summary>
+        /// 设置网络时间接口地址。返回文本需为 UTF-8 时间戳秒值位于第 20-29 字符的格式，否则解析返回 null
+        /// </summary>
+        public static void SetNetworkTimeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("网络时间接口地址不能为空。", nameof(url));
+
+            _networkTimeUrl = url;
+        }
+
+        /// <summary>
         /// 获取当前网络时间
         /// </summary>
         /// <returns></returns>
         public static async Task<DateTime?> GetNetworkTime()
         {
-            const string serviceUrl = "https://cn.apihz.cn/api/time/getapi.php?id=88888888&key=88888888&type=1";
-
             try
             {
-                using var client = new HttpClient();
-                var response = await client.GetStringAsync(serviceUrl);
+                var response = await NetworkTimeClient.GetStringAsync(_networkTimeUrl);
 
                 if (string.IsNullOrEmpty(response) || response.Length < 29)
                     return null;

@@ -21,7 +21,8 @@ namespace Azrng.Core.Helpers
         {
             try
             {
-                var strmWriterObj = new StreamWriter(strFilePath, false, Encoding.UTF8);
+                //using 确保异常路径也释放文件句柄；写入失败按契约返回 false
+                using var strmWriterObj = new StreamWriter(strFilePath, false, Encoding.UTF8);
                 strmWriterObj.WriteLine(tableHeader);
                 strmWriterObj.WriteLine(columName);
                 for (var i = 0; i < dt.Rows.Count; i++)
@@ -37,7 +38,6 @@ namespace Azrng.Core.Helpers
                     strmWriterObj.WriteLine(strBufferLine);
                 }
 
-                strmWriterObj.Close();
                 return true;
             }
             catch

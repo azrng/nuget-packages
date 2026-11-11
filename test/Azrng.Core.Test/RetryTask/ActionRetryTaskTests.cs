@@ -62,6 +62,20 @@ public class ActionRetryTaskTests
     }
 
     [Fact]
+    public async Task Retry_ShouldKeepOriginalExceptionAsInner_WhenExceedsMaxRetry()
+    {
+        // 重试耗尽后原始异常的类型与堆栈不应丢失
+        var task = CreateTask<int>(() =>
+            Task.FromException<int>(new RetryMarkException("原始失败")));
+
+        Func<Task> act = async () => await task.Retry(2);
+
+        (await act.Should().ThrowAsync<InternalServerException>())
+            .And.InnerException.Should().BeOfType<RetryMarkException>()
+            .Which.Message.Should().Be("原始失败");
+    }
+
+    [Fact]
     public void Retry_ShouldThrowArgumentOutOfRangeException_WhenMaxCountInvalid()
     {
         var task = CreateTask(() => Task.FromResult(1));

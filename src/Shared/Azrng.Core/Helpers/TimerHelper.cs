@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -72,16 +73,19 @@ namespace Azrng.Core.Helpers
 
             var addresses = Dns.GetHostEntry(ntpServer).AddressList;
 
-            IPEndPoint ipEndPoint = new(addresses[0], 123);
-            Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //DNS 结果首个地址可能是 IPv6，优先取 IPv4，socket 地址族跟随选中地址
+            var address = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
+                          ?? addresses[0];
+            var ipEndPoint = new IPEndPoint(address, 123);
 
-            socket.Connect(ipEndPoint);
+            //using 确保异常路径也释放 socket 句柄
+            using var socket = new Socket(address.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
 
             socket.ReceiveTimeout = 3000;
 
+            socket.Connect(ipEndPoint);
             socket.Send(ntpData);
             socket.Receive(ntpData);
-            socket.Close();
 
             const byte serverReplyTime = 40;
 

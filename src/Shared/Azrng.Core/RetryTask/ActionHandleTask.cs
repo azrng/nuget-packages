@@ -54,7 +54,9 @@ namespace Azrng.Core.RetryTask
                 {
                     return await _invoker().ConfigureAwait(false);
                 }
-                catch (TException ex)
+                //取消异常不转默认结果，除非显式声明捕获 OperationCanceledException；避免请求取消被静默吞掉
+                catch (TException ex) when (typeof(OperationCanceledException).IsAssignableFrom(typeof(TException))
+                                            || ex is not OperationCanceledException)
                 {
                     return await func(ex).ConfigureAwait(false);
                 }

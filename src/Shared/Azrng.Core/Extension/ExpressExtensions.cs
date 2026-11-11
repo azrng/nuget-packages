@@ -1,5 +1,6 @@
 ﻿using Azrng.Core.CommonDto;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -136,8 +137,9 @@ namespace Azrng.Core.Extension
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(
+                new[] { leftExpress.Parameters[0], rightExpress.Parameters[0] }, parameter);
 
             //表达式树内容
             var left = visitor.Visit(leftExpress.Body);
@@ -159,8 +161,8 @@ namespace Azrng.Core.Extension
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(CollectSourceParameters(express, arrayExpress), parameter);
             Expression<Func<T, bool>>? result = express;
 
             foreach (var curExpression in arrayExpress)
@@ -194,8 +196,9 @@ namespace Azrng.Core.Extension
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(
+                new[] { leftExpress.Parameters[0], rightExpress.Parameters[0] }, parameter);
 
             //表达式树内容
             var left = visitor.Visit(leftExpress.Body);
@@ -217,8 +220,8 @@ namespace Azrng.Core.Extension
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(CollectSourceParameters(express, arrayExpress!), parameter);
             Expression<Func<T, bool>>? result = express;
 
             //合并表达式
@@ -246,6 +249,29 @@ namespace Azrng.Core.Extension
             }
 
             return result ?? throw new InvalidOperationException("No valid expressions to merge");
+        }
+
+        /// <summary>
+        /// 收集参与合并的表达式的顶层参数作为替换来源，嵌套 lambda 的内层参数不参与替换
+        /// </summary>
+        private static List<ParameterExpression> CollectSourceParameters<T>(Expression<Func<T, bool>>? express,
+                                                                             Expression<Func<T, bool>>[] arrayExpress)
+        {
+            var sources = new List<ParameterExpression>();
+            if (express != null)
+            {
+                sources.Add(express.Parameters[0]);
+            }
+
+            foreach (var curExpression in arrayExpress)
+            {
+                if (curExpression != null)
+                {
+                    sources.Add(curExpression.Parameters[0]);
+                }
+            }
+
+            return sources;
         }
 
         #endregion

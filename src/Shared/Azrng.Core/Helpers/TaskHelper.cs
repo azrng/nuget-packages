@@ -18,20 +18,21 @@ namespace Azrng.Core.Helpers
         /// <param name="timeout">限制时间</param>
         /// <returns></returns>
         /// <exception cref="TimeoutException"></exception>
-        public static Task<T> RunTimeLimitAsync<T>(Func<Task<T>> func, TimeSpan timeout)
+        public static async Task<T> RunTimeLimitAsync<T>(Func<Task<T>> func, TimeSpan timeout)
         {
-            var tokenSource = new CancellationTokenSource();
-            var cancellationToken = tokenSource.Token;
+            // WhenAny 等待替代 task.Wait 同步阻塞：避免调用线程死锁、保留原始异常（而非 AggregateException）
+            using var tokenSource = new CancellationTokenSource();
 
-            var task = Task.Run(func, cancellationToken);
+            var task = Task.Run(func, tokenSource.Token);
 
-            if (!task.Wait(timeout))
+            var completed = await Task.WhenAny(task, Task.Delay(timeout)).ConfigureAwait(false);
+            if (completed != task)
             {
-                tokenSource.Cancel();
+                // 超时后放弃等待；func 未支持协作取消时任务仍会在后台跑完，其结果与异常被丢弃
                 throw new TimeoutException("操作超时");
             }
 
-            return task;
+            return await task.ConfigureAwait(false);
         }
 
 #if NET6_0_OR_GREATER

@@ -53,7 +53,8 @@ namespace Azrng.Core.RetryTask
                 return result;
             }
 
-            throw new InternalServerException($"超出最大重试{_maxRetryCount} 错误信息：{inner?.Message}");
+            //携带最后一次原始异常，保留其类型与堆栈便于排障
+            throw new InternalServerException($"超出最大重试{_maxRetryCount} 错误信息：{inner?.Message}", inner);
         }
 
         /// <summary>
@@ -144,7 +145,9 @@ namespace Azrng.Core.RetryTask
                 {
                     return await _invoker().ConfigureAwait(false);
                 }
-                catch (TException ex)
+                //取消异常不参与重试标记，除非显式声明捕获 OperationCanceledException；避免请求取消被吞或被反复重试
+                catch (TException ex) when (typeof(OperationCanceledException).IsAssignableFrom(typeof(TException))
+                                            || ex is not OperationCanceledException)
                 {
                     var flag = predicate == null;
                     if (!flag && predicate != null)

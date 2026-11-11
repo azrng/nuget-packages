@@ -36,6 +36,28 @@ public class CsvHelperTests : IDisposable
     }
 
     [Fact]
+    public void DateTableToCsv_WritingTwiceToSameFile_ShouldSucceedBothTimes()
+    {
+        // 第二次写入成功依赖第一次的文件句柄已正确释放
+        var dt = CreateSampleDataTable();
+        var filePath = Path.Combine(_testDirectory, "twice.csv");
+
+        CsvHelper.DateTableToCsv(dt, filePath, "Test Header", "Name,Age,City").Should().BeTrue();
+        CsvHelper.DateTableToCsv(dt, filePath, "Test Header", "Name,Age,City").Should().BeTrue();
+    }
+
+    [Fact]
+    public void DateTableToCsv_InvalidDirectory_ReturnsFalse()
+    {
+        var dt = CreateSampleDataTable();
+        var badPath = Path.Combine(_testDirectory, "not-exist-dir", "test.csv");
+
+        var result = CsvHelper.DateTableToCsv(dt, badPath, "Test Header", "Name,Age,City");
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void DateTableToCsv_ValidDataTable_CreatesFile()
     {
         var dt = CreateSampleDataTable();

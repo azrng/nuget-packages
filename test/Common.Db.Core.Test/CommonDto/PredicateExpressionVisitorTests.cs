@@ -12,7 +12,7 @@ public class PredicateExpressionVisitorTests
     {
         Expression<Func<SampleEntity, bool>> expression = source => source.Age >= 18 && source.Enabled;
         var replacement = Expression.Parameter(typeof(SampleEntity), "target");
-        var visitor = new PredicateExpressionVisitor(replacement);
+        var visitor = new PredicateExpressionVisitor(expression.Parameters[0], replacement);
 
         var visitedBody = visitor.Visit(expression.Body);
         var lambda = Expression.Lambda<Func<SampleEntity, bool>>(visitedBody!, replacement).Compile();
@@ -22,10 +22,32 @@ public class PredicateExpressionVisitorTests
         visitedBody!.ToString().Should().Contain("target");
     }
 
+    [Fact]
+    public void Visit_WithNestedLambda_ShouldPreserveInnerParameter()
+    {
+        Expression<Func<SampleEntity, bool>> expression =
+            source => source.Children.Any(child => child.Age > 10);
+        var replacement = Expression.Parameter(typeof(SampleEntity), "target");
+        var visitor = new PredicateExpressionVisitor(expression.Parameters[0], replacement);
+
+        var visitedBody = visitor.Visit(expression.Body);
+        var lambda = Expression.Lambda<Func<SampleEntity, bool>>(visitedBody!, replacement).Compile();
+
+        lambda(new SampleEntity { Children = [new ChildEntity { Age = 11 }] }).Should().BeTrue();
+        lambda(new SampleEntity { Children = [new ChildEntity { Age = 5 }] }).Should().BeFalse();
+    }
+
+    private sealed class ChildEntity
+    {
+        public int Age { get; set; }
+    }
+
     private sealed class SampleEntity
     {
         public int Age { get; set; }
 
         public bool Enabled { get; set; }
+
+        public List<ChildEntity> Children { get; set; } = [];
     }
 }

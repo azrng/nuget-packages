@@ -334,6 +334,16 @@ public class RandomGeneratorTests
     }
 
     [Fact]
+    public void GenerateIdCard_Female_RepeatedGeneration_AlwaysKeepsLength18()
+    {
+        // 顺序码恰为 999 时女性分支 +1 会产出 4 位性别码，回归验证多次生成恒为 18 位
+        for (var i = 0; i < 5000; i++)
+        {
+            RandomGenerator.GenerateIdCard(2).Length.Should().Be(18);
+        }
+    }
+
+    [Fact]
     public void GenerateIdCard_WithAgeRange_ReturnsValidFormat()
     {
         var result = RandomGenerator.GenerateIdCard(0, 20, 30);

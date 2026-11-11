@@ -1,5 +1,6 @@
-﻿using Azrng.Core.CommonDto;
+	﻿using Azrng.Core.CommonDto;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -67,8 +68,9 @@ namespace Azrng.Core.Extensions
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(
+                new[] { leftExpress.Parameters[0], rightExpress.Parameters[0] }, parameter);
 
             //表达式树内容
             var left = visitor.Visit(leftExpress.Body);
@@ -90,8 +92,12 @@ namespace Azrng.Core.Extensions
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var sources = new List<ParameterExpression>();
+            if (express != null)
+                sources.Add(express.Parameters[0]);
+            sources.AddRange(arrayExpress.Select(e => e.Parameters[0]));
+            var visitor = new PredicateExpressionVisitor(sources, parameter);
             Expression<Func<T, bool>>? result = null;
 
             //合并表达式
@@ -130,8 +136,9 @@ namespace Azrng.Core.Extensions
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var visitor = new PredicateExpressionVisitor(
+                new[] { leftExpress.Parameters[0], rightExpress.Parameters[0] }, parameter);
 
             //表达式树内容
             var left = visitor.Visit(leftExpress.Body);
@@ -153,8 +160,12 @@ namespace Azrng.Core.Extensions
             //声明传递参数（也就是表达式树里面的参数别名s）
             var parameter = Expression.Parameter(typeof(T), "s");
 
-            //统一管理参数，保证参数一致，否则会报错
-            var visitor = new PredicateExpressionVisitor(parameter);
+            //统一管理参数，保证参数一致，否则会报错；仅替换来源 lambda 的顶层参数，嵌套 lambda 参数保持原样
+            var sources = new List<ParameterExpression>();
+            if (express != null)
+                sources.Add(express.Parameters[0]);
+            sources.AddRange(arrayExpress.Select(e => e.Parameters[0]));
+            var visitor = new PredicateExpressionVisitor(sources, parameter);
             Expression<Func<T, bool>>? result = null;
 
             //合并表达式

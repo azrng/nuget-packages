@@ -116,7 +116,7 @@ namespace Azrng.Core.Extension
                 return Array.Empty<byte>();
 
             var array = new byte[stream.Length];
-            _ = stream.Read(array, 0, array.Length);
+            ReadExactly(stream, array);
             stream.Seek(0L, SeekOrigin.Begin);
 
             return array;
@@ -132,7 +132,7 @@ namespace Azrng.Core.Extension
             if (stream is null || stream.Length == 0)
                 return Array.Empty<byte>();
             var array = new byte[stream.Length];
-            _ = await stream.ReadAsync(array);
+            await ReadExactlyAsync(stream, array);
             stream.Seek(0L, SeekOrigin.Begin);
             return array;
         }
@@ -147,7 +147,7 @@ namespace Azrng.Core.Extension
             if (stream is null || stream.Length == 0)
                 return false;
             var array = new byte[stream.Length];
-            _ = stream.Read(array, 0, array.Length);
+            ReadExactly(stream, array);
             stream.Seek(0L, SeekOrigin.Begin);
             //FileMode.Create 会截断已存在文件，避免新内容比旧内容短时尾部残留旧字节
             using var fileStream = new FileStream(filePath, FileMode.Create);
@@ -167,13 +167,43 @@ namespace Azrng.Core.Extension
                 return false;
 
             var array = new byte[stream.Length];
-            _ = await stream.ReadAsync(array).ConfigureAwait(false);
+            await ReadExactlyAsync(stream, array).ConfigureAwait(false);
             stream.Seek(0L, SeekOrigin.Begin);
             //FileMode.Create 会截断已存在文件，避免新内容比旧内容短时尾部残留旧字节
             await using var fileStream = new FileStream(filePath, FileMode.Create);
             await using var binaryWriter = new BinaryWriter(fileStream);
             binaryWriter.Write(array);
             return true;
+        }
+
+        /// <summary>
+        /// 循环读满缓冲区：Stream.Read 允许部分读，网络流等场景单次 Read 可能截断
+        /// </summary>
+        private static void ReadExactly(Stream stream, byte[] buffer)
+        {
+            var offset = 0;
+            while (offset < buffer.Length)
+            {
+                var read = stream.Read(buffer, offset, buffer.Length - offset);
+                if (read <= 0)
+                    throw new EndOfStreamException($"流在读取 {offset}/{buffer.Length} 字节后提前结束。");
+                offset += read;
+            }
+        }
+
+        /// <summary>
+        /// 循环读满缓冲区：Stream.Read 允许部分读，网络流等场景单次 Read 可能截断
+        /// </summary>
+        private static async Task ReadExactlyAsync(Stream stream, byte[] buffer)
+        {
+            var offset = 0;
+            while (offset < buffer.Length)
+            {
+                var read = await stream.ReadAsync(buffer, offset, buffer.Length - offset);
+                if (read <= 0)
+                    throw new EndOfStreamException($"流在读取 {offset}/{buffer.Length} 字节后提前结束。");
+                offset += read;
+            }
         }
     }
 }

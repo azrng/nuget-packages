@@ -192,6 +192,29 @@ public class ActionHandleTaskTests
         result.Should().Be(10);
     }
 
+    [Fact]
+    public async Task WhenCatch_ShouldNotSwallowCancellation_WhenCatchTypeIsException()
+    {
+        // 请求取消不应被 HandleAsDefaultWhenException 吞成默认值
+        var task = Task.FromCanceled<int>(new CancellationToken(true));
+
+        Func<Task<int>> act = async () => await task.HandleAsDefaultWhenException();
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task WhenCatch_ShouldStillHandleCancellation_WhenExplicitlyDeclared()
+    {
+        // 显式声明捕获 OperationCanceledException 时行为保持不变
+        var task = Task.FromCanceled<int>(new CancellationToken(true));
+
+        var result = await task.Handle()
+                               .WhenCatch<OperationCanceledException>(() => -1);
+
+        result.Should().Be(-1);
+    }
+
     #endregion
 
     #region Helpers
