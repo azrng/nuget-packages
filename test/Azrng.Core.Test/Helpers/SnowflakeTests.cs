@@ -191,4 +191,38 @@ public class SnowflakeTests
 
         action.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    #region 默认 WorkerId 派生
+
+    [Fact]
+    public void DeriveDefaultWorkerId_ShouldBeStableWithinProcess()
+    {
+        var first = Snowflake.DeriveDefaultWorkerId();
+        var second = Snowflake.DeriveDefaultWorkerId();
+
+        first.Should().Be(second);
+    }
+
+    [Fact]
+    public void DeriveDefaultWorkerId_ShouldBeInRange()
+    {
+        Snowflake.DeriveDefaultWorkerId().Should().BeInRange(0, 1023);
+    }
+
+    [Fact]
+    public void DeriveDefaultWorkerId_ShouldUseProcessIdInLowBits()
+    {
+        var expected = System.Diagnostics.Process.GetCurrentProcess().Id & 0x1F;
+
+        (Snowflake.DeriveDefaultWorkerId() & 0x1F).Should().Be(expected);
+    }
+
+    [Fact]
+    public void StableHash_ShouldBeDeterministicPerInput()
+    {
+        Snowflake.StableHash("192.168.1.10").Should().Be(Snowflake.StableHash("192.168.1.10"));
+        Snowflake.StableHash("192.168.1.10").Should().NotBe(Snowflake.StableHash("192.168.1.11"));
+    }
+
+    #endregion
 }

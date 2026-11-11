@@ -401,14 +401,14 @@ namespace Azrng.Core.Extension
                 result += new string('=', 4 - mod4);
             }
 
-            var bytes = Convert.FromBase64String(result);
-
             try
             {
+                var bytes = Convert.FromBase64String(result);
                 return encodeType.GetString(bytes);
             }
-            catch
+            catch (FormatException)
             {
+                //非法 base64 输入按容错契约返回空串
                 return string.Empty;
             }
         }

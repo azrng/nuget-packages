@@ -207,6 +207,24 @@ public class DictionaryExtensionTests
     }
 
     [Fact]
+    public void GetColumnValueByName_Generic_ShouldReturnGuid_WhenValueIsGuidString()
+    {
+        var guid = Guid.NewGuid();
+        var dict = new Dictionary<string, object?> { { "Id", guid.ToString() } };
+
+        dict.GetColumnValueByName<Guid?>("Id").Should().Be(guid);
+    }
+
+    [Fact]
+    public void GetColumnValueByName_Generic_ShouldReturnGuid_WhenValueIsGuidStringAndTypeIsNonNullable()
+    {
+        var guid = Guid.NewGuid();
+        var dict = new Dictionary<string, object?> { { "Id", guid.ToString() } };
+
+        dict.GetColumnValueByName<Guid>("Id").Should().Be(guid);
+    }
+
+    [Fact]
     public void GetColumnValueByName_Generic_ShouldReturnDefault_WhenDictIsNull()
     {
         Dictionary<string, object?>? dict = null;

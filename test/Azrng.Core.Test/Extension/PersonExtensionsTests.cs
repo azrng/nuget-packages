@@ -44,21 +44,23 @@ public class PersonExtensionsTests
     [Theory]
     [InlineData("11010119900307001X", 1)]
     [InlineData("11010119900307003X", 1)]
-    [InlineData("11010119900307002X", 0)]
-    [InlineData("11010119900307004X", 0)]
+    [InlineData("11010119900307002X", 2)]
+    [InlineData("11010119900307004X", 2)]
     [InlineData("110101199003071234", 1)]
-    [InlineData("110101199003071224", 0)]
+    [InlineData("110101199003071224", 2)]
     public void GetSexByIdCard_18DigitId_ReturnsSexBasedOnSequenceOddEven(string input, int expected)
     {
         input.GetSexByIdCard().Should().Be(expected);
     }
 
     [Theory]
-    [InlineData("110101900307001")]
-    [InlineData("110101850101001")]
-    public void GetSexByIdCard_15DigitId_ReturnsZero(string input)
+    [InlineData("110101900307001", 1)]
+    [InlineData("110101900307002", 2)]
+    [InlineData("110101850101003", 1)]
+    [InlineData("110101850101004", 2)]
+    public void GetSexByIdCard_15DigitId_ReturnsSexFromLastDigit(string input, int expected)
     {
-        input.GetSexByIdCard().Should().Be(0);
+        input.GetSexByIdCard().Should().Be(expected);
     }
 
     [Theory]

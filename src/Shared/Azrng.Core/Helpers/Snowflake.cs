@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.Security.Cryptography;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace Azrng.Core.Helpers
@@ -15,17 +17,13 @@ namespace Azrng.Core.Helpers
         格式：1bit保留 + 41bit时间戳 + 10bit机器 + 12bit序列号
         第一位不使用，主要是为了避免部分场景变成负数；
         41位时间戳，也就是2的41次方，毫秒为单位，足够保存69年。这里一般存储1970年以来的毫秒数，建议各个系统根据需要自定义这个开始日期；
-        10位机器码，理论上可以表示1024台机器，也可以拆分几位表示机房几位表示机器。这里默认采用本机IPv4地址最后两段以及进程Id一起作为机器码，确保机房内部不同机器，
-        以及相同机器上的不同进程，拥有不同的机器码；
+        10位机器码，理论上可以表示1024台机器。默认自动派生：高5位取本机标识（非回环IPv4地址，无则机器名）的稳定哈希，
+        低5位取进程Id，保证机房内不同机器、相同机器上的不同进程派生出不同的机器码；
+        分布式部署建议通过 ConfigureWorkerId 显式配置，彻底避免自动派生的哈希碰撞。
         12位序列号，表示范围0~4095，一直递增，即使毫秒数加一，这里也不会归零，避免被恶意用户轻易猜测得到前后订单号；
          */
 
         #region 属性
-
-        /// <summary>
-        /// 随机数生成
-        /// </summary>
-        private static readonly RandomNumberGenerator Rnd = RandomNumberGenerator.Create();
 
         private const int WorkerIdBits = 10;
         private const int SequenceBits = 12;
@@ -105,13 +103,10 @@ namespace Azrng.Core.Helpers
         {
             lock (SyncRoot)
             {
-                // 初始化WorkerId，取5位实例加上5位进程，确保同一台机器的WorkerId不同
+                // 初始化WorkerId：未显式配置时按机器标识+进程Id派生，避免多机/多进程默认值撞号产生重复雪花Id
                 if (!_workerId.HasValue)
                 {
-                    var nodeId = Next(1, 1024);
-                    var pid = Process.GetCurrentProcess().Id;
-                    var tid = Thread.CurrentThread.ManagedThreadId;
-                    _workerId = (nodeId & 0x1F) << 5 | (pid ^ tid) & 0x1F;
+                    _workerId = DeriveDefaultWorkerId();
                 }
 
                 // 记录此时距离起点的毫秒数以及开机嘀嗒数
@@ -233,26 +228,57 @@ namespace Azrng.Core.Helpers
         }
 
         /// <summary>
-        /// 返回一个指定范围内的随机数
+        /// 默认 WorkerId 派生：高5位取机器标识的稳定哈希，低5位取进程Id。
         /// </summary>
-        /// <remarks>调用平均耗时37.76ns，其中GC耗时77.56%</remarks>
-        /// <param name="min">返回的随机数的下界（随机数可取该下界值）</param>
-        /// <param name="max">返回的随机数的上界（随机数不能取该上界值）</param>
-        /// <returns></returns>
-        private static int Next(int min, int max)
+        internal static int DeriveDefaultWorkerId()
         {
-            if (max <= min)
-                throw new ArgumentOutOfRangeException(nameof(max));
-            var _buf = new byte[4];
-            Rnd.GetBytes(_buf);
-            var int32 = BitConverter.ToInt32(_buf, 0);
-            if (min == int.MinValue && max == int.MaxValue)
-                return int32;
-            if (min == 0 && max == int.MaxValue)
-                return Math.Abs(int32);
-            return min == int.MinValue && max == 0
-                ? -Math.Abs(int32)
-                : (int)(((max - min) * (uint)int32 >> 32) + min);
+            var machinePart = GetMachineIdentityHash() & 0x1F;
+            var processPart = Process.GetCurrentProcess().Id & 0x1F;
+            return machinePart << 5 | processPart;
+        }
+
+        /// <summary>
+        /// 机器标识哈希：优先取非回环 IPv4 地址，DNS 不可用或无 IPv4 时退回机器名。
+        /// </summary>
+        private static int GetMachineIdentityHash()
+        {
+            try
+            {
+                var ipv4 = Dns.GetHostEntry(Dns.GetHostName())
+                    .AddressList
+                    .Where(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a))
+                    .Select(a => a.ToString())
+                    .OrderBy(address => address, StringComparer.Ordinal)
+                    .FirstOrDefault();
+                if (ipv4 != null)
+                {
+                    return StableHash(ipv4);
+                }
+            }
+            catch (SocketException)
+            {
+                // DNS 解析不可用时退回机器名哈希
+            }
+
+            return StableHash(Environment.MachineName);
+        }
+
+        /// <summary>
+        /// FNV-1a 稳定哈希：string.GetHashCode 跨进程随机化，不能用于跨进程一致的身份标识。
+        /// </summary>
+        internal static int StableHash(string value)
+        {
+            unchecked
+            {
+                var hash = 2166136261;
+                foreach (var c in value)
+                {
+                    hash ^= c;
+                    hash *= 16777619;
+                }
+
+                return (int)hash;
+            }
         }
 
         #endregion

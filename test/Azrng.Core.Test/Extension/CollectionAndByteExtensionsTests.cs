@@ -58,6 +58,26 @@ public class CollectionAndByteExtensionsTests
     }
 
     [Fact]
+    public void FileTypeHelpers_ShouldReturnNull_WhenFileMagicIsUnknown()
+    {
+        var unknownBytes = new byte[] { 1, 2, 3, 4 };
+
+        unknownBytes.GetFileSuffix().Should().BeNull();
+        unknownBytes.GetContentType().Should().BeNull();
+        unknownBytes.GetRandomFileName().Should().BeNull();
+    }
+
+    [Fact]
+    public void FileTypeHelpers_ShouldReturnNull_WhenBytesTooShort()
+    {
+        var shortBytes = new byte[] { 0x89 };
+
+        shortBytes.GetFileSuffix().Should().BeNull();
+        shortBytes.GetContentType().Should().BeNull();
+        shortBytes.GetRandomFileName().Should().BeNull();
+    }
+
+    [Fact]
     public void ToFileByBytes_ShouldPersistBytesToDisk()
     {
         var bytes = new byte[] { 10, 20, 30 };
@@ -68,6 +88,28 @@ public class CollectionAndByteExtensionsTests
             bytes.ToFileByBytes(filePath);
 
             File.ReadAllBytes(filePath).Should().Equal(bytes);
+        }
+        finally
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+    }
+
+    [Fact]
+    public void ToFileByBytes_ShouldTruncateExistingFile_WhenNewContentIsShorter()
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.bin");
+
+        try
+        {
+            File.WriteAllBytes(filePath, new byte[100]);
+
+            new byte[] { 1, 2, 3 }.ToFileByBytes(filePath);
+
+            File.ReadAllBytes(filePath).Should().Equal(1, 2, 3);
         }
         finally
         {

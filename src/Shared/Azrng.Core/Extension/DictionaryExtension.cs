@@ -86,9 +86,12 @@ namespace Azrng.Core.Extension
             {
                 return (T)Convert.ChangeType(columnInfo, typeof(double));
             }
-            else if (typeof(T) == typeof(Guid?))
+            else if (typeof(T) == typeof(Guid?) || typeof(T) == typeof(Guid))
             {
-                return (T)Convert.ChangeType(columnInfo, typeof(Guid));
+                //Guid 未实现 IConvertible，字符串值 Convert.ChangeType 必抛 InvalidCastException，需显式解析
+                return columnInfo is Guid guidValue
+                    ? (T)(object)guidValue
+                    : (T)(object)Guid.Parse(columnInfo.ToString()!);
             }
             else if (typeof(T) == typeof(bool?))
             {

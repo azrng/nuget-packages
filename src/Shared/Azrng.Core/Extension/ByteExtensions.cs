@@ -81,8 +81,11 @@ namespace Azrng.Core.Extension
             var fileCode = GetFileCode(bytes);
             if(fileCode is null)
                 return null;
-            var key = CommonCoreConst.FileFormats.First(i => i.Value.Equals(fileCode)).Key;
-            return !CommonCoreConst.ContentTypeExtensionsMapping.ContainsKey(key) ? null : key;
+            //未登记的文件头返回 null，不抛异常
+            var match = CommonCoreConst.FileFormats.FirstOrDefault(i => i.Value.Equals(fileCode));
+            return match.Key is null || !CommonCoreConst.ContentTypeExtensionsMapping.ContainsKey(match.Key)
+                ? null
+                : match.Key;
         }
 
         /// <summary>
@@ -93,24 +96,28 @@ namespace Azrng.Core.Extension
         public static string? GetContentType(this byte[] bytes)
         {
             var fileCode = GetFileCode(bytes);
-            var extensions = CommonCoreConst.FileFormats.First((i) => i.Value.Equals(fileCode)).Key;
-            return !CommonCoreConst.ContentTypeExtensionsMapping.ContainsKey(extensions)
-                ? null
-                : CommonCoreConst.ContentTypeExtensionsMapping.Where(x => x.Key == extensions)
-                    .Select(x => x.Value)
-                    .FirstOrDefault();
+            if (fileCode is null)
+                return null;
+            var match = CommonCoreConst.FileFormats.FirstOrDefault(i => i.Value.Equals(fileCode));
+            if (match.Key is null)
+                return null;
+            return CommonCoreConst.ContentTypeExtensionsMapping.TryGetValue(match.Key, out var contentType)
+                ? contentType
+                : null;
         }
 
         /// <summary>
         /// 获取随机文件名
         /// </summary>
         /// <param name="data">字节数组</param>
-        /// <returns></returns>
-        public static string GetRandomFileName(this byte[] data)
+        /// <returns>无法识别文件头时返回 null</returns>
+        public static string? GetRandomFileName(this byte[] data)
         {
             var fileCode = GetFileCode(data);
-            return string.Concat(Guid.NewGuid().ToString("n"),
-                CommonCoreConst.FileFormats.First(i => i.Value.Equals(fileCode)).Key);
+            if (fileCode is null)
+                return null;
+            var match = CommonCoreConst.FileFormats.FirstOrDefault(i => i.Value.Equals(fileCode));
+            return match.Key is null ? null : string.Concat(Guid.NewGuid().ToString("n"), match.Key);
         }
 
 
@@ -121,7 +128,8 @@ namespace Azrng.Core.Extension
         /// <param name="fileName"></param>
         public static void ToFileByBytes(this byte[] bytes, string fileName)
         {
-            using var fileStream = new FileStream(fileName, FileMode.OpenOrCreate);
+            //FileMode.Create 会截断已存在文件，避免新内容比旧内容短时尾部残留旧字节
+            using var fileStream = new FileStream(fileName, FileMode.Create);
             using var binaryWriter = new BinaryWriter(fileStream);
             binaryWriter.Write(bytes);
         }

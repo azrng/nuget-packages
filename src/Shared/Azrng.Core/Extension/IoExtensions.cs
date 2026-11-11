@@ -149,7 +149,8 @@ namespace Azrng.Core.Extension
             var array = new byte[stream.Length];
             _ = stream.Read(array, 0, array.Length);
             stream.Seek(0L, SeekOrigin.Begin);
-            using var fileStream = new FileStream(filePath, FileMode.OpenOrCreate);
+            //FileMode.Create 会截断已存在文件，避免新内容比旧内容短时尾部残留旧字节
+            using var fileStream = new FileStream(filePath, FileMode.Create);
             using var binaryWriter = new BinaryWriter(fileStream);
             binaryWriter.Write(array);
             return true;
@@ -168,7 +169,8 @@ namespace Azrng.Core.Extension
             var array = new byte[stream.Length];
             _ = await stream.ReadAsync(array).ConfigureAwait(false);
             stream.Seek(0L, SeekOrigin.Begin);
-            await using var fileStream = new FileStream(filePath, FileMode.OpenOrCreate);
+            //FileMode.Create 会截断已存在文件，避免新内容比旧内容短时尾部残留旧字节
+            await using var fileStream = new FileStream(filePath, FileMode.Create);
             await using var binaryWriter = new BinaryWriter(fileStream);
             binaryWriter.Write(array);
             return true;

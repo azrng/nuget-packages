@@ -17,7 +17,7 @@
 | T165 | AI 规则按仓库现状清理瘦身 | DONE | 2026-11-03 |
 | T164 | 按 LogAnalyzer v3 参考升级 AI 规则 | DONE | 2026-11-03 |
 | T163 | Azrng.S3Store 1.2.0 bug 修复与四项 API 扩展 | DONE | 2026-11-03 |
-| T162 | Azrng.S3Store 1.1.0 补齐对象级 API 缺口（6 项） | DONE | 2026-10-29 |
 | T166 | Tika 各包职责说明文档 | DONE | 2026-11-04 |
+| T167 | Azrng.Core/AspNetCore.Core 审查问题批次1修复 | DONE | 2026-11-11 |
 
 文件结束。

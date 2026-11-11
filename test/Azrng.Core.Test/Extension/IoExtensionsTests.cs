@@ -352,6 +352,18 @@ public class IoExtensionsTests : IDisposable
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public void ToFile_ShouldTruncateExistingFile_WhenNewContentIsShorter()
+    {
+        var filePath = CreateTempFile(new byte[100]);
+        using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+
+        var result = stream.ToFile(filePath);
+
+        result.Should().BeTrue();
+        File.ReadAllBytes(filePath).Should().Equal(1, 2, 3);
+    }
+
     #endregion
 
     #region ToFileAsync(Stream, string)
@@ -390,6 +402,18 @@ public class IoExtensionsTests : IDisposable
         var result = await stream.ToFileAsync(filePath);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ToFileAsync_ShouldTruncateExistingFile_WhenNewContentIsShorter()
+    {
+        var filePath = CreateTempFile(new byte[100]);
+        using var stream = new MemoryStream(new byte[] { 4, 5, 6 });
+
+        var result = await stream.ToFileAsync(filePath);
+
+        result.Should().BeTrue();
+        File.ReadAllBytes(filePath).Should().Equal(4, 5, 6);
     }
 
     #endregion

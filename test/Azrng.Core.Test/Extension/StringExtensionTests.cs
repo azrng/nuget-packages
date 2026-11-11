@@ -519,6 +519,12 @@ public class StringExtensionTests
         base64WithSpaces.FromBase64Decode().Should().Be("test+data");
     }
 
+    [Fact]
+    public void FromBase64Decode_InvalidBase64_ShouldReturnEmpty()
+    {
+        "not-base64!!".FromBase64Decode().Should().BeEmpty();
+    }
+
     #endregion
 
     #region ToVersionNumber
