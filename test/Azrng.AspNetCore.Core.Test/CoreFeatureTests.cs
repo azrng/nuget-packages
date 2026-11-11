@@ -378,6 +378,124 @@ public class CoreFeatureTests
     }
 
     [Fact]
+    public async Task AuditLogMiddleware_MasksSensitiveHeaders()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        context.Request.Headers["Authorization"] = "Bearer secret-token";
+        context.Request.Headers["Cookie"] = "session=abc";
+        context.Request.Headers["X-Custom"] = "plain-value";
+        var middleware = new AuditLogMiddleware(_ => Task.CompletedTask);
+
+        await middleware.Invoke(context);
+        await responseFeature.InvokeCompletedAsync();
+
+        logger.Log.Should().NotBeNull();
+        logger.Log!.RawData.Should().Contain("******");
+        logger.Log.RawData.Should().NotContain("secret-token");
+        logger.Log.RawData.Should().NotContain("session=abc");
+        logger.Log.RawData.Should().Contain("plain-value");
+    }
+
+    [Fact]
+    public async Task AuditLogMiddleware_TruncatesLargeResponseBodyInLogButClientGetsFullBody()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        // DefaultHttpContext 下 Response.Body 默认为 Stream.Null，需显式设置可读流以验证客户端实际收到完整内容
+        var clientBody = new MemoryStream();
+        context.Response.Body = clientBody;
+        var largeBody = new string('a', 10_000);
+        var options = new AuditLogOptions { MaxResponseBodySize = 100 };
+        var middleware = new AuditLogMiddleware(next => next.Response.WriteAsync(largeBody), Options.Create(options));
+
+        await middleware.Invoke(context);
+
+        // 客户端仍收到完整响应体
+        clientBody.Position = 0;
+        using var reader = new StreamReader(clientBody);
+        (await reader.ReadToEndAsync()).Should().Be(largeBody);
+
+        await responseFeature.InvokeCompletedAsync();
+        logger.Log.Should().NotBeNull();
+        logger.Log!.ResponseBody.Should().Contain("响应体过大").And.Contain(new string('a', 100));
+    }
+
+    [Fact]
+    public async Task AuditLogMiddleware_TruncatesLargeRequestBodyInLog()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/orders";
+        context.Request.ContentType = "application/json";
+        var largeRequest = "{\"data\":\"" + new string('b', 500) + "\"}";
+        context.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(largeRequest));
+        var options = new AuditLogOptions { MaxRequestBodySize = 50 };
+        var middleware = new AuditLogMiddleware(_ => Task.CompletedTask, Options.Create(options));
+
+        await middleware.Invoke(context);
+        await responseFeature.InvokeCompletedAsync();
+
+        logger.Log.Should().NotBeNull();
+        logger.Log!.RequestBody.Should().Contain("请求体过大");
+    }
+
+    [Fact]
+    public async Task AuditLogMiddleware_SkipsMultipartRequestBody()
+    {
+        var responseFeature = new CapturingResponseFeature();
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddLogging();
+        var logger = new CapturingLoggerService();
+        services.AddSingleton<ILoggerService>(logger);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = "/api/upload";
+        context.Request.ContentType = "multipart/form-data; boundary=----boundary";
+        context.Request.Body = new MemoryStream(new byte[2048]);
+        var middleware = new AuditLogMiddleware(_ => Task.CompletedTask);
+
+        await middleware.Invoke(context);
+        await responseFeature.InvokeCompletedAsync();
+
+        logger.Log.Should().NotBeNull();
+        logger.Log!.RequestBody.Should().Contain("二进制内容");
+    }
+
+    [Fact]
     public void RegisterBusinessServices_RegistersConcreteTypeWhenOnlyLifetimeMarkerIsImplemented()
     {
         var services = new ServiceCollection();

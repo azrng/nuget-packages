@@ -23,6 +23,28 @@ public class AuditLogOptions
     public int MaxResponseBodySize { get; set; } = 1024 * 1024;
 
     /// <summary>
+    /// 最大请求体记录长度（字符），超过将截断
+    /// 默认 1MB
+    /// </summary>
+    public int MaxRequestBodySize { get; set; } = 1024 * 1024;
+
+    /// <summary>
+    /// 敏感请求头名称（不区分大小写），命中的头值会被替换为掩码，避免凭证进入日志
+    /// </summary>
+    public List<string> SensitiveHeaders { get; set; } = new()
+    {
+        "Authorization",
+        "Cookie",
+        "Set-Cookie",
+        "Proxy-Authorization"
+    };
+
+    /// <summary>
+    /// 敏感头替换的掩码文本
+    /// </summary>
+    public string SensitiveHeaderMask { get; set; } = "******";
+
+    /// <summary>
     /// 是否只记录 /api/ 开头的请求
     /// </summary>
     public bool LogOnlyApiRoutes { get; set; } = true;

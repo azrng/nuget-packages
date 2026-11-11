@@ -413,6 +413,12 @@ public void Configure(WebApplication app, IWebHostEnvironment env)
 如果没有注册 `ILoggerService`，中间件会使用默认日志服务写入 `ILogger`。默认日志服务优先使用容器中的
 `IJsonSerializer`；未引用或未注册 `Azrng.Core.Json` 时，会自动使用 `System.Text.Json` 作为兜底序列化器。
 
+审计日志内置以下安全与内存保护（可通过 `AuditLogOptions` 调整）：
+
+- 敏感请求头脱敏：`Authorization`、`Cookie`、`Set-Cookie`、`Proxy-Authorization` 的值默认以 `******` 记录，名单由 `SensitiveHeaders` 配置，掩码文本由 `SensitiveHeaderMask` 配置
+- 响应体限量捕获：只捕获前 `MaxResponseBodySize`（默认 1MB）字节用于日志，客户端仍收到完整响应，大响应不再整体驻留内存
+- 请求体限量读取：超过 `MaxRequestBodySize`（默认 1MB）字符的请求体只记录前缀并标注截断；`multipart/` 与 `application/octet-stream` 请求直接跳过正文记录
+
 ##### HTTP请求日志示例
 
 示例如下
@@ -603,6 +609,7 @@ ForbiddenException
 ### 版本更新记录
 
 * 1.5.0
+  * 审计日志安全与内存加固：请求头全量记录改为敏感头脱敏（`SensitiveHeaders` 名单 + `SensitiveHeaderMask` 掩码，默认覆盖 `Authorization`/`Cookie`/`Set-Cookie`/`Proxy-Authorization`）；响应体由整包内存缓冲改为限量捕获（`MaxResponseBodySize`，客户端不受影响）；新增请求体上限 `MaxRequestBodySize`（默认 1MB），`multipart/` 与 `application/octet-stream` 请求体不再进日志（行为变更：请求体日志默认新增截断与跳过）
   * `RequestIdMiddleware` 加固：入站 `X-RequestId` 增加长度上限与字符白名单校验（防日志注入与伪造关联）；无合法入站头时沿用宿主 `TraceIdentifier`，与诊断 traceId 体系对齐（行为变更：不再重新生成 N 格式 GUID）；多值头取第一个值；移除 .NET 3.0 起已失效的 `IHttpRequestIdentifierFeature` 死代码
   * 新增反向代理真实客户端 IP 支持：`UseForwardedHeaders()` 转发头中间件封装（可信代理列表 + 防伪造）与 `HttpContext.GetClientIp()` 扩展
   * **破坏性变更**：移除 `AddCorsPolicy()`，该方法与框架原生 `services.AddCors(o => o.AddPolicy(name, builder => ...))` 完全等价；高级场景请直接使用原生写法，`AddAnyCors()` 与 `AddCorsByOrigins()` 保持不变
