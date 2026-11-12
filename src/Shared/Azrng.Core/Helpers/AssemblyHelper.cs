@@ -123,7 +123,17 @@ namespace Azrng.Core.Helpers
                     if (loadedAssemblies.Contains(reference.FullName))
                         continue;
 
-                    var assembly = Assembly.Load(reference);
+                    // 引用链中任一程序集解析失败不应中断整体枚举，跳过并继续
+                    Assembly assembly;
+                    try
+                    {
+                        assembly = Assembly.Load(reference);
+                    }
+                    catch (Exception ex) when (ex is FileNotFoundException or BadImageFormatException or FileLoadException)
+                    {
+                        continue;
+                    }
+
                     if (skipSystemAssemblies && assembly.IsSystemAssembly())
                     {
                         continue;
@@ -203,7 +213,11 @@ namespace Azrng.Core.Helpers
         /// <returns></returns>
         public static Type GetType(string assemblyName, string typeFullName)
         {
-            return GetAssembly(assemblyName).GetType(typeFullName)!;
+            var type = GetAssembly(assemblyName).GetType(typeFullName);
+            if (type == null)
+                throw new ArgumentException($"程序集 {assemblyName} 中未找到类型 {typeFullName}。");
+
+            return type;
         }
 
         /// <summary>
@@ -214,6 +228,9 @@ namespace Azrng.Core.Helpers
         public static Type GetStringType(string str)
         {
             var typeDefinitions = str.Split(';');
+            if (typeDefinitions.Length != 2 || typeDefinitions.Any(string.IsNullOrWhiteSpace))
+                throw new ArgumentException($"输入格式应为：程序集;类型全名，实际输入：{str}", nameof(str));
+
             return GetType(typeDefinitions[0], typeDefinitions[1]);
         }
 #endif

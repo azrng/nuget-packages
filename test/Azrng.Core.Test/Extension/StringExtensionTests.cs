@@ -21,7 +21,10 @@ public class StringExtensionTests
     [InlineData("", false)]
     [InlineData(null, false)]
     [InlineData("  ", false)]
-    [InlineData(" true ", false)]
+    [InlineData(" true ", true)]
+    [InlineData("false", false)]
+    [InlineData("TRUE", true)]
+    [InlineData("no", false)]
     public void IsBool_ShouldReturnExpected(string? input, bool expected)
     {
         input.IsBool().Should().Be(expected);
@@ -251,9 +254,10 @@ public class StringExtensionTests
     }
 
     [Fact]
-    public void ToBytesFromHexString_Empty_ShouldReturnSingleByte()
+    public void ToBytesFromHexString_Empty_ShouldReturnEmptyArray()
     {
-        "".ToBytesFromHexString().Should().HaveCount(1);
+        // 空串应返回空数组而非冒充非空的单字节
+        "".ToBytesFromHexString().Should().BeEmpty();
     }
 
     #endregion

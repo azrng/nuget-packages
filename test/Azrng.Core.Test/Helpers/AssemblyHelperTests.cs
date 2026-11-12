@@ -183,11 +183,13 @@ public class AssemblyHelperTests
     }
 
     [Fact]
-    public void GetType_InvalidTypeName_ShouldReturnNull()
+    public void GetType_InvalidTypeName_ShouldThrowWithClearMessage()
     {
-        var result = AssemblyHelper.GetType("System.Runtime", "Non.Existent.Type");
+        // 原实现返回被 `!` 掩盖的 null，NRE 延迟到调用方；修正为抛带类型名的明确异常
+        var action = () => AssemblyHelper.GetType("System.Runtime", "Non.Existent.Type");
 
-        result.Should().BeNull();
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*Non.Existent.Type*");
     }
 #endif
 
@@ -208,9 +210,11 @@ public class AssemblyHelperTests
     [Fact]
     public void GetStringType_InvalidFormat_ShouldThrow()
     {
+        // 原实现在无分号时 IndexOutOfRangeException，修正为明确 ArgumentException
         var action = () => AssemblyHelper.GetStringType("InvalidFormat");
 
-        action.Should().Throw<IndexOutOfRangeException>();
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*程序集;类型全名*");
     }
 #endif
 

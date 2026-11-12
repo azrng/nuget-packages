@@ -43,12 +43,10 @@ namespace Azrng.Core.Helpers
 
             // 求总页数
             var pageCount = (size + (pageSize - 1)) / pageSize;
-            ConsoleHelper.WriteInfoLine($"当前数据 每页：{pageSize}条  共：{pageCount}页");
 
             for (var i = 1; i <= pageCount; i++)
             {
                 var currSize = collection.Skip(pageSize * (i - 1)).Take(pageSize).ToList();
-                ConsoleHelper.WriteInfoLine($"当前是第{i}页 本页面数据条数：{currSize.Count}");
                 total += await processFunc(currSize, i);
             }
 
@@ -78,7 +76,6 @@ namespace Azrng.Core.Helpers
 
                 total += processFunc(currentBatchSize);
 
-                ConsoleHelper.WriteInfoLine($"当前批次：{batch + 1}/{totalBatches}，插入数量：{currentBatchSize}");
             }
 
             return total;
@@ -107,7 +104,6 @@ namespace Azrng.Core.Helpers
 
                 total += await processFunc(currentBatchSize);
 
-                ConsoleHelper.WriteInfoLine($"当前批次：{batch + 1}/{totalBatches}，插入数量：{currentBatchSize}");
             }
 
             return total;

@@ -147,7 +147,6 @@ namespace Azrng.Core.Helpers
                     csharpType = isNullable ? "short?" : "short";
                     break;
                 case "int4":
-                case "double precision":
                 case "integer":
                     csharpType = isNullable ? "int?" : "int";
                     break;
@@ -160,34 +159,38 @@ namespace Azrng.Core.Helpers
                     csharpType = isNullable ? "float?" : "float";
                     break;
                 case "float8":
+                case "double precision":
                     csharpType = isNullable ? "double?" : "double";
                     break;
                 case "numeric":
                 case "decimal":
-                case "path":
-                case "point":
-                case "interval":
-                case "lseg":
-                case "macaddr":
                 case "money":
-                case "polygon":
                     csharpType = isNullable ? "decimal?" : "decimal";
                     break;
                 case "boolean":
                 case "bool":
-                case "box":
-                case "bytea":
                     csharpType = isNullable ? "bool?" : "bool";
+                    break;
+                case "bytea":
+                    //byte[]：与 SqlServer 分支的类型名约定保持一致
+                    csharpType = "byte[]";
                     break;
                 case "varchar":
                 case "character varying":
                 case "geometry":
+                case "path":
+                case "point":
+                case "lseg":
+                case "box":
+                case "circle":
+                case "polygon":
                 case "name":
                 case "text":
                 case "char":
                 case "character":
                 case "cidr":
-                case "circle":
+                case "macaddr":
+                case "interval":
                 case "tsquery":
                 case "tsvector":
                 case "xml":

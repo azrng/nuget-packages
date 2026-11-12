@@ -320,7 +320,6 @@ public class DbTypeMapHelperTests
 
     [Theory]
     [InlineData("int4")]
-    [InlineData("double precision")]
     [InlineData("integer")]
     public void PostgreMapCsharpType_IntTypes_NonNullable_ReturnsInt(string dbType)
     {
@@ -329,7 +328,6 @@ public class DbTypeMapHelperTests
 
     [Theory]
     [InlineData("int4")]
-    [InlineData("double precision")]
     [InlineData("integer")]
     public void PostgreMapCsharpType_IntTypes_Nullable_ReturnsIntNullable(string dbType)
     {
@@ -368,28 +366,26 @@ public class DbTypeMapHelperTests
         DbTypeMapHelper.PostgreMapCsharpType(dbType, true).Should().Be("float?");
     }
 
-    [Fact]
-    public void PostgreMapCsharpType_Float8_NonNullable_ReturnsDouble()
+    [Theory]
+    [InlineData("float8")]
+    [InlineData("double precision")]
+    public void PostgreMapCsharpType_Float8_NonNullable_ReturnsDouble(string dbType)
     {
-        DbTypeMapHelper.PostgreMapCsharpType("float8", false).Should().Be("double");
+        DbTypeMapHelper.PostgreMapCsharpType(dbType, false).Should().Be("double");
     }
 
-    [Fact]
-    public void PostgreMapCsharpType_Float8_Nullable_ReturnsDoubleNullable()
+    [Theory]
+    [InlineData("float8")]
+    [InlineData("double precision")]
+    public void PostgreMapCsharpType_Float8_Nullable_ReturnsDoubleNullable(string dbType)
     {
-        DbTypeMapHelper.PostgreMapCsharpType("float8", true).Should().Be("double?");
+        DbTypeMapHelper.PostgreMapCsharpType(dbType, true).Should().Be("double?");
     }
 
     [Theory]
     [InlineData("numeric")]
     [InlineData("decimal")]
-    [InlineData("path")]
-    [InlineData("point")]
-    [InlineData("interval")]
-    [InlineData("lseg")]
-    [InlineData("macaddr")]
     [InlineData("money")]
-    [InlineData("polygon")]
     public void PostgreMapCsharpType_DecimalTypes_NonNullable_ReturnsDecimal(string dbType)
     {
         DbTypeMapHelper.PostgreMapCsharpType(dbType, false).Should().Be("decimal");
@@ -398,23 +394,22 @@ public class DbTypeMapHelperTests
     [Theory]
     [InlineData("numeric")]
     [InlineData("decimal")]
-    [InlineData("path")]
-    [InlineData("point")]
-    [InlineData("interval")]
-    [InlineData("lseg")]
-    [InlineData("macaddr")]
     [InlineData("money")]
-    [InlineData("polygon")]
     public void PostgreMapCsharpType_DecimalTypes_Nullable_ReturnsDecimalNullable(string dbType)
     {
         DbTypeMapHelper.PostgreMapCsharpType(dbType, true).Should().Be("decimal?");
     }
 
+    [Fact]
+    public void PostgreMapCsharpType_Bytea_ReturnsByteArray()
+    {
+        DbTypeMapHelper.PostgreMapCsharpType("bytea", false).Should().Be("byte[]");
+        DbTypeMapHelper.PostgreMapCsharpType("bytea", true).Should().Be("byte[]");
+    }
+
     [Theory]
     [InlineData("boolean")]
     [InlineData("bool")]
-    [InlineData("box")]
-    [InlineData("bytea")]
     public void PostgreMapCsharpType_BoolTypes_NonNullable_ReturnsBool(string dbType)
     {
         DbTypeMapHelper.PostgreMapCsharpType(dbType, false).Should().Be("bool");
@@ -423,8 +418,6 @@ public class DbTypeMapHelperTests
     [Theory]
     [InlineData("boolean")]
     [InlineData("bool")]
-    [InlineData("box")]
-    [InlineData("bytea")]
     public void PostgreMapCsharpType_BoolTypes_Nullable_ReturnsBoolNullable(string dbType)
     {
         DbTypeMapHelper.PostgreMapCsharpType(dbType, true).Should().Be("bool?");
@@ -440,6 +433,13 @@ public class DbTypeMapHelperTests
     [InlineData("character")]
     [InlineData("cidr")]
     [InlineData("circle")]
+    [InlineData("macaddr")]
+    [InlineData("interval")]
+    [InlineData("path")]
+    [InlineData("point")]
+    [InlineData("lseg")]
+    [InlineData("box")]
+    [InlineData("polygon")]
     [InlineData("tsquery")]
     [InlineData("tsvector")]
     [InlineData("xml")]

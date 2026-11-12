@@ -84,18 +84,14 @@ namespace Azrng.Core.Helpers
                 try
                 {
                     var result = await func.Invoke();
-                    Console.WriteLine("方法执行成功。");
                     return result;
                 }
                 catch (Exception ex) when (attempts < maxAttempts)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
                     await Task.Delay(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    Console.WriteLine("达到最大尝试次数，执行失败。");
                     throw;
                 }
             }
@@ -123,18 +119,14 @@ namespace Azrng.Core.Helpers
                 try
                 {
                     var result = func.Invoke();
-                    Console.WriteLine("方法执行成功。");
                     return result;
                 }
                 catch (Exception ex) when (attempts < maxAttempts)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
                     Thread.Sleep(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    Console.WriteLine("达到最大尝试次数，执行失败。");
                     throw;
                 }
             }
@@ -160,18 +152,14 @@ namespace Azrng.Core.Helpers
                 try
                 {
                     action.Invoke();
-                    Console.WriteLine("方法执行成功。");
                     return;
                 }
                 catch (Exception ex) when (attempts < maxAttempts)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
                     Thread.Sleep(delayInMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"尝试第{attempts}/{maxAttempts}次执行失败: {ex.Message}");
-                    Console.WriteLine("达到最大尝试次数，执行失败。");
                     throw;
                 }
             }

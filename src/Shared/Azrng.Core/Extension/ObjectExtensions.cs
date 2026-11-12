@@ -45,14 +45,9 @@ namespace Azrng.Core.Extension
                 var value = property.GetValue(source);
                 if (value == null)
                     continue;
-                if (paramLower)
-                {
-                    buff.Append(property.Name.ToLowerInvariant() + "=" + value + "&");
-                }
-                else
-                {
-                    buff.Append(property.Name + "=" + value + "&");
-                }
+                //键值均需 URL 编码，否则值含 & = 空格中文时会产出错位的 query 串
+                var key = paramLower ? property.Name.ToLowerInvariant() : property.Name;
+                buff.Append(Uri.EscapeDataString(key) + "=" + Uri.EscapeDataString(value.ToString()!) + "&");
             }
 
             return buff.ToString().Trim('&');

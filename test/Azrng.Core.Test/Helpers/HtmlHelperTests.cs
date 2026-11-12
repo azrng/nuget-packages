@@ -49,28 +49,40 @@ public class HtmlHelperTests
     }
 
     [Fact]
-    public void HtmlToText_ShouldRemoveCommonEntities()
+    public void HtmlToText_ShouldStripMultilineScriptAndStyleContent()
     {
-        HtmlHelper.HtmlToText("a&amp;b").Should().Be("ab");
-        HtmlHelper.HtmlToText("a&lt;b").Should().Be("ab");
-        HtmlHelper.HtmlToText("a&gt;b").Should().Be("ab");
-        HtmlHelper.HtmlToText("a&quot;b").Should().Be("ab");
-        HtmlHelper.HtmlToText("a&nbsp;b").Should().Be("ab");
+        // 多行 script/style 块的 JS/CSS 正文不应残留在文本里（潜在信息泄漏）
+        var html = "<script>\nvar secret = 1;\nalert(secret);\n</script>safe";
+        HtmlHelper.HtmlToText(html).Should().Be("safe");
+
+        var html2 = "<style>\nbody { color: red; }\n</style>content";
+        HtmlHelper.HtmlToText(html2).Should().Be("content");
     }
 
     [Fact]
-    public void HtmlToText_ShouldRemoveNumericEntities()
+    public void HtmlToText_ShouldDecodeCommonEntities()
     {
-        HtmlHelper.HtmlToText("&#65;B").Should().Be("B");
+        // 实体应还原为对应字符（原实现替换为空串，R&amp;D 会丢失 & ）
+        HtmlHelper.HtmlToText("a&amp;b").Should().Be("a&b");
+        HtmlHelper.HtmlToText("a&lt;b").Should().Be("a<b");
+        HtmlHelper.HtmlToText("a&gt;b").Should().Be("a>b");
+        HtmlHelper.HtmlToText("a&quot;b").Should().Be("a\"b");
+        HtmlHelper.HtmlToText("a&nbsp;b").Should().Be("a\u00A0b");
     }
 
     [Fact]
-    public void HtmlToText_ShouldRemoveEntitiesIexclCentPoundCopy()
+    public void HtmlToText_ShouldDecodeNumericEntities()
     {
-        HtmlHelper.HtmlToText("&iexcl;x").Should().Be("x");
-        HtmlHelper.HtmlToText("&cent;x").Should().Be("x");
-        HtmlHelper.HtmlToText("&pound;x").Should().Be("x");
-        HtmlHelper.HtmlToText("&copy;x").Should().Be("x");
+        HtmlHelper.HtmlToText("&#65;B").Should().Be("AB");
+    }
+
+    [Fact]
+    public void HtmlToText_ShouldDecodeNamedEntitiesIexclCentPoundCopy()
+    {
+        HtmlHelper.HtmlToText("&iexcl;x").Should().Be("¡x");
+        HtmlHelper.HtmlToText("&cent;x").Should().Be("¢x");
+        HtmlHelper.HtmlToText("&pound;x").Should().Be("£x");
+        HtmlHelper.HtmlToText("&copy;x").Should().Be("©x");
     }
 
     [Fact]

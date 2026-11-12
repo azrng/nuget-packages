@@ -141,7 +141,7 @@ namespace Azrng.Core.Extension
             var parameter = Expression.Parameter(typeof(T), sortField);
             var property = typeof(T).GetProperty(sortField);
             if (property == null)
-                throw new ArgumentNullException($"无效的属性 {sortField}");
+                throw new ArgumentException($"无效的属性 {sortField}", nameof(sortField));
 
             var memberExpression = Expression.Property(parameter, property);
             var orderByExpression = Expression.Lambda(memberExpression, new ParameterExpression[]
@@ -173,8 +173,10 @@ namespace Azrng.Core.Extension
                                                            SortContent orderContent)
             where TEntity : class
         {
-            if (query == null || orderContent == null || string.IsNullOrWhiteSpace(orderContent.SortName))
+            if (query == null)
                 throw new ArgumentNullException(nameof(query));
+            if (orderContent == null || string.IsNullOrWhiteSpace(orderContent.SortName))
+                throw new ArgumentException("排序参数不能为空。", nameof(orderContent));
 
             //说明：使用包System.Linq.Dynamic.Core  写法 orderby("time asc")
             //return query.OrderBy($"{orderContent.SortName} {orderContent.Sort}");
@@ -200,7 +202,7 @@ namespace Azrng.Core.Extension
             var parameter = Expression.Parameter(typeof(T), sortField);
             var property = typeof(T).GetProperty(sortField);
             if (property == null)
-                throw new ArgumentNullException($"无效的属性 {sortField}");
+                throw new ArgumentException($"无效的属性 {sortField}", nameof(sortField));
 
             var memberExpression = Expression.Property(parameter, property);
             var orderByExpression = Expression.Lambda(memberExpression, new ParameterExpression[]

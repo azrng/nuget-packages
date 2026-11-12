@@ -96,8 +96,12 @@ namespace Azrng.Core.Extension
             where TProp : class
         {
             var e1 = propAccessor.Parameters.Single();
+            var properties = typeof(TProp).GetProperties();
+            if (properties.Length == 0)
+                throw new ArgumentException($"{typeof(TProp).Name} 没有可用于比较的属性。", nameof(other));
+
             BinaryExpression? conditionalExpr = null;
-            foreach (var prop in typeof(TProp).GetProperties())
+            foreach (var prop in properties)
             {
                 BinaryExpression equalExpr;
                 object? otherValue = null;
@@ -106,6 +110,13 @@ namespace Azrng.Core.Extension
 
                 var propType = prop.PropertyType;
                 var leftExpr = Expression.MakeMemberAccess(propAccessor.Body, prop);
+                if (otherValue == null && propType.IsValueType && Nullable.GetUnderlyingType(propType) == null)
+                {
+                    // Expression.Constant(null, 非空值类型) 会直接抛 ArgumentException，提前给出可读错误
+                    throw new ArgumentException(
+                        $"other 为 null 时无法与值类型属性 {prop.Name} 比较。", nameof(other));
+                }
+
                 Expression rightExpr = Expression.Constant(otherValue, propType);
                 if (propType.IsPrimitive)
                 {

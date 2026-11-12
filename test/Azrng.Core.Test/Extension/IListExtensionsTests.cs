@@ -53,16 +53,18 @@ public class IListExtensionsTests
     }
 
     [Fact]
-    public void ToDataTable_IList_ShouldThrow_WhenHasColumnsIsFalseAndListHasItems()
+    public void ToDataTable_IList_ShouldReturnEmptyTable_WhenHasColumnsIsFalse()
     {
+        // 原实现无列装行走 LoadDataRow 意外抛 ArgumentException 并被测试固化；修正为返回空表结构
         var list = new ArrayList
         {
             new TestItem { Id = 1, Name = "Alice", Age = 30 }
         };
 
-        var action = () => list.ToDataTable(hasColumns: false);
+        var table = list.ToDataTable(hasColumns: false);
 
-        action.Should().Throw<ArgumentException>();
+        table.Columns.Should().BeEmpty();
+        table.Rows.Should().BeEmpty();
     }
 
     [Fact]

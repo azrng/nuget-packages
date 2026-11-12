@@ -232,9 +232,10 @@ public class QueryableExtensionsTests
         var action2 = () => data.OrderBy(new SortContent("", SortEnum.Asc));
         var action3 = () => data.OrderBy(new SortContent("   ", SortEnum.Asc));
 
-        action1.Should().Throw<ArgumentNullException>();
-        action2.Should().Throw<ArgumentNullException>();
-        action3.Should().Throw<ArgumentNullException>();
+        // 无效排序参数应报 ArgumentException 且指向 orderContent，而非误导性的 ArgumentNullException(nameof(query))
+        action1.Should().Throw<ArgumentException>();
+        action2.Should().Throw<ArgumentException>();
+        action3.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -278,7 +279,9 @@ public class QueryableExtensionsTests
 
         var action = () => data.OrderBy("NonExistent");
 
-        action.Should().Throw<ArgumentNullException>();
+        // 无效属性名应报 ArgumentException 且参数名指向 sortField
+        action.Should().Throw<ArgumentException>()
+            .Which.ParamName.Should().Be("sortField");
     }
 
     #endregion

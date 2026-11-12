@@ -12,37 +12,33 @@ namespace Azrng.Core.Extension
         /// </summary>
         /// <param name="list"></param>
         /// <param name="hasColumns"></param>
+        /// <remarks>hasColumns=false 时仅返回空表结构（无列不装行，行数据在无列的表上必然报错）</remarks>
         /// <returns></returns>
         public static DataTable ToDataTable(this IList list, bool hasColumns = true)
         {
             var dataTable = new DataTable();
-            if (list.Count <= 0)
+            if (list.Count <= 0 || !hasColumns)
                 return dataTable;
             var properties = list[0]!.GetType().GetProperties();
-            if (hasColumns)
+            foreach (var propertyInfo in properties)
             {
-                foreach (var propertyInfo in properties)
+                var type = propertyInfo.PropertyType;
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
-                    var type = propertyInfo.PropertyType;
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-                    {
-                        type = type.GetGenericArguments()[0];
-                    }
-
-                    dataTable.Columns.Add(new DataColumn(propertyInfo.Name, type));
+                    type = type.GetGenericArguments()[0];
                 }
+
+                dataTable.Columns.Add(new DataColumn(propertyInfo.Name, type));
             }
 
             foreach (var t in list)
             {
-                var arrayList = new ArrayList();
-                foreach (var item in properties)
+                var values = new object[properties.Length];
+                for (var i = 0; i < properties.Length; i++)
                 {
-                    var value = item.GetValue(t, null);
-                    arrayList.Add(value);
+                    values[i] = properties[i].GetValue(t, null)!;
                 }
 
-                var values = arrayList.ToArray();
                 dataTable.LoadDataRow(values, fAcceptChanges: true);
             }
 

@@ -56,7 +56,8 @@ namespace Azrng.Core.Extension
 
             if (pageIndex < 1) pageIndex = 1;
             if (pageSize < 1) pageSize = 10;
-            return source.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+            // long 中间量防大 pageIndex 乘法溢出为负，Skip 负数会抛异常
+            return source.Skip((int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue)).Take(pageSize);
         }
 
         /// <summary>

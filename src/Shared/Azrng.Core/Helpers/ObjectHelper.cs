@@ -40,10 +40,9 @@ namespace Azrng.Core.Helpers
                         result[property.Name] = value;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // 记录错误但继续处理其他属性
-                    Console.WriteLine($"读取属性 {property.Name} 时出错: {ex.Message}");
+                    // 单个属性读取失败不中断整体转换，跳过该属性继续处理其他属性
                 }
             }
 

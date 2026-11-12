@@ -19,6 +19,7 @@ namespace Azrng.Core.Extension
         /// <param name="idSelector">Function extracting item's id</param>
         /// <param name="parentIdSelector">Function extracting item's parent_id</param>
         /// <param name="rootId">Root element id</param>
+        /// <remarks>内部先物化集合并按 parentId 分组索引，O(n) 构建；传入 IQueryable 等延迟源不会反复执行查询</remarks>
         public static IEnumerable<TreeItem<T>> GenerateTree<T, K>(this IEnumerable<T> collection, Func<T, K> idSelector,
             Func<T, K> parentIdSelector, K? rootId = default)
         {
@@ -28,18 +29,55 @@ namespace Azrng.Core.Extension
                 throw new ArgumentNullException(nameof(idSelector));
             if (parentIdSelector == null)
                 throw new ArgumentNullException(nameof(parentIdSelector));
-            var list = collection.Where(u =>
+
+            // 原实现每层递归都对原始集合重新 Where（O(n²)），延迟源会被反复执行且结果随枚举漂移
+            // Dictionary 不允许 null 键，parentIdSelector 返回 null 的根节点单独归桶
+            List<T>? rootItems = null;
+            var byParent = new Dictionary<K, List<T>>();
+            foreach (var item in collection)
             {
-                var selector = parentIdSelector(u);
-                return rootId == null && selector == null || rootId != null && rootId.Equals(selector);
-            });
-            foreach (var c in list)
-            {
-                yield return new TreeItem<T>
+                var parentKey = parentIdSelector(item);
+                if (parentKey == null)
                 {
-                    Item = c, Children = collection.GenerateTree(idSelector, parentIdSelector, idSelector(c))
-                };
+                    (rootItems ??= new List<T>()).Add(item);
+                }
+                else if (!byParent.TryGetValue(parentKey, out var bucket))
+                {
+                    byParent[parentKey] = bucket = new List<T>();
+                    bucket.Add(item);
+                }
+                else
+                {
+                    bucket.Add(item);
+                }
             }
+
+            IEnumerable<TreeItem<T>> Build(K? parentKey)
+            {
+                List<T>? children;
+                if (parentKey != null)
+                {
+                    children = byParent.TryGetValue(parentKey, out var found) ? found : null;
+                }
+                else
+                {
+                    // 与原实现一致：rootId 为 null 时仅取 parentId 同为 null 的项作为根
+                    children = rootItems;
+                }
+
+                return children?.Select(CreateNode) ?? Enumerable.Empty<TreeItem<T>>();
+
+                TreeItem<T> CreateNode(T item)
+                {
+                    return new TreeItem<T>
+                    {
+                        Item = item,
+                        Children = Build(idSelector(item))
+                    };
+                }
+            }
+
+            return Build(rootId);
         }
 
 

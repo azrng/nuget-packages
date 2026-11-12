@@ -343,4 +343,47 @@ public class TreeExtensionsTests
 
         public CycleNode(string name) => Name = name;
     }
+
+    [Fact]
+    public void GenerateTree_ShouldEnumerateDeferredSourceOnlyOnce()
+    {
+        // 原实现每层递归重新枚举源（IQueryable 场景会反复执行查询），重构后应只枚举一次
+        var data = new List<FlatItem>
+        {
+            new() { Id = 1, ParentId = null },
+            new() { Id = 2, ParentId = 1 },
+            new() { Id = 3, ParentId = 1 }
+        };
+        var tracked = new TrackedEnumerable<FlatItem>(data);
+
+        var tree = tracked.GenerateTree(x => x.Id, x => x.ParentId).ToList();
+
+        tracked.EnumerationCount.Should().Be(1);
+        tree.Should().HaveCount(1);
+        tree[0].Children.Should().HaveCount(2);
+    }
+
+    private sealed class FlatItem
+    {
+        public int Id { get; set; }
+
+        public int? ParentId { get; set; }
+    }
+
+    private sealed class TrackedEnumerable<T> : IEnumerable<T>
+    {
+        private readonly IEnumerable<T> _source;
+
+        public TrackedEnumerable(IEnumerable<T> source) => _source = source;
+
+        public int EnumerationCount { get; private set; }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            EnumerationCount++;
+            return _source.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

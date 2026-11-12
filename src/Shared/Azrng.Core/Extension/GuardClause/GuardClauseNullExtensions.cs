@@ -155,7 +155,7 @@ namespace Azrng.Core.Extension.GuardClause
             || input.TryGetNonEnumeratedCount(out var count) && count == 0
 #endif
                 ||
-                !input.Any())
+                !input.GetEnumerator().MoveNext()) //MoveNext 而非 Any：避免守卫通过后丢失一次性枚举的首个元素
             {
                 throw exceptionCreator?.Invoke() ??
                       new ArgumentException(message ?? $"Required input {parameterName} was empty.", parameterName);

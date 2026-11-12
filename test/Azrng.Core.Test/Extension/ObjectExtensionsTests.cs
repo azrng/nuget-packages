@@ -440,5 +440,18 @@ public class ObjectExtensionsTests
         Green
     }
 
+    [Fact]
+    public void ToUrlParameter_ShouldEncodeSpecialCharacters()
+    {
+        // 值含 & = 中文时不编码会产出错位 query 串
+        var entity = new { Name = "a&b=c", Query = "zhong wen" };
+
+        var result = entity.ToUrlParameter();
+
+        result.Should().NotContain("a&b=c");
+        result.Should().Contain("Name=a%26b%3Dc");
+        result.Should().NotContain(" ");
+    }
+
     #endregion
 }

@@ -29,6 +29,9 @@ namespace Azrng.Core.Extension
                 "是" => true,
                 "否" => false,
                 "yes" => true,
+                "no" => false,
+                "true" => true,
+                "false" => false,
                 _ => false
             };
         }
@@ -188,7 +191,7 @@ namespace Azrng.Core.Extension
         public static byte[] ToBytesFromHexString(this string hexStr)
         {
             if (hexStr.Length == 0)
-                return new byte[1];
+                return Array.Empty<byte>();
             if (hexStr.Length % 2 == 1)
                 hexStr = "0" + hexStr;
             var bytes = new byte[hexStr.Length / 2];

@@ -31,21 +31,6 @@ namespace Azrng.Core.Helpers
             return Convert.ToBase64String(mso.ToArray());
         }
 
-        // TODO 代完善
-        // /// <summary>
-        // /// 压缩
-        // /// </summary>
-        // /// <typeparam name="T"></typeparam>
-        // /// <param name="model"></param>
-        // /// <returns>Base64格式字符串</returns>
-        // public static string Compress<T>(T model)
-        // {
-        //     if (model == null)
-        //         return default;
-        //     var s = JsonConvert.SerializeObject(model);
-        //     return Compress(s);
-        // }
-
         /// <summary>
         /// 从Base64String解压
         /// </summary>
@@ -63,23 +48,5 @@ namespace Azrng.Core.Helpers
 
             return Encoding.UTF8.GetString(mso.ToArray());
         }
-
-        // TODO 代完善
-        // /// <summary>
-        // /// 从Base64String解压
-        // /// </summary>
-        // /// <typeparam name="T"></typeparam>
-        // /// <param name="s"></param>
-        // /// <returns></returns>
-        // public static T Decompress<T>(string s)
-        // {
-        //     if (string.IsNullOrWhiteSpace(s))
-        //     {
-        //         return default;
-        //     }
-        //
-        //     var str = Decompress(s);
-        //     return JsonConvert.DeserializeObject<T>(str);
-        // }
     }
 }

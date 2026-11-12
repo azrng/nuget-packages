@@ -56,7 +56,7 @@ namespace Azrng.Core.Helpers
                 if (Directory.Exists(path))
                 {
                     var folder = new DirectoryInfo(path);
-                    folder.Attributes = FileAttributes.Normal & FileAttributes.Directory;
+                    folder.Attributes = FileAttributes.Normal;
                 }
             }
         }
