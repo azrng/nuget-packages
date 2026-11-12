@@ -968,7 +968,7 @@ public IResultModel<bool> Save()
 
 ## 📝 当前版本更新
 
-### 1.20.1
+### 2.0.0
 - Snowflake 新增 WorkerId 配置、范围校验和生成后的切换保护
 - Snowflake 默认 WorkerId 由随机数改为机器标识（非回环 IPv4，无则机器名）稳定哈希 + 进程 Id（右移 2 位规避 Windows 进程 Id 按 4 对齐）派生，大幅降低多机/多进程默认值撞号导致雪花 Id 重复的概率，但不能保证唯一；分布式部署仍建议显式 `ConfigureWorkerId`
 - 修复 `PersonExtensions.GetSexByIdCard`：15 位身份证恒返回未知的缺陷，修正女性应返回 2（行为变更：原 18 位偶数返回 0 现返回 2）

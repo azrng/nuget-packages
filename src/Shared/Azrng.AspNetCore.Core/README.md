@@ -633,7 +633,7 @@ ForbiddenException
 
 ### 当前版本更新
 
-* 1.5.0
+* 1.6.0
   * 全局异常中间件加固：客户端主动取消（`OperationCanceledException` 且 `RequestAborted`）按 Information 记录不再产生 Error 日志；响应已开始后无法写统一错误响应时重新抛出异常由服务器重置连接（原吞掉二次异常后客户端收到 200 + 半截响应）（行为变更）
   * `CustomResultPackFilter` 包装时保留 action 声明的状态码（`CreatedAtAction` 201、`Accepted` 202、`StatusCode(...)` 等不再被强制改为 200）（行为变更）
   * `MinValueAttribute` 对 null 值校验失败（行为变更：原 null 直接通过，与 remarks 声称的“已经包含了Required”不符）
