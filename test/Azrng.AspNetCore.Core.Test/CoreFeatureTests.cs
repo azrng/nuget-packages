@@ -552,7 +552,8 @@ public class CoreFeatureTests
         context.Features.Set<IHttpResponseFeature>(responseFeature);
         context.Request.Method = HttpMethods.Post;
         context.Request.Path = "/api/monitor/healthcheck";
-        var options = new AuditLogOptions { IgnoreRoutePrefix = ["/health"] };
+        //net6.0 目标框架默认 C# 10，不支持集合表达式，这里用显式初始化
+        var options = new AuditLogOptions { IgnoreRoutePrefix = new List<string> { "/health" } };
         var middleware = new AuditLogMiddleware(_ => Task.CompletedTask, Options.Create(options));
 
         await middleware.Invoke(context);
