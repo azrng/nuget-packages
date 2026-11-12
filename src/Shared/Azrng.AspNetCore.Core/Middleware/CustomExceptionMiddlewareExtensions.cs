@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Net;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -48,12 +49,12 @@ namespace Azrng.AspNetCore.Core.Middleware
         {
             try
             {
-                _logger.LogInformation("{UrlAddress} request", context.Request.GetUrl());
-
                 await _next.Invoke(context);
-
-                _logger.LogInformation("{UrlAddress} response with status code {Code}",
-                    context.Request.GetUrl(), context.Response.StatusCode);
+            }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // 客户端主动断开不算错误，静默结束避免大量 Error 日志与必然失败的写响应
+                _logger.LogInformation("请求已被客户端取消-{Url}", context.Request.GetUrl());
             }
             catch (Exception ex)
             {
@@ -81,6 +82,15 @@ namespace Azrng.AspNetCore.Core.Middleware
         private async Task WriteExceptionAsync(HttpContext context, Exception exception)
         {
             var xRequested = Activity.Current != null ? Activity.Current.TraceId.ToString() : context.TraceIdentifier;
+
+            // 响应已开始后无法再改写状态码与响应体，重抛让 Kestrel 重置连接，避免客户端收到 200 + 半截 JSON
+            if (context.Response.HasStarted)
+            {
+                _logger.LogError(exception,
+                    "响应已开始，无法写入统一错误响应-{Url} xRequestId:{TraceId}",
+                    context.Request.GetUrl(), xRequested);
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
 
             _logger.LogError(exception,
                 "统一日志记录异常-{Url} request had an exception, xRequestId:{TraceId}, time:{Time}",

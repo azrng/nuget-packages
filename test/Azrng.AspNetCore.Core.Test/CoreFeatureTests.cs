@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -61,6 +62,18 @@ public class CoreFeatureTests
         var attribute = new MinValueAttribute(1);
 
         attribute.IsValid(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void LongToNullableStringConverter_NullAndEmpty_ProduceNull()
+    {
+        var options = new JsonSerializerOptions { Converters = { new LongToNullableStringConverter() } };
+
+        JsonSerializer.Deserialize<long?>("null", options).Should().BeNull();
+        JsonSerializer.Deserialize<long?>("\"\"", options).Should().BeNull();
+        JsonSerializer.Deserialize<long?>("\"123\"", options).Should().Be(123);
+        JsonSerializer.Serialize((long?)null, options).Should().Be("null");
+        JsonSerializer.Serialize((long?)456, options).Should().Be("\"456\"");
     }
 
     [Fact]
@@ -219,6 +232,18 @@ public class CoreFeatureTests
         options.Services.Should().Contain(x => x.ServiceType == typeof(SampleOptions));
     }
 
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+
+        public string ApplicationName { get; set; } = "Test";
+
+        public string ContentRootPath { get; set; } = ".";
+
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
+            new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+
     [Fact]
     public async Task ShowAllServicesMiddleware_HtmlEncodesServiceNames()
     {
@@ -232,7 +257,8 @@ public class CoreFeatureTests
             Path = "/services",
             Services = new List<ServiceDescriptor> { descriptor }
         });
-        var middleware = new ShowAllServicesMiddleware(_ => Task.CompletedTask, options);
+        var environment = new TestHostEnvironment { EnvironmentName = Environments.Development };
+        var middleware = new ShowAllServicesMiddleware(_ => Task.CompletedTask, options, environment);
 
         await middleware.Invoke(context);
 
@@ -241,6 +267,45 @@ public class CoreFeatureTests
         var html = await reader.ReadToEndAsync();
         html.Should().Contain("Html&lt;Dangerous&gt;Service");
         html.Should().NotContain("Html<Dangerous>Service");
+    }
+
+    [Fact]
+    public async Task ShowAllServicesMiddleware_ShouldReturn404_WhenNotDevelopmentAndNotAllowListed()
+    {
+        // 服务清单泄露内部架构信息，非开发环境默认 404 拒绝
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/services";
+        context.Response.Body = new MemoryStream();
+        var options = Options.Create(new ShowServiceConfig { Path = "/services", Services = [] });
+        var environment = new TestHostEnvironment { EnvironmentName = Environments.Production };
+        var middleware = new ShowAllServicesMiddleware(_ => Task.CompletedTask, options, environment);
+
+        await middleware.Invoke(context);
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task ShowAllServicesMiddleware_ShouldRender_WhenAllowNonDevelopmentEnabled()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/services";
+        context.Response.Body = new MemoryStream();
+        var options = Options.Create(new ShowServiceConfig
+        {
+            Path = "/services",
+            Services = [],
+            AllowNonDevelopment = true
+        });
+        var environment = new TestHostEnvironment { EnvironmentName = Environments.Production };
+        var middleware = new ShowAllServicesMiddleware(_ => Task.CompletedTask, options, environment);
+
+        await middleware.Invoke(context);
+
+        context.Response.Body.Position = 0;
+        using var reader = new StreamReader(context.Response.Body);
+        var html = await reader.ReadToEndAsync();
+        html.Should().Contain("All Services");
     }
 
     [Fact]

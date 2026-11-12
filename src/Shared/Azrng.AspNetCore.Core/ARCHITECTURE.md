@@ -18,7 +18,7 @@
 - **目标框架**: net6.0; net7.0; net8.0; net9.0; net10.0
 - **核心依赖**:
   - `Microsoft.AspNetCore.App` (ASP.NET Core 框架引用)
-  - `Azrng.Core` 1.8.4 (核心工具库，提供异常、结果封装等)
+  - `Azrng.Core`（本地项目引用，核心工具库，提供异常、结果封装等）
 
 ---
 
@@ -40,7 +40,6 @@ Azrng.AspNetCore.Core/
 │   ├── HttpContextExtensions.cs         # HttpContext 扩展
 │   ├── IApplicationBuilderExtensions.cs # IApplicationBuilder 扩展
 │   ├── ServiceCollectionExtensions.cs   # IServiceCollection 扩展（包含 CORS 配置）
-│   └── CustomContractResolver.cs        # JSON 序列化契约解析器
 │
 ├── Filter/                               # MVC 过滤器
 │   ├── ModelVerifyFilter.cs             # 模型验证过滤器
@@ -50,7 +49,6 @@ Azrng.AspNetCore.Core/
 │   ├── AppSettings.cs                   # 配置帮助类
 │   ├── HttpContextManager.cs            # HttpContext 管理器
 │   ├── ServiceProviderHelper.cs         # 服务提供者帮助类
-│   └── SessionHelper.cs                 # Session 帮助类
 │
 ├── Middleware/                           # 中间件
 │   ├── AuditLogMiddleware.cs            # 审计日志中间件
@@ -228,10 +226,10 @@ Azrng.AspNetCore.Core/
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `LogOnlyApiRoutes` | `bool` | `false` | 是否只记录 `/api/` 开头的路由 |
+| `LogOnlyApiRoutes` | `bool` | `true` | 是否只记录 `/api/` 开头的路由 |
 | `IncludeHttpMethods` | `List<string>` | `["POST", "PUT", "DELETE"]` | 需要记录的 HTTP 方法 |
 | `IgnoreRoutePrefix` | `List<string>` | `[]` | 忽略的路由前缀 |
-| `MaxResponseBodySize` | `int` | `10240` | 最大响应体大小 (字节) |
+| `MaxResponseBodySize` | `int` | `1048576` (1MB) | 响应体日志捕获上限（字节），客户端仍收到完整响应 |
 | `FormatJson` | `bool` | `false` | 是否格式化 JSON 输出 |
 
 **工作流程**:
@@ -448,8 +446,8 @@ app.UseForwardedHeaders("10.0.0.5", "10.0.0.6");
 app.UseRequestBodyRepetitionRead();
 
 // 之后可以多次读取请求体
-var body1 = await HttpContext.Request.ReadBodyAsync();
-var body2 = await HttpContext.Request.ReadBodyAsync();
+var body1 = await HttpContext.Request.ReadBodyContentAsync();
+var body2 = await HttpContext.Request.ReadBodyContentAsync();
 ```
 
 ---
@@ -469,10 +467,13 @@ MVC 通用配置类，控制核心行为：
 **配置方式**:
 
 ```csharp
-services.AddDefaultControllers(options =>
+// 注意：AddDefaultControllers 已标记 Obsolete，按需组合使用：
+services.AddControllers();
+services.AddMvcResultPackFilter("/swagger");
+services.AddMvcModelVerifyFilter();
+// UseHttpStateCode 仍通过 Configure<CommonMvcConfig> 设置（仅对异常中间件生效）：
+services.Configure<CommonMvcConfig>(options =>
 {
-    options.EnabledCustomerResultPack = true;
-    options.EnabledModelVerify = true;
     options.UseHttpStateCode = false; // 所有响应返回 200，错误信息在 body 中
 });
 ```
@@ -508,6 +509,8 @@ app.UseAutoAuditLog();
 var app = builder.Build();
 
 // 1. 异常处理 (最外层)
+// 注意：异常响应体不会进入内层的审计日志；如需审计记录错误响应体，
+// 可将 UseAutoAuditLog 移到 UseGlobalException 之前（审计在异常外层）
 app.UseGlobalException();
 
 // 2. 请求 ID 传递
@@ -535,7 +538,7 @@ app.UseAuthorization();
 // 9. 服务显示 (开发环境)
 if (app.Environment.IsDevelopment())
 {
-    app.UseShowAllServicesMiddleware();
+    app.UseShowAllServices();
 }
 
 // 10. 映射控制器
@@ -616,11 +619,9 @@ dotnet build src/Shared/Azrng.AspNetCore.Core/Azrng.AspNetCore.Core.csproj -c Re
 var builder = WebApplication.CreateBuilder(args);
 
 // 配置服务
-builder.Services.AddDefaultControllers(options =>
-{
-    options.EnabledCustomerResultPack = true;
-    options.EnabledModelVerify = true;
-});
+builder.Services.AddControllers();
+builder.Services.AddMvcResultPackFilter("/swagger");
+builder.Services.AddMvcModelVerifyFilter();
 
 // CORS 配置（开发环境）
 builder.Services.AddAnyCors();
@@ -659,7 +660,7 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseShowAllServicesMiddleware();
+    app.UseShowAllServices();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

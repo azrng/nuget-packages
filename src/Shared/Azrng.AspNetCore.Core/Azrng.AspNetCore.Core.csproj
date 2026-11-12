@@ -5,13 +5,14 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
-        <Description>基本的公共类库</Description>
+        <Description>ASP.NET Core 常用中间件、过滤器与扩展方法集合</Description>
         <Version>1.5.0</Version>
         <PackageId>Azrng.AspNetCore.Core</PackageId>
         <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
         <NoWarn>1701;1702;1591;CA1416</NoWarn>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <Title>ASP.NET Core Extensions</Title>
+        <PackageProjectUrl>https://azrng.github.io/nuget-docs/</PackageProjectUrl>
         <PackageTags>aspnetcore;extensions;dotnet</PackageTags>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
     </PropertyGroup>

@@ -60,19 +60,19 @@ public class AuditLogInfo
     /// <summary>
     /// 请求主体
     /// </summary>
-    [MaxLength(-2)]
+    [MaxLength(-1)]
     public string? RequestBody { get; set; }
 
     /// <summary>
     /// 响应主体
     /// </summary>
-    [MaxLength(-2)]
+    [MaxLength(-1)]
     public string? ResponseBody { get; set; }
 
     /// <summary>
     /// 原始数据
     /// </summary>
-    [MaxLength(-2)]
+    [MaxLength(-1)]
     public string? RawData { get; set; }
 
     /// <summary>

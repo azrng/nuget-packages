@@ -64,17 +64,16 @@ public class CustomResultPackFilter : Attribute, IResultFilter
                 return;
             }
 
-            // 包装其他对象结果
-            context.Result = new OkObjectResult(new ResultModel<object?>(objectResult.Value, true, "success", "200"));
+            // 保留 action 声明的状态码（201 CreatedAtAction / 202 Accepted / StatusCode(...) 等），
+            // 仅替换响应体为统一外壳；原实现强制改 200 覆盖了这些语义
+            context.Result = new ObjectResult(new ResultModel<object?>(objectResult.Value, true, "success", "200"))
+            {
+                StatusCode = objectResult.StatusCode
+            };
             return;
         }
 
-        // 处理其他结果类型 (ContentResult, StatusCodeResult 等)
-        // 对于这些类型，我们选择不包装，保持原有行为
-        if (context.Result is ContentResult or StatusCodeResult or RedirectToActionResult or LocalRedirectResult)
-        {
-            return;
-        }
+        // ContentResult / StatusCodeResult / 重定向等结果类型不包装，保持原有行为
     }
 }
 
