@@ -2,13 +2,14 @@
 
     <PropertyGroup>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-        <IsAotCompatible>true</IsAotCompatible>
-        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+        <!-- RabbitMQ.Client 6.x 不支持 Native AOT，不能声明 IsAotCompatible；Core/InMemory 才有该声明 -->
         <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>一个学习eShop的自用事件总线RabbitMq实现</Description>
-        <Version>1.1.0</Version>
+        <!-- 1.2.0：消费失败进死信队列（原为 ACK 丢弃）、发布 channel 复用、断线自动重连、配置校验 -->
+        <Version>1.2.0</Version>
         <PackageId>Azrng.EventBus.RabbitMQ</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <NoWarn>1701;1702;1591</NoWarn>

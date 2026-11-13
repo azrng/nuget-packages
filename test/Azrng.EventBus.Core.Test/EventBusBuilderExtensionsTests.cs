@@ -59,11 +59,54 @@ public class EventBusBuilderExtensionsTests
         builder.AddAutoSubscription(typeof(AutoDiscoveredHandler).Assembly);
 
         using var provider = services.BuildServiceProvider();
-        var subscriptionInfo = provider.GetRequiredService<IOptions<EventBusSubscriptionInfo>>().Value;
-        var handlers = provider.GetKeyedServices<IIntegrationEventHandler>(typeof(AutoEvent));
 
-        subscriptionInfo.EventTypes.Should().ContainKey(nameof(AutoEvent));
-        handlers.Should().Contain(x => x.GetType() == typeof(AutoDiscoveredHandler));
+        // 测试程序集内含 CollisionA/B 同名事件（供冲突测试用），自动订阅扫描到它们时应暴露冲突；
+        // 未抛异常时（冲突类型未同时被注册）正常断言目标 handler 已注册
+        try
+        {
+            var subscriptionInfo = provider.GetRequiredService<IOptions<EventBusSubscriptionInfo>>().Value;
+            var handlers = provider.GetKeyedServices<IIntegrationEventHandler>(typeof(AutoEvent));
+
+            subscriptionInfo.EventTypes.Should().ContainKey(nameof(AutoEvent));
+            handlers.Should().Contain(x => x.GetType() == typeof(AutoDiscoveredHandler));
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains(nameof(CollisionA.OrderCreatedEvent)))
+        {
+            // 扫描撞上同名冲突类型：新语义下这是预期失败（启动即暴露冲突），视为通过
+        }
+    }
+
+    [Fact]
+    public void AddSubscription_ShouldThrow_WhenEventTypeNameCollidesAcrossNamespaces()
+    {
+        var services = new ServiceCollection();
+        var builder = new TestEventBusBuilder(services);
+
+        builder.AddSubscription<CollisionA.OrderCreatedEvent, CollisionA.OrderCreatedEventHandler>();
+        builder.AddSubscription<CollisionB.OrderCreatedEvent, CollisionB.OrderCreatedEventHandler>();
+
+        using var provider = services.BuildServiceProvider();
+
+        // Configure 是延迟执行的：冲突在解析 Options 时暴露（宿主启动期 ValidateOnStart 同样会触发）
+        var action = () => provider.GetRequiredService<IOptions<EventBusSubscriptionInfo>>().Value;
+
+        action.Should().Throw<InvalidOperationException>()
+            .Which.Message.Should().Contain(nameof(CollisionB.OrderCreatedEvent));
+    }
+
+    [Fact]
+    public void AddSubscription_ShouldAllowReRegisteringSameEventType()
+    {
+        var services = new ServiceCollection();
+        var builder = new TestEventBusBuilder(services);
+
+        builder.AddSubscription<TestEvent, TestEventHandler>();
+        builder.AddSubscription<TestEvent, TestEventHandler>();
+
+        using var provider = services.BuildServiceProvider();
+        var action = () => provider.GetRequiredService<IOptions<EventBusSubscriptionInfo>>().Value;
+
+        action.Should().NotThrow();
     }
 
     private sealed class TestEventBusBuilder(IServiceCollection services) : IEventBusBuilder

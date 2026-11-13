@@ -5,7 +5,7 @@ using System.Text.Json.Serialization.Metadata;
 namespace Azrng.EventBus.Core.Abstractions;
 
 /// <summary>
-/// 时间总线订阅信息类
+/// 事件总线订阅信息类
 /// </summary>
 public class EventBusSubscriptionInfo
 {

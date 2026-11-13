@@ -10,8 +10,12 @@
 - 支持多个事件处理器处理同一事件
 - 支持 JSON 序列化配置
 - 支持自动和手动订阅事件处理器
-- 支持 AOT 和修剪兼容性
-- 支持多框架：.NET 8.0 / 9.0
+- 消费失败的消息转入死信队列，不再随 ACK 丢弃
+- 发布重试 + 断线自动重连（指数退避）
+- 启动期配置校验（队列名必填等）
+- 支持多框架：.NET 8.0 / 9.0 / 10.0
+
+> 注：依赖的 RabbitMQ.Client 6.x 不支持 Native AOT，本包未声明 AOT 兼容；Core 与 InMemory 包保持 AOT 兼容。
 
 ## 安装
 
@@ -41,7 +45,8 @@ services.AddRabbitMqEventBus(options =>
     options.UserName = "guest";
     options.Password = "guest";
     options.Port = 5672;
-    options.SubscriptionClientName = "default_queue";
+    // 必填：本服务的消费队列名，每个服务必须唯一（共用同名队列会互相抢消息）
+    options.SubscriptionClientName = "order_service_queue";
     options.RetryCount = 10;
     options.ExchangeName = "direct_exchange";
 })
@@ -135,14 +140,16 @@ public class OrderService
 
 [RabbitmqEventBusOptions]() 类提供了以下配置选项：
 
-- `HostName`: RabbitMQ 主机地址
-- `VirtualHost`: RabbitMQ 虚拟主机
-- `UserName`: 用户名
-- `Password`: 密码
+- `HostName`: RabbitMQ 主机地址，默认 `localhost`
+- `VirtualHost`: RabbitMQ 虚拟主机，默认 `/`
+- `UserName`: 用户名，默认 `guest`
+- `Password`: 密码，默认 `guest`
 - `Port`: 端口号，默认为 5672
-- `SubscriptionClientName`: 订阅客户端名称（队列名称）
-- `RetryCount`: 重试次数，默认为 10
+- `SubscriptionClientName`: 订阅队列名称，必填（启动期校验）；每个服务必须唯一
+- `RetryCount`: 发布重试次数，默认为 10
 - `ExchangeName`: 交换机名称，默认为 "direct_exchange"
+- `DeadLetterExchangeName`: 死信交换机名称，默认为 "eventbus_dlx"
+- `DeadLetterQueueName`: 死信队列名称，默认为 "eventbus_dlx_queue"
 
 ## 核心概念
 
@@ -179,12 +186,23 @@ public class OrderService
 1. 需要预先安装和配置 RabbitMQ 服务器
 2. 需要正确配置连接参数（主机名、端口、用户名、密码等）
 3. 事件处理是异步执行的，通过后台服务持续监听消息
-4. 事件会持久化到 RabbitMQ，即使应用程序重启也不会丢失
-5. 支持事件的重试机制，默认重试10次
-6. 需要合理设置队列和交换机的参数以满足业务需求
+4. 消息与队列均为持久化，broker 重启不丢；应用消费失败（处理器异常、反序列化失败、无注册处理器）的消息转入死信队列（默认 `eventbus_dlx_queue`），需人工或重试消费处理，不自动重回队列
+5. 发布侧带指数退避重试（默认 10 次）；broker 不可用时消费侧自动指数退避重连
+6. `SubscriptionClientName` 是本服务的消费队列名，每个服务必须唯一：多个服务共用同名队列时，同一条消息只会投递给其中一个服务
+7. 发布未订阅的事件类型时，消息会被 broker 退回并记录 Warning 日志（`mandatory: true`）
+8. 事件类改名后 routingKey 随之变化，旧队列绑定收不到新事件名，需通过运维手段迁移绑定
 
 ## 版本更新记录
 
+* 1.2.0
+    * 消费失败的消息转入死信队列（原实现无条件 ACK 会丢消息）
+    * 发布复用单一 channel，修复每次发布新建 channel 的泄漏
+    * broker 不可用时消费端指数退避自动重连（原实现只尝试一次，失败后消费端永久失效）
+    * 发布重试管道覆盖 channel 级异常（AlreadyClosedException / OperationInterruptedException）
+    * 处理器收到 CancellationToken；应用停机时优雅退出消费循环
+    * 启动期配置校验：SubscriptionClientName 必填
+    * 处理 mandatory 消息的 BasicReturn，未路由消息记录 Warning 而非静默丢弃
+    * 未声明 AOT 兼容（RabbitMQ.Client 6.x 限制），并补 Nullable 支持
 * 1.1.0
     * 支持.Net10并优化
 * 1.0.0

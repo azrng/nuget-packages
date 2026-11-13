@@ -25,12 +25,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddRabbitMqEventBus(options =>
 {
     options.HostName = "localhost";
-    options.VirtualHost = "myQueue";
-    options.UserName = "admin";
-    options.Password = "123456";
-    options.Port = 5672;
+    options.VirtualHost = "/"; // 默认 vhost；guest 账号只允许本机连接默认 vhost
+    options.UserName = "guest";
+    options.Password = "guest";
+    options.Port = 5672; // 本机 5672 端口被占用时可映射其他端口（如 docker -p 5872:5672 后改为 5872）
     options.ExchangeName = "direct_exchange";
-    options.SubscriptionClientName = "bbbb";
+    // 必填：本服务的消费队列名，每个服务必须唯一（共用同名队列会互相抢消息）
+    options.SubscriptionClientName = "rabbitmq_sample_queue";
 })
 .AddAutoSubscription(Assembly.GetExecutingAssembly());
 

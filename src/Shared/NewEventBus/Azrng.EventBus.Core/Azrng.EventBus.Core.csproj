@@ -8,7 +8,8 @@
         <Authors>Azrng</Authors>
         <Copyright>版权归Azrng所有</Copyright>
         <Description>一个学习eShop的自用事件总线</Description>
-        <Version>1.1.0</Version>
+        <!-- 1.2.0：同名事件类型冲突时启动即抛出（原为静默覆盖） -->
+        <Version>1.2.0</Version>
         <PackageId>Azrng.EventBus.Core</PackageId>
         <RepositoryUrl>https://github.com/azrng/nuget-packages</RepositoryUrl>
         <NoWarn>1701;1702;1591</NoWarn>

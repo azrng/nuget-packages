@@ -46,7 +46,7 @@ public static class EventBusBuilderExtensions
             // and we don't want to do Type.GetType, so we keep track of the name mapping here.
 
             // This list will also be used to subscribe to events from the underlying message broker implementation.
-            o.EventTypes[typeof(T).Name] = typeof(T);
+            RegisterEventType(o, typeof(T));
         });
 
         return eventBusBuilder;
@@ -58,6 +58,10 @@ public static class EventBusBuilderExtensions
     /// <param name="eventBusBuilder"></param>
     /// <param name="assemblies"></param>
     /// <returns></returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026:GetTypes",
+        Justification = "自动订阅需要反射扫描程序集，修剪/AOT 场景请改用 AddSubscription 显式订阅。")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072:DynamicallyAccessedMembers",
+        Justification = "自动订阅需要反射扫描程序集，修剪/AOT 场景请改用 AddSubscription 显式订阅。")]
     public static IEventBusBuilder AddAutoSubscription(this IEventBusBuilder eventBusBuilder, params Assembly[] assemblies)
     {
         // 自动注册事件处理器
@@ -87,12 +91,27 @@ public static class EventBusBuilderExtensions
                     eventBusBuilder.Services.Configure<EventBusSubscriptionInfo>(o =>
                     {
                         // This list will also be used to subscribe to events from the underlying message broker implementation.
-                        o.EventTypes[eventObjectType.Name] = eventObjectType;
+                        RegisterEventType(o, eventObjectType);
                     });
                 }
             }
         }
 
         return eventBusBuilder;
+    }
+
+    /// <summary>
+    /// 登记事件类型映射；同名不同命名空间的事件类型会静默互相覆盖导致消费端反序列化成错误类型，这里直接抛出
+    /// </summary>
+    private static void RegisterEventType(EventBusSubscriptionInfo info, Type eventType)
+    {
+        if (info.EventTypes.TryGetValue(eventType.Name, out var existing) && existing != eventType)
+        {
+            throw new InvalidOperationException(
+                $"事件类型名 \"{eventType.Name}\" 已被 {existing.FullName} 注册，{eventType.FullName} 与之同名：" +
+                "消息路由按类型名（不含命名空间）匹配，同名事件会互相覆盖，请重命名其中一个事件类");
+        }
+
+        info.EventTypes[eventType.Name] = eventType;
     }
 }

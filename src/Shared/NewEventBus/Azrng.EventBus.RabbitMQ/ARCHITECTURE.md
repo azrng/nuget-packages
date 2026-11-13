@@ -228,8 +228,8 @@
 │  │ 3. 调用 ProcessEventAsync 处理事件                   │    │
 │  └─────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │ 4. 手动确认消息（无论成功或失败）                     │    │
-│  │    _channel.BasicAck(deliveryTag, multiple: false)   │    │
+│  │ 4. 全部处理器成功 → BasicAck；任一失败/无法处理     │    │
+│  │    → BasicNack(requeue:false) 转入死信交换机 (DLX)   │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
                            │
@@ -462,14 +462,18 @@ channel.BasicConsume(
     consumer: consumer
 );
 
-// 消息处理完成后确认
-_consumerChannel.BasicAck(
-    eventArgs.DeliveryTag,
-    multiple: false
-);
+// 全部处理器成功才确认；任一失败走 nack 进死信队列
+if (await ProcessEventAsync(eventName, message, cancellationToken))
+{
+    _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
+}
+else
+{
+    _consumerChannel.BasicNack(eventArgs.DeliveryTag, multiple: false, requeue: false);
+}
 ```
 
-**注意**: 当前实现在异常时也会确认消息。生产环境建议使用 **死信队列 (DLX)** 处理失败消息。
+**说明**: 消费队列声明时带 `x-dead-letter-exchange` 参数，nack(requeue:false) 的消息自动转入死信交换机（默认 `eventbus_dlx`），由死信队列留存，不再随 ACK 丢失。
 
 ### 4. 错误隔离机制
 
@@ -708,38 +712,28 @@ services.AddKeyedSingleton<IIntegrationEventHandler, OrderCreatedSMSHandler>
     (typeof(OrderCreatedEvent));
 ```
 
-### 8. 为什么异常时仍然确认消息？
+### 8. 消费失败的消息如何处理？
 
-**当前实现**:
+**当前实现**（1.2.0 起）：消费队列声明时绑定死信交换机（`x-dead-letter-exchange`），处理失败（处理器异常、反序列化失败、无注册处理器）的消息 `BasicNack(requeue: false)` 转入死信队列留存，不再无条件 ACK 丢弃。
+
 ```csharp
-try
-{
-    await ProcessEventAsync(eventName, message);
-}
-catch (Exception ex)
-{
-    Logger.LogWarning(ex, "Error Processing message");
-}
-finally
-{
-    _consumerChannel.BasicAck(eventArgs.DeliveryTag, multiple: false);
-}
+_consumerChannel.QueueDeclare(
+    queue: _rabbitmqEventBus.SubscriptionClientName,
+    durable: true,
+    exclusive: false,
+    autoDelete: false,
+    arguments: new Dictionary<string, object>
+    {
+        ["x-dead-letter-exchange"] = _rabbitmqEventBus.DeadLetterExchangeName
+    });
 ```
 
 **设计考虑**:
-- **避免消息堆积**: 处理失败的消息不会无限重试导致队列堵塞
-- **错误可见**: 通过日志记录错误，便于监控和排查
-- **简化实现**: 避免复杂的重试逻辑
+- **不丢消息**: 失败消息留存死信队列，可人工排查或重试消费
+- **不无限重试**: nack 不 requeue，毒消息不会造成消费死循环
+- **错误可见**: 失败与 nack 均有日志，死信队列可监控
 
-**生产环境建议**:
-使用 **死信队列 (DLX)** 存储失败消息:
-```csharp
-var args = new Dictionary<string, object>
-{
-    { "x-dead-letter-exchange", "dlx_exchange" }
-};
-channel.QueueDeclare(queue: "main_queue", durable: true, arguments: args);
-```
+**不 requeue 的原因**: 反序列化失败等毒消息重新入队会立即再次失败，无限循环占满消费线程。
 
 ---
 
