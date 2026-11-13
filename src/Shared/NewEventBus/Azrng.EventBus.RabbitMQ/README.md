@@ -80,7 +80,7 @@ public class OrderCreatedEventHandler : IIntegrationEventHandler<OrderCreatedEve
         _logger = logger;
     }
 
-    public async Task Handle(OrderCreatedEvent @event)
+    public async Task Handle(OrderCreatedEvent @event, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Order created: ID={OrderId}, Customer={CustomerName}, Amount={TotalAmount}",
             @event.OrderId, @event.CustomerName, @event.TotalAmount);

@@ -119,7 +119,7 @@ public interface IEventBus
 **文件位置**: [`Azrng.EventBus.Core/Abstractions/EventBusBase.cs`](../Azrng.EventBus.Core/Abstractions/EventBusBase.cs)
 
 **核心功能**:
-- 提供事件序列化/反序列化的公共方法
+- 提供事件序列化/反序列化的公共方法（供 RabbitMQ 等跨进程实现使用；InMemory 1.2.0 起直投原事件对象，仅复用其订阅信息与日志）
 - 管理订阅信息和日志记录器
 - 支持AOT和修剪的序列化实现
 
@@ -170,71 +170,51 @@ protected IntegrationEvent? DeserializeMessage(ReadOnlySpan<byte> bytes, Type ev
 public async Task PublishAsync(IntegrationEvent @event,
                                 CancellationToken cancellationToken = default)
 {
+    // 1. 空检查与取消令牌快速失败
+    ArgumentNullException.ThrowIfNull(@event);
+    cancellationToken.ThrowIfCancellationRequested();
+
     var eventName = @event.GetType().Name;
 
-    // 1. 记录发布日志
+    // 2. 记录发布日志
     Logger.LogTrace("Publishing InMemory event: {EventId} ({EventName})",
                     @event.Id, eventName);
 
-    // 2. 序列化事件
-    var message = SerializeMessage(@event);
-
-    // 3. 处理事件（调用所有订阅的处理器）
-    await ProcessEventAsync(eventName, message, cancellationToken);
-}
-```
-
-#### 3.2 事件处理流程
-
-```csharp
-private async Task ProcessEventAsync(string eventName, string message,
-                                     CancellationToken cancellationToken)
-{
-    // 1. 创建依赖注入作用域（确保服务正确释放）
-    await using var scope = _serviceProvider.CreateAsyncScope();
-
-    // 2. 解析事件类型
+    // 3. 解析事件类型（无订阅则告警返回）
     if (!SubscriptionInfo.EventTypes.TryGetValue(eventName, out var eventType))
     {
         Logger.LogWarning("Unable to resolve event type for event name {EventName}", eventName);
         return;
     }
 
-    // 3. 反序列化事件
-    var integrationEvent = DeserializeMessage(message, eventType);
-    if (integrationEvent == null)
-    {
-        Logger.LogError("Failed to deserialize event {EventName}", eventName);
-        return;
-    }
-
-    // 4. 获取所有事件处理器（使用 Keyed Services）
+    // 4. 创建依赖注入作用域并激活处理器（构造失败遵循失败策略）
+    await using var scope = _serviceProvider.CreateAsyncScope();
     var handlers = scope.ServiceProvider
         .GetKeyedServices<IIntegrationEventHandler>(eventType)
         .ToList();
 
-    if (handlers.Count == 0)
-    {
-        Logger.LogWarning("No handlers registered for event {EventName}", eventName);
-        return;
-    }
-
-    // 5. 并行执行所有事件处理器
-    var handlerTasks = handlers.Select(async handler =>
+    // 5. 并行执行所有事件处理器（直投原事件对象，无序列化往返）
+    var failures = new ConcurrentQueue<Exception>();
+    await Task.WhenAll(handlers.Select(async handler =>
     {
         try
         {
-            await handler.Handle(integrationEvent, cancellationToken);
+            await handler.Handle(@event, cancellationToken);
         }
         catch (Exception ex)
         {
-            // 错误隔离：单个处理器失败不影响其他处理器
+            // 错误隔离：单个处理器失败不影响其他处理器，按策略决定是否抛回发布方
+            failures.Enqueue(ex);
             Logger.LogError(ex, "Error processing event {EventName} with handler {HandlerType}",
                 eventName, handler.GetType().Name);
         }
-    });
+    }));
 
-    await Task.WhenAll(handlerTasks);
+    // 6. 失败策略为 Throw 时，全部处理器执行完毕后统一抛出
+    if (_options.HandlerFailurePolicy == HandlerFailurePolicy.Throw && !failures.IsEmpty)
+    {
+        throw new AggregateException($"One or more handlers failed for event {eventName}", failures);
+    }
 }
 ```
 
@@ -434,8 +414,8 @@ public static IEventBusBuilder AddAutoSubscription(
        │ PublishAsync()    │                      │                      │
        │──────────────────>│                      │                      │
        │                   │                      │                      │
-       │                   │ SerializeMessage()   │                      │
-       │                   │ (JSON序列化)         │                      │
+       │                   │ (1.2.0 起直投原事件对象 │                      │
+       │                   │  无序列化往返)        │                      │
        │                   │                      │                      │
        │                   │ CreateAsyncScope()   │                      │
        │                   │─────────────────────>│                      │
@@ -483,14 +463,12 @@ await eventBus.PublishAsync(new OrderCreatedEvent {
 ```
 
 **内部执行**:
-1. **日志记录**: 记录事件ID和事件名称
-2. **序列化**: 将事件对象序列化为JSON字符串
-3. **创建作用域**: 创建异步DI作用域（确保服务正确释放）
-4. **类型解析**: 从 `SubscriptionInfo.EventTypes` 字典中查找事件类型
-5. **反序列化**: 将JSON字符串反序列化为事件对象
-6. **处理器查找**: 使用 `GetKeyedServices<IIntegrationEventHandler>(eventType)` 获取所有订阅的处理器
-7. **并行执行**: 使用 `Task.WhenAll()` 并行调用所有处理器的 `Handle()` 方法
-8. **错误隔离**: 单个处理器异常不影响其他处理器执行
+1. **校验**: 空检查与取消令牌快速失败，记录事件ID和事件名称
+2. **类型解析**: 从 `SubscriptionInfo.EventTypes` 字典中查找事件类型（无订阅告警返回）
+3. **创建作用域**: 创建异步DI作用域并激活处理器（构造失败遵循失败策略）
+4. **处理器查找**: 使用 `GetKeyedServices<IIntegrationEventHandler>(eventType)` 获取所有订阅的处理器
+5. **并行执行**: 使用 `Task.WhenAll()` 并行调用所有处理器的 `Handle()` 方法，直投原事件对象
+6. **错误隔离**: 单个处理器异常不影响其他处理器执行；`HandlerFailurePolicy.Throw` 时全部执行完毕后向发布方抛 `AggregateException`
 
 ---
 
@@ -647,21 +625,17 @@ public interface IIntegrationEventHandler<in TIntegrationEvent>
 
 ### 4. 模板方法模式 (Template Method Pattern)
 
-**应用场景**: `EventBusBase` 定义序列化/反序列化算法骨架
+**应用场景**: `EventBusBase` 为消息型实现提供序列化/反序列化能力（InMemory 1.2.0 起直投原事件对象，不再调用这些方法，仅复用其 Logger 与 SubscriptionInfo）
 
 ```csharp
 public abstract class EventBusBase
 {
-    // 模板方法：定义序列化流程
+    // 供 RabbitMQ 等跨进程实现使用：发布前序列化、消费后反序列化
     protected string SerializeMessage(IntegrationEvent @event)
     {
         return JsonSerializer.Serialize(@event, @event.GetType(),
                                          SubscriptionInfo.JsonSerializerOptions);
     }
-
-    // 子类实现具体的发布逻辑
-    public abstract Task PublishAsync(IntegrationEvent @event,
-                                       CancellationToken cancellationToken = default);
 }
 ```
 
@@ -682,10 +656,11 @@ var handlers = scope.ServiceProvider.GetKeyedServices<IIntegrationEventHandler>(
 
 ### 1. 可替换的序列化器
 
-通过 `ConfigureJsonOptions()` 可自定义序列化行为：
+**注意**: InMemory 1.2.0 起直投原事件对象，`ConfigureJsonOptions()` 对 InMemory 链路**不再生效**；该配置供 RabbitMQ 等跨进程实现使用：
 
 ```csharp
-services.AddInMemoryEventBus()
+// 仅影响走消息序列化的实现（如 RabbitMQ）
+services.AddRabbitMqEventBus(options => { /* ... */ })
        .ConfigureJsonOptions(options =>
        {
            options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -734,7 +709,8 @@ public class RabbitMQEventBus : EventBusBase, IEventBus
 
 ### 1. 内存级别性能
 
-- **零网络开销**: 无需序列化后传输到消息队列
+- **零网络开销**: 进程内直接调用，无消息队列
+- **零序列化开销**: 1.2.0 起直投原事件对象（1.1.1 每次发布做一次 JSON 序列化+反序列化往返）
 - **极低延迟**: 直接内存调用，延迟在微秒级
 - **高吞吐**: 单机可支持每秒数万次事件处理
 

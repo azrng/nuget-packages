@@ -94,6 +94,108 @@ public class InMemoryEventBusTests
         provider.GetRequiredService<IEventBus>().Should().BeOfType<InMemoryEventBus>();
     }
 
+    [Fact]
+    public async Task PublishAsync_ShouldThrowOperationCanceled_WhenTokenAlreadyCancelled()
+    {
+        var recorder = new ConcurrentBag<string>();
+        using var provider = CreateServiceProvider(recorder, builder =>
+            builder.AddSubscription<SampleEvent, FirstHandler>());
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var action = () => provider.GetRequiredService<IEventBus>()
+            .PublishAsync(new SampleEvent { Message = "cancel" }, cts.Token);
+
+        // 预取消令牌应在分发前快速失败，处理器不得执行
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        recorder.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldPassSameInstanceToHandlers()
+    {
+        var recorder = new ConcurrentBag<SampleEvent>();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(recorder);
+        services.AddInMemoryEventBus()
+            .AddSubscription<SampleEvent, CapturingHandler>();
+        using var provider = services.BuildServiceProvider();
+
+        var published = new SampleEvent { Message = "same-instance" };
+        await provider.GetRequiredService<IEventBus>().PublishAsync(published);
+
+        // 1.2.0 起直投原事件对象（同一实例），不再做序列化往返副本
+        recorder.Should().ContainSingle().Which.Should().BeSameAs(published);
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldSwallowHandlerFailure_ByDefault()
+    {
+        var recorder = new ConcurrentBag<string>();
+        using var provider = CreateServiceProvider(recorder, builder =>
+        {
+            builder.AddSubscription<SampleEvent, ThrowingHandler>();
+            builder.AddSubscription<SampleEvent, FirstHandler>();
+        });
+
+        var action = () => provider.GetRequiredService<IEventBus>().PublishAsync(new SampleEvent { Message = "x" });
+
+        // 默认策略 LogAndContinue：失败只记日志，发布方不感知
+        await action.Should().NotThrowAsync();
+        recorder.Should().Contain("first:x");
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldThrowAggregateException_WhenPolicyIsThrow()
+    {
+        var recorder = new ConcurrentBag<string>();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(recorder);
+        services.AddInMemoryEventBus(options => options.HandlerFailurePolicy = HandlerFailurePolicy.Throw)
+            .AddSubscription<SampleEvent, ThrowingHandler>()
+            .AddSubscription<SampleEvent, FirstHandler>();
+        using var provider = services.BuildServiceProvider();
+
+        var action = () => provider.GetRequiredService<IEventBus>().PublishAsync(new SampleEvent { Message = "x" });
+
+        // Throw 策略：等全部处理器完成后统一抛出，正常处理器仍已执行（错误隔离保留）
+        await action.Should().ThrowAsync<AggregateException>().WithMessage("*boom*");
+        recorder.Should().Contain("first:x");
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldSwallowActivationFailure_ByDefault()
+    {
+        var recorder = new ConcurrentBag<string>();
+        using var provider = CreateServiceProvider(recorder, builder =>
+        {
+            builder.AddSubscription<SampleEvent, BrokenCtorHandler>();
+        });
+
+        var action = () => provider.GetRequiredService<IEventBus>().PublishAsync(new SampleEvent { Message = "x" });
+
+        // 处理器构造失败与处理器执行失败同策略：默认只记日志
+        await action.Should().NotThrowAsync();
+        recorder.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PublishAsync_ShouldThrow_WhenPolicyIsThrow_AndActivationFails()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddInMemoryEventBus(options => options.HandlerFailurePolicy = HandlerFailurePolicy.Throw)
+            .AddSubscription<SampleEvent, BrokenCtorHandler>();
+        using var provider = services.BuildServiceProvider();
+
+        var action = () => provider.GetRequiredService<IEventBus>().PublishAsync(new SampleEvent { Message = "x" });
+
+        await action.Should().ThrowAsync<InvalidOperationException>().WithMessage("*ctor*");
+    }
+
     private static ServiceProvider CreateServiceProvider(ConcurrentBag<string> recorder,
                                                          Action<IEventBusBuilder> configure)
     {
@@ -205,5 +307,31 @@ public class InMemoryEventBusTests
     private sealed class ScopeTracker
     {
         public bool Disposed { get; set; }
+    }
+
+    private sealed class CapturingHandler : IIntegrationEventHandler<SampleEvent>
+    {
+        private readonly ConcurrentBag<SampleEvent> _captured;
+
+        public CapturingHandler(ConcurrentBag<SampleEvent> captured)
+        {
+            _captured = captured;
+        }
+
+        public Task Handle(SampleEvent @event, CancellationToken cancellationToken = default)
+        {
+            _captured.Add(@event);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BrokenCtorHandler : IIntegrationEventHandler<SampleEvent>
+    {
+        public BrokenCtorHandler()
+        {
+            throw new InvalidOperationException("ctor boom");
+        }
+
+        public Task Handle(SampleEvent @event, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
