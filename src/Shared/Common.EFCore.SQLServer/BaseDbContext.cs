@@ -24,7 +24,7 @@ namespace Azrng.EFCore.SQLServer
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
                                               .Where(t => t.FullName?.StartsWith("Microsoft") == false))
             {
-                foreach (var type in assembly.GetTypes()
+                foreach (var type in GetSafelyLoadedTypes(assembly)
                                              .Where(t =>
                                                  typeof(IdentityBaseEntity).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract))
                 {
@@ -36,6 +36,21 @@ namespace Azrng.EFCore.SQLServer
             }
 
             base.OnModelCreating(modelBuilder);
+        }
+
+        /// <summary>
+        /// 部分程序集可能因依赖缺失无法完整加载类型，取可加载部分继续扫描，避免启动失败
+        /// </summary>
+        private static Type[] GetSafelyLoadedTypes(System.Reflection.Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null).ToArray();
+            }
         }
     }
 }

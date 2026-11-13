@@ -6,6 +6,7 @@
 
 | ID | 任务名称 | 任务目标 | 当前步骤 | 负责人 AI | 状态 | 优先级 | 最近更新时间 |
 |----|----------|----------|----------|-----------|------|--------|--------------|
+| T173 | Common.EFCore 系列审查问题修复 | 修复仓储全局缓存跨Scope复用、CreateCommand连接/命令泄漏与事务内失败、Postgres DeleteAsync返回值、MySQL ServerVersion重复探测、GetTypes异常防护、回滚吞异常等；行为变更+新增注册按minor升版本号（EFCore/MySQL/PostgresSql 1.8.0，InMemory/SQLServer/SQLite 1.7.0）并同步README；构建+Postgres测试回归后待评审 | 待用户评审 | ZCode | REVIEW | P1 | 2026-11-13 |
 | T172 | 审查批次4：文档债与剩余 P2 修复 | CHANGELOG 迁移+ARCHITECTURE 校对+README 修正；HtmlHelper/DbTypeMap/Tree/ToEntity/ToUrlParameter/IList/MarkEqual/Console收敛/异常中间件/结果包装/OCE/ShowAllServices；全部回归通过后提交 | 已完成 | ZCode | DONE | P1 | 2026-11-12 |
 | T119 | Azrng.NmcWeather 审查问题修复 | 收紧 LooksLikeCityCode 启发式（基于 2413 样本精确为 5 位 base62），新增 NmcWeatherOptionsValidator 启动期配置校验，补全测试缺失分支 | 等待评审 | ZCode | REVIEW | P1 | 2026-07-23 |
 | T111 | Azrng.JSqlParser 对齐审计修复（17 处走样） | 修复系统对比发现的 17 处迁移走样。Oracle oldOracleJoinSyntax 体系、ParenthesedSelect 继承、GROUP BY 混用、SqlServerHints 完整关键字跳过记录 TODO 在 MIGRATION.md 第 13.2 节。测试 1465→1567（+102） | 等待评审 | ZCode | REVIEW | P1 | 2026-07-18 |

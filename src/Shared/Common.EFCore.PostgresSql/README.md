@@ -36,6 +36,11 @@ builder.Logging.AddConsole();
 
 #### 版本更新记录
 
+* 1.8.0
+  * 修复 `DeleteAsync(expression)` 返回值：`ExecuteDeleteAsync`/`DeleteRangeAsync` 直接返回删除行数，不再追加 `SaveChangesAsync`（原返回值被替换为其他挂起更改数，且会误提交无关修改）（行为变更）
+  * 实体程序集扫描对 `ReflectionTypeLoadException` 兜底，依赖缺失的程序集取可加载类型继续，不再导致启动失败
+  * 升级 Common.EFCore 1.8.0：修复仓储缓存跨 Scope 泄漏、原生 SQL 命令/连接泄漏与事务内调用失败
+
 * 1.7.2
   * 使用 `Azrng.Core.Helpers.Snowflake` 配置 WorkerId 并生成实体 ID
 

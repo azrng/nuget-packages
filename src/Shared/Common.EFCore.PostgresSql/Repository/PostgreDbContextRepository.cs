@@ -21,11 +21,12 @@ namespace Azrng.EFCore.PostgresSql.Repository
         public override async Task<int> DeleteAsync(Expression<Func<TEntity, bool>> expression)
         {
 #if !NET7_0_OR_GREATER
-            await _dbContext.DeleteRangeAsync(expression);
-            return await _dbContext.SaveChangesAsync();
+            // Zack.EFCore.Batch 的 DeleteRangeAsync 直接批量删除并返回行数，与 MySQL 包行为一致
+            return await _dbContext.DeleteRangeAsync(expression);
 #else
-            await _dbContext.Set<TEntity>().Where(expression).ExecuteDeleteAsync();
-            return await _dbContext.SaveChangesAsync();
+            // ExecuteDeleteAsync 直接返回删除行数并立即生效，无需再 SaveChanges
+            // （额外 SaveChanges 会把返回值换成其他挂起更改数，还会误提交无关修改）
+            return await _dbContext.Set<TEntity>().Where(expression).ExecuteDeleteAsync();
 #endif
         }
     }

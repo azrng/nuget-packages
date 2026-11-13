@@ -642,6 +642,14 @@ catch
 
 ## 版本更新记录
 
+### 1.8.0
+
+- 修复 `UnitOfWork.GetRepository` 仓储缓存跨 Scope 泄漏：缓存从进程级静态字典改为 UnitOfWork 实例级，仓储与 DbContext 生命周期一致（原跨 Scope 会复用已释放的 DbContext 导致 `ObjectDisposedException`）
+- 原生 SQL 扩展（`ExecuteSqlCommand`/`ExecuteScalar`/`SqlQueryDataTable` 等）：命令确定性释放；连接仅由本方法打开时才负责关闭，事务中已由 EF 打开的连接不再被重复 Open / 误关闭（原在事务内调用必抛异常）
+- 原生 SQL 参数必须为 `DbParameter`，传入原始值时抛出明确的 `ArgumentException` 提示使用参数化查询（行为变更）
+- `IUnitOfWork` 与 `IUnitOfWork<TContext>` 注入解析为同一实例
+- `IBaseRepository.Add/Update/Delete(entity, submit)` XML 文档明确 `submit: false` 时返回值固定为 1，不代表受影响行数
+
 ### 1.7.1
 
 - 使用 `Azrng.Core.Helpers.Snowflake` 替代 `IdHelper` 生成实体 ID

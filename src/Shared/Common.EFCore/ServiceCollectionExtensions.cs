@@ -34,9 +34,8 @@ namespace Azrng.EFCore
         {
             services.AddScoped<IUnitOfWork<TContext>, UnitOfWork<TContext>>();
 
-            // 确保IUnitOfWork和IUnitOfWork<TContext>注入的实例是同一个
-            // services.AddScoped<IUnitOfWork<TContext>>(provider => new UnitOfWork<TContext>(provider.GetRequiredService<TContext>(),
-            //     provider.GetRequiredService<ILogger<UnitOfWork<TContext>>>()));
+            // 转发注册，确保 IUnitOfWork 与 IUnitOfWork<TContext> 在同一 Scope 内解析到同一实例
+            services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IUnitOfWork<TContext>>());
             return services;
         }
     }

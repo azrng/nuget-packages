@@ -92,7 +92,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entity">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅添加到上下文未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> AddAsync(TEntity entity, bool submit = false);
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entities">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅添加到上下文未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> AddAsync(IEnumerable<TEntity> entities, bool submit = false);
 
         /// <summary>
@@ -108,7 +108,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entity">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅附加到上下文未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> UpdateAsync(TEntity entity, bool submit = false);
 
 #if NET7_0_OR_GREATER && (!NET10_0_OR_GREATER)
@@ -135,7 +135,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entity">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅附加到上下文未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> UpdateAsync(IEnumerable<TEntity> entity, bool submit = false);
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entity">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅标记删除未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> DeleteAsync(TEntity entity, bool submit = false);
 
         /// <summary>
@@ -158,7 +158,7 @@ namespace Azrng.EFCore
         /// </summary>
         /// <param name="entity">实体</param>
         /// <param name="submit">是否提交</param>
-        /// <returns></returns>
+        /// <returns>submit 为 true 时返回受影响行数；为 false 时仅标记删除未写库，返回值固定为 1，不代表受影响行数</returns>
         Task<int> DeleteAsync(IEnumerable<TEntity> entity, bool submit = false);
 
         #endregion

@@ -8,6 +8,11 @@ services.AddEntityFramework();
 
 ### 版本更新记录
 
+* 1.7.0
+  * 新增 `IBaseRepository<TEntity, TDbContext>` 双泛型注册，与其余数据库提供程序包对齐
+  * 实体程序集扫描对 `ReflectionTypeLoadException` 兜底，依赖缺失的程序集取可加载类型继续，不再导致启动失败
+  * 升级 Common.EFCore 1.8.0：修复仓储缓存跨 Scope 泄漏、原生 SQL 命令/连接泄漏与事务内调用失败
+
 * 1.6.1
   * 使用 `Azrng.Core.Helpers.Snowflake` 配置 WorkerId 并生成实体 ID
 

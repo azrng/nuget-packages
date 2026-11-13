@@ -1,13 +1,14 @@
-﻿using Azrng.EFCore.Entities;
+using Azrng.EFCore.Entities;
 using Azrng.EFCore.Extensions;
 using Azrng.EFCore.Transactions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,12 @@ namespace Azrng.EFCore
     {
         private readonly TContext _context;
         private readonly ILogger<UnitOfWork<TContext>> _logger;
-        private readonly object _repositoryObj = new object();
+
+        /// <summary>
+        /// 仓储缓存。仓储持有 scoped 的 DbContext，生命周期必须与本工作单元一致，
+        /// 因此只缓存在实例内，不能放静态字典（否则跨 Scope 复用已释放的上下文）
+        /// </summary>
+        private readonly ConcurrentDictionary<string, object> _repositories = new ConcurrentDictionary<string, object>();
 
         public UnitOfWork(TContext context, ILogger<UnitOfWork<TContext>> logger)
         {
@@ -44,24 +50,9 @@ namespace Azrng.EFCore
 
         public IBaseRepository<TEntity> GetRepository<TEntity>() where TEntity : IEntity
         {
-            var key = _context.GetType().FullName + typeof(TEntity).FullName;
-            if (EfCoreGlobalConfig.Repositories.TryGetValue(key, out var repository))
-            {
-                return (IBaseRepository<TEntity>)repository;
-            }
-
-            lock (_repositoryObj)
-            {
-                if (EfCoreGlobalConfig.Repositories.TryGetValue(key, out var repository1))
-                {
-                    return (IBaseRepository<TEntity>)repository1;
-                }
-
-                // 获取指定上下文对应的BaseRepository
-                var curdRepository = new BaseRepository<TEntity>(DbContext);
-                EfCoreGlobalConfig.Repositories.Add(key, curdRepository);
-                return curdRepository;
-            }
+            var key = _context.GetType().FullName + "." + typeof(TEntity).FullName;
+            return (IBaseRepository<TEntity>)_repositories.GetOrAdd(key,
+                _ => new BaseRepository<TEntity>(DbContext));
         }
 
         public int SaveChanges() => _context.SaveChanges();
@@ -79,8 +70,8 @@ namespace Azrng.EFCore
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "CommitTransaction failed, message:{Message}", ex.Message);
-                transaction.Rollback();
+                _logger?.LogError(ex, "CommitTransaction failed, message:{Message}", ex.Message);
+                TryRollback(transaction);
                 throw;
             }
         }
@@ -97,8 +88,8 @@ namespace Azrng.EFCore
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "CommitTransaction failed, message:{Message}", ex.Message);
-                await transaction.RollbackAsync().ConfigureAwait(false);
+                _logger?.LogError(ex, "CommitTransaction failed, message:{Message}", ex.Message);
+                await TryRollbackAsync(transaction).ConfigureAwait(false);
                 throw;
             }
             finally
@@ -166,84 +157,39 @@ namespace Azrng.EFCore
             return _context.Database.SqlQueryListAsync<T>(sql, parameters);
         }
 
-        #region 私有方法
-
         /// <summary>
-        /// DataTable类型转为List类型
+        /// 回滚失败（如连接已中断）时只记录日志，不掩盖触发回滚的原始异常
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="dt"></param>
-        /// <returns></returns>
-        private static List<T> ToList<T>(DataTable dt) where T : class, new()
+        private void TryRollback(IDbContextTransaction transaction)
         {
-            var propertyInfos = typeof(T).GetProperties();
-            var list = new List<T>();
-            foreach (DataRow row in dt.Rows)
+            try
             {
-                var t = new T();
-                foreach (var p in propertyInfos)
-                {
-                    if (dt.Columns.IndexOf(p.Name) != -1 && row[p.Name] != DBNull.Value)
-                        p.SetValue(t, row[p.Name], null);
-                }
-
-                list.Add(t);
+                transaction.Rollback();
             }
-
-            return list;
+            catch (Exception rollbackEx)
+            {
+                _logger?.LogWarning(rollbackEx, "Rollback failed, message:{Message}", rollbackEx.Message);
+            }
         }
 
         /// <summary>
-        /// 查询并返回DataTable
+        /// 回滚失败（如连接已中断）时只记录日志，不掩盖触发回滚的原始异常
         /// </summary>
-        /// <param name="facade">db.Database</param>
-        /// <param name="sql">sql语句</param>
-        /// <param name="parameters">参数</param>
-        /// <returns></returns>
-        private static async Task<DataTable> SqlQueryDataTable(DatabaseFacade facade, string sql,
-                                                               params object[] parameters)
+        private async Task TryRollbackAsync(IDbContextTransaction transaction)
         {
-            var command = CreateCommand(facade, sql, out var conn, parameters);
-            var reader = await command.ExecuteReaderAsync();
-            var dt = new DataTable();
-            dt.Load(reader);
-            await reader.CloseAsync();
-            await conn.CloseAsync();
-            return dt;
+            try
+            {
+                await transaction.RollbackAsync().ConfigureAwait(false);
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger?.LogWarning(rollbackEx, "RollbackAsync failed, message:{Message}", rollbackEx.Message);
+            }
         }
-
-        /// <summary>
-        /// 创建命令
-        /// </summary>
-        /// <param name="facade"></param>
-        /// <param name="sql"></param>
-        /// <param name="connection"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
-        private static DbCommand CreateCommand(DatabaseFacade facade, string sql, out DbConnection connection,
-                                               params object[] parameters)
-        {
-            var conn = facade.GetDbConnection();
-            connection = conn;
-            conn.Open();
-            var cmd = conn.CreateCommand();
-
-            //提供了根据不同类型数据库的判断
-            //facade.IsNpgsql()
-
-            cmd.CommandText = sql;
-            cmd.Parameters.AddRange(parameters);
-            return cmd;
-        }
-
-        #endregion 私有方法
 
         public void Dispose()
         {
-            if (EfCoreGlobalConfig.Repositories != null && EfCoreGlobalConfig.Repositories.Count > 0)
-            {
-                EfCoreGlobalConfig.Repositories.Clear();
-            }
+            // DbContext 与仓储的生命周期均由 DI Scope 管理，这里无需清理全局状态
         }
     }
 }

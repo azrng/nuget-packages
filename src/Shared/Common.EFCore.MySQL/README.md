@@ -36,6 +36,11 @@ builder.Logging.AddConsole();
 
 ### 版本更新记录
 
+* 1.8.0
+  * `ServerVersion.AutoDetect` 移到注册 lambda 外仅执行一次，消除每次创建 DbContext 的一次额外数据库探测往返
+  * 实体程序集扫描对 `ReflectionTypeLoadException` 兜底，依赖缺失的程序集取可加载类型继续，不再导致启动失败
+  * 升级 Common.EFCore 1.8.0：修复仓储缓存跨 Scope 泄漏、原生 SQL 命令/连接泄漏与事务内调用失败
+
 * 1.7.1
   * 使用 `Azrng.Core.Helpers.Snowflake` 配置 WorkerId 并生成实体 ID
 

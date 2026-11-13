@@ -24,7 +24,7 @@ namespace Azrng.EFCore.InMemory
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
               .Where(t => !(t.FullName.StartsWith("Microsoft.") || t.FullName.StartsWith("System."))))
             {
-                var exist = assembly.GetTypes().Any(t =>
+                var exist = GetSafelyLoadedTypes(assembly).Any(t =>
                     typeof(IEntity).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract);
                 if (exist)
                 {
@@ -33,6 +33,21 @@ namespace Azrng.EFCore.InMemory
             }
 
             base.OnModelCreating(modelBuilder);
+        }
+
+        /// <summary>
+        /// 部分程序集可能因依赖缺失无法完整加载类型，取可加载部分继续扫描，避免启动失败
+        /// </summary>
+        private static Type[] GetSafelyLoadedTypes(System.Reflection.Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (System.Reflection.ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null).ToArray();
+            }
         }
     }
 }

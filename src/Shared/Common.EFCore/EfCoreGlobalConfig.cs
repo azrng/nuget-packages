@@ -1,5 +1,4 @@
 ﻿using Azrng.Core.Model;
-using System.Collections.Generic;
 
 namespace Azrng.EFCore
 {
@@ -37,12 +36,6 @@ namespace Azrng.EFCore
         /// 老的更新时间
         /// </summary>
         internal const string OldUpdateTime = "modify_time";
-
-        /// <summary>
-        /// 存储本次请求过程中创建的仓储类
-        /// </summary>
-        internal static Dictionary<string, object> Repositories { get; private set; } =
-            new Dictionary<string, object>();
 
         /// <summary>
         /// 设置配置

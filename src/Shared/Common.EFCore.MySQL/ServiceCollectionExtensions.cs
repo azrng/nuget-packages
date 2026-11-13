@@ -55,9 +55,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
             EfCoreGlobalConfig.SetConfig(DatabaseType.MySql, config.UseOldUpdateColumn, config.Schema);
 
+            // AutoDetect 会连接数据库探测版本，放在 lambda 外只执行一次，
+            // 避免每次创建 DbContext 都产生一次额外连接往返
+            var serverVersion = ServerVersion.AutoDetect(config.ConnectionString);
+
             services.AddDbContext<T>((provider, options) =>
             {
-                options.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder);
+                options.UseMySql(config.ConnectionString, serverVersion, builder);
 
                 var loggerFactory = provider.GetService<ILoggerFactory>();
                 if (loggerFactory != null)
@@ -100,9 +104,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
             EfCoreGlobalConfig.SetConfig(DatabaseType.MySql, config.UseOldUpdateColumn, config.Schema);
 
+            // AutoDetect 会连接数据库探测版本，放在 lambda 外只执行一次，
+            // 避免每次创建 DbContext 都产生一次额外连接往返
+            var serverVersion = ServerVersion.AutoDetect(config.ConnectionString);
+
             services.AddDbContextFactory<T>((provider, options) =>
             {
-                options.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder);
+                options.UseMySql(config.ConnectionString, serverVersion, builder);
 
                 var loggerFactory = provider.GetService<ILoggerFactory>();
                 if (loggerFactory != null)
